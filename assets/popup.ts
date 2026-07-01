@@ -1,6 +1,6 @@
 // ─── Popup system ─────────────────────────────────────────────────────────────
 
-import maplibregl, { type MapMouseEvent, type MapGeoJSONFeature } from 'maplibre-gl';
+import maplibregl, { type MapMouseEvent, type MapTouchEvent, type MapGeoJSONFeature } from 'maplibre-gl';
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
 import { highlightLine, clearLineHighlight } from './hover.js';
@@ -99,7 +99,7 @@ function tryHighlightLine(feature: MapGeoJSONFeature) {
 // non-touch desktop browsers (referencing it throws). `pointer: coarse` is the
 // reliable "finger, not mouse" signal.
 const TOUCH_HIT = matchMedia('(pointer: coarse)').matches;
-function hitBox(e: MapMouseEvent): [maplibregl.PointLike, maplibregl.PointLike] {
+function hitBox(e: MapMouseEvent | MapTouchEvent): [maplibregl.PointLike, maplibregl.PointLike] {
   const r = TOUCH_HIT ? 8 : 3;
   return [
     [e.point.x - r, e.point.y - r],
@@ -112,7 +112,7 @@ function hitBox(e: MapMouseEvent): [maplibregl.PointLike, maplibregl.PointLike] 
 // `popup.remove()` could tear down a copy popup the sibling click just opened —
 // popup never appeared. Swallow the second click of a tap. See commit 87664a9.
 let lastClickTime = 0;
-function onMapClick(e: MapMouseEvent) {
+function onMapClick(e: MapMouseEvent | MapTouchEvent) {
   if (state.measure.active) return;
   if (!state.map || !state.popup) return;
   const now = e.originalEvent.timeStamp || Date.now();
@@ -272,6 +272,24 @@ export function initPopups() {
   state.popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, maxWidth: "280px" });
 
   state.map.on("click", onMapClick);
+
+  // In edit mode, MapboxDraw's simple_select swallows the browser's emulated
+  // click on touch, so the `click` handler above never fires — tapping a feature
+  // to copy did nothing on mobile. Drive the same handler from a detected tap
+  // (single finger, small move). Fires in all modes; the lastClickTime debounce
+  // dedupes against the real `click` on platforms where both arrive.
+  let touchStart: { x: number; y: number; t: number } | null = null;
+  state.map.on("touchstart", e => {
+    touchStart = e.points.length === 1
+      ? { x: e.point.x, y: e.point.y, t: Date.now() } : null;
+  });
+  state.map.on("touchend", e => {
+    if (!touchStart) return;
+    const moved = Math.hypot(e.point.x - touchStart.x, e.point.y - touchStart.y);
+    const dt = Date.now() - touchStart.t;
+    touchStart = null;
+    if (moved < 10 && dt < 500) onMapClick(e);
+  });
 
   for (const layerId of CLICKABLE_LAYERS) {
     state.map.on("mouseenter", layerId, () => {
