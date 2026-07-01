@@ -180,26 +180,25 @@ export function wireGenModeToggle() {
 }
 
 export function wireYearFilter() {
-  const btn   = document.getElementById("genYearFilterBtn");
-  const panel = document.getElementById("genYearFilterPanel");
-  if (btn && panel) {
-    btn.addEventListener("click", () => {
+  // ponytail: delegate on document — the panel HTML gets re-rendered by
+  // buildLayersPanel() (e.g. Reset all layers), which would orphan any
+  // listener bound directly to the button/slider elements.
+  document.addEventListener("click", (e) => {
+    const t = e.target as Element | null;
+    if (t?.closest("#genYearFilterBtn")) {
+      const panel = document.getElementById("genYearFilterPanel");
+      if (!panel) return;
       panel.hidden = !panel.hidden;
-      btn.classList.toggle("filter-btn--open", !panel.hidden);
-    });
-  }
-
-  const slider = document.getElementById("yearSlider") as HTMLInputElement | null;
-  if (slider) {
-    slider.min   = String(state.yearFilter.min);
-    slider.max   = String(state.yearFilter.max);
-    slider.value = String(state.yearFilter.year);
-    slider.addEventListener("input", onYearSliderInput);
-  }
-  const playBtn = document.getElementById("yearPlayBtn");
-  if (playBtn) playBtn.addEventListener("click", toggleYearPlayback);
-  const allBtn = document.getElementById("yearAllBtn");
-  if (allBtn) allBtn.addEventListener("click", clearYearFilter);
+      document.getElementById("genYearFilterBtn")?.classList.toggle("filter-btn--open", !panel.hidden);
+    } else if (t?.closest("#yearPlayBtn")) {
+      toggleYearPlayback();
+    } else if (t?.closest("#yearAllBtn")) {
+      clearYearFilter();
+    }
+  });
+  document.addEventListener("input", (e) => {
+    if ((e.target as Element | null)?.id === "yearSlider") onYearSliderInput(e);
+  });
 
   updateYearSliderUI();
   updateYearPlayBtn();

@@ -24,7 +24,10 @@ async function draw(): Promise<DrawChunk> {
 // ─── Event handlers ───────────────────────────────────────────────────────────
 async function onMenubarClick(e: MouseEvent) {
   const t = e.target as Element;
-  const menuBtn = t?.closest<HTMLElement>('.menu-btn');
+  // Only File/Add open dropdowns (aria-haspopup). The Measure button also
+  // carries .menu-btn for styling but toggles a tool, not a menu — matching it
+  // here would hide its nextElementSibling (the Add menu-wrap) by mistake.
+  const menuBtn = t?.closest<HTMLElement>('.menu-btn[aria-haspopup="true"]');
   if (menuBtn) {
     e.stopPropagation();
     const dropdown = menuBtn.nextElementSibling as HTMLElement | null;
