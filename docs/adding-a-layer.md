@@ -20,87 +20,16 @@ All built tiles/GeoJSON go to a single output directory: `data/layers/`.
 
 ---
 
-## 2. Data pipeline
+## 2–3. Data pipeline — see [adding-a-dataset.md](adding-a-dataset.md)
 
-### 2a. Extraction / build script
+The extract/build script, `Makefile` wiring, and `tile_manifest.yaml` block are
+the data-engineering half, covered entirely in
+**[adding-a-dataset.md](adding-a-dataset.md)** (model scripts to copy, shared
+helpers, conventions). Do that first; come back here when the served file
+exists in `data/layers/`.
 
-Write a script in `scripts/`. Follow whichever existing script best matches your source:
-
-| Source type | Model script |
-|---|---|
-| OSM PBF (point features) | `extract_osm_datacenters.py` |
-| OSM PBF (lines/polygons with enrichment) | `extract_osm_lines.py` |
-| External download → GeoTIFF raster | `build_population_density.sh` or `build_wind_resource.sh` |
-| CSV/point grid → raster (gdal_grid) | `build_seismic_hazard.sh` (complete grid) or `build_geothermal_resource.sh` (scattered IDW) |
-| Categorical raster (discrete classes) | `build_wildfire_hazard.sh` |
-| HIFLD / EIA Excel or Shapefile | `extract_hifld_lines.py`, `extract_eia_generators.py` |
-
-Decide field schema early. Keep only what the popup or filter UI will actually use — dropped fields can't be recovered without a rebuild.
-
-> **Raster build scripts** all source `scripts/raster_common.sh` — shared helpers
-> `rc_check_deps`, `rc_cog` (Float32 COG download), `rc_bake_tiles` (color-relief →
-> 3857 → MBTiles/WEBP → PMTiles), `rc_write_lut` (Int16 hover-LUT sidecar). Your
-> script owns only its fetch/clip/grid steps; these own the identical tail. Don't
-> re-implement them.
-
-### 2b. Wire into `Makefile`
-
-Add a step to the `pipeline` target:
-
-```makefile
-@echo "=== N/N  My new layer ==="
-@$(PY) $(SCRIPTS)/extract_my_layer.py
-```
-
-For raster-only layers that don't come from the OSM PBF, add a standalone `make` target instead (like `make popden`):
-
-```makefile
-mylayer:
-    @bash $(SCRIPTS)/build_my_layer.sh
-```
-
----
-
-## 3. Build tiles (`scripts/tile_manifest.yaml`) — **vector layers only**
-
-> **Rasters skip this section entirely.** Every raster layer (wind, solar, geo,
-> population, wildfire, seismic) is built by its own `build_*.sh` + a standalone
-> `make` target (§2b) that writes PMTiles straight to `data/layers/`. The
-> `tile_manifest.yaml` driver is tippecanoe-only (vector). If you're adding a
-> raster, jump to **§3R** below.
-
-No code edit — add one block to `scripts/tile_manifest.yaml`. The driver
-(`scripts/build_tiles.py`) builds every block in order. `.csv` sources are
-treated as lon/lat points automatically; output goes to `data/layers/<id>.*`
-(GeoJSON is gzipped to `.geojson.gz`; pmtiles via tippecanoe). A missing source
-is skipped, not an error.
-
-**GeoJSON point/polygon layer:**
-```yaml
-  - id: my_layer
-    src: data/build/my_layer.csv        # or .shp
-    format: geojson
-    select: [field1, field2, field3]    # omit to keep all columns
-    precision: 6                         # optional COORDINATE_PRECISION
-```
-
-**PMTiles vector layer:**
-```yaml
-  - id: my_layer
-    src: data/build/my_layer.shp
-    format: pmtiles
-    select: [field1, field2]
-    min_zoom: 4
-    max_zoom: 14
-    simplification: 4                    # optional
-    max_tile_bytes: 500000               # optional (default)
-    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
-```
-
-Block order = build order (z-order; put slow layers last). All tippecanoe
-tuning lives in `flags` (literal flags) + the zoom/simplification/tile-byte
-fields — see existing blocks for the full vocabulary. `make validate` flags any
-mismatch between manifest output and `assets/constants.ts`.
+One exception stays in this doc because it's half-frontend: the raster color
+ramp (**§3R** below) — its stops must mirror `src/colors/ramps.ts`.
 
 Anchor (in `tile_manifest.yaml`): `>>> ADD-LAYER: tile-build-calls`
 
@@ -153,7 +82,7 @@ Anchor: `>>> ADD-LAYER: data-urls`
 
 ## 5. `src/registry/<group>.ts` — layer registry entry
 
-Every visible layer needs an entry in the right registry file. Add it to the array in the file matching its group (`generators.ts`, `transmission.ts`, `pipelines.ts`, `renewable.ts`, `land.ts`, or `regions.ts`). New sources go in `src/registry/sources.ts`.
+Every visible layer needs an entry in the right registry file. Add it to the array in the file matching its group — the imports in `src/registry/index.ts` list every registry file (generators, transmission, pipelines, renewable, land, regions, hazards, rail, …). New sources go in `src/registry/sources.ts`.
 
 ### `src/registry/sources.ts` (if new data provider)
 
@@ -172,7 +101,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   id:          "my-layer",          // unique; matches MapLibre source/layer IDs
   urlCode:     "MYL",               // 3-char URL hash code (must be unique across all layers)
   label:       "My Layer",          // shown in the layers panel
-  group:       "load",              // panel group: transmission|substations|generators|pipelines|renewable|load|land|regions|test
+  group:       "load",              // panel group — see the `groups` array in assets/ui/ui-layer-rows.ts for the current list
   sourceId:    "my-source",         // key into LAYER_SOURCES (src/registry/sources.ts)
   swatch:      "#6366f1",           // color dot shown in panel row
   defaultOn:   false,               // visible on page load?
@@ -376,7 +305,7 @@ If this is the first layer in a new group, add a collapsible section:
 </div>
 ```
 
-Also add `"mygroup"` to the `groups` array in `buildLayersPanel()` in `assets/ui/ui.ts`.
+Also add `"mygroup"` to the `groups` array in `buildLayersPanel()` in `assets/ui/ui-layer-rows.ts`.
 
 ### Source credit
 
@@ -426,9 +355,7 @@ Update `docs/data-sources.md`:
 ## Checklist
 
 ```
-[ ] scripts/extract_or_build.py/.sh       — produces data/build/my_layer.csv or equivalent
-[ ] Makefile                               — pipeline step (vector) OR standalone target (raster)
-[ ] scripts/tile_manifest.yaml             — VECTOR ONLY: add one block (id, src, format, zoom/select); rasters skip
+[ ] Data half done                         — script, Makefile, manifest, .gitignore, release pack: checklist in adding-a-dataset.md
 [ ] scripts/<id>_color_ramp.txt            — RASTER ONLY: gdaldem color-relief ramp (value R G B A)
 [ ] src/colors/ramps.ts                    — CONTINUOUS RASTER ONLY: <X>_RAMP_STOPS + <X>_RAMP_MAX (mirror the .txt)
 [ ] assets/constants.ts                    — DATA.my_layer (+ lut/meta if raster)
@@ -439,12 +366,12 @@ Update `docs/data-sources.md`:
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — addMyLayer() call in addAllLayers()
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)
-[ ] assets/popup.ts                       — CLICKABLE_LAYERS + POPUP_RENDERER_GROUPS
+[ ] assets/popup.ts                       — CLICKABLE_LAYERS entry
+[ ] assets/popup-format.ts                — renderer tuple in the _defs table
 [ ] assets/filters.ts                     — bus subscription (if new filter type)
 [ ] assets/ui/ui-filters.ts              — emit events (if new filter type)
 [ ] index.html                            — layer-rows-* div (if new group: full section + ui/ui.ts)
 [ ] index.html                            — source credit <li data-source-credit="...">
-[ ] .gitignore                            — ignore data/raw/<source>/ (NOT ignored by default; see >>> ADD-LAYER: gitignore). data/layers/ tiles ARE tracked.
 [ ] docs/layers/my-layer.md               — layer documentation
 [ ] docs/layers/README.md                  — add the layer to the index prose
 [ ] docs/data-sources.md                  — summary table + feeds list

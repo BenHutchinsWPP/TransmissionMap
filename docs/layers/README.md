@@ -27,8 +27,6 @@ Power plant data at two levels of detail.
 
 **EIA Form 860** ([eia-generators](eia-generators.md)) is the authoritative US regulatory dataset: every utility-scale plant ≥1 MW with nameplate capacity, fuel type, NERC region, and balancing authority. Updated annually. **OSM generators** ([generators](osm-generators.md) · [plants](osm-plants.md)) adds unit-level granularity (individual turbines and panel arrays) and international coverage, at the cost of less consistent attribute fill.
 
-EIA Form 860 is the regulatory source for US analysis; OSM adds unit-level granularity and international coverage.
-
 ---
 
 ## ⛽ Fuel Delivery
@@ -84,5 +82,3 @@ Physical-risk layers for siting and resilience analysis.
 ## Adding a layer
 
 See [../adding-a-layer.md](../adding-a-layer.md) for the step-by-step guide.
-</content>
-</invoke>

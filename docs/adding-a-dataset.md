@@ -59,8 +59,8 @@ your new script plus `make tiles`.
 
    GeoJSON and vector PMTiles both go through the manifest driver — same
    extract script shape. Rasters are a separate track (own `build_*.sh`, own
-   `make` target, no manifest). If you're adding a raster, the raster sections
-   of [adding-a-layer.md](adding-a-layer.md) (§2a, §3R) are the real reference.
+   `make` target, no manifest). If you're adding a raster, the color-ramp
+   section of [adding-a-layer.md](adding-a-layer.md) (§3R) is also required.
 
 3. **Decide the field schema now.** The extract step drops everything you don't
    `select`. Dropped fields can't be recovered without a full rebuild, so keep
@@ -96,9 +96,9 @@ heavy lifting.
   fetch/clip/grid steps — `rc_cog`, `rc_bake_tiles`, `rc_write_lut` own the
   shared tail. Don't re-implement the bake.
 
-> **You cannot read `data/` from a coding agent** (28 GB, in CLAUDE.md hard
-> rules). Inspect schemas by running the script and printing `df.head()` /
-> `ogrinfo`, not by opening the data files.
+> **Never open files under `data/` directly** (tens of GB of binaries). Inspect
+> schemas by running the script and printing `df.head()` / `ogrinfo`, not by
+> opening the data files.
 
 ---
 
@@ -176,7 +176,7 @@ duplicate that here.
 [ ] Source recorded: URL, license, vintage, format  (→ data-sources.md)
 [ ] scripts/extract_or_build.*    — copy nearest sibling; header comment; → data/build/<id>.*
 [ ] data/raw/<source>/            — auto-download, or document manual placement
-[ ] .gitignore                    — ignore data/raw/<source>/  (data/layers/ IS tracked)
+[ ] .gitignore                    — ignore data/raw/<source>/  (NOT ignored by default; see >>> ADD-LAYER: gitignore. data/layers/ IS tracked)
 [ ] Makefile                      — pipeline step (manifest) OR standalone target (raster)
 [ ] scripts/tile_manifest.yaml    — one block  (manifest layers only)
 [ ] run: extract script → make tiles → file appears in data/layers/
