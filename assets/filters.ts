@@ -13,6 +13,8 @@ import {
   TRIBAL_BUCKETS, TRIBAL_MAP,
   NERC_BUCKETS, NERC_MAP,
   OGF_STATUS_BUCKETS, OGF_STATUS_MAP,
+  OGF_SCENARIO_BUCKETS, OGF_SCENARIO_MAP,
+  OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP,
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
 } from '../src/colors/buckets.js';
@@ -158,10 +160,16 @@ export function applySubstanceFilter() {
     "substance", state.legendFilters.substance, SUBSTANCE_BUCKETS, SUBSTANCE_MAP);
 }
 
-export function applyOGFStatusFilter() {
-  applyBucketFilterToLayers(
-    ["ogf-planned-lines-casing", "ogf-planned-lines"],
-    "Status", state.legendFilters.ogfStatus, OGF_STATUS_BUCKETS, OGF_STATUS_MAP);
+// Status + scenario + planning-authority all target the same two OGF map
+// layers, so they must be combined in one setFilter call — applying them via
+// separate applyBucketFilterToLayers calls would clobber each other.
+export function applyOGFFilters() {
+  if (!state.mapReady) return;
+  const expr = combineFilters(
+    buildValueFilterExpr("Status",    state.legendFilters.ogfStatus,   OGF_STATUS_BUCKETS,   OGF_STATUS_MAP),
+    buildValueFilterExpr("Portfolio", state.legendFilters.ogfScenario, OGF_SCENARIO_BUCKETS, OGF_SCENARIO_MAP),
+    buildValueFilterExpr("PlanAuth",  state.legendFilters.ogfPlanAuth, OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP));
+  setBucketFilter(["ogf-planned-lines-casing", "ogf-planned-lines"], expr);
 }
 
 export function applyPipelineTypeFilter() {
@@ -368,7 +376,9 @@ on('filter:generators',    applyGeneratorFilters);
 on('filter:voltage',       applyVoltageFilter);
 on('filter:natgas-line',   applyNatgasLineFilter);
 on('filter:natgas-pts',    applyNatgasPtsFilter);
-on('filter:ogf-status',    applyOGFStatusFilter);
+on('filter:ogf-status',    applyOGFFilters);
+on('filter:ogf-scenario',  applyOGFFilters);
+on('filter:ogf-planauth',  applyOGFFilters);
 on('filter:substance',     applySubstanceFilter);
 on('filter:pipeline-type', applyPipelineTypeFilter);
 on('filter:padus',         applyPadusClassFilter);
@@ -389,5 +399,5 @@ on('filter:all',           () => {
   applyNatgasLineFilter();
   applyNatgasPtsFilter();
   applySubstanceFilter();
-  applyOGFStatusFilter();
+  applyOGFFilters();
 });

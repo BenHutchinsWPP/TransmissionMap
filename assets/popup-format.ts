@@ -56,13 +56,15 @@ export function renderOgfPlanned(p: Record<string, unknown>) {
     row("Status", (p.Status as string || "").trim() || null) +
     row("Type", p.Type) +
     row("Voltage", voltStr) +
-    row("Capacity", p.CalcCapMW ? p.CalcCapMW + " MW" : null) +
+    row("Capacity", p.CapacityMW ? p.CapacityMW + " MW" : null) +
     row("Est. Year", p.EstYear) +
     row("AC/DC", (p.ACDC as string || "").trim() || null) +
     row("From", p.FromSub) +
     row("To", p.ToSub) +
     row("States", p.StatesFull) +
     row("RTO/ISO", p.ISO_RTO) +
+    row("Plan Authority", p.PlanAuth) +
+    row("Portfolio", p.Portfolio) +
     row("Length", typeof p.Length_mi === 'number' ? p.Length_mi.toFixed(1) + " mi" : null) +
     (link ? `<div class="popup-row"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">Project page</a></div>` : "") +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Our Grid Future — Horizon Energy Systems, 2026</div>`;

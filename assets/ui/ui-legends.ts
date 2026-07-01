@@ -8,12 +8,13 @@ import {
   KV_BUCKETS, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
+  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS,
 } from '../../src/colors/buckets.js';
 import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
   applyCritHabFilter, applyPadusClassFilter, applyTribalClassFilter,
   applyNatgasLineFilter, applyNatgasPtsFilter, applyNercFilter,
-  applyRetailTypeFilter, applyOGFStatusFilter, applySubstanceFilter,
+  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter,
 } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
 import { ICON_SVG } from '../icons.js';
@@ -57,7 +58,13 @@ export const LEGEND_FILTERS = [
     title: "Utility type", swatch: "color", apply: applyRetailTypeFilter },
   { key: "ogfStatus", groupCode: "g", buckets: OGF_STATUS_BUCKETS,
     masterId: "ogfStatusAllCb", legendId: "ogfStatusLegend", itemsId: "ogfStatusLegendItems",
-    title: "Project status", swatch: "color", apply: applyOGFStatusFilter },
+    title: "Project status", swatch: "color", apply: applyOGFFilters },
+  { key: "ogfScenario", groupCode: "w", buckets: OGF_SCENARIO_BUCKETS,
+    masterId: "ogfScenarioAllCb", legendId: "ogfScenarioLegend", itemsId: "ogfScenarioLegendItems",
+    title: "WestTEC scenario", swatch: "color", apply: applyOGFFilters },
+  { key: "ogfPlanAuth", groupCode: "a", buckets: OGF_PLANAUTH_BUCKETS,
+    masterId: "ogfPlanAuthAllCb", legendId: "ogfPlanAuthLegend", itemsId: "ogfPlanAuthLegendItems",
+    title: "Planning authority", swatch: "color", apply: applyOGFFilters },
 ];
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
@@ -187,6 +194,8 @@ const LEGEND_VISIBILITY = [
   { el: "retailLegend",     show: () => !!state.layerVisibility["retail-territories"] },
   { el: "whpLegend",             show: () => !!state.layerVisibility["usfs-wildfire-potential"] },
   { el: "ogfStatusLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
+  { el: "ogfScenarioLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
+  { el: "ogfPlanAuthLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "smokeLiveLegend",        show: () => !!state.layerVisibility["wildfire-smoke"] },
   { el: "wildfireLiveLegend",    show: () => !!state.layerVisibility["wildfire-live"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },

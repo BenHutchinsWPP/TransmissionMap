@@ -104,7 +104,7 @@ describe('renderOgfPlanned', () => {
   const base: Record<string, unknown> = {
     Project: 'Desert Wind Link', Owner: 'APS', Status: 'Permitted',
     Type: 'AC', MinVolt: 230, MaxVolt: 500,
-    CalcCapMW: 1200, EstYear: 2028, ACDC: 'AC',
+    CapacityMW: 1200, EstYear: 2028, ACDC: 'AC',
     FromSub: 'Alpha', ToSub: 'Beta', StatesFull: 'AZ, NV',
     ISO_RTO: 'WECC', Length_mi: 185.7, Link: '',
   };

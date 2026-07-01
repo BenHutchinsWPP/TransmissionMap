@@ -8,6 +8,8 @@ type Events = {
   'filter:natgas-line':   void;
   'filter:natgas-pts':    void;
   'filter:ogf-status':    void;
+  'filter:ogf-scenario':  void;
+  'filter:ogf-planauth':  void;
   'filter:substance':     void;
   'filter:pipeline-type': void;
   'filter:padus':         void;

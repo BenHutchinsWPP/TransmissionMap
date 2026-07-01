@@ -236,3 +236,49 @@ export const OGF_STATUS_MAP = {
   complete:     ["Complete"],
   terminated:   ["Terminated"],
 };
+
+// ─── OGF WestTEC study scenario (Portfolio field) ────────────────────────────
+// Matches the scenario filter on ourgridfuture.org; only WestTEC projects
+// carry these Portfolio values. "other" catches every other portfolio + blank.
+export const OGF_SCENARIO_BUCKETS = [
+  { id: "base_case",  urlCode: "B", label: "Base Case Planned Projects",    color: "#0891b2" },
+  { id: "sra",        urlCode: "R", label: "Reliability Assessment (SRA)",  color: "#7c3aed" },
+  { id: "ida",        urlCode: "D", label: "Deliverability Assessment (IDA)", color: "#d97706" },
+  { id: "congestion", urlCode: "C", label: "Congestion Assessment",         color: "#dc2626" },
+  { id: "other",      urlCode: "O", label: "Other / no scenario",           color: "#94a3b8" },
+];
+export const OGF_SCENARIO_MAP = {
+  base_case:  ["Base Case"],
+  sra:        ["SRA"],
+  ida:        ["IDA"],
+  congestion: ["Congestion"],
+};
+
+// ─── OGF planning authority (PlanAuth field) ─────────────────────────────────
+// Combo values ("MISO, SPP") are listed under each member so checking either
+// authority shows the row.
+export const OGF_PLANAUTH_BUCKETS = [
+  { id: "westtec", urlCode: "W", label: "WestTEC",          color: "#0891b2" },
+  { id: "caiso",   urlCode: "C", label: "CAISO",            color: "#059669" },
+  { id: "bpa",     urlCode: "B", label: "Bonneville (BPA)", color: "#65a30d" },
+  { id: "ercot",   urlCode: "E", label: "ERCOT",            color: "#d97706" },
+  { id: "spp",     urlCode: "S", label: "SPP",              color: "#ca8a04" },
+  { id: "miso",    urlCode: "M", label: "MISO",             color: "#7c3aed" },
+  { id: "pjm",     urlCode: "P", label: "PJM",              color: "#db2777" },
+  { id: "nyiso",   urlCode: "N", label: "NYISO",            color: "#2563eb" },
+  { id: "isone",   urlCode: "I", label: "ISO-NE",           color: "#0ea5e9" },
+  { id: "merchant",urlCode: "H", label: "Merchant",         color: "#dc2626" },
+  { id: "other",   urlCode: "O", label: "Other / none",     color: "#94a3b8" },
+];
+export const OGF_PLANAUTH_MAP = {
+  westtec:  ["WestTEC"],
+  caiso:    ["CAISO"],
+  bpa:      ["Bonneville Power Administration"],
+  ercot:    ["ERCOT"],
+  spp:      ["SPP", "MISO, SPP"],
+  miso:     ["MISO", "MISO, SPP"],
+  pjm:      ["PJM"],
+  nyiso:    ["NYISO"],
+  isone:    ["ISO-NE", "ISO-NE, Canada Energy Regulator"],
+  merchant: ["Merchant"],
+};
