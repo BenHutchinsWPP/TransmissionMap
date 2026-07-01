@@ -15,7 +15,7 @@ Interactive map of US electric transmission infrastructure — lines, substation
 - **Aerial basemap toggle** — ESRI World Imagery to spot newly-built facilities not yet in OSM.
 - **HIFLD substations & lines** — the US public-domain dataset that fills in gaps OSM hasn't covered yet.
 - **EIA generators** — plant-level capacity, fuel, NERC region, balancing authority for the US.
-- **Direct downloads** — CSV / SHP for every layer, ready for Google Earth or GIS software.
+- **Direct downloads** — GeoJSON / CSV for every layer, ready for Google Earth or GIS software.
 
 ---
 

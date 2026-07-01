@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden wildfire-dev smoke-dev validate tiles releases web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden wildfire-dev smoke-dev validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -45,6 +45,7 @@ help:
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
+	@echo "  make publish-data force-push data/layers + data/releases → orphan 'data-static' branch (raw host; needs public repo)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
 	@echo "  make clean       remove $(BUILD)/ AND data/layers + data/releases"
@@ -260,6 +261,10 @@ tiles: validate
 releases:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/build_releases.py
+
+# ── Publish built data to the raw-hosted 'data-static' branch ───────────────
+publish-data:
+	@bash $(SCRIPTS)/publish_data.sh
 
 # ── Serve static site ──────────────────────────────────────────────────────
 web:

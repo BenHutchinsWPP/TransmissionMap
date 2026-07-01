@@ -10,6 +10,7 @@ import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
 import type { LayerDef, BucketDef } from '../../src/types.js';
 import { HEAT_RAMP } from '../../src/colors/ramps.js';
+import { DATA_ORIGIN } from '../constants.js';
 import { rampLegendHtml } from './ui-legends.js';
 import { escapeHtml } from '../utils/utils.js';
 
@@ -48,7 +49,7 @@ function downloadMenuHtml(entry: LayerDef) {
   // reachable via the info button — one fewer link to maintain.
   if (!zip) return "";
   const items = [
-    `<a href="${zip}" download>Download ZIP</a>`,
+    `<a href="${DATA_ORIGIN}${zip}" download>Download ZIP</a>`,
     url ? `<a href="${url}" target="_blank" rel="noopener">Source data ↗</a>` : "",
   ].filter(Boolean).join("");
   return `
