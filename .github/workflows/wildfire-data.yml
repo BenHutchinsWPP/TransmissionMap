@@ -1,0 +1,82 @@
+name: Update wildfire data
+# Fetches NASA FIRMS VIIRS hotspots + NIFC WFIGS perimeters + incidents + NOAA HMS smoke hourly.
+# All four datasets are merged into a single wildfire_live.geojson.
+# Writes to the orphan `data` branch via a single amended commit (no history growth).
+# Frontend fetches from raw.githubusercontent.com (CORS ok on public repos).
+# main is never touched by this workflow.
+#
+# Bootstrap: create the orphan branch once before this workflow runs:
+#   git checkout --orphan data
+#   git rm -rf .
+#   mkdir -p data/layers
+#   echo '{"type":"FeatureCollection","features":[]}' > data/layers/wildfire_live.geojson
+#   git add data/layers/wildfire_live.geojson
+#   git commit -m "init: wildfire data branch"
+#   git push origin data
+#   git checkout main
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour, on the hour
+  workflow_dispatch:       # manual trigger for testing
+
+# Don't let a slow run race the next hour's force-push; queue instead of overlap.
+concurrency:
+  group: wildfire-data
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20    # guard against a hung upstream fetch (default is 6h)
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: data                        # orphan branch — only the data file
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch FIRMS VIIRS CSVs
+        run: |
+          # USA (CONUS+HI) region files + Canada and Central_America (incl. Mexico)
+          # country files. Script dedups across all CSVs, so border overlap is fine.
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/USA_contiguous_and_Hawaii/SUOMI_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv" \
+            -o /tmp/snpp.csv
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/USA_contiguous_and_Hawaii/J1_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv" \
+            -o /tmp/n20.csv
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Canada_24h.csv" \
+            -o /tmp/snpp_ca.csv
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Canada_24h.csv" \
+            -o /tmp/n20_ca.csv
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Central_America_24h.csv" \
+            -o /tmp/snpp_mx.csv
+          curl -sf \
+            "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Central_America_24h.csv" \
+            -o /tmp/n20_mx.csv
+
+      - name: Merge hotspots + fetch perimeters → wildfire_live.geojson
+        run: |
+          # Scripts live on main; grab without switching branches
+          git fetch origin main
+          git show origin/main:scripts/firms_csv_to_geojson.py > /tmp/firms_csv_to_geojson.py
+          python3 /tmp/firms_csv_to_geojson.py \
+            /tmp/snpp.csv /tmp/n20.csv \
+            /tmp/snpp_ca.csv /tmp/n20_ca.csv \
+            /tmp/snpp_mx.csv /tmp/n20_mx.csv \
+            -o data/layers/wildfire_live.geojson
+
+      - name: Amend rolling commit and force-push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/layers/wildfire_live.geojson
+          git diff --cached --quiet && echo "No change — skipping" && exit 0
+          git commit --amend --no-edit --date=now
+          git push --force-with-lease

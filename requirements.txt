@@ -1,0 +1,12 @@
+osmium
+shapely
+numpy
+pandas
+scipy
+openpyxl
+pyyaml
+tqdm
+pyogrio
+geopandas
+fiona
+psutil

@@ -1,0 +1,166 @@
+# release_manifest.yaml — per-layer download pack definitions
+#
+# Each entry produces one ZIP in data/releases/:
+#   <layer-id>.zip  containing  <name>.geojson + <name>.csv + <layer-id>.md + disclaimer.txt
+#
+# Source keys (mutually exclusive):
+#   geojson_gz: path  — decompress .geojson.gz → GeoJSON + CSV
+#   shp:        path  — read Shapefile → GeoJSON + CSV
+#   geojson:    path  — read raw GeoJSON → GeoJSON + CSV
+#   csv:        path  — CSV with lat_col / lon_col → point GeoJSON + CSV (no geometry column)
+#   tif:        path  — copy GeoTIFF into raster pack (no GeoJSON/CSV)
+#
+# For multi-file layers use `files:` (dict of stem → source spec).
+# `skip: true` silently skips the layer (live services, no-redistribution).
+#
+# doc: path to docs/layers/<layer>.md — included in every ZIP.
+
+disclaimer: disclaimer.txt
+
+layers:
+
+  # ── Transmission ──────────────────────────────────────────────────────────
+
+  hifld-transmission-lines:
+    doc: docs/layers/hifld-transmission-lines.md
+    shp: data/build/transmission_hifld.gpkg
+
+  hifld-substations:
+    doc: docs/layers/hifld-substations.md
+    geojson_gz: data/layers/hifld_substations.geojson.gz
+    csv_only: true
+
+  osm-transmission-lines:
+    doc: docs/layers/osm-transmission-lines.md
+    shp: data/build/transmission_lines.gpkg
+
+  osm-substations:
+    doc: docs/layers/osm-substations.md
+    files:
+      osm-substations-points:
+        geojson_gz: data/layers/osm_substations_points.geojson.gz
+        csv_only: true
+      osm-substations-polygons:
+        geojson_gz: data/layers/osm_substations_polygons.geojson.gz
+
+  ogf-planned-transmission:
+    skip: true  # no redistribution; users download from ourgridfuture.org
+
+  wecc-paths:
+    doc: docs/layers/wecc-paths.md
+    files:
+      # points + interface-highlight corridors (isCorridor:true), as hosted
+      wecc-paths:
+        geojson_gz: data/layers/wecc_paths.geojson.gz
+      # highlighted transmission-line geometries
+      wecc-path-lines:
+        geojson_gz: data/layers/wecc_path_lines.geojson.gz
+
+  # ── Generators ────────────────────────────────────────────────────────────
+
+  eia-generators:
+    doc: docs/layers/eia-generators.md
+    geojson_gz: data/layers/eia_generators.geojson.gz
+    csv_only: true
+
+  osm-generators:
+    doc: docs/layers/osm-generators.md
+    csv: data/build/generator_osm.csv
+    lat_col: lat
+    lon_col: lon
+    csv_only: true
+
+  osm-plants:
+    doc: docs/layers/osm-plants.md
+    files:
+      osm-plants-points:
+        geojson_gz: data/layers/osm_plants_points.geojson.gz
+        csv_only: true
+      osm-plants-polygons:
+        geojson_gz: data/layers/osm_plants_polygons.geojson.gz
+
+  # ── Pipelines ─────────────────────────────────────────────────────────────
+
+  hifld-natgas:
+    doc: docs/layers/hifld-natgas.md
+    files:
+      hifld-natgas-lines:
+        shp: data/build/hifld_natgas_lines.gpkg
+      hifld-natgas-points:
+        geojson_gz: data/layers/hifld_natgas_points.geojson.gz
+        csv_only: true
+
+  osm-pipelines:
+    doc: docs/layers/osm-pipelines.md
+    files:
+      osm-pipelines-lines:
+        shp: data/build/pipeline_routes.gpkg
+      osm-pipelines-points:
+        geojson_gz: data/layers/osm_pipelines_points.geojson.gz
+        csv_only: true
+
+  eia-petroleum:
+    doc: docs/layers/eia-petroleum-pipelines.md
+    files:
+      eia-crude-pipelines:
+        geojson_gz: data/layers/eia_crude_pipelines.geojson.gz
+      eia-product-pipelines:
+        geojson_gz: data/layers/eia_product_pipelines.geojson.gz
+
+  # ── Renewable Resources ───────────────────────────────────────────────────
+
+  nlr-wind-100m:
+    doc: docs/layers/nlr-wind-100m.md
+    tif: data/build/nlr_wind_100m.tif
+
+  gsa-solar-pvout:
+    doc: docs/layers/gsa-solar-pvout.md
+    tif: data/build/gsa_solar_pvout.tif
+
+  ihfc-geo-heatflow:
+    doc: docs/layers/ihfc-geo-heatflow.md
+    tif: data/build/ihfc_geo_heatflow.tif
+
+  nrel-hydrothermal-points:
+    doc: docs/layers/nrel-hydrothermal-points.md
+    geojson_gz: data/layers/nrel_hydrothermal_points.geojson.gz
+    csv_only: true
+
+  # ── Land ──────────────────────────────────────────────────────────────────
+
+  padus-protected-lands:
+    skip: true  # too large to redistribute; users download from the USGS ScienceBase link
+
+  tribal-lands:
+    doc: docs/layers/tribal-lands.md
+    shp: data/build/tribal_lands.gpkg
+
+  crithab:
+    skip: true  # no redistribution; users link out to ECOS (local pmtiles built by extract_crithab.py)
+
+  # ── Regions ───────────────────────────────────────────────────────────────
+
+  hifld-regions:
+    doc: docs/layers/hifld-regions.md
+    files:
+      nerc-regions:
+        shp: data/build/nerc_regions.gpkg
+      control-areas:
+        shp: data/build/control_areas.gpkg
+      retail-territories:
+        shp: data/build/retail_territories.gpkg
+
+  railroads:
+    doc: docs/layers/railroads.md
+    geojson: data/raw/railroads/narn_rail_lines.geojson
+
+  # ── Load ──────────────────────────────────────────────────────────────────
+
+  osm-datacenters:
+    doc: docs/layers/osm-datacenters.md
+    geojson_gz: data/layers/osm_datacenters.geojson.gz
+    csv_only: true
+
+  worldpop-pop-density:
+    doc: docs/layers/worldpop-pop-density.md
+    tif: data/build/worldpop_pop_density.tif

@@ -1,0 +1,20 @@
+# gdaldem color-relief ramp for WorldPop 2020 population density, log10(1+ppl/km²).
+# Columns: value  R  G  B  A   — alpha baked in; plain `raster` layer in MapLibre.
+# Input values are log10(1+population_density_per_km²), so the range is:
+#   0     → 0 ppl/km² (no data / ocean)
+#   0.3   → ~1 ppl/km²   (very sparse)
+#   1.0   → ~9 ppl/km²   (rural)
+#   2.0   → ~99 ppl/km²  (suburban)
+#   3.0   → ~999 ppl/km² (urban)
+#   4.0   → ~9,999 ppl/km² (dense urban)
+#   4.7   → ~50,000 ppl/km² (very dense — clamp)
+# Ramp: transparent → amber → orange → red → dark red.
+# MUST stay in sync with POP_RAMP_STOPS / POP_LOG_MAX in assets/layers.js.
+nv    0    0    0    0
+0     0    0    0    0
+0.3 255  247  188   15
+1.0 254  217  142   80
+2.0 253  141   60  160
+3.0 227   74   51  210
+4.0 189    0   38  240
+4.7  80    0    0  255

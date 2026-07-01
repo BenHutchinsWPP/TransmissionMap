@@ -1,0 +1,14 @@
+# gdaldem color-relief ramp for USFS Wildfire Hazard Potential (classified, 2023).
+# Categorical raster, values 1-7. Pixels are exact integers so color-relief
+# yields each class's exact color (no meaningful interpolation). Colors are the
+# official WHP symbology (WHP2023_GISDataSymbology.xlsx). Columns: value R G B A.
+# Keep in sync with the static legend in index.html (#whpLegend).
+nv    0    0    0    0     # NoData (255) — transparent
+0     0    0    0    0     # background — transparent
+1    56  168    0  255     # Very Low      #38A800
+2   209  255  115  255     # Low           #D1FF73
+3   255  255    0  255     # Moderate      #FFFF00
+4   255  170    0  255     # High          #FFAA00
+5   255    0    0  255     # Very High     #FF0000
+6   178  178  178  255     # Non-burnable  #B2B2B2
+7     0  112  255  255     # Water         #0070FF

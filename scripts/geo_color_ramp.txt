@@ -1,0 +1,9 @@
+# gdaldem color-relief ramp for IHFC heat flow (mW/m²).
+# nv=NoData transparent. Ramp: transparent→yellow→orange→red over 0-150 mW/m².
+# Values above 150 clamp to dark red. Sync with GEO_RAMP_STOPS in assets/layers.js.
+nv   0   0   0   0
+0   255 255 204   0
+40  254 217 142 120
+80  253 141  60 190
+120 240  59  32 225
+150 189   0  38 250

@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TransmissionMap — North American Energy Infrastructure</title>
+  <link href="assets/style.css" rel="stylesheet">
+  <link rel="icon" type="image/webp" href="/assets/WPP-Logo-Circle.webp">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <header>
+      <div class="brand">
+        <a href="https://www.westernpowerpool.org/" target="_blank" rel="noopener">
+          <img id="logo" src="assets/WPP-Logo-Circle.webp" alt="WPP">
+        </a>
+        <h1 class="truncate">TransmissionMap</h1>
+      </div>
+
+      <!-- ── Edit menubar ──────────────────────────────────────────────────── -->
+      <nav class="menubar" id="menubar">
+        <div class="menu-wrap">
+          <button class="menu-btn" id="menuFileBtn" type="button" aria-haspopup="true" aria-expanded="false">File ▾</button>
+          <div class="dropdown menu-dropdown" id="menuFileDropdown" hidden role="menu">
+            <button class="menu-item" data-action="file-open" type="button">Open…</button>
+            <button class="menu-item" data-action="save-geojson" type="button">Save as GeoJSON…</button>
+            <button class="menu-item" data-action="save-kml" type="button">Save as KML…</button>
+          </div>
+        </div>
+        <div class="mode-toggle" role="group" aria-label="Map mode">
+          <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button">View</button>
+          <button class="mode-btn" id="modeEditBtn" data-mode="edit" type="button">Edit</button>
+        </div>
+        <button class="menu-btn measure-btn" id="measureBtn" type="button"
+                aria-pressed="false" title="Measure linear distance">📏 Measure</button>
+        <!-- Edit-only controls last so toggling edit/view never reflows the buttons above -->
+        <div class="menu-wrap">
+          <button class="menu-btn" id="menuAddBtn" type="button" aria-haspopup="true" aria-expanded="false" hidden>Add ▾</button>
+          <div class="dropdown menu-dropdown" id="menuAddDropdown" hidden role="menu">
+            <button class="menu-item" data-action="add-point"   type="button">Point</button>
+            <button class="menu-item" data-action="add-line"    type="button">Line</button>
+            <button class="menu-item" data-action="add-polygon" type="button">Polygon</button>
+          </div>
+        </div>
+        <span class="color-picker" id="drawColorPicker" data-target="default"
+              title="Default color for new drawings" hidden></span>
+      </nav>
+
+      <!-- Selected-object metrics (lat/long · length · area) -->
+      <div class="feature-info" id="featureInfo" hidden></div>
+
+      <!-- Hidden file input for File > Open -->
+      <input type="file" id="fileOpenInput" accept=".geojson,.kml,.kmz,.csv" hidden>
+
+      <div class="header-actions">
+
+        <!-- Open With dropdown -->
+        <div class="open-with-wrap" id="openWithWrap">
+          <button class="open-with-btn" id="openWithBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            Open with ▾
+          </button>
+          <div class="dropdown open-with-menu" id="openWithMenu" hidden role="menu">
+            <!-- links injected by ui.js — hrefs are set fresh each time the menu opens -->
+          </div>
+        </div>
+
+        <button class="info-button" id="infoButton" type="button" aria-label="Data credits">i</button>
+      </div>
+    </header>
+
+    <!-- ── Map + floating UI ──────────────────────────────────────────────── -->
+    <div class="map-container">
+      <div id="map"></div>
+
+      <!-- Address / place geocoder — top left -->
+      <div class="geocoder" id="geocoder">
+        <div class="geocoder-wrap">
+          <input id="geocoderInput" type="search" placeholder="🔍 Search addresses…"
+                 autocomplete="off" spellcheck="false">
+          <div class="dropdown geocoder-results" id="geocoderResults" hidden></div>
+        </div>
+      </div>
+
+      <!-- Layers panel — top right -->
+      <div class="layers-panel" id="layersPanel">
+        <div class="layers-header">
+          <div class="layers-tabs">
+            <button class="layers-tab layers-tab--active" data-tab="map-layers" type="button">Map Layers</button>
+            <button class="layers-tab" data-tab="my-data" type="button">My Data</button>
+          </div>
+          <button class="icon-btn close-btn" id="closeLayers" type="button" aria-label="Close layers panel">×</button>
+        </div>
+
+        <!-- Tab pane: Map Layers -->
+        <div class="tab-pane" id="tab-map-layers">
+
+        <!-- Feature search -->
+        <div class="panel-search">
+          <div class="panel-search-wrap">
+            <input id="searchInput" type="search" placeholder="Search features…"
+                   autocomplete="off" spellcheck="false">
+            <div class="dropdown search-results" id="searchResults" hidden></div>
+          </div>
+        </div>
+
+        <!-- Reset all layer toggles, filters, modes + basemap to defaults -->
+        <div class="panel-toolbar">
+          <button type="button" class="reset-layers-btn" id="resetLayersBtn"
+                  title="Restore every layer's visibility, filters, MW/year ranges, display mode and basemap to defaults">
+            ↺ Reset layers
+          </button>
+        </div>
+
+        <!-- Scrollable layer groups -->
+        <div class="layers-body">
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> Base Map</div>
+            <div class="collapsible-content basemap-cols">
+            <div class="basemap-col">
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="street" checked> Street
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="light"> Light
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="dark"> Dark
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="voyager"> Voyager
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="topo"> Topo
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="basemap" value="aerial"> Aerial
+            </label>
+            </div>
+            <div class="basemap-col">
+            <label class="basemap-radio">
+              <input type="radio" name="projection" value="mercator" checked> Flat
+            </label>
+            <label class="basemap-radio">
+              <input type="radio" name="projection" value="globe"> Globe
+            </label>
+            <hr style="border: none; border-top: 1px solid var(--panel-border); margin: 8px 0 6px 0;">
+            <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);">
+              <input type="checkbox" id="dataCounterToggle"> Data Counter
+            </label>
+            </div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 〰 Transmission</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-transmission"></div>
+            <div id="layer-rows-substations"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title-row">
+              <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⚡ Generators</div>
+              <div class="section-filter-btns">
+                <button class="section-filter-btn" id="genMwFilterBtn" title="Filter by MW size">▾</button>
+              </div>
+            </div>
+            <div class="collapsible-content">
+            <div class="section-filter-panel" id="genMwFilterPanel" hidden>
+              <div class="mw-slider-wrap">
+                <div class="mw-slider-labels">
+                  <input type="number" class="mw-text-input" id="mwMinInput"
+                         min="0" max="10000" step="10" value="0" placeholder="0">
+                  <span class="mw-dash">—</span>
+                  <input type="number" class="mw-text-input" id="mwMaxInput"
+                         min="0" max="10000" step="10" placeholder="No max">
+                  <span class="mw-unit">MW</span>
+                </div>
+                <div class="mw-slider-track-wrap">
+                  <div class="mw-slider-bg"></div>
+                  <div class="mw-slider-range" id="mwSliderRange"></div>
+                  <input type="range" class="mw-slider" id="mwSliderMin"
+                         min="0" max="4000" step="1" value="0">
+                  <input type="range" class="mw-slider" id="mwSliderMax"
+                         min="0" max="4000" step="1" value="4000">
+                </div>
+                <div class="mw-slider-ticks">
+                  <span>1</span>
+                  <span>10</span>
+                  <span>100</span>
+                  <span>1k</span>
+                  <span>10k+</span>
+                </div>
+              </div>
+            </div>
+            <div id="layer-rows-generators"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⛽ Fuel Delivery</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-pipelines"></div>
+            <div id="layer-rows-rail"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🌱 Potential</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-renewable"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏙 Load</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-load"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏞 Land</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-land"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🗺 Regions</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-regions"></div>
+            </div>
+          </div>
+
+          <div class="layer-section collapsed" data-collapsible>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🔥 Hazards</div>
+            <div class="collapsible-content">
+            <div id="layer-rows-hazards"></div>
+            </div>
+          </div>
+        </div>
+
+        </div><!-- /.tab-pane#tab-map-layers -->
+
+        <!-- Tab pane: My Data -->
+        <div class="tab-pane" id="tab-my-data" hidden>
+          <div class="my-data-body" id="myDataBody"></div>
+        </div>
+
+      </div>
+
+      <!-- Layers panel re-open button (shown when panel is closed) -->
+      <button class="layers-toggle-btn" id="layersToggleBtn" type="button" hidden>
+        🗂 Layers
+      </button>
+
+      <!-- Legends — bottom left -->
+      <div class="legend-container" id="legendContainer" hidden>
+        <div class="legend collapsed" id="voltageLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="voltageLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="fuelLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="fuelLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="pipelineLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline Points</span></div>
+          <div class="legend-items collapsible-content" id="pipelineLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="crithabLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="crithabLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="padusLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="padusLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="tribalLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="tribalLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="ogfStatusLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Project status</span></div>
+          <div class="legend-items collapsible-content" id="ogfStatusLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="natgasLineLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline type</span></div>
+          <div class="legend-items collapsible-content" id="natgasLineLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="natgasPtsLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Facility type</span></div>
+          <div class="legend-items collapsible-content" id="natgasPtsLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="substanceLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline substance</span></div>
+          <div class="legend-items collapsible-content" id="substanceLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="nercLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="nercLegendItems"></div>
+        </div>
+        <div class="legend collapsed" id="retailLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-items collapsible-content" id="retailLegendItems"></div>
+        </div>
+        <!-- HMS smoke detection live legend -->
+        <div class="legend collapsed" id="smokeLiveLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">HMS Smoke Detection</span><span class="legend-age" id="smokeAge"></span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#ffd700;opacity:0.7"></span><span>Light smoke</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ff8c00;opacity:0.8"></span><span>Medium smoke</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#8b4513;opacity:0.9"></span><span>Heavy smoke</span></div>
+            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="smokeDataTimestamp">Smoke data loading…</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">NOAA HMS satellite-detected smoke polygons, updated every 3 hours.</div>
+          </div>
+        </div>
+        <!-- Active wildfire live legend -->
+        <div class="legend collapsed" id="wildfireLiveLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Active Wildfire</span><span class="legend-age" id="wildfireAge"></span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:linear-gradient(to right,rgba(255,200,0,0.7),rgba(255,100,0,0.9),rgba(180,0,0,1))"></span><span>Fire hotspot intensity (FRP)</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#cc2200;outline:2px solid #cc2200;outline-offset:1px"></span><span>Perimeter — active (0% contained)</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ff8800;outline:2px solid #ff8800;outline-offset:1px"></span><span>Perimeter — partially contained</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#22aa44;outline:2px solid #22aa44;outline-offset:1px"></span><span>Perimeter — fully contained</span></div>
+            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="wildfireDataTimestamp">Data loading…</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">Canada perimeters: CWFIS estimates (extent only, containment unknown).</div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">NASA FIRMS VIIRS (24h) + NIFC WFIGS perimeters.<br>Not for firefighting decisions.</div>
+          </div>
+        </div>
+        <!-- Named fire incidents legend -->
+        <div class="legend collapsed" id="incidentLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Named Incidents</span><span class="legend-age" id="incidentAge"></span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#cc0000;border:2px solid #fff;border-radius:50%"></span><span>WF — Wildfire</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#8b6914;border:2px solid #fff;border-radius:50%"></span><span>RX — Prescribed Fire</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">NIFC WFIGS human-reported fire incidents. Dot size = acreage.</div>
+            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="incidentDataTimestamp"></span></div>
+          </div>
+        </div>
+        <!-- Static categorical legend — WHP raster has baked colors, no per-class filter -->
+        <div class="legend collapsed" id="whpLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Wildfire Hazard Potential</span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#38A800"></span><span>Very Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#D1FF73"></span><span>Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FFFF00"></span><span>Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FFAA00"></span><span>High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FF0000"></span><span>Very High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#B2B2B2"></span><span>Non-burnable</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#0070FF"></span><span>Water</span></div>
+          </div>
+        </div>
+        <!-- Data usage counter legend -->
+        <div class="legend" id="dataCounterLegend">
+          <div class="legend-title">
+            <span class="legend-title-label">Data Usage</span>
+          </div>
+          <div class="legend-items">
+            <div class="legend-item">
+              <span class="legend-swatch" style="background:var(--accent)"></span>
+              <span id="dataUsageVal" style="font-family:monospace;font-weight:600">0.00 KB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.map-container -->
+
+  </div><!-- /.app -->
+
+  <!-- Disclaimer dialog (first visit only) -->
+  <dialog class="disclaimer-dialog" id="disclaimerDialog">
+    <div class="disclaimer-content">
+      <div class="disclaimer-header">
+        <h2>TransmissionMap</h2>
+      </div>
+      <p class="disclaimer-body">
+        This unofficial, community-built map of the North American energy infrastructure comprises data 
+        aggregated from public sources and <strong>may be incomplete, outdated, or inaccurate.</strong>
+        It is provided for educational and informational purposes only.
+      </p>
+      <p class="disclaimer-body">
+        <strong>Do not use for engineering, operational, safety, or regulatory decisions.</strong>
+        No warranty of any kind is provided.
+      </p>
+      <p class="disclaimer-body">
+        <strong>THIS MAP AND ALL ASSOCIATED DATA ARE PROVIDED "AS IS" AND "AS AVAILABLE." 
+          NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, IS PROVIDED. IN NO EVENT SHALL THE 
+          PROVIDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF 
+          OR RELIANCE ON THIS MAP OR ITS DATA.</strong>
+      </p>
+      <p class="disclaimer-body">
+        See the <a href="https://github.com/BenHutchinsWPP/TransmissionMap#readme" target="_blank" rel="noopener">README on GitHub</a> for data sources, limitations, and licensing.
+      </p>
+      <div class="disclaimer-footer">
+        <button class="disclaimer-accept" id="disclaimerAccept" type="button">I understand — Continue</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Wildfire staleness cutoff dialog (auto-shown when live fire data is too old) -->
+  <dialog class="disclaimer-dialog wildfire-stale-dialog" id="wildfireStaleDialog">
+    <div class="disclaimer-content">
+      <div class="disclaimer-header">
+        <h2>⚠ Live wildfire data is stale</h2>
+      </div>
+      <p class="disclaimer-body">
+        The live wildfire data is <strong id="wildfireStaleAge">—</strong> old —
+        beyond the safe limit. The hourly feed may be broken or delayed, so the
+        <strong>active fire, smoke, and incident layers have been turned off</strong>
+        to avoid showing dangerously outdated fire positions.
+      </p>
+      <p class="disclaimer-body">
+        Do not rely on stale fire data for any safety or evacuation decision.
+        It will re-enable automatically once a fresh update arrives.
+      </p>
+      <div class="disclaimer-footer wildfire-stale-footer">
+        <button class="disclaimer-dismiss" id="wildfireStaleDismiss" type="button">Keep disabled</button>
+        <button class="disclaimer-accept disclaimer-danger" id="wildfireStaleReenable" type="button">I understand the risk — re-enable</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Credits dialog -->
+  <dialog class="credits-dialog" id="creditsDialog">
+    <div class="credits-content">
+      <div class="credits-header">
+        <h2>Data Credits</h2>
+        <button id="closeCredits" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="credits-disclaimer">Educational and informational use only. Data may be incomplete, outdated, or inaccurate. No warranty. Do not use for operational, safety, or regulatory decisions. Full attribution and licensing: <a href="https://github.com/BenHutchinsWPP/TransmissionMap/blob/main/docs/data-sources.md" target="_blank" rel="noopener">data-sources.md</a>.</p>
+      <ul>
+        <li data-source-credit="osm"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> via <a href="https://download.geofabrik.de/" target="_blank" rel="noopener">Geofabrik</a> — May 2026 — ODbL</li>
+        <li><a href="https://source.coop/seerai/hifld" target="_blank" rel="noopener">HIFLD / DHS CISA</a> via source.coop — public domain:
+          <span data-source-credit="hifld-power"><a href="https://source.coop/seerai/hifld/transmission-lines/transmission-lines/transmission-lines.parquet" target="_blank" rel="noopener">Transmission Lines</a></span>;
+          <span data-source-credit="hifld-substations"><a href="https://www.arcgis.com/home/item.html?id=ef04dc8231c9491e804a008e5faa7d3a" target="_blank" rel="noopener">Substations</a></span>;
+          <span data-source-credit="hifld-natgas"><a href="https://source.coop/seerai/hifld/natural-gas-interstate-and-intrastate-pipelines/naturalgas-interintrastate-pipelines-us-eia/naturalgas-interintrastate-pipelines-us-eia.parquet" target="_blank" rel="noopener">Nat Gas Pipelines</a>,
+          <a href="https://source.coop/seerai/hifld/hydrocarbon-gas-liquid-pipelines/hgl-pipelines-us-eia/hgl-pipelines-us-eia.parquet" target="_blank" rel="noopener">HGL Pipelines</a>,
+          <a href="https://source.coop/seerai/hifld/liquified-natural-gas-lng-import-and-export-terminals/lng-import-and-export-terminals/lng-import-and-export-terminals.parquet" target="_blank" rel="noopener">LNG Terminals</a>,
+          <a href="https://source.coop/seerai/hifld/above-ground-lng-storage-facilities/above-ground-lng-storage-facilities/above-ground-lng-storage-facilities.parquet" target="_blank" rel="noopener">LNG Storage</a>,
+          <a href="https://source.coop/seerai/hifld/natural-gas-underground-storage/natural-gas-underground-storage/natural-gas-underground-storage.parquet" target="_blank" rel="noopener">Underground Storage</a>,
+          <a href="https://source.coop/seerai/hifld/natural-gas-processing-plants/natural-gas-processing-plant/natural-gas-processing-plant.parquet" target="_blank" rel="noopener">Processing Plants</a>,
+          <a href="https://source.coop/seerai/hifld/pol-terminals/pol-terminals/pol-terminals.parquet" target="_blank" rel="noopener">POL Terminals</a>,
+          <a href="https://source.coop/seerai/hifld/natural-gas-trading-hubs/market-hubs-natural-gas/market-hubs-natural-gas.parquet" target="_blank" rel="noopener">Trading Hubs</a>,
+          <a href="https://source.coop/seerai/hifld/peak-shaving-facilities/peak-shaving-facilities/peak-shaving-facilities.parquet" target="_blank" rel="noopener">Peak Shaving</a>,
+          <a href="https://source.coop/seerai/hifld/border-crossings---natural-gas/bordercrossing-naturalgas-eia/bordercrossing-naturalgas-eia.parquet" target="_blank" rel="noopener">Border Crossings</a>,
+          <a href="https://source.coop/seerai/hifld/strategic-petroleum-reserves/strategic-petroleum-reserve/strategic-petroleum-reserve.parquet" target="_blank" rel="noopener">Strategic Petroleum Reserves</a></span>;
+          Regions: <span data-source-credit="hifld-nerc"><a href="https://source.coop/seerai/hifld/nerc-regions/nerc-regions-subregions/nerc-regions-subregions.parquet" target="_blank" rel="noopener">NERC</a></span>,
+          <span data-source-credit="hifld-ba"><a href="https://source.coop/seerai/hifld/control-areas/control-areas/control-areas.parquet" target="_blank" rel="noopener">Balancing Authorities</a></span>,
+          <span data-source-credit="hifld-retail"><a href="https://source.coop/seerai/hifld/electric-retail-service-territories/retail-service-territories/retail-service-territories.parquet" target="_blank" rel="noopener">Retail Territories</a></span>
+        </li>
+        <li data-source-credit="hifld-tribal"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line 2025</a> — AIANNH — public domain</li>
+        <li data-source-credit="ogf"><a href="https://ourgridfuture.org" target="_blank" rel="noopener">Our Grid Future</a> / Horizon Energy Systems — March 2026 — non-commercial use</li>
+        <li data-source-credit="eia"><a href="https://www.eia.gov/electricity/data/eia860/" target="_blank" rel="noopener">EIA Form 860</a> — 2025 early-release — public domain</li>
+        <li data-source-credit="usgs-padus"><a href="https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-download" target="_blank" rel="noopener">USGS PAD-US 4.1</a> — Jun 2026 — public domain. <strong>Display note:</strong> features are filtered for aesthetic and display clarity (selected categories only); this is not a complete or regulatory representation. Full dataset available at the linked USGS site.</li>
+        <li data-source-credit="nlr-wind"><a href="https://www.nlr.gov/grid/wind-toolkit.html" target="_blank" rel="noopener">NREL/NLR WIND Toolkit</a> — 100 m wind speed — public domain</li>
+        <li data-source-credit="global-solar-atlas"><a href="https://energydata.info/dataset/world-photovoltaic-power-potential-pvout-gis-data-global-solar-atlas" target="_blank" rel="noopener">Global Solar Atlas 2.0</a> / Solargis / World Bank — PVOUT — CC BY 4.0</li>
+        <li data-source-credit="ihfc-gfz"><a href="https://doi.org/10.5880/fidgeo.2024.014" target="_blank" rel="noopener">IHFC / GFZ Data Services</a> — Heat Flow 2024 v2026.03 — CC BY 4.0</li>
+        <li data-source-credit="nrel-doe-hydrothermal"><a href="https://gdr.openei.org/submissions/842" target="_blank" rel="noopener">NREL/DOE Geothermal Data Repository</a> — 2016 — public domain</li>
+        <li data-source-credit="worldpop"><a href="https://www.worldpop.org/geodata/summary?id=24798" target="_blank" rel="noopener">WorldPop / Univ. Southampton</a> — 2020, 1 km, scaled to UN totals — CC BY 4.0</li>
+        <li data-source-credit="fws-crithab"><a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html" target="_blank" rel="noopener">USFWS ECOS Critical Habitat</a> — live tile service — public domain</li>
+        <li data-source-credit="usgs-seismic"><a href="https://earthquake.usgs.gov/arcgis/rest/services/haz/US1hz050_2014/MapServer" target="_blank" rel="noopener">USGS Seismic Hazard Model 2014</a> — live tile service — public domain</li>
+        <li data-source-credit="bts-narn"><a href="https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about" target="_blank" rel="noopener">BTS / FRA NARN</a> — May 2026 — public domain</li>
+        <li data-source-credit="nasa-firms-nifc"><a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS VIIRS</a> (LANCE / ESDIS) + <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a> — active fire detections + perimeters, refreshed hourly — public domain. Not for tactical firefighting.</li>
+        <li data-source-credit="noaa-hms"><a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">NOAA HMS Smoke Detection</a> (OSPO / NESDIS) — satellite smoke polygon analysis, updated every 3 hours — public domain.</li>
+        <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>
+        <li data-source-credit="usgs-nshm"><a href="https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1" target="_blank" rel="noopener">USGS National Seismic Hazard Model</a> — 2018, Peak Ground Acceleration (PGA), 2% in 50yr (≈2475-yr return), Site Class B/C — public domain</li>
+        <li data-source-credit="eia-atlas"><a href="https://atlas.eia.gov/" target="_blank" rel="noopener">EIA U.S. Energy Atlas</a> — crude-oil &amp; petroleum-product pipelines (public domain). Vintage Jan 2020.</li>
+        <li data-source-credit="wecc-paths"><a href="https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf" target="_blank" rel="noopener">WECC Path Rating Catalog</a> — 2026 Public Version (V3, March 2026) — path definitions, ratings &amp; directionality. 🚧 Under construction — layer is a work in progress.</li>
+        <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
+      </ul>
+      <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>
+    </div>
+  </dialog>
+
+  <!-- >>> ADD-LAYER: script-tags — see docs/adding-a-layer.md §11 -->
+  <!-- All assets/*.ts are ES modules bundled by Vite; entry point is src/main.ts -->
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
