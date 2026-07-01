@@ -257,7 +257,11 @@ function showFeaturePicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeatur
 
 export function initPopups() {
   if (!state.map) return;
-  state.popup = new maplibregl.Popup({ closeButton: true, maxWidth: "280px" });
+  // closeOnClick:false — we manage lifecycle in onMapClick (empty-tap removes the
+  // popup). Leaving it true let a touch tap's double-fired click (synthesized +
+  // native) close the popup on the same tap that opened it — popups never showed
+  // on mobile. See onMapClick.
+  state.popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, maxWidth: "280px" });
 
   state.map.on("click", onMapClick);
 
