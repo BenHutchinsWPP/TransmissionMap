@@ -17,7 +17,7 @@ name: Update wildfire data
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour, on the hour
+    - cron: '17 * * * *'  # hourly, offset off the contended top-of-hour slot
   workflow_dispatch:       # manual trigger for testing
 
 # Don't let a slow run race the next hour's force-push; queue instead of overlap.
@@ -42,22 +42,22 @@ jobs:
         run: |
           # USA (CONUS+HI) region files + Canada and Central_America (incl. Mexico)
           # country files. Script dedups across all CSVs, so border overlap is fine.
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/USA_contiguous_and_Hawaii/SUOMI_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv" \
             -o /tmp/snpp.csv
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/USA_contiguous_and_Hawaii/J1_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv" \
             -o /tmp/n20.csv
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Canada_24h.csv" \
             -o /tmp/snpp_ca.csv
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Canada_24h.csv" \
             -o /tmp/n20_ca.csv
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Central_America_24h.csv" \
             -o /tmp/snpp_mx.csv
-          curl -sf \
+          curl -sf --retry 3 --retry-delay 5 --retry-all-errors \
             "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Central_America_24h.csv" \
             -o /tmp/n20_mx.csv
 
