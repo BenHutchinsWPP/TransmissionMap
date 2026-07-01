@@ -107,9 +107,17 @@ function hitBox(e: MapMouseEvent): [maplibregl.PointLike, maplibregl.PointLike] 
   ];
 }
 
+// A mobile tap fires two map `click` events (synthesized touch-click + native).
+// They can land a pixel or two apart, so the edit branch's empty-tap
+// `popup.remove()` could tear down a copy popup the sibling click just opened —
+// popup never appeared. Swallow the second click of a tap. See commit 87664a9.
+let lastClickTime = 0;
 function onMapClick(e: MapMouseEvent) {
   if (state.measure.active) return;
   if (!state.map || !state.popup) return;
+  const now = e.originalEvent.timeStamp || Date.now();
+  if (now - lastClickTime < 350) return;
+  lastClickTime = now;
   const activeLayers = activeClickableLayers();
   if (!activeLayers.length) return;
 
