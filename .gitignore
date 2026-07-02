@@ -73,9 +73,10 @@ data/raw/noaa/
 
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
-# commit the (often large) raw download. Built tiles in data/layers/ ARE tracked.
+# commit the (often large) raw download. Built tiles in data/layers/ are
+# gitignored too — they ship via `make publish-data` → orphan 'data-static' branch.
 
-# Gitignore the generated load layer artifacts (raw .geojson pre-gzip; .geojson.gz is committed)
+# Gitignore the generated load layer artifacts (raw .geojson pre-gzip; only .geojson.gz ships)
 data/load/*.geojson
 # data/load/*.pmtiles
 # data/load/*.i16
@@ -96,11 +97,12 @@ data/downloads/padus-protected-lands.zip
 data/downloads/tribal-lands.zip
 data/downloads/gsa-solar-pvout.zip
 
-# Built layer files and release ZIPs — uploaded to GitHub Releases; not tracked in repo.
+# Built layer files and release ZIPs — published to the orphan 'data-static'
+# branch via `make publish-data` (served from raw.githubusercontent.com); not tracked in repo.
 data/layers/
 data/releases/
 
-# Raw served GeoJSON — committed pre-gzipped as .geojson.gz instead.
+# Raw served GeoJSON — shipped pre-gzipped as .geojson.gz instead.
 # (build_tiles.sh runs gzip_served_geojson; the app decompresses client-side.)
 # These globs ignore *.geojson but NOT *.geojson.gz, which is what ships.
 data/substations/*.geojson

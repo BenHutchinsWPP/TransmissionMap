@@ -23,7 +23,7 @@ provider, layer, and pipeline.
 | **Vintage** | Rolling — VIIRS last 24 h; US perimeters/incidents = WFIGS *Current*; CA perimeters = CWFIS M3 *current* (daily); smoke = latest available HMS day |
 | **License** | Public domain (US Government work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105)); CWFIS under [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution) |
 | **Served (prod)** | `wildfire_live.geojson` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok; ~5 min CDN lag). URL in `assets/constants.ts` → `DATA.wildfire_live`. |
-| **Served (dev)** | Local `data/layers/wildfire_live.geojson` — a snapshot **is committed to `main`** (offline-dev seed; no automation refreshes it, so it's frozen at whenever it was last committed). Run `make wildfire-dev` to pull fresh fire data. |
+| **Served (dev)** | Local `data/layers/wildfire_live.geojson` — **not in git** (`data/layers/` is gitignored); run `make wildfire-dev` to pull fresh fire data before local dev. |
 | **Built by** | `scripts/firms_csv_to_geojson.py` (merges all feeds: VIIRS hotspots, NIFC + CWFIS perimeters, NIFC incidents, HMS smoke) |
 | **Refresh** | `.github/workflows/wildfire-data.yml` — hourly `workflow_dispatch` from cron-job.org at `:05` (GitHub's own cron drops fires under load; kept as `:33` fallback). Force-pushes an amended commit to the `data` branch (no history growth). `main` is never touched. The cron-job.org job authenticates with a fine-grained PAT (Actions R/W, this repo only) that expires yearly. |
 

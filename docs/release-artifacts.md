@@ -45,6 +45,8 @@ These live under `data/` and must be present for the app to function.
 
 These live under `data/releases/` as one ZIP per layer, served as download links in
 the layer panel (`downloads.zip` in the registry → `assets/ui/ui-layer-rows.ts`).
+In prod they are fetched from the orphan `data-static` branch via
+`raw.githubusercontent.com` (pushed by `make publish-data`), not from `main` or Pages.
 `build_releases.py` builds them from `scripts/release_manifest.yaml`; each ZIP bundles
 the data (GeoJSON + CSV for vectors, or a COG GeoTIFF for rasters), the layer doc
 (`<layer-id>.txt`, via pandoc), and `disclaimer.txt`. Sizes vary and are not pinned here.

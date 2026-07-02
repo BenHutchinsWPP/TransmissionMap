@@ -22,6 +22,10 @@ make pipeline
 
 # 4. Build PMTiles and GeoJSON for the app → data/layers/
 make tiles
+
+# 5. (deploying) Push data/layers/ + data/releases/ to the orphan 'data-static'
+#    branch that prod fetches from — local dev reads data/layers/ directly
+make publish-data
 ```
 
 HIFLD and EIA reference data are auto-downloaded on first run to `data/raw/hifld/` and
@@ -88,10 +92,18 @@ Two on-disk formats are served to the app, picked per layer by geometry profile:
 - **Gzipped GeoJSON** (`.geojson.gz`) — for *many-small* geometries (substation / plant
   points & polygons, EIA generators, pipeline points). These tile *poorly* (tens of
   thousands of tiny polygons replicate across zoom levels and *grow* as PMTiles), but
-  gzip crushes GeoJSON's repetitive structure ~8×. Files are committed **pre-gzipped**;
+  gzip crushes GeoJSON's repetitive structure ~8×. Files are shipped **pre-gzipped**;
   the app fetches the `.gz` and decompresses in-browser via `DecompressionStream`
   (`fetchGeojson` in `assets/layers/layer-init.ts`). `build_tiles.py` gzips all served
   GeoJSON as its final step.
+
+Neither format lives in `main` — `data/layers/` and `data/releases/` are gitignored.
+`make publish-data` (`scripts/publish_data.sh`) force-pushes them as a single orphan
+commit to the **`data-static`** branch, and prod fetches from
+`raw.githubusercontent.com/.../data-static/` (CORS-enabled; see the `DATA_ORIGIN` logic
+in `assets/constants.ts`). The GitHub Pages deploy (`.github/workflows/deploy.yml`)
+builds only the app bundle — it ships no data. The live wildfire feed uses a separate
+orphan `data` branch on the same pattern (see `layers/wildfire-live.md`).
 
 The per-layer docs in [`layers/`](layers/) record which format each layer uses and the
 tippecanoe zoom range applied.

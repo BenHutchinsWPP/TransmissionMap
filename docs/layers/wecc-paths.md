@@ -90,8 +90,8 @@ located paths; the rest are left for manual fill-in. Hard cases (long DC
 interties, odd voltages, point-defined paths like PDCI at NOB) are handled by
 `LINE_OVERRIDES` / `COORD_OVERRIDES` — this is a manually-maintained layer.
 
-Some highlights are **hand-added by OSM way id**, appended straight to the
-committed `wecc_path_lines.geojson.gz` (not produced by the matcher): the way
+Some highlights are **hand-added by OSM way id**, appended straight to
+`wecc_path_lines.geojson.gz` (not produced by the matcher): the way
 geometry is pulled from Overpass and stored as a `source: "osm"` feature with
 `key` = the OSM way id (`score: 3.0` flags these manual entries). Paths added
 this way include 27 (Adelanto–Intermountain HVDC), 32, 38, 40, 71, 75, and 90
@@ -102,11 +102,15 @@ kv, wecc_line, score:3.0}` — no rebuild needed.
 
 ## Caveats
 
-- **The committed `.gz` files are hand-maintained — do not blindly rebuild.**
+- **The shipped `.gz` files are hand-maintained — do not blindly rebuild.**
   `wecc_paths.geojson.gz` and `wecc_path_lines.geojson.gz` carry manual edits the
   parser knows nothing about and would silently drop: digitized corridors, moved
   markers, `number:`-prefixed / hyphen-normalized names, notes, and hand-added
   OSM highlight lines. Edit them in place (decompress, change, `gzip` back).
+  They are **not in `main`** (`data/layers/` is gitignored) — the canonical
+  copies live on the orphan `data-static` branch; if your local `data/layers/`
+  lacks them, recover from there before editing, and re-run `make publish-data`
+  after.
   `parse_paths.py` refuses to run without `--force` for this reason; use it only
   to regenerate raw catalog points from the PDF, then re-merge the manual edits.
 - **Source files are private.** The catalog PDF and `Interface.csv` live in the

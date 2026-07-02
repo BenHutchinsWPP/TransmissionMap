@@ -27,7 +27,7 @@ data/build/<id>.{csv,shp,geojson}    cleaned, selected columns
    │  make tiles  →  tile_manifest.yaml block          (manifest layers)
    │  make <target>  →  build_*.sh                     (rasters)
    ▼
-data/layers/<id>.{geojson.gz,pmtiles}    served to the app   (tracked in git)
+data/layers/<id>.{geojson.gz,pmtiles}    served to the app   (gitignored; published via make publish-data)
    │
    ▼
 frontend wiring  →  adding-a-layer.md
@@ -176,10 +176,11 @@ duplicate that here.
 [ ] Source recorded: URL, license, vintage, format  (→ data-sources.md)
 [ ] scripts/extract_or_build.*    — copy nearest sibling; header comment; → data/build/<id>.*
 [ ] data/raw/<source>/            — auto-download, or document manual placement
-[ ] .gitignore                    — ignore data/raw/<source>/  (NOT ignored by default; see >>> ADD-LAYER: gitignore. data/layers/ IS tracked)
+[ ] .gitignore                    — ignore data/raw/<source>/  (NOT ignored by default; see >>> ADD-LAYER: gitignore. data/layers/ and data/releases/ are gitignored too)
 [ ] Makefile                      — pipeline step (manifest) OR standalone target (raster)
 [ ] scripts/tile_manifest.yaml    — one block  (manifest layers only)
 [ ] run: extract script → make tiles → file appears in data/layers/
 [ ] release_manifest.yaml         — download pack, or skip:true if non-redistributable
+[ ] make publish-data             — push data/layers + data/releases → orphan 'data-static' branch (prod host)
 [ ] → continue in adding-a-layer.md for all frontend wiring
 ```

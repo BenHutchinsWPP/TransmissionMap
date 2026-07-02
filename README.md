@@ -24,11 +24,13 @@ Interactive map of US electric transmission infrastructure — lines, substation
 ```bash
 git clone https://github.com/benhutchinswpp/TransmissionMap.git
 cd TransmissionMap
+git restore -s origin/data-static -- data/   # prebuilt map data (not in main)
+npm install
 npm run dev
 # open http://localhost:5173
 ```
 
-The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are committed; `npm run dev` serves locally with hot reload. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md).
+The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from the orphan `data-static` branch via `raw.githubusercontent.com`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md).
 
 ---
 
