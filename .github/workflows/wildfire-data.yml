@@ -17,7 +17,10 @@ name: Update wildfire data
 
 on:
   schedule:
-    - cron: '17 * * * *'  # hourly, offset off the contended top-of-hour slot
+    # GitHub schedule events are best-effort and get delayed/dropped under load
+    # (observed: 1 of 7 hourly fires on 2026-07-01). Fire 3×/hour so surviving
+    # events still give ~hourly data; the no-change guard makes extra runs free.
+    - cron: '13,33,53 * * * *'
   workflow_dispatch:       # manual trigger for testing
 
 # Don't let a slow run race the next hour's force-push; queue instead of overlap.
