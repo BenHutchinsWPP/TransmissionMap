@@ -8,7 +8,7 @@ export const hazardLayers: LayerDef[] = [
   {
     id:          "wildfire-live",
     urlCode:     "WFL",
-    label:       "Active Wildfire (live)",
+    label:       "Active Wildfire (~24h)",
     group:       "hazards",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#ff4400",
@@ -20,7 +20,7 @@ export const hazardLayers: LayerDef[] = [
   {
     id:          "wildfire-smoke",
     urlCode:     "SMK",
-    label:       "Smoke Detection (live)",
+    label:       "Smoke Detection (~24h)",
     group:       "hazards",
     sourceId:    "noaa-hms",
     swatch:      "#ff8c00",
@@ -32,7 +32,7 @@ export const hazardLayers: LayerDef[] = [
   {
     id:          "wildfire-incidents",
     urlCode:     "WFI",
-    label:       "Named Incidents (live)",
+    label:       "Named Incidents (~24h)",
     group:       "hazards",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#cc0000",

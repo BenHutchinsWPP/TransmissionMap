@@ -138,10 +138,10 @@ export function addWildfireLive() {
     layout: { visibility: wildfireVis },
     paint: {
       "circle-color": [
-        "match", ["get", "confidence"],
-        "h", "#ff2200",
-        "n", "#ff7700",
-        "#ffcc00",
+        "interpolate", ["linear"],
+        ["coalesce", ["to-number", ["get", "age_hours"], null], 24],
+        0, "#ff2200",
+        24, "#ffcc00",
       ],
       "circle-radius": [
         "interpolate", ["linear"], ["to-number", ["get", "frp"], 0],
