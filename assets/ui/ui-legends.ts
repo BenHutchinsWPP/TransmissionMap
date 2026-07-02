@@ -142,10 +142,10 @@ function relAge(tsIso: string): { short: string; level: string; abs: string } {
   });
   const min = Math.max(0, Math.round((Date.now() - then) / 60000));
   const short =
-    min < 1    ? "live"
-    : min < 60   ? `${min}m old`
-    : min < 1440 ? `${Math.round(min / 60)}h old`
-    :              `${Math.round(min / 1440)}d old`;
+    min < 1    ? "just pulled"
+    : min < 60   ? `pulled ${min}m ago`
+    : min < 1440 ? `pulled ${Math.round(min / 60)}h ago`
+    :              `pulled ${Math.round(min / 1440)}d ago`;
   const level = min <= 90 ? "fresh" : min <= 360 ? "aging" : "stale";  // hourly feed: >90m = a cycle missed
   return { short, level, abs };
 }
@@ -157,7 +157,7 @@ function renderLiveAge() {
     const el = document.getElementById(id);
     if (!el) continue;
     el.textContent = short;
-    el.title = abs;
+    el.title = abs + " — when the map last fetched the feeds; observations can be older (see legend note)";
     el.className = "legend-age legend-age--" + level;
   }
   for (const id of ["smokeDataTimestamp", "wildfireDataTimestamp", "incidentDataTimestamp"]) {

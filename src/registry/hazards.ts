@@ -6,18 +6,6 @@ import { SEIS_RAMP_STOPS, SEIS_RAMP_MAX } from '../colors/ramps.js';
 
 export const hazardLayers: LayerDef[] = [
   {
-    id:          "wildfire-smoke",
-    urlCode:     "SMK",
-    label:       "Smoke Detection (live)",
-    group:       "hazards",
-    sourceId:    "noaa-hms",
-    swatch:      "#ff8c00",
-    live:        true,
-    defaultOn:   false,
-    mapLayerIds: ["wildfire-smoke-fill", "wildfire-smoke-line"],
-    downloads: { url: "https://www.ospo.noaa.gov/Products/land/hms.html" },
-  },
-  {
     id:          "wildfire-live",
     urlCode:     "WFL",
     label:       "Active Wildfire (live)",
@@ -28,6 +16,18 @@ export const hazardLayers: LayerDef[] = [
     defaultOn:   false,
     mapLayerIds: ["wildfire-perimeters-fill", "wildfire-perimeters-line", "wildfire-hotspots-heat", "wildfire-hotspots-circle"],
     downloads: { url: "https://firms.modaps.eosdis.nasa.gov/data/active_fire/" },
+  },
+  {
+    id:          "wildfire-smoke",
+    urlCode:     "SMK",
+    label:       "Smoke Detection (live)",
+    group:       "hazards",
+    sourceId:    "noaa-hms",
+    swatch:      "#ff8c00",
+    live:        true,
+    defaultOn:   false,
+    mapLayerIds: ["wildfire-smoke-fill", "wildfire-smoke-line"],
+    downloads: { url: "https://www.ospo.noaa.gov/Products/land/hms.html" },
   },
   {
     id:          "wildfire-incidents",
@@ -42,6 +42,20 @@ export const hazardLayers: LayerDef[] = [
     downloads: { url: "https://data-nifc.opendata.arcgis.com/" },
   },
   {
+    id:           "usfs-wildfire-potential",
+    urlCode:      "WHP",
+    label:        "Wildfire Hazard Potential",
+    group:        "hazards",
+    sourceId:     "usfs-firelab",
+    swatch:       "#FF0000",
+    defaultOn:    false,
+    rasterLayer:  true,
+    mapLayerIds:  ["usfs-wildfire-potential"],
+    downloads: {
+      url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
+    },
+  },
+  {
     id:           "usgs-seismic-pga",
     urlCode:      "PGA",
     label:        "Seismic Hazard (PGA, 2% in 50yr)",
@@ -54,20 +68,6 @@ export const hazardLayers: LayerDef[] = [
     mapLayerIds:  ["usgs-seismic-pga"],
     downloads: {
       url: "https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1",
-    },
-  },
-  {
-    id:           "usfs-wildfire-potential",
-    urlCode:      "WHP",
-    label:        "Wildfire Hazard Potential",
-    group:        "hazards",
-    sourceId:     "usfs-firelab",
-    swatch:       "#FF0000",
-    defaultOn:    false,
-    rasterLayer:  true,
-    mapLayerIds:  ["usfs-wildfire-potential"],
-    downloads: {
-      url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
     },
   },
 ];
