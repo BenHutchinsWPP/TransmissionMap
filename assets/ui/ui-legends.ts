@@ -146,7 +146,9 @@ function relAge(tsIso: string): { short: string; level: string; abs: string } {
     : min < 60   ? `pulled ${min}m ago`
     : min < 1440 ? `pulled ${Math.round(min / 60)}h ago`
     :              `pulled ${Math.round(min / 1440)}d ago`;
-  const level = min <= 90 ? "fresh" : min <= 360 ? "aging" : "stale";  // hourly feed: >90m = a cycle missed
+  // Cron misses of 1–3h are routine and VIIRS obs are hours old anyway — warn
+  // only when meaningfully behind; "stale" aligns with the 6h kill-switch.
+  const level = min <= 180 ? "fresh" : min <= 360 ? "aging" : "stale";
   return { short, level, abs };
 }
 
