@@ -1,8 +1,9 @@
-// ─── Layer visibility toggle + generator display mode ────────────────────────
+// ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
 // Imported by: ui.ts (setLayerVisibility, applyAllGenModes),
-//              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes)
+//              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
 
 import { state } from './state.js';
+import { ogfColorExpr } from '../src/colors/buckets.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { writeUrlState } from './url-state.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
@@ -47,6 +48,24 @@ export function applyAllGenModes() {
   for (const entry of LAYERS) if (entry.heatLayerId) applyGenMode(entry.id);
 }
 
+// ─── OGF planned-lines color-by ───────────────────────────────────────────────
+// Repaints the lines for the selected mode and dims the swatches of the two
+// OGF legends that are NOT driving color (they remain filters, not color keys).
+const OGF_LEGEND_MODES = {
+  ogfStatusLegend:   "status",
+  ogfScenarioLegend: "scenario",
+  ogfPlanAuthLegend: "planauth",
+} as const;
+
+export function applyOGFColorBy() {
+  for (const [elId, mode] of Object.entries(OGF_LEGEND_MODES)) {
+    document.getElementById(elId)?.classList.toggle("legend--not-color-key", mode !== state.ogfColorBy);
+  }
+  if (!state.mapReady || !state.map?.getLayer("ogf-planned-lines")) return;
+  state.map.setPaintProperty("ogf-planned-lines", "line-color", ogfColorExpr(state.ogfColorBy));
+}
+
 // ─── Bus subscription ─────────────────────────────────────────────────────────
 import { on } from './state-bus.js';
 on('gen:mode', ({ id }) => applyGenMode(id));
+on('ogf:colorby', applyOGFColorBy);

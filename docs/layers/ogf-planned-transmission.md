@@ -28,9 +28,12 @@ to EPSG:4326, keeps only line features with geometry, normalizes inconsistent
 `Status` spellings ("On Hold"/"Hold" → "On hold"), and drops server-computed
 columns (`Shape_Leng`, `Shape__Length`, `OBJECTID`, `CalcCapMW`). No geometry
 simplification. `build_tiles.py` then serves it raw as gzipped GeoJSON
-(zoom-less, lazy-loaded). The `Status` field drives the color expression
-(`ogfStatusLayer` in the registry, rendered by `addOGFPlannedTransmission()`
-in `map-layers-hifld.ts`; buckets in `OGF_STATUS_BUCKETS`, `src/colors/buckets.ts`).
+(zoom-less, lazy-loaded). Line color is selectable via a "color by" toggle on
+the layer row (`ogfStatusLayer` in the registry): `Status` (default),
+`Portfolio` (WestTEC scenario), or `PlanAuth` — expression built by
+`ogfColorExpr()` in `src/colors/buckets.ts`, applied by `applyOGFColorBy()`
+in `assets/visibility.ts`, persisted as URL param `oc`. The two OGF legends
+not driving color get dimmed swatches (they remain filters).
 
 ## Fields
 

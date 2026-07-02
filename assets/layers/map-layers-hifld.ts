@@ -4,7 +4,7 @@
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import { bucketColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS } from '../../src/colors/buckets.js';
+import { bucketColorExpr, ogfColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS } from '../../src/colors/buckets.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
   pmtilesUrl, initialVisibility, registerBaseFilter,
@@ -240,19 +240,6 @@ export function addOGFPlannedTransmission() {
 
   state.map.addSource("ogf-planned-transmission", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["ogf-planned-transmission"] });
 
-  const STATUS_COLOR = [
-    "match", ["get", "Status"],
-    "Pre-planning / conceptual",        "#a5f3fc",
-    "Planning",                         "#67e8f9",
-    "Engineering, design, and routing", "#22d3ee",
-    "Permitting",                       "#06b6d4",
-    "Construction",                     "#0891b2",
-    "Complete",                         "#155e75",
-    "On hold",                          "#94a3b8",
-    "Terminated",                       "#ef4444",
-    "#d1d5db"
-  ];
-
   const OGF_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 3, 2, 7, 3.5, 12, 6];
   const vis = initialVisibility("ogf-planned-transmission");
 
@@ -273,7 +260,7 @@ export function addOGFPlannedTransmission() {
     type: "line", source: "ogf-planned-transmission", minzoom: 3,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": STATUS_COLOR,
+      "line-color": ogfColorExpr(state.ogfColorBy),
       "line-width": OGF_LINE_WIDTH,
       "line-dasharray": [4, 2],
       "line-opacity": 0.95,

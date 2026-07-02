@@ -41,6 +41,8 @@ const BM_CODE_TO_TYPE: Record<string, string> = { l: "light", d: "dark", v: "voy
 const BM_TYPE_TO_CODE: Record<string, string> = { light: "l", dark: "d", voyager: "v", topo: "t", aerial: "a" };
 const GM_CHAR_TO_MODE: Record<string, string> = { i: "icons", h: "heat", b: "both" };
 const GM_MODE_TO_CHAR: Record<string, string> = { icons: "i", heat: "h", both: "b" };
+const OC_CHAR_TO_MODE: Record<string, string> = { s: "status", w: "scenario", a: "planauth" };
+const OC_MODE_TO_CHAR: Record<string, string> = { status: "s", scenario: "w", planauth: "a" };
 
 export interface UrlStateData {
   layerVisibility: Record<string, boolean>;
@@ -49,6 +51,7 @@ export interface UrlStateData {
   mwFilter: { min: number; max: number };
   yearFilter: { enabled: boolean; year: number };
   genMode: Record<string, string>;
+  ogfColorBy: string;
   basemap: string;
   projection: string;
 }
@@ -115,6 +118,10 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
     }
   }
 
+  // OGF color-by
+  const oc = params.get('oc');
+  if (oc && OC_CHAR_TO_MODE[oc]) data.ogfColorBy = OC_CHAR_TO_MODE[oc];
+
   // Basemap
   const bm = params.get('bm');
   if (bm && BM_CODE_TO_TYPE[bm]) data.basemap = BM_CODE_TO_TYPE[bm];
@@ -177,6 +184,11 @@ export function formatUrlState(data: UrlStateData): string[] {
     if (mode !== "icons") gmTokens.push(e.genModeCode + GM_MODE_TO_CHAR[mode]);
   }
   if (gmTokens.length) parts.push('gm=' + gmTokens.join('.'));
+
+  // OGF color-by (default "status" omitted)
+  if (data.ogfColorBy && data.ogfColorBy !== 'status' && OC_MODE_TO_CHAR[data.ogfColorBy]) {
+    parts.push('oc=' + OC_MODE_TO_CHAR[data.ogfColorBy]);
+  }
 
   // Basemap
   if (data.basemap !== 'street') {

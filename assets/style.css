@@ -833,6 +833,10 @@ header h1 {
   flex-shrink: 0;
 }
 
+/* OGF legends not driving line color (color-by picks one of three): the
+   legend still filters, but its swatches are not the active color key. */
+.legend--not-color-key .legend-swatch { opacity: 0.25; }
+
 .legend-icon {
   width: 16px;
   height: 16px;

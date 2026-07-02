@@ -33,6 +33,7 @@ export const state: AppState = {
   legendFilters:       {},    // legendKey → Set<bucketId>  — keyed by LEGEND_FILTERS[].key; init in init()
   mwFilter: { min: 0, max: 10000 }, // global MW range filter for all generator layers
   genMode: {},          // registryId → "icons" | "heat" | "both" (heat-capable gen layers); init in init()
+  ogfColorBy: "status", // OGF planned-lines color-by: "status" | "scenario" | "planauth"
   yearFilter:   { enabled: false, year: 2025, min: 1900, max: 2031 }, // EIA "alive at year Y"; bounds set in init()
   yearPlayback: { active: false, interval: null, speedMs: 600 },        // year-scrub animation
   sourcesLoaded: {},    // registryId → boolean — tracks which GeoJSON sources have been fetched

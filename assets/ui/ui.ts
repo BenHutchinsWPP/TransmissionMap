@@ -16,7 +16,7 @@ import {
 } from './ui-legends.js';
 import {
   wireLayerFilterPanels, wireLegendFilters, wireMwFilter,
-  wireGenModeToggle, wireYearFilter,
+  wireGenModeToggle, wireOgfColorByToggle, wireYearFilter,
   updateMwSliderUI, updateYearSliderUI, updateYearPlayBtn,
   stopYearPlayback,
 } from './ui-filters.js';
@@ -195,6 +195,7 @@ function wireUI() {
   wireCollapseToggles();
   wireMwFilter();
   wireGenModeToggle();
+  wireOgfColorByToggle();
   wireYearFilter();
   wireResetLayers();
 

@@ -39,6 +39,7 @@ function layerRowHtml(entry: LayerDef) {
     </div>
     ${rampLegendHtml(entry)}
     ${genModeBlockHtml(entry)}
+    ${ogfColorByBlockHtml(entry)}
     ${filterPanelHtml(entry)}
     ${yearFilterBlockHtml(entry)}`;
 }
@@ -111,6 +112,19 @@ function filterPanelHtml(entry: LayerDef) {
           <span class="chip-label">${escapeHtml(b.label)}</span>
         </label>`;
       }).join("")}
+    </div>`;
+}
+
+function ogfColorByBlockHtml(entry: LayerDef) {
+  if (!entry.ogfStatusLayer) return "";
+  const btn = (m: string, label: string) =>
+    `<button type="button" class="gen-mode-btn${state.ogfColorBy === m ? " gen-mode-btn--active" : ""}"` +
+    ` data-ogf-colorby="${m}">${label}</button>`;
+  return `
+    <div class="gen-mode">
+      <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(entry.label)} by">
+        ${btn("status", "Status")}${btn("scenario", "Scenario")}${btn("planauth", "Authority")}
+      </div>
     </div>`;
 }
 

@@ -215,13 +215,16 @@ export const RETAIL_TYPE_MAP = Object.fromEntries(
   RETAIL_TYPE_BUCKETS.filter(b => b.values.length).map(b => [b.id, b.values]));
 
 // ─── OGF planned transmission status ─────────────────────────────────────────
+// Lifecycle hue ramp: cool = early, warm = late, green = in service. The layer
+// reads as "planned" via its dash + white casing, so hue is free to encode
+// status (mirrors ourgridfuture.org's own status palette semantics).
 export const OGF_STATUS_BUCKETS = [
-  { id: "conceptual",   urlCode: "N", label: "Pre-planning / conceptual", color: "#a5f3fc" },
-  { id: "planning",     urlCode: "L", label: "Planning",                  color: "#67e8f9" },
+  { id: "conceptual",   urlCode: "N", label: "Pre-planning / conceptual", color: "#a78bfa" },
+  { id: "planning",     urlCode: "L", label: "Planning",                  color: "#60a5fa" },
   { id: "engineering",  urlCode: "E", label: "Engineering & routing",     color: "#22d3ee" },
-  { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#06b6d4" },
-  { id: "construction", urlCode: "C", label: "Construction",              color: "#0891b2" },
-  { id: "complete",     urlCode: "D", label: "Complete",                  color: "#155e75" },
+  { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#eab308" },
+  { id: "construction", urlCode: "C", label: "Construction",              color: "#f97316" },
+  { id: "complete",     urlCode: "D", label: "Complete",                  color: "#16a34a" },
   { id: "on_hold",      urlCode: "H", label: "On hold",                   color: "#94a3b8" },
   { id: "terminated",   urlCode: "T", label: "Terminated",                color: "#ef4444" },
   { id: "other",        urlCode: "O", label: "Unknown",                   color: "#d1d5db" },
@@ -282,3 +285,32 @@ export const OGF_PLANAUTH_MAP = {
   isone:    ["ISO-NE", "ISO-NE, Canada Energy Regulator"],
   merchant: ["Merchant"],
 };
+
+// ─── OGF "color by" line-color expressions ────────────────────────────────────
+// Drives ogf-planned-lines paint; selected via state.ogfColorBy.
+export type OgfColorMode = "status" | "scenario" | "planauth";
+const OGF_COLOR_CFG: Record<OgfColorMode, {
+  field: string;
+  buckets: { id: string; color: string }[];
+  map: Record<string, string[]>;
+}> = {
+  status:   { field: "Status",    buckets: OGF_STATUS_BUCKETS,   map: OGF_STATUS_MAP },
+  scenario: { field: "Portfolio", buckets: OGF_SCENARIO_BUCKETS, map: OGF_SCENARIO_MAP },
+  planauth: { field: "PlanAuth",  buckets: OGF_PLANAUTH_BUCKETS, map: OGF_PLANAUTH_MAP },
+};
+
+export function ogfColorExpr(mode: OgfColorMode): ExpressionSpecification {
+  const { field, buckets, map } = OGF_COLOR_CFG[mode];
+  const expr: unknown[] = ["match", ["get", field]];
+  const seen = new Set<string>();
+  for (const b of buckets) {
+    // ponytail: first bucket wins combo values ("MISO, SPP" is listed under
+    // both spp and miso for filtering) — match branches must be unique
+    const vals = (map[b.id] ?? []).filter(v => !seen.has(v));
+    if (!vals.length) continue;
+    vals.forEach(v => seen.add(v));
+    expr.push(vals.length === 1 ? vals[0] : vals, b.color);
+  }
+  expr.push(buckets.find(b => b.id === "other")!.color);
+  return expr as unknown as ExpressionSpecification;
+}

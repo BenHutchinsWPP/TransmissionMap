@@ -6,7 +6,7 @@ import { readUrlState, writeUrlState } from './url-state.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -24,6 +24,7 @@ beforeEach(() => {
   state.legendFilters   = {};
   state.layerFilters    = {};
   state.genMode         = {};
+  state.ogfColorBy      = 'status';
   state.mwFilter        = { min: 0, max: MW_SLIDER_MAX };
   state.basemap         = 'street';
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
@@ -124,6 +125,7 @@ describe('round-trip serialization', () => {
     state.layerVisibility['osm-transmission-lines'] = false; // default on
     state.legendFilters['fuel'] = new Set(['wind', 'nuclear']);
     state.genMode['eia-generators'] = 'heat';
+    state.ogfColorBy = 'planauth';
 
     writeUrlState();
 
@@ -134,6 +136,7 @@ describe('round-trip serialization', () => {
     state.layerVisibility = {};
     state.legendFilters = {};
     state.genMode = {};
+    state.ogfColorBy = 'status';
 
     readUrlState();
 
@@ -145,6 +148,12 @@ describe('round-trip serialization', () => {
     expect(state.layerVisibility['osm-transmission-lines']).toBe(false);
     expect(state.legendFilters['fuel']).toEqual(new Set(['wind', 'nuclear']));
     expect(state.genMode['eia-generators']).toBe('heat');
+    expect(state.ogfColorBy).toBe('planauth');
+  });
+
+  it('omits oc when ogfColorBy is the default "status"', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('oc=');
   });
 });
 

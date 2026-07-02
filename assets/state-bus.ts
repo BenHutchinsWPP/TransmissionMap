@@ -20,6 +20,7 @@ type Events = {
   'filter:layer': { id: string }; // per-layer bucket filter changed
   'filter:all':           void;   // re-apply every filter (used by reset)
   'gen:mode':    { id: string };  // generator display mode changed
+  'ogf:colorby':          void;   // OGF planned-lines color-by mode changed
   'url:write':            void;   // persist current state to URL / localStorage
 };
 

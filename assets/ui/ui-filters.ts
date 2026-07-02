@@ -179,6 +179,20 @@ export function wireGenModeToggle() {
   });
 }
 
+export function wireOgfColorByToggle() {
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as Element)?.closest<HTMLElement>(".gen-mode-btn[data-ogf-colorby]");
+    if (!btn) return;
+    const mode = btn.dataset.ogfColorby as typeof state.ogfColorBy;
+    if (state.ogfColorBy === mode) return;
+    state.ogfColorBy = mode;
+    btn.parentElement?.querySelectorAll<HTMLElement>("[data-ogf-colorby]").forEach(b =>
+      b.classList.toggle("gen-mode-btn--active", b.dataset.ogfColorby === mode));
+    emit('ogf:colorby');
+    emit('url:write');
+  });
+}
+
 export function wireYearFilter() {
   // ponytail: delegate on document — the panel HTML gets re-rendered by
   // buildLayersPanel() (e.g. Reset all layers), which would orphan any

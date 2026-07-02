@@ -9,7 +9,7 @@ import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initRasterProbes } from './raster-probes.js';
-import { applyAllGenModes } from './visibility.js';
+import { applyAllGenModes, applyOGFColorBy } from './visibility.js';
 import { applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
          applyPadusClassFilter, applyTribalClassFilter, applyNercFilter,
          applyRetailTypeFilter, applySubstanceFilter } from './filters.js';
@@ -69,6 +69,7 @@ export function initMap() {
       applyVoltageFilter();
       applyGeneratorFilters();
       applyAllGenModes();
+      applyOGFColorBy();
       applyPipelineTypeFilter();
       applySubstanceFilter();
       applyPadusClassFilter();

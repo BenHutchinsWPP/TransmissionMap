@@ -47,6 +47,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `mw` | MW range | codec |
 | `y`  | generator year filter | codec |
 | `gm` | generator display mode (icons/heat/both) | codec, via `genModeCode` |
+| `oc` | OGF planned-lines color-by (`s`=status, `w`=scenario, `a`=planauth) | codec, `OC_*` maps |
 | `bm` | basemap | codec, `BM_*_CODE` maps |
 | `pj` | projection (`g` = globe) | codec |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |

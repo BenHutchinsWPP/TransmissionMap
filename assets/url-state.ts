@@ -31,6 +31,7 @@ export function readUrlState() {
   if (data.genMode) {
     Object.assign(state.genMode, data.genMode);
   }
+  if (data.ogfColorBy) state.ogfColorBy = data.ogfColorBy as typeof state.ogfColorBy;
   if (data.basemap) state.basemap = data.basemap;
   if (data.projection) state.projection = data.projection;
 }
@@ -45,6 +46,7 @@ export function writeUrlState() {
     mwFilter: state.mwFilter,
     yearFilter: state.yearFilter,
     genMode: state.genMode,
+    ogfColorBy: state.ogfColorBy,
     basemap: state.basemap,
     projection: state.projection,
   };

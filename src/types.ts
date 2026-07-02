@@ -120,6 +120,7 @@ export interface AppState {
   legendFilters: Record<string, Set<string>>; // legendKey → active bucket Set
   mwFilter: MwFilter;
   genMode: Record<string, string>;
+  ogfColorBy: "status" | "scenario" | "planauth"; // OGF planned-lines color-by mode
   yearFilter: YearFilter;
   yearPlayback: YearPlayback;
   sourcesLoaded: Record<string, boolean>;
