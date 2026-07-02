@@ -835,7 +835,7 @@ header h1 {
 
 /* OGF legends not driving line color (color-by picks one of three): the
    legend still filters, but its swatches are not the active color key. */
-.legend--not-color-key .legend-swatch { opacity: 0.25; }
+.legend--not-color-key .legend-swatch { display: none; }
 
 .legend-icon {
   width: 16px;
