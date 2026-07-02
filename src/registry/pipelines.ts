@@ -32,6 +32,10 @@ export const pipelineLayers: LayerDef[] = [
       zip: "data/releases/hifld-natgas.zip",
     },
   },
+  // Hidden 2026-07: crude/refined-oil delivery has no grid-planning value
+  // (oil peakers are truck-fed; crude feeds refineries, not generators).
+  // Map builders still add these layers (hidden); uncomment to restore.
+  /*
   {
     // Petroleum facilities (POL terminals + SPR) — shares the HIFLD points source,
     // base-filtered to the petroleum fac_types (the gas layer excludes them).
@@ -76,6 +80,7 @@ export const pipelineLayers: LayerDef[] = [
       url: "https://www.eia.gov/maps/map_data/PetroleumProduct_Pipelines_US_EIA.zip",
     },
   },
+  */
   {
     id:                "osm-pipelines-lines",
     urlCode:           "PLL",
@@ -90,6 +95,8 @@ export const pipelineLayers: LayerDef[] = [
       zip: "data/releases/osm-pipelines.zip",
     },
   },
+  // Hidden 2026-07: lower-reliability duplicate of HIFLD natgas points.
+  /*
   {
     id:            "osm-pipelines-points",
     urlCode:       "PLP",
@@ -104,4 +111,5 @@ export const pipelineLayers: LayerDef[] = [
       zip: "data/releases/osm-pipelines.zip",
     },
   },
+  */
 ];
