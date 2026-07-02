@@ -1,7 +1,8 @@
 // ─── Live-wildfire staleness safety ───────────────────────────────────────────
-// Role: auto-refresh the shared `wildfire-live` GeoJSON on an interval and, when
-//       the data's pull age exceeds a hard cutoff, auto-disable every live
-//       wildfire layer and warn the user with a full-screen modal. An explicit
+// Role: auto-refresh the shared `wildfire-live` GeoJSON on an interval (and on
+//       return-to-page, since mobile browsers freeze timers in background tabs)
+//       and, when the data's pull age exceeds a hard cutoff, auto-disable every
+//       live wildfire layer and warn the user with a full-screen modal. An explicit
 //       "I understand the risk" action re-enables them.
 // Source of truth for age = the `generated_utc` property on the first feature of
 //       state.sourcesData["wildfire-live"] (same field the legend age chip uses).
@@ -93,10 +94,13 @@ function checkStaleness() {
 // Re-fetch the feed and push it onto the existing source. Cache-busts the
 // service worker (same-origin dev) and the CDN/browser cache (cross-origin prod)
 // so we never re-read a stale cached copy.
+let lastFetchMs = 0;   // last refetch attempt — guards the return-to-page path
+
 async function refetchWildfire(): Promise<void> {
   if (!state.map) return;
   const src = state.map.getSource("wildfire-live") as GeoJSONSource | undefined;
   if (!src) return;   // source not added yet (no wildfire layer ever enabled)
+  lastFetchMs = Date.now();
   const url = DATA.wildfire_live;
   try {
     const resp = await fetch(url, { cache: "no-cache" });
@@ -157,4 +161,22 @@ export function initWildfireStaleness() {
   setInterval(() => {
     if (visibleWildfireLayers().length > 0) checkStaleness();
   }, 60_000);
+
+  // Mobile browsers freeze setInterval while the tab is backgrounded, so the
+  // poll never fires at the moment of return — refetch on the "page is visible
+  // again" signals instead. 60s guard so rapid app-switching doesn't spam the
+  // feed (refetchWildfire itself dedupes real data via generated_utc anyway).
+  const refetchOnReturn = () => {
+    if (visibleWildfireLayers().length === 0) return;
+    if (Date.now() - lastFetchMs < 60_000) return;
+    void refetchWildfire();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refetchOnReturn();
+  });
+  // Back/forward-cache restore (common iOS Safari path) doesn't always emit a
+  // visibilitychange — pageshow with persisted=true covers it.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) refetchOnReturn();
+  });
 }
