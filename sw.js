@@ -2,7 +2,8 @@
 // sw.js — TransmissionMap Service Worker
 //
 // Caching strategy:
-//   Static assets (JS/CSS/images) — Cache-First, pre-cached on install.
+//   Static assets (JS/CSS/images) — Network-First (cache is offline fallback)
+//                                    while updates are actively shipping.
 //   GeoJSON data files             — Cache-First (full response).
 //   PMTiles range requests         — Cache-First, keyed by URL + Range header
 //                                    so each byte range is stored separately.
@@ -13,7 +14,7 @@
 //   Old cache buckets are deleted automatically on activate.
 // =============================================================================
 
-const STATIC_VERSION = 'v32';  // wildfire staleness cutoff modal (index.html + wildfire-staleness + CSS)
+const STATIC_VERSION = 'v33';  // network-first static strategy (purges stale cache-first bundles)
 const DATA_VERSION   = 'v2';   // ← bump this after running build_tiles.sh
 
 const STATIC_CACHE = `tm-static-${STATIC_VERSION}`;
@@ -64,17 +65,22 @@ self.addEventListener('fetch', event => {
   }
 });
 
-// ── Static: Cache-First ────────────────────────────────────────────────────────
+// ── Static: Network-First ─────────────────────────────────────────────────────
+// ponytail: network-first while updates ship frequently — nobody can be stale
+// while online. Flip back to cache-first (or SWR) once the site stabilizes.
 async function handleStatic(req) {
-  const cached = await caches.match(req);
-  if (cached) return cached;
-
-  const response = await fetch(req);
-  if (response.ok) {
-    const cache = await caches.open(STATIC_CACHE);
-    cache.put(req, response.clone());
+  try {
+    const response = await fetch(req);
+    if (response.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(req, response.clone());
+    }
+    return response;
+  } catch (err) {
+    const cached = await caches.match(req);   // offline → serve last good copy
+    if (cached) return cached;
+    throw err;
   }
-  return response;
 }
 
 // ── Data: Cache-First, range-aware ────────────────────────────────────────────
