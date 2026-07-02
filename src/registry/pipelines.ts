@@ -95,8 +95,8 @@ export const pipelineLayers: LayerDef[] = [
       zip: "data/releases/osm-pipelines.zip",
     },
   },
-  // Hidden 2026-07: lower-reliability duplicate of HIFLD natgas points.
-  /*
+  // Restored 2026-07: complements HIFLD Gas Facilities (inline equipment —
+  // valves, pig launchers, pressure stations — absent from HIFLD taxonomy).
   {
     id:            "osm-pipelines-points",
     urlCode:       "PLP",
@@ -111,5 +111,4 @@ export const pipelineLayers: LayerDef[] = [
       zip: "data/releases/osm-pipelines.zip",
     },
   },
-  */
 ];
