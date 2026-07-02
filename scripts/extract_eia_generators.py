@@ -14,7 +14,8 @@ License:  Public domain
 
 Files used (early-release builds append _Early_Release to the stem):
   2___Plant_Y{year}.xlsx      — Plant Code, Plant Name, Latitude, Longitude,
-                                State, NERC Region, Balancing Authority Code
+                                State, NERC Region, Balancing Authority Code,
+                                Utility Name, Sector Name
   3_1_Generator_Y{year}.xlsx  — Operable sheet: Plant Code, Generator ID,
                                 Technology, Energy Source 1, Nameplate Capacity
                                 (MW), Status, Operating Year, Planned Retirement
@@ -104,6 +105,8 @@ def _load_plant(eia_dir: Path, year: int, suffix: str = "", header: int = 1) -> 
         "State":                    "state",
         "NERC Region":              "nerc_region",
         "Balancing Authority Code": "ba_code",
+        "Utility Name":             "utility_name",
+        "Sector Name":              "sector_name",
     })
     df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
     df["lon"] = pd.to_numeric(df["lon"], errors="coerce")
@@ -134,7 +137,8 @@ def _load_plant(eia_dir: Path, year: int, suffix: str = "", header: int = 1) -> 
 
     log.info("  Plants loaded: %d", len(df))
     return df[["plant_code", "plant_name", "lat", "lon",
-               "state", "nerc_region", "ba_code", "pipelines"]].reset_index(drop=True)
+               "state", "nerc_region", "ba_code", "utility_name",
+               "sector_name", "pipelines"]].reset_index(drop=True)
 
 
 def _load_generators(eia_dir: Path, year: int, suffix: str = "", header: int = 1) -> "pd.DataFrame":
@@ -251,7 +255,8 @@ def build_output(plant_df: "pd.DataFrame", gen_df: "pd.DataFrame") -> "pd.DataFr
     col_order = [
         "plant_code", "plant_name", "lat", "lon", "state", "nerc_region", "ba_code",
         "generator_id", "technology", "energy_source", "nameplate_mw", "mw_range",
-        "status", "op_year", "prime_mover", "retirement_year", "gen_status", "pipelines",
+        "status", "op_year", "prime_mover", "retirement_year", "gen_status",
+        "utility_name", "sector_name", "pipelines",
     ]
     return merged[[c for c in col_order if c in merged.columns]]
 

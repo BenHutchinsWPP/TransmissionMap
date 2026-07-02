@@ -22,7 +22,7 @@ layers:
   - id: eia_generators
     src: data/build/generator_eia.csv
     format: geojson
-    select: [plant_code, plant_name, technology, energy_source, nameplate_mw, nerc_region, ba_code, state, op_year, status, gen_status, retirement_year, pipelines, prime_mover]
+    select: [plant_code, plant_name, technology, energy_source, nameplate_mw, nerc_region, ba_code, state, op_year, status, gen_status, retirement_year, utility_name, sector_name, pipelines, prime_mover]
 
   - id: osm_plants_polygons
     src: data/build/plant_polygons.gpkg

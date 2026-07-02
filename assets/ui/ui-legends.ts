@@ -8,7 +8,7 @@ import {
   KV_BUCKETS, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
-  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS,
+  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS, SECTOR_BUCKETS,
 } from '../../src/colors/buckets.js';
 import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
@@ -29,6 +29,9 @@ export const LEGEND_FILTERS = [
   { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
     masterId: "fuelAllCb", legendId: "fuelLegend", itemsId: "fuelLegendItems",
     title: "Fuel Type", swatch: "icon", apply: applyGeneratorFilters },
+  { key: "sector", groupCode: "i", buckets: SECTOR_BUCKETS,
+    masterId: "sectorAllCb", legendId: "sectorLegend", itemsId: "sectorLegendItems",
+    title: "EIA Plants — sector", swatch: "none", apply: applyGeneratorFilters },
   { key: "pipeline", groupCode: "p", buckets: PIPELINE_TYPE_BUCKETS,
     masterId: "pipelineAllCb", legendId: "pipelineLegend", itemsId: "pipelineLegendItems",
     title: "Pipeline Points", swatch: "icon", apply: applyPipelineTypeFilter },
@@ -195,6 +198,7 @@ const LEGEND_VISIBILITY = [
   { el: "voltageLegend",    show: () => LAYERS.some(l => l.voltageLayer  && state.layerVisibility[l.id]) },
   { el: "fuelLegend",       show: () => LAYERS.some(l => l.fuelLayer     && state.layerVisibility[l.id]) },
   { el: "pipelineLegend",   show: () => LAYERS.some(l => l.pipelineLayer && state.layerVisibility[l.id]) },
+  { el: "sectorLegend",     show: () => !!state.layerVisibility["eia-generators"] },
   { el: "crithabLegend",    show: () => !!state.layerVisibility["crithab"] },
   { el: "padusLegend",      show: () => !!state.layerVisibility["padus"] },
   { el: "tribalLegend",     show: () => !!state.layerVisibility["tribal-lands"] },

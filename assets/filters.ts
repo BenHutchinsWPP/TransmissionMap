@@ -17,6 +17,7 @@ import {
   OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP,
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
+  SECTOR_BUCKETS, SECTOR_MAP,
 } from '../src/colors/buckets.js';
 import {
   MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
@@ -284,6 +285,10 @@ export function applyGeneratorFilters() {
 
     const fuelExpr = buildGenFuelExpr(entry);
     const yearExpr = entry.yearFilterLayer ? buildYearFilterExpr() : null;
+    // sector_name only exists on EIA data; OSM generators are untouched
+    const sectorExpr = entry.filterType === "fuel_eia"
+      ? buildValueFilterExpr("sector_name", state.legendFilters.sector, SECTOR_BUCKETS, SECTOR_MAP)
+      : null;
 
     let statusExpr: FilterSpecification | null = null;
     if (entry.filterBuckets && entry.bucketField) {
@@ -300,7 +305,7 @@ export function applyGeneratorFilters() {
       const base    = BASE_LAYER_FILTERS[mlId] ?? null;
       const mwField = GEN_MW_FIELDS[mlId];
       const mwExpr  = mwField ? buildMwFilterExpr(mwField, state.mwFilter.min, state.mwFilter.max) : null;
-      state.map.setFilter(mlId, combineFilters(base, fuelExpr, mwExpr, statusExpr, yearExpr));
+      state.map.setFilter(mlId, combineFilters(base, fuelExpr, mwExpr, statusExpr, yearExpr, sectorExpr));
     }
   }
 }

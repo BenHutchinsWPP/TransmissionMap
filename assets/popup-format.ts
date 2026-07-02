@@ -78,6 +78,8 @@ export function renderEiaGen(p: Record<string, unknown>) {
     row("Technology", p.technology) +
     row("Fuel", p.energy_source) +
     row("Capacity", p.nameplate_mw ? p.nameplate_mw + " MW" : null) +
+    row("Utility", p.utility_name) +
+    row("Sector", p.sector_name) +
     row("NERC Region", p.nerc_region) +
     row("BA Code", p.ba_code) +
     row("State", p.state) +

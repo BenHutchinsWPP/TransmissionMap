@@ -185,6 +185,23 @@ export const SUBSTANCE_MAP = Object.fromEntries(
 // the palette and the legend never drift. Untagged → "Unknown" grey.
 export const PIPELINE_LINE_COLOR = bucketColorExpr("substance", SUBSTANCE_BUCKETS, "#9ca3af");
 
+// ─── EIA generator sector (Form 860 "Sector Name") ────────────────────────────
+// Filter-only chips (legend renders swatch: "none"); colors are unused but the
+// BucketDef type requires them. CHP and non-CHP variants collapse into one
+// chip per ownership sector via SECTOR_MAP.
+export const SECTOR_BUCKETS: BucketDef[] = [
+  { id: "utility",    label: "Electric Utility", color: "#9ca3af", urlCode: "u" },
+  { id: "ipp",        label: "IPP",              color: "#9ca3af", urlCode: "i" },
+  { id: "commercial", label: "Commercial",       color: "#9ca3af", urlCode: "c" },
+  { id: "industrial", label: "Industrial",       color: "#9ca3af", urlCode: "n" },
+];
+export const SECTOR_MAP: Record<string, string[]> = {
+  utility:    ["Electric Utility"],
+  ipp:        ["IPP Non-CHP", "IPP CHP"],
+  commercial: ["Commercial Non-CHP", "Commercial CHP"],
+  industrial: ["Industrial Non-CHP", "Industrial CHP"],
+};
+
 // ─── NERC regions ─────────────────────────────────────────────────────────────
 export const NERC_BUCKETS = [
   { id: "WECC",  urlCode: "W", label: "WECC — Western",        color: "#3b82f6", values: ["WECC"]  },

@@ -34,14 +34,14 @@ _Counts approximate, from the EIA-860 2025 early-release build (`eia8602025ER.zi
 ## Processing
 
 - **Joined:** generator sheets (`3_1_Generator_Y2025`) to the plant sheet (`2___Plant_Y2025`)
-  for location + NERC/BA metadata
+  for location + NERC/BA + utility/sector metadata
 - **Three generator sheets concatenated:** `Operable` (filtered to `status` OP/SB),
   `Proposed`, and `Retired and Canceled` (filtered to `status` RE — canceled units dropped)
 - **Computed:** `gen_status` partition (see table above); `mw_range` bucket from
   `nameplate_mw`; point geometry from plant lat/lon
 - **Columns kept:** `plant_code`, `plant_name`, `state`, `nerc_region`, `ba_code`,
   `generator_id`, `technology`, `energy_source`, `nameplate_mw`, `mw_range`, `status`,
-  `op_year`, `prime_mover`, `retirement_year`, `gen_status`
+  `op_year`, `prime_mover`, `retirement_year`, `gen_status`, `utility_name`, `sector_name`
 
 ## Fields
 
@@ -52,6 +52,8 @@ _Counts approximate, from the EIA-860 2025 early-release build (`eia8602025ER.zi
 | `state` | 100% | RI, IA, OH, CA, TX, … (all 50 + DC + PR) |
 | `nerc_region` | ~97% | TRE, SERC, RFC, WECC, MRO, NPCC |
 | `ba_code` | ~97% | PSCO, MISO, SC, CISO, ERCO, … (66 unique) |
+| `utility_name` | 100% | "Alabama Power Co", "El Paso Electric Co" — operator/reporting utility (from plant sheet) |
+| `sector_name` | 100% | "Electric Utility", "IPP Non-CHP", "IPP CHP", "Commercial Non-CHP", … |
 | `generator_id` | 100% | "T-13", "EMDA", "TROYL" — combine with `plant_code` to identify a unit |
 | `technology` | 100% | "Solar Photovoltaic" (7.1k), "Petroleum Liquids" (3.8k), "Conventional Hydroelectric" (3.7k), "Natural Gas Fired Combustion Turbine" (2.2k), "Natural Gas Fired Combined Cycle" (1.9k), "Onshore Wind Turbine" (1.5k), "Landfill Gas", "Batteries" |
 | `energy_source` | 100% | SUN (7.1k), NG (6.6k), WAT (3.9k), DFO (3.7k), WND (1.5k), LFG (1.2k), MWH (764), … |
