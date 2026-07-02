@@ -5,7 +5,7 @@ import * as pmtiles from 'pmtiles';
 import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, CARTO_LIGHT_TILE_URLS, CARTO_DARK_TILE_URLS,
          CARTO_VOYAGER_TILE_URLS, USGS_TOPO_TILE_URL, AERIAL_TILE_URL } from './state.js';
-import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons } from './icons.js';
+import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initRasterProbes } from './raster-probes.js';
@@ -64,7 +64,10 @@ export function initMap() {
     addBasemapSources();
     switchBasemap(state.basemap);
     switchProjection(state.projection);
-    await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons()]);
+    // Icon loads must never block layer creation — a failed rasterize would
+    // otherwise skip addAllLayers() and blank every layer. Degrade to no-icon.
+    await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons()]
+      .map(p => p.catch(err => console.warn('[TransmissionMap] icon load failed', err))));
     try { addAllLayers(); } finally {
       applyVoltageFilter();
       applyGeneratorFilters();

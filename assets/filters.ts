@@ -18,6 +18,10 @@ import {
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
 } from '../src/colors/buckets.js';
+import {
+  MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
+  MINES_STATUS_BUCKETS, MINES_STATUS_MAP,
+} from '../src/colors/minerals.js';
 
 const OSM_FUEL_MAP = {
   wind:       ["wind"],
@@ -170,6 +174,16 @@ export function applyOGFFilters() {
     buildValueFilterExpr("Portfolio", state.legendFilters.ogfScenario, OGF_SCENARIO_BUCKETS, OGF_SCENARIO_MAP),
     buildValueFilterExpr("PlanAuth",  state.legendFilters.ogfPlanAuth, OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP));
   setBucketFilter(["ogf-planned-lines-casing", "ogf-planned-lines"], expr);
+}
+
+// Commodity + status both target the same two mine layers, so combine into one
+// setFilter call (like applyOGFFilters).
+export function applyMinesFilter() {
+  if (!state.mapReady) return;
+  const expr = combineFilters(
+    buildValueFilterExpr("cat",    state.legendFilters.mines,       MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP),
+    buildValueFilterExpr("status", state.legendFilters.minesStatus, MINES_STATUS_BUCKETS,    MINES_STATUS_MAP));
+  setBucketFilter(["mines-icons"], expr);
 }
 
 export function applyPipelineTypeFilter() {
@@ -400,4 +414,5 @@ on('filter:all',           () => {
   applyNatgasPtsFilter();
   applySubstanceFilter();
   applyOGFFilters();
+  applyMinesFilter();
 });

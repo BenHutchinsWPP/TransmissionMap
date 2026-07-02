@@ -54,6 +54,11 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: U.S. EIA Form 860",
     creditId: "eia",
   },
+  "msha-mines": {
+    label: "MSHA Mines",
+    tooltip: "Source: MSHA Mine Data — large mines (peak employment ≥ 50); filtered subset, not the full dataset. Public domain (US DOL).",
+    creditId: "msha-mines",
+  },
   "usgs-padus": {
     label: "USGS PAD-US",
     tooltip: "Source: USGS PAD-US — filtered subset displayed for aesthetic and display clarity; not a complete or regulatory representation",

@@ -66,6 +66,7 @@ const CLICKABLE_LAYERS = [
   "hifld-natgas-points", "hifld-petroleum-facilities",
   "osm-pipelines-points",
   "nrel-hydrothermal-points",
+  "mines-icons",
   "osm-dc-circles",
   "osm-transmission-lines-hv", "osm-transmission-lines-mv", "osm-transmission-lines-lv", "osm-transmission-lines-unknown",
   "hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown",

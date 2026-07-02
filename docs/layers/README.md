@@ -51,7 +51,7 @@ The three raster layers (wind, solar, geothermal heat flow) support a cursor hov
 
 Where electricity demand concentrates.
 
-**Data centers** ([osm-datacenters](osm-datacenters.md)) maps OSM-tagged data center facilities — a location-concentrated source of grid load. **Population density** ([worldpop-pop-density](worldpop-pop-density.md)) is the WorldPop 2020 raster (people/km², log-colored), a proxy for residential and commercial demand; it also supports a cursor hover readout.
+**Data centers** ([osm-datacenters](osm-datacenters.md)) maps OSM-tagged data center facilities — a location-concentrated source of grid load. **Population density** ([worldpop-pop-density](worldpop-pop-density.md)) is the WorldPop 2020 raster (people/km², log-colored), a proxy for residential and commercial demand; it also supports a cursor hover readout. **Large mines** ([mines](mines.md)) plots ~2.3k active and retired US mines with peak quarterly employment ≥ 50, from the MSHA mine registry.
 
 ---
 

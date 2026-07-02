@@ -37,6 +37,7 @@ These live under `data/` and must be present for the app to function.
 | `data/layers/ihfc_geo_heatflow_lut.i16` | <1 MB | Coarse Int16 mW/m² value grid (0.5°) for the legend hover readout (lazy-loaded) |
 | `data/layers/ihfc_geo_heatflow_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/nrel_hydrothermal_points.geojson.gz` | 40 KB | NREL/DOE low-temp hydrothermal systems (1,214 circle points, gzipped GeoJSON) |
+| `data/layers/mines.geojson.gz` | 70 KB | MSHA large mines, peak employment ≥ 50 (~2.3k points, gzipped GeoJSON) |
 | **Total** | **~218 MB** | |
 
 ---
@@ -75,8 +76,9 @@ the data (GeoJSON + CSV for vectors, or a COG GeoTIFF for rasters), the layer do
 
 Layers marked `skip: true` in the manifest produce no ZIP: the OurGridFuture
 planned-transmission layer (no redistribution — link out to ourgridfuture.org),
-Critical Habitat (no redistribution — link out to USFWS ECOS), and PAD-US protected
-lands (too large to redistribute — link out to the USGS ScienceBase item). OGF and
+Critical Habitat (no redistribution — link out to USFWS ECOS), PAD-US protected
+lands (too large to redistribute — link out to the USGS ScienceBase item), and
+Large Mines (filtered subset of the MSHA dataset — no pack offered). OGF and
 Critical Habitat are pre-baked into `data/layers/` by their own extractors
 (`extract_ogf.py`, `extract_crithab.py`).
 

@@ -14,8 +14,9 @@ import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
   applyCritHabFilter, applyPadusClassFilter, applyTribalClassFilter,
   applyNatgasLineFilter, applyNatgasPtsFilter, applyNercFilter,
-  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter,
+  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter, applyMinesFilter,
 } from '../filters.js';
+import { MINES_COMMODITY_BUCKETS, MINES_STATUS_BUCKETS } from '../../src/colors/minerals.js';
 import { escapeHtml } from '../utils/utils.js';
 import { ICON_SVG } from '../icons.js';
 
@@ -65,6 +66,12 @@ export const LEGEND_FILTERS = [
   { key: "ogfPlanAuth", groupCode: "a", buckets: OGF_PLANAUTH_BUCKETS,
     masterId: "ogfPlanAuthAllCb", legendId: "ogfPlanAuthLegend", itemsId: "ogfPlanAuthLegendItems",
     title: "Planning authority", swatch: "color", apply: applyOGFFilters },
+  { key: "mines", groupCode: "k", buckets: MINES_COMMODITY_BUCKETS,
+    masterId: "minesAllCb", legendId: "minesLegend", itemsId: "minesLegendItems",
+    title: "Mines — commodity", swatch: "icon", apply: applyMinesFilter },
+  { key: "minesStatus", groupCode: "d", buckets: MINES_STATUS_BUCKETS,
+    masterId: "minesStatusAllCb", legendId: "minesStatusLegend", itemsId: "minesStatusLegendItems",
+    title: "Mines — status", swatch: "none", defaultActive: ["active"], apply: applyMinesFilter },
 ];
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
@@ -116,6 +123,8 @@ function buildLegendSection(cfg: LegendFilter) {
     const checked = state.legendFilters[cfg.key].has(b.id) ? " checked" : "";
     const swatch  = cfg.swatch === "icon"
       ? `<svg class="legend-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${ICON_SVG[(b as { icon?: string }).icon ?? ""] ?? ""}</svg>`
+      : cfg.swatch === "none"
+      ? ""
       : `<span class="legend-swatch" style="background:${b.color}"></span>`;
     return `<label class="legend-item legend-filter-item">
        <input type="checkbox" class="legend-filter-cb" data-legend-key="${cfg.key}" data-bucket-id="${b.id}"${checked}>
@@ -198,6 +207,8 @@ const LEGEND_VISIBILITY = [
   { el: "ogfStatusLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "ogfScenarioLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "ogfPlanAuthLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
+  { el: "minesLegend",           show: () => !!state.layerVisibility["mines"] },
+  { el: "minesStatusLegend",     show: () => !!state.layerVisibility["mines"] },
   { el: "smokeLiveLegend",        show: () => !!state.layerVisibility["wildfire-smoke"] },
   { el: "wildfireLiveLegend",    show: () => !!state.layerVisibility["wildfire-live"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },

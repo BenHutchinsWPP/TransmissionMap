@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden wildfire-dev smoke-dev validate tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev smoke-dev validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -220,6 +220,15 @@ hydro-pts:
 # hover LUT + COG download. License CC BY 4.0 (attribution required).
 popden:
 	@bash $(SCRIPTS)/build_population_density.sh
+
+# ── Large active/retired mines (MSHA, filtered) ─────────────────────────────
+# Extract → filtered GeoJSON (peak employment >= 50), then gzip for serving.
+# Inputs: unzip Mines.zip + MinesProdQuarterly.zip into data/raw/mines/ from
+# https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp
+mines:
+	@$(PY) $(SCRIPTS)/extract_mines.py
+	@gzip -9 -f data/layers/mines.geojson
+	@echo "[done] data/layers/mines.geojson.gz"
 
 whp:
 	@bash $(SCRIPTS)/build_wildfire_hazard.sh

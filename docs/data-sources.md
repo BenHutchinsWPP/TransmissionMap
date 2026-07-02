@@ -14,6 +14,7 @@ documentation linked below. This page is the license and attribution index.
 | **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
 | **EIA** | [Generators (Form 860)](layers/eia-generators.md) · [Petroleum pipelines](layers/eia-petroleum-pipelines.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: U.S. EIA, Form EIA-860" / "EIA U.S. Energy Atlas" |
 | **USGS** | [PAD-US protected & managed lands](layers/padus-protected-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | USGS Gap Analysis Project |
+| **MSHA** (US DOL) | [Large mines (filtered)](layers/mines.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: MSHA Mine Data (US DOL)" |
 | **NREL/NLR** | [Wind resource @ 100 m](layers/nlr-wind-100m.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: NREL Wind Integration National Dataset (WIND) Toolkit" |
 | **Global Solar Atlas** (Solargis / World Bank) | [Solar resource (PVOUT)](layers/gsa-solar-pvout.md) | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — attribution **required** | "© 2024 Global Solar Atlas / Solargis / World Bank" |
 | **IHFC / GFZ Data Services** | [Geothermal heat flow](layers/ihfc-geo-heatflow.md) | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — attribution **required** | "© IHFC / GFZ Data Services (CC BY 4.0) — Global Heat Flow Database Release 2024" |

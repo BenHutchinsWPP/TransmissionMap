@@ -247,6 +247,13 @@ const _defs = [
     row("City", p.addr_city) +
     row("State", p.addr_state) +
     row("Since", p.start_date)],
+  [["mines-icons"], (p: Record<string, unknown>) =>
+    title((p.name as string) || "Mine") +
+    row("Commodity", p.commodity) +
+    row("Status", p.status === "active" ? "Active" : "Retired / idled") +
+    row("Peak employment", p.employees) +
+    row("Operator", p.operator) +
+    row("State", p.state)],
   [["nrel-hydrothermal-points"], renderGeoHydroPts],
   [["padus-fill"], (p: Record<string, unknown>) =>
     title((p.name as string) || "Protected Land") +

@@ -23,6 +23,7 @@ import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
 import { addPetroleumPipelines } from './map-layers-petroleum.js';
 import { addWildfireHazard, addWildfireLive, addSeismicHazard } from './map-layers-hazards.js';
+import { addMines } from './map-layers-mines.js';
 import { addHighlightLayers } from '../highlights.js';
 
 // >>> ADD-LAYER: add-all-layers
@@ -43,6 +44,7 @@ export function addAllLayers() {
   addPadus();
   addTribalLands();
   addCritHab();
+  addMines();
 
   addOsmSubstationPolygons();
   addOsmPlantPolygons();

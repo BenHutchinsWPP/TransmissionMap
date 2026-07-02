@@ -33,6 +33,7 @@ const LAZY_GEOJSON: Record<string, string> = {
   "eia-product-pipelines":      DATA.eia_product_pipelines,
   "nrel-hydrothermal-points":   DATA.nrel_hydrothermal_points,
   "osm-datacenters":            DATA.osm_datacenters,
+  "mines":                      DATA.mines,
   "wecc-paths":                 DATA.wecc_paths,
   "wecc-path-lines":            DATA.wecc_path_lines,
   "nerc-regions":               DATA.nerc_regions,

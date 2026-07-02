@@ -42,6 +42,7 @@ export const DATA = {
   padus:          DATA_ORIGIN + "data/layers/padus.pmtiles",          // USGS PAD-US: GAP 1-3 conservation + GAP 4 federal (DoD/DOE/USACE)
   tribal_lands:   DATA_ORIGIN + "data/layers/tribal_lands.pmtiles",   // Census TIGER Tribal (AIANNH)
   crithab:        DATA_ORIGIN + "data/layers/crithab.pmtiles",         // USFWS Critical Habitat (T&E species)
+  mines:          DATA_ORIGIN + "data/layers/mines.geojson.gz",        // MSHA large mines (filtered) — lazy GeoJSON
   wecc_paths:         DATA_ORIGIN + "data/layers/wecc_paths.geojson.gz",   // WECC Path Rating Catalog 2026 (points + ratings + line lists)
   wecc_path_lines:    DATA_ORIGIN + "data/layers/wecc_path_lines.geojson.gz", // OSM/HIFLD lines matched to each WECC path (click-highlight)
   nerc_regions:       DATA_ORIGIN + "data/layers/nerc_regions.geojson.gz",

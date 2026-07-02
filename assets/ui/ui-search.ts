@@ -30,6 +30,7 @@ const SEARCH_SOURCES = [
   { sourceId: "eia-crude-pipelines",   sourceLayer: null,            label: "Crude Pipeline",   fields: ["name", "operator"] },
   { sourceId: "eia-product-pipelines", sourceLayer: null,            label: "Product Pipeline", fields: ["name", "operator"] },
   { sourceId: "nrel-hydrothermal-points", sourceLayer: null,         label: "Hydrothermal",   fields: ["name", "state", "county"] },
+  { sourceId: "mines",           sourceLayer: null,             label: "Mine",               fields: ["name", "commodity", "operator", "state"], layerId: "mines-icons" },
   { sourceId: "railroads",       sourceLayer: "railroads",      label: "Railroad",           fields: ["RROWNER1", "SUBDIV", "BRANCH"], layerId: "railroads" },
   { sourceId: "nerc-regions",    sourceLayer: null,             label: "NERC Region",        fields: ["region", "sub_nm", "code", "state"] },
   { sourceId: "control-areas",   sourceLayer: null,             label: "Balancing Authority", fields: ["name", "state"] },

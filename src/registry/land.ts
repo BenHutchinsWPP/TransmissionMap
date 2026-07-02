@@ -29,6 +29,17 @@ export const landLayers: LayerDef[] = [
     },
   },
   {
+    id:            "mines",
+    urlCode:       "MNE",
+    label:         "✂️ Large Mines (MSHA, Filtered)",
+    group:         "load",
+    sourceId:      "msha-mines",
+    swatch:        "#b45309",
+    defaultOn:     false,
+    mapLayerIds:   ["mines-icons"],
+    downloads:     {},   // filtered subset (peak employment ≥ 50), not the full MSHA dataset
+  },
+  {
     id:          "crithab",
     urlCode:     "CHB",
     label:       "Critical Habitat (ESA)",

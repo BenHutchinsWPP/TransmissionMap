@@ -23,7 +23,7 @@ data/raw/hifld/
 data/raw/eia/
 data/raw/eia_petroleum/
 
-# Mines source data (USGS MRDS; large download — see extract_mines.py)
+# Mines source data (MSHA zips, manual download — see extract_mines.py)
 data/raw/mines/
 
 # Seismic hazard source (USGS NSHM 2018 CSV grid, 37 MB — see build_seismic_hazard.sh)

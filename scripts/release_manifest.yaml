@@ -138,6 +138,9 @@ layers:
   crithab:
     skip: true  # no redistribution; users link out to ECOS (local pmtiles built by extract_crithab.py)
 
+  mines:
+    skip: true  # filtered subset (peak employment >= 50), not the full MSHA dataset — no pack offered
+
   # ── Regions ───────────────────────────────────────────────────────────────
 
   hifld-regions:

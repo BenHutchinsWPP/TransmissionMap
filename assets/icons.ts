@@ -44,6 +44,31 @@ const NATGAS_PT_ICON_DEFS = [
   ["natgas-other",         `<circle cx="12" cy="12" r="4" fill="#9ca3af"/><circle cx="12" cy="12" r="8" stroke="#9ca3af" stroke-width="2" fill="none"/>`],
 ];
 
+// Mine commodity-category icons — hand-drawn SVG glyphs (NOT emoji: color-emoji
+// fonts aren't guaranteed on every OS, so emoji render blank). Rasterized via the
+// same _makeSvgIcon pipeline as the generator icons. Each is colored to match its
+// commodity bucket, with a white outline for contrast on the map. Names are
+// `mine-<cat>` and must match minesIconExpr() in src/colors/minerals.ts.
+const _mw = 'stroke="#fff" stroke-width="1" stroke-linejoin="round"';
+const MINE_ICON_DEFS = [
+  // gold ingot
+  ["mine-precious",   `<path d="M4 16l3-6h10l3 6z" fill="#d4af37" ${_mw}/>`],
+  // hex nut (base metals)
+  ["mine-base",       `<path d="M7 5h10l5 7-5 7H7l-5-7z" fill="#b87333" ${_mw}/><circle cx="12" cy="12" r="3.2" fill="#fff"/>`],
+  // gear (iron & ferroalloy)
+  ["mine-ferroalloy", `<path fill-rule="evenodd" d="M18.06 8.5L20.86 10.44L20.86 13.56L18.06 15.5L17.79 18.89L15.08 20.46L12 19L8.92 20.46L6.21 18.89L5.94 15.5L3.14 13.56L3.14 10.44L5.94 8.5L6.21 5.11L8.92 3.54L12 5L15.08 3.54L17.79 5.11ZM12 9A3 3 0 1 0 12 15A3 3 0 1 0 12 9Z" fill="#708090" ${_mw}/>`],
+  // battery
+  ["mine-battery",    `<rect x="4" y="7" width="15" height="10" rx="1.5" fill="#22c55e" ${_mw}/><rect x="19" y="10" width="2.5" height="4" rx="1" fill="#22c55e"/><path d="M11 9l-2 4h3l-2 4" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`],
+  // lightning bolt (energy)
+  ["mine-energy",     `<path d="M13 2L4 14h6l-1 8 9-12h-6z" fill="#ef4444" ${_mw}/>`],
+  // diamond (gem)
+  ["mine-gem",        `<path d="M6 4h12l3 5-9 12L3 9z" fill="#a855f7" ${_mw}/><path d="M3 9h18M9 4l-3 5 6 12M15 4l3 5-6 12" stroke="#fff" stroke-width="0.9" fill="none"/>`],
+  // stacked bricks (industrial/construction)
+  ["mine-industrial", `<g fill="#9ca3af" ${_mw}><rect x="3" y="7" width="8" height="4"/><rect x="13" y="7" width="8" height="4"/><rect x="8" y="12" width="8" height="4"/><rect x="3" y="17" width="8" height="4"/><rect x="13" y="17" width="8" height="4"/></g>`],
+  // pickaxe (other)
+  ["mine-other",      `<path d="M3 7c6-4 12-4 18 0" stroke="#6b7280" stroke-width="2.6" fill="none" stroke-linecap="round"/><rect x="10.7" y="6" width="2.6" height="16" rx="1" fill="#6b7280" ${_mw}/>`],
+];
+
 const GEN_ICON_LOGICAL_PX = 22;
 const GEN_ICON_OVERSAMPLE = 4;
 
@@ -81,6 +106,7 @@ function _loadIcons(defs: string[][]) {
 export function loadGenIcons()      { return _loadIcons(GEN_ICON_DEFS);      }
 export function loadPipelineIcons() { return _loadIcons(PIPELINE_ICON_DEFS); }
 export function loadNatgasPtIcons() { return _loadIcons(NATGAS_PT_ICON_DEFS); }
+export function loadMineIcons()     { return _loadIcons(MINE_ICON_DEFS);      }
 
 // Flat name → svgBody lookup used by legend renderer.
-export const ICON_SVG = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS]);
+export const ICON_SVG = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS, ...MINE_ICON_DEFS]);
