@@ -15,11 +15,16 @@ name: Update wildfire data
 #   git push origin data
 #   git checkout main
 
-# Sole trigger: cron-job.org fires workflow_dispatch hourly. No GitHub
-# `schedule:` fallback — extra runs risk FIRMS rate-limiting (observed
-# Errno 101 bans of runner IPs on 2026-07-03 under burst load). If cron-job.org
-# dies entirely, the failure-alert issue + frontend staleness UI surface it.
+# Primary trigger: cron-job.org fires workflow_dispatch hourly. The sparse
+# GitHub cron below is disaster insurance only: if cron-job.org (or its PAT)
+# silently dies, no runs happen at all — which means no failure alert either —
+# and the map would drift stale with nobody notified. Every 6h keeps the data
+# under the frontend's 6h kill-switch while adding negligible FIRMS load
+# (hourly+ cadence risked rate-limiting; observed Errno 101 runner-IP bans
+# 2026-07-03 under burst load).
 on:
+  schedule:
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 # Don't let a slow run race the next hour's force-push; queue instead of overlap.

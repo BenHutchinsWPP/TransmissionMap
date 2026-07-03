@@ -400,11 +400,18 @@ def main():
         csv_texts = [open(p, newline="").read() for p in args.viirs_csvs]
     else:
         key = os.environ.get("FIRMS_MAP_KEY")
-        urls = ([FIRMS_API_URL.format(key=key, sensor=s) for s in FIRMS_API_SENSORS]
-                if key else VIIRS_URLS)
-        print(f"Fetching FIRMS VIIRS CSVs ({'API' if key else 'anonymous flat files'})…",
-              file=sys.stderr)
-        csv_texts = [_fetch_viirs_csv(u) for u in urls]
+        csv_texts = None
+        if key:
+            print("Fetching FIRMS VIIRS CSVs (API)…", file=sys.stderr)
+            try:
+                csv_texts = [_fetch_viirs_csv(FIRMS_API_URL.format(key=key, sensor=s))
+                             for s in FIRMS_API_SENSORS]
+            except Exception as e:
+                # Bad/expired key or API outage — the flat files may still work.
+                print(f"  WARNING: API failed ({e}); falling back to flat files", file=sys.stderr)
+        if csv_texts is None:
+            print("Fetching FIRMS VIIRS CSVs (anonymous flat files)…", file=sys.stderr)
+            csv_texts = [_fetch_viirs_csv(u) for u in VIIRS_URLS]
     hotspots = read_viirs_csvs(csv_texts, now)
     print(f"  {len(hotspots)} hotspots", file=sys.stderr)
 
