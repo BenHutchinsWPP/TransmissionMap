@@ -162,10 +162,10 @@ export function addWildfireLive() {
     layout: { visibility: incidentVis },
     paint: {
       "circle-color": [
-        "match", ["get", "type_cat"],
-        "WF",  "#cc0000",
-        "RX",  "#8b6914",
-        "#666666",
+        "interpolate", ["linear"], ["to-number", ["get", "pct_contained"], 0],
+        0,   "#cc0000",
+        90,  "#f1c40f",
+        100, "#2ecc71",
       ],
       "circle-radius": [
         "step", ["to-number", ["get", "acres"], 0],
@@ -174,7 +174,11 @@ export function addWildfireLive() {
         1000,  11,
         10000, 14,
       ],
-      "circle-stroke-color": "#ffffff",
+      "circle-stroke-color": [
+        "match", ["get", "type_cat"],
+        "RX", "#3498db",
+        "#ffffff",
+      ],
       "circle-stroke-width": 2,
       "circle-opacity": 0.9,
     },
