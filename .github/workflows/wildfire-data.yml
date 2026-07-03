@@ -15,14 +15,12 @@ name: Update wildfire data
 #   git push origin data
 #   git checkout main
 
+# Sole trigger: cron-job.org fires workflow_dispatch hourly. No GitHub
+# `schedule:` fallback — extra runs risk FIRMS rate-limiting (observed
+# Errno 101 bans of runner IPs on 2026-07-03 under burst load). If cron-job.org
+# dies entirely, the failure-alert issue + frontend staleness UI surface it.
 on:
-  schedule:
-    # Fallback only. Primary hourly trigger is cron-job.org → workflow_dispatch
-    # (GitHub schedule events are best-effort and get dropped under load;
-    # observed 1 of 7 hourly fires on 2026-07-01). Offset from the external
-    # trigger's :05 slot so a dropped external fire still gets covered.
-    - cron: '33 * * * *'
-  workflow_dispatch:       # manual trigger for testing
+  workflow_dispatch:
 
 # Don't let a slow run race the next hour's force-push; queue instead of overlap.
 concurrency:
@@ -35,6 +33,7 @@ jobs:
     timeout-minutes: 20    # guard against a hung upstream fetch (default is 6h)
     permissions:
       contents: write
+      issues: write        # failure-alert step
 
     steps:
       - uses: actions/checkout@v5
@@ -59,3 +58,21 @@ jobs:
           git diff --cached --quiet && echo "No change — skipping" && exit 0
           git commit --amend --no-edit --date=now
           git push --force-with-lease
+
+      # Failed runs otherwise surface only as an amber chip / stale modal on the
+      # map — open (or bump) a tracking issue so the operator gets notified.
+      - name: Alert on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          msg="Run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          n=$(gh issue list --label wildfire-feed-down --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --body "$msg"
+          else
+            gh label create wildfire-feed-down --color D93F0B --force
+            gh issue create --title "Wildfire data workflow failing" \
+              --label wildfire-feed-down \
+              --body "$msg — map serves the last good pull; close when green again."
+          fi

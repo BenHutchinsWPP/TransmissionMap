@@ -25,7 +25,7 @@ provider, layer, and pipeline.
 | **Served (prod)** | `wildfire_live.geojson` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok; ~5 min CDN lag). URL in `assets/constants.ts` → `DATA.wildfire_live`. |
 | **Served (dev)** | Local `data/layers/wildfire_live.geojson` — **not in git** (`data/layers/` is gitignored). `make wildfire-dev` builds it, fetching all feeds live (no manual downloads). Offline: pass pre-downloaded VIIRS CSVs to `fetch_wildfire_live.py` as positional args. |
 | **Built by** | `scripts/fetch_wildfire_live.py` (merges all feeds: VIIRS hotspots, NIFC + CWFIS perimeters, NIFC incidents, HMS smoke) |
-| **Refresh** | `.github/workflows/wildfire-data.yml` — hourly `workflow_dispatch` from cron-job.org at `:05` (GitHub's own cron drops fires under load; kept as `:33` fallback). Force-pushes an amended commit to the `data` branch (no history growth). `main` is never touched. The cron-job.org job authenticates with a fine-grained PAT (Actions R/W, this repo only) that expires yearly. |
+| **Refresh** | `.github/workflows/wildfire-data.yml` — `workflow_dispatch` fired on a schedule by cron-job.org (sole trigger; GitHub's own cron dropped fires under load and was removed). Force-pushes an amended commit to the `data` branch (no history growth). `main` is never touched. A failed run opens/bumps a `wildfire-feed-down` issue. The cron-job.org job authenticates with a fine-grained PAT (Actions R/W, this repo only) that expires yearly. |
 
 > **Hosting.** Lives on a one-commit orphan `data` branch rather than a Release asset —
 > GitHub Release assets have no CORS, which breaks live-map fetches. R2 is the deferred
