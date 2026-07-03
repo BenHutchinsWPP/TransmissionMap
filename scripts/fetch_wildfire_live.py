@@ -7,14 +7,11 @@ All four feature types share one output file; _type distinguishes them:
   incident  — WFIGS named dispatch record (Point)
   smoke     — NOAA HMS smoke detection polygon (Polygon)
 
-Usage (local dev — fetches live perimeters, incidents, and smoke):
-  python3 scripts/firms_csv_to_geojson.py \\
-      tmp/wildfire-data/viirs_snpp_24h.csv \\
-      tmp/wildfire-data/viirs_noaa20_24h.csv \\
-      -o data/layers/wildfire_live.geojson
+Usage (dev + GH Actions — fetches everything live, including VIIRS CSVs):
+  python3 scripts/fetch_wildfire_live.py -o data/layers/wildfire_live.geojson
 
-Usage (GH Actions):
-  python3 scripts/firms_csv_to_geojson.py /tmp/snpp.csv /tmp/n20.csv -o output.geojson
+Usage (offline — pass pre-downloaded VIIRS CSVs instead of fetching):
+  python3 scripts/fetch_wildfire_live.py tmp/wildfire-data/*.csv -o output.geojson
 """
 
 import argparse
@@ -60,6 +57,20 @@ CWFIS_PERIMETERS_URL = (
     "&count=1000"
 )
 
+# ── FIRMS VIIRS 24h CSV feeds (fetched when no CSV paths are given) ──────────
+# USA region file + Canada and Central_America (incl. Mexico) country files,
+# for S-NPP and NOAA-20. read_viirs_csvs dedups across them, so border
+# overlap between region/country files is fine. Alaska has no pulled feed.
+FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
+VIIRS_URLS = [
+    f"{FIRMS_BASE}/suomi-npp-viirs-c2/USA_contiguous_and_Hawaii/SUOMI_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv",
+    f"{FIRMS_BASE}/noaa-20-viirs-c2/USA_contiguous_and_Hawaii/J1_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv",
+    f"{FIRMS_BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Canada_24h.csv",
+    f"{FIRMS_BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Canada_24h.csv",
+    f"{FIRMS_BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Central_America_24h.csv",
+    f"{FIRMS_BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Central_America_24h.csv",
+]
+
 # ── NOAA HMS smoke URL ────────────────────────────────────────────────────────
 HMS_BASE_URL = (
     "https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS"
@@ -103,33 +114,48 @@ def _parse_acq_dt(acq_date: str, acq_time: str) -> datetime | None:
         return None
 
 
-def read_viirs_csvs(paths: list[str], now: datetime) -> list[dict]:
+def _fetch_viirs_csv(url: str) -> str:
+    # Retry like the old workflow curl (--retry 3): FIRMS drops connections
+    # under load. Exhausted retries raise — hotspots are the core payload, so
+    # the run must fail (and keep the last good file) rather than publish
+    # a hotspot-free update.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                return r.read().decode("utf-8")
+        except Exception as e:
+            if attempt == 2:
+                raise
+            print(f"  retrying {url} after {e}", file=sys.stderr)
+    raise AssertionError("unreachable")
+
+
+def read_viirs_csvs(csv_texts: list[str], now: datetime) -> list[dict]:
     seen: set[str] = set()
     features = []
-    for path in paths:
-        with open(path, newline="") as f:
-            for row in csv.DictReader(f):
-                if row.get("confidence", "").lower() == "l":
-                    continue
-                key = f"{row['latitude']},{row['longitude']},{row.get('acq_date','')},{row.get('acq_time','')}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                acq_dt = _parse_acq_dt(row.get("acq_date", ""), row.get("acq_time", ""))
-                age_hours = round((now - acq_dt).total_seconds() / 3600, 1) if acq_dt else None
-                features.append({
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [float(row["longitude"]), float(row["latitude"])]},
-                    "properties": {
-                        "_type": "hotspot",
-                        "frp": float(row["frp"]) if row.get("frp") else None,
-                        "confidence": row.get("confidence"),
-                        "satellite": row.get("satellite"),
-                        "acq_date": row.get("acq_date"),
-                        "acq_time": row.get("acq_time"),
-                        "age_hours": age_hours,
-                    },
-                })
+    for text in csv_texts:
+        for row in csv.DictReader(io.StringIO(text)):
+            if row.get("confidence", "").lower() == "l":
+                continue
+            key = f"{row['latitude']},{row['longitude']},{row.get('acq_date','')},{row.get('acq_time','')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            acq_dt = _parse_acq_dt(row.get("acq_date", ""), row.get("acq_time", ""))
+            age_hours = round((now - acq_dt).total_seconds() / 3600, 1) if acq_dt else None
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [float(row["longitude"]), float(row["latitude"])]},
+                "properties": {
+                    "_type": "hotspot",
+                    "frp": float(row["frp"]) if row.get("frp") else None,
+                    "confidence": row.get("confidence"),
+                    "satellite": row.get("satellite"),
+                    "acq_date": row.get("acq_date"),
+                    "acq_time": row.get("acq_time"),
+                    "age_hours": age_hours,
+                },
+            })
     return features
 
 
@@ -342,15 +368,21 @@ def fetch_hms_smoke() -> list[dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("viirs_csvs", nargs="+", help="FIRMS VIIRS CSV files (SNPP, NOAA-20, …)")
+    ap.add_argument("viirs_csvs", nargs="*",
+                    help="pre-downloaded FIRMS VIIRS CSVs; omit to fetch the live feeds")
     ap.add_argument("-o", "--output", required=True)
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc)
     generated_utc = now.strftime("%Y-%m-%dT%H:%MZ")
 
-    print("Reading VIIRS CSVs…", file=sys.stderr)
-    hotspots = read_viirs_csvs(args.viirs_csvs, now)
+    if args.viirs_csvs:
+        print("Reading local VIIRS CSVs…", file=sys.stderr)
+        csv_texts = [open(p, newline="").read() for p in args.viirs_csvs]
+    else:
+        print("Fetching FIRMS VIIRS CSVs…", file=sys.stderr)
+        csv_texts = [_fetch_viirs_csv(u) for u in VIIRS_URLS]
+    hotspots = read_viirs_csvs(csv_texts, now)
     print(f"  {len(hotspots)} hotspots", file=sys.stderr)
 
     # Perimeters/incidents/smoke each degrade to [] on upstream failure so one

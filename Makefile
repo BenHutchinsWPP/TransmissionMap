@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev smoke-dev validate tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -234,18 +234,13 @@ whp:
 	@bash $(SCRIPTS)/build_wildfire_hazard.sh
 
 # ── Active wildfire live layer (local dev) ───────────────────────────────────
-# Merges local VIIRS CSVs + live NIFC perimeters/incidents + live NOAA HMS smoke
-# → data/layers/wildfire_live.geojson (single file, all _types).
-# Reads every CSV in tmp/wildfire-data/ (USA + Canada + Central_America country
-# files); script dedups across them. In production this runs hourly via
-# .github/workflows/wildfire-data.yml.
+# Fetches everything live (VIIRS hotspots + NIFC perimeters/incidents + NOAA
+# HMS smoke) → data/layers/wildfire_live.geojson (single file, all _types).
+# Pass pre-downloaded CSVs to the script directly for offline use. In
+# production this runs via .github/workflows/wildfire-data.yml.
 wildfire-dev:
-	@$(PY) $(SCRIPTS)/firms_csv_to_geojson.py \
-		tmp/wildfire-data/*.csv \
+	@$(PY) $(SCRIPTS)/fetch_wildfire_live.py \
 		-o data/layers/wildfire_live.geojson
-
-smoke-dev:
-	@echo "smoke-dev merged into wildfire-dev. Run 'make wildfire-dev' instead."
 
 # ── Seismic hazard raster (USGS NSHM 2018, PGA 2% in 50yr) ──────────────────
 # Self-contained raster pipeline (gdal + pmtiles, no venv). Reads the USGS NSHM

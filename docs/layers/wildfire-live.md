@@ -5,9 +5,9 @@ layers consume it:
 
 | Layer id | Label | `urlCode` | Feature (`_type`) | Source |
 |---|---|---|---|---|
-| `wildfire-live` | Active Wildfire (live) | `WFL` | `perimeter` (Polygon) + `hotspot` (Point) | NIFC WFIGS + CWFIS (CA) perimeters · NASA FIRMS VIIRS |
-| `wildfire-incidents` | Named Incidents (live) | `WFI` | `incident` (Point) | NIFC WFIGS incident locations |
-| `wildfire-smoke` | Smoke Detection (live) | `SMK` | `smoke` (Polygon) | NOAA HMS smoke polygons |
+| `wildfire-live` | Active Wildfire (~24h) | `WFL` | `perimeter` (Polygon) + `hotspot` (Point) | NIFC WFIGS + CWFIS (CA) perimeters · NASA FIRMS VIIRS |
+| `wildfire-incidents` | Named Incidents (~24h) | `WFI` | `incident` (Point) | NIFC WFIGS incident locations |
+| `wildfire-smoke` | Smoke Detection (~24h) | `SMK` | `smoke` (Polygon) | NOAA HMS smoke polygons |
 
 All four `_type`s are merged into a **single** `wildfire_live.geojson`; the frontend
 splits them into the map layers above by filtering on `_type`. These are **not** the
@@ -23,8 +23,8 @@ provider, layer, and pipeline.
 | **Vintage** | Rolling — VIIRS last 24 h; US perimeters/incidents = WFIGS *Current*; CA perimeters = CWFIS M3 *current* (daily); smoke = latest available HMS day |
 | **License** | Public domain (US Government work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105)); CWFIS under [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution) |
 | **Served (prod)** | `wildfire_live.geojson` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok; ~5 min CDN lag). URL in `assets/constants.ts` → `DATA.wildfire_live`. |
-| **Served (dev)** | Local `data/layers/wildfire_live.geojson` — **not in git** (`data/layers/` is gitignored); run `make wildfire-dev` to pull fresh fire data before local dev. |
-| **Built by** | `scripts/firms_csv_to_geojson.py` (merges all feeds: VIIRS hotspots, NIFC + CWFIS perimeters, NIFC incidents, HMS smoke) |
+| **Served (dev)** | Local `data/layers/wildfire_live.geojson` — **not in git** (`data/layers/` is gitignored). `make wildfire-dev` builds it, fetching all feeds live (no manual downloads). Offline: pass pre-downloaded VIIRS CSVs to `fetch_wildfire_live.py` as positional args. |
+| **Built by** | `scripts/fetch_wildfire_live.py` (merges all feeds: VIIRS hotspots, NIFC + CWFIS perimeters, NIFC incidents, HMS smoke) |
 | **Refresh** | `.github/workflows/wildfire-data.yml` — hourly `workflow_dispatch` from cron-job.org at `:05` (GitHub's own cron drops fires under load; kept as `:33` fallback). Force-pushes an amended commit to the `data` branch (no history growth). `main` is never touched. The cron-job.org job authenticates with a fine-grained PAT (Actions R/W, this repo only) that expires yearly. |
 
 > **Hosting.** Lives on a one-commit orphan `data` branch rather than a Release asset —
@@ -33,7 +33,7 @@ provider, layer, and pipeline.
 
 ## Live endpoints (upstream)
 
-Pulled by `firms_csv_to_geojson.py` / the workflow:
+All pulled by `fetch_wildfire_live.py` (the workflow just runs it):
 
 - **FIRMS VIIRS 24 h** (S-NPP + NOAA-20 CSVs), three feed regions each:
   - USA: `.../{suomi-npp,noaa-20}-viirs-c2/USA_contiguous_and_Hawaii/...24h.csv`
@@ -59,6 +59,18 @@ All features carry a `_type` discriminator (`hotspot` | `perimeter` | `incident`
 
 - **Live & best-effort.** Upstream feeds go down; the workflow tolerates a missing day
   (HMS falls back up to 2 days). A stale file means the map shows the last good pull.
+- **Production method varies by feed — not all are machine-generated:**
+  - `hotspot` (VIIRS/FIRMS): fully automated satellite pixel detection, no human step.
+  - `smoke` (NOAA HMS): **manually analyzed** — NOAA satellite analysts hand-draw the
+    smoke polygons once per day (not a continuous automated feed), which is why a
+    single stale/missing day is expected and tolerated (2-day fallback above). Exact
+    daily publish time in ET is not confirmed — check
+    https://www.ospo.noaa.gov/Products/land/hms.html before relying on freshness SLAs.
+  - `perimeter`/`incident` (NIFC WFIGS, US): human-reported by fire agencies/incident
+    command, not NASA/NOAA — updates as agencies file reports, can lag the actual
+    fire by hours.
+  - `perimeter` (CWFIS, CA): the one machine-derived exception — estimated from
+    hotspot clustering, not human-surveyed (see below).
 - **VIIRS hotspots are heat detections, not fires** — clouds, flares, and hot industrial
   sites produce false positives. Confidence field is the filter.
 - Hotspots cover CONUS + Hawaii + Canada + Mexico/Central America; **Alaska is
@@ -70,8 +82,3 @@ All features carry a `_type` discriminator (`hotspot` | `perimeter` | `incident`
   the real thing. The popup labels CA ones "Fire Perimeter Estimate (CWFIS)".
   No national Canadian *named-incident* feed exists (provincial + fragmented), so
   there's no Canadian analog to the `incident` layer.
-- `scripts/hms_smoke_to_geojson.py` is a standalone smoke-only helper; the live pipeline
-  uses `firms_csv_to_geojson.py`, which merges smoke too.
-- `data/layers/smoke_live.geojson` is a **dead artifact** from the old standalone smoke
-  pipeline — no code reads it (smoke comes from `wildfire_live.geojson`). Kept in `main`
-  for now; safe to delete post-release.
