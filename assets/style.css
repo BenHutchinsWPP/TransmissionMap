@@ -767,6 +767,7 @@ header h1 {
   box-shadow: var(--panel-shadow);
   padding: 8px 10px;
   min-width: 130px;
+  max-width: 260px;
 }
 
 .legend-title {
