@@ -103,7 +103,10 @@ export function init() {
     // fallback (clone().blob()) — it bought a few unlabeled responses at the
     // cost of buffering every response body on the hot path.
     const contentLength = response.headers.get("content-length");
-    if (contentLength) updateCounter(parseInt(contentLength, 10));
+    // Service-worker cache hits cost zero network bytes — don't count them.
+    if (contentLength && response.headers.get("x-sw-cache") !== "hit") {
+      updateCounter(parseInt(contentLength, 10));
+    }
     return response;
   };
 }
