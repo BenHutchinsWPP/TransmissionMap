@@ -46,7 +46,12 @@ All pulled by `fetch_wildfire_live.py` (the workflow just runs it):
 
 ## Feature attributes
 
-All features carry a `_type` discriminator (`hotspot` | `perimeter` | `incident` | `smoke`).
+All features carry a `_type` discriminator (`hotspot` | `perimeter` | `incident` | `smoke`)
+and `generated_utc` (pull time). The **first feature additionally carries `feed_status`**
+(`{perimeters_us, perimeters_ca, incidents, smoke}` → `ok` | `failed` | smoke-only
+`fallback-1d`/`fallback-2d`) — the frontend legend chips read it to flag a feed that
+silently degraded to empty/old data despite a fresh pull (`assets/ui/ui-legends.ts`).
+Hotspots never appear in it: a VIIRS failure fails the whole run instead (see Caveats).
 
 | `_type` | Geometry | Key fields |
 |---|---|---|
@@ -57,8 +62,15 @@ All features carry a `_type` discriminator (`hotspot` | `perimeter` | `incident`
 
 ## Caveats
 
-- **Live & best-effort.** Upstream feeds go down; the workflow tolerates a missing day
-  (HMS falls back up to 2 days). A stale file means the map shows the last good pull.
+- **Live & best-effort.** Upstream feeds go down; failure handling differs by feed:
+  - **VIIRS hotspots (core):** fetch is retried 3× per URL; if still failing the run
+    exits nonzero and nothing is published — the map keeps the last good pull, whose
+    growing age the legend chips show and the 6-hour kill-switch modal
+    (`assets/wildfire-staleness.ts`) enforces.
+  - **Perimeters / incidents / smoke (secondary):** each degrades independently to
+    empty (HMS smoke first falls back up to 2 days) so one flaky source doesn't block
+    the rest. The pull still publishes with a fresh `generated_utc`, so the gap is
+    flagged via `feed_status` (above) as an amber legend chip instead.
 - **Production method varies by feed — not all are machine-generated:**
   - `hotspot` (VIIRS/FIRMS): fully automated satellite pixel detection, no human step.
   - `smoke` (NOAA HMS): **manually analyzed** — NOAA satellite analysts hand-draw the

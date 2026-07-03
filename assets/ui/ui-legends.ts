@@ -144,6 +144,27 @@ function buildLegendSection(cfg: LegendFilter) {
 // time). We show the *pull age* (now − generated_utc) — the true staleness of
 // what's on screen, including how long the page has sat open without refetching.
 let liveGeneratedUtc: string | undefined;
+// Per-feed degradation flags from the pipeline (stamped on the first feature,
+// same carrier as generated_utc). A fresh pull can still be missing a feed —
+// e.g. ArcGIS down → zero perimeters — and that must not look like a calm day.
+let liveFeedStatus: Record<string, string> | undefined;
+
+// Chip element id → the upstream feeds it depends on (hotspots hard-fail the
+// whole pull, so they never appear here — a published file always has them).
+const CHIP_FEEDS: Record<string, string[]> = {
+  wildfireAge: ["perimeters_us", "perimeters_ca"],
+  incidentAge: ["incidents"],
+  smokeAge:    ["smoke"],
+};
+
+// Human text for a degraded feed, or null when ok.
+function feedIssue(feed: string, status: string): string | null {
+  if (status === "ok") return null;
+  const name = { perimeters_us: "US perimeters", perimeters_ca: "CA perimeters",
+                 incidents: "incidents", smoke: "smoke" }[feed] ?? feed;
+  const m = status.match(/^fallback-(\d+)d$/);
+  return m ? `${name} from ${m[1]}d ago` : `${name} feed down`;
+}
 
 function relAge(tsIso: string): { short: string; level: string; abs: string } {
   const then = Date.parse(tsIso);
@@ -170,9 +191,14 @@ function renderLiveAge() {
   for (const id of ["smokeAge", "wildfireAge", "incidentAge"]) {
     const el = document.getElementById(id);
     if (!el) continue;
-    el.textContent = short;
-    el.title = abs + " — when the map last fetched the feeds; observations can be older (see legend note)";
-    el.className = "legend-age legend-age--" + level;
+    const issues = CHIP_FEEDS[id]
+      .map(f => feedIssue(f, liveFeedStatus?.[f] ?? "ok"))
+      .filter((s): s is string => s !== null);
+    el.textContent = issues.length ? `${short} · ${issues.join(", ")}` : short;
+    el.title = abs + " — when the map last fetched the feeds; observations can be older (see legend note)"
+      + (issues.length ? ". A source feed is degraded — this layer shows the last good data, which may be incomplete." : "");
+    // A degraded feed is at least "aging" (amber) even seconds after a pull.
+    el.className = "legend-age legend-age--" + (issues.length && level === "fresh" ? "aging" : level);
   }
   for (const id of ["smokeDataTimestamp", "wildfireDataTimestamp", "incidentDataTimestamp"]) {
     const el = document.getElementById(id);
@@ -188,7 +214,9 @@ export function buildLegends() {
   window.addEventListener("tm:layerdata", (e) => {
     const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
     if (registryId !== "wildfire-live") return;
-    liveGeneratedUtc = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties?.generated_utc as string | undefined;
+    const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
+    liveGeneratedUtc = first?.generated_utc as string | undefined;
+    liveFeedStatus = first?.feed_status as Record<string, string> | undefined;
     renderLiveAge();
   });
   setInterval(renderLiveAge, 60_000);

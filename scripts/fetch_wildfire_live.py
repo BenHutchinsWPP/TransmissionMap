@@ -322,7 +322,8 @@ def _read_shp(data: bytes) -> list[list[list[list[float]]]]:
     return all_rings
 
 
-def fetch_hms_smoke() -> list[dict]:
+def fetch_hms_smoke() -> tuple[list[dict], str]:
+    """Returns (features, status) — status: "ok" | "fallback-1d" | "fallback-2d" | "failed"."""
     now = datetime.now(timezone.utc)
     for delta in (0, 1, 2):
         dt = now - timedelta(days=delta)
@@ -356,12 +357,12 @@ def fetch_hms_smoke() -> list[dict]:
                 })
             print(f"  {len(features)} smoke polygons from {dt.strftime('%Y-%m-%d')}", file=sys.stderr)
             if features:
-                return features
+                return features, ("ok" if delta == 0 else f"fallback-{delta}d")
             # empty (clear-sky or not-yet-posted day) — fall back to prior day
         except Exception as e:
             print(f"  {e}", file=sys.stderr)
     print("  WARNING: HMS smoke unavailable", file=sys.stderr)
-    return []
+    return [], "failed"
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -387,12 +388,17 @@ def main():
 
     # Perimeters/incidents/smoke each degrade to [] on upstream failure so one
     # flaky source (ArcGIS especially) doesn't blank the whole hourly update.
+    # feed_status records those degradations for the frontend (legend chips) —
+    # a fresh generated_utc must not mask a silently-missing feed.
+    feed_status = {"perimeters_us": "ok", "perimeters_ca": "ok", "incidents": "ok"}
+
     print("Fetching NIFC perimeters…", file=sys.stderr)
     try:
         perimeters = [normalize_perimeter(f) for f in _fetch_paginated(NIFC_PERIMETERS_URL) if f.get("geometry")]
         print(f"  {len(perimeters)} perimeters", file=sys.stderr)
     except Exception as e:
         perimeters = []
+        feed_status["perimeters_us"] = "failed"
         print(f"  WARNING: perimeters unavailable: {e}", file=sys.stderr)
 
     print("Fetching CWFIS Canada perimeter estimates…", file=sys.stderr)
@@ -402,6 +408,7 @@ def main():
         perimeters += ca_perimeters
         print(f"  {len(ca_perimeters)} CA perimeter estimates", file=sys.stderr)
     except Exception as e:
+        feed_status["perimeters_ca"] = "failed"
         print(f"  WARNING: CWFIS perimeters unavailable: {e}", file=sys.stderr)
 
     print("Fetching WFIGS incidents…", file=sys.stderr)
@@ -410,14 +417,19 @@ def main():
         print(f"  {len(incidents)} incidents", file=sys.stderr)
     except Exception as e:
         incidents = []
+        feed_status["incidents"] = "failed"
         print(f"  WARNING: incidents unavailable: {e}", file=sys.stderr)
 
     print("Fetching NOAA HMS smoke…", file=sys.stderr)
-    smoke = fetch_hms_smoke()
+    smoke, feed_status["smoke"] = fetch_hms_smoke()
 
     all_features = hotspots + perimeters + incidents + smoke
     for feat in all_features:
         feat["properties"]["generated_utc"] = generated_utc
+    # Stamped on the first feature only (the same carrier the frontend reads
+    # generated_utc from) — stamping all ~40k features would bloat the file.
+    if all_features:
+        all_features[0]["properties"]["feed_status"] = feed_status
 
     fc = {"type": "FeatureCollection", "features": all_features}
     with open(args.output, "w") as f:
