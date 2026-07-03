@@ -35,10 +35,18 @@ provider, layer, and pipeline.
 
 All pulled by `fetch_wildfire_live.py` (the workflow just runs it):
 
-- **FIRMS VIIRS 24 h** (S-NPP + NOAA-20 CSVs), three feed regions each:
-  - USA: `.../{suomi-npp,noaa-20}-viirs-c2/USA_contiguous_and_Hawaii/...24h.csv`
-  - Canada: `.../{suomi-npp,noaa-20}-viirs-c2/csv/{SUOMI,J1}_VIIRS_C2_Canada_24h.csv`
-  - Mexico/Central America: `.../csv/{SUOMI,J1}_VIIRS_C2_Central_America_24h.csv` (Mexico has no standalone country file; it lives in the Central_America region)
+- **FIRMS VIIRS 24 h** (S-NPP + NOAA-20), two paths:
+  - **Primary (`FIRMS_MAP_KEY` env var set — the prod path):** quota'd area API,
+    `firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/-180,5,-40,75/2` —
+    one North+Central-America bbox per sensor (**includes Alaska**), 2 UTC days
+    trimmed to a rolling 24 h in the script. Key: free from
+    https://firms.modaps.eosdis.nasa.gov/api/map_key/ (5000 req/10 min); stored as
+    the `FIRMS_MAP_KEY` Actions secret.
+  - **Fallback (no key):** anonymous flat files, which rate-limit runner IPs under
+    load and **exclude Alaska**:
+    - USA: `.../{suomi-npp,noaa-20}-viirs-c2/USA_contiguous_and_Hawaii/...24h.csv`
+    - Canada: `.../{suomi-npp,noaa-20}-viirs-c2/csv/{SUOMI,J1}_VIIRS_C2_Canada_24h.csv`
+    - Mexico/Central America: `.../csv/{SUOMI,J1}_VIIRS_C2_Central_America_24h.csv` (Mexico has no standalone country file; it lives in the Central_America region)
 - **WFIGS perimeters (US):** `services3.arcgis.com/.../WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query`
 - **CWFIS perimeter estimates (CA):** `cwfis.cfs.nrcan.gc.ca/geoserver/public/ows` WFS 2.0, `typeNames=public:m3_polygons_current`, GeoJSON (CORS `*`)
 - **WFIGS incidents:** `services3.arcgis.com/.../WFIGS_Incident_Locations_Current/FeatureServer/0/query`
@@ -85,9 +93,10 @@ Hotspots never appear in it: a VIIRS failure fails the whole run instead (see Ca
     hotspot clustering, not human-surveyed (see below).
 - **VIIRS hotspots are heat detections, not fires** — clouds, flares, and hot industrial
   sites produce false positives. Confidence field is the filter.
-- Hotspots cover CONUS + Hawaii + Canada + Mexico/Central America; **Alaska is
-  still excluded** (not in any pulled FIRMS region file). Incidents and smoke
-  remain US-only — NIFC and NOAA are US agencies.
+- Hotspot coverage depends on the FIRMS path: the API bbox (prod) covers all of
+  North + Central America **including Alaska**; the anonymous flat-file fallback
+  **excludes Alaska** (no region file covers it). Incidents and smoke remain
+  US-only — NIFC and NOAA are US agencies.
 - **Canadian perimeters are estimates, not surveyed boundaries.** CWFIS Fire M3
   polygons are generated from clustered hotspots, so they carry no incident name,
   cause, or containment %, and the extent is approximate. US (NIFC) perimeters are

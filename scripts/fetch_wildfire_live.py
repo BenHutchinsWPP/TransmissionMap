@@ -18,6 +18,7 @@ import argparse
 import csv
 import io
 import json
+import os
 import struct
 import sys
 import urllib.request
@@ -58,9 +59,18 @@ CWFIS_PERIMETERS_URL = (
 )
 
 # ── FIRMS VIIRS 24h CSV feeds (fetched when no CSV paths are given) ──────────
-# USA region file + Canada and Central_America (incl. Mexico) country files,
-# for S-NPP and NOAA-20. read_viirs_csvs dedups across them, so border
-# overlap between region/country files is fine. Alaska has no pulled feed.
+# Primary: the quota'd area API (5000 req/10min per key) when FIRMS_MAP_KEY is
+# set — one North+Central-America bbox per sensor, which also covers Alaska.
+# The API's day-range param is UTC-calendar-day granular, so we ask for 2 days
+# and let read_viirs_csvs trim to a rolling 24 h.
+FIRMS_API_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/-180,5,-40,75/2"
+FIRMS_API_SENSORS = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT"]
+
+# Fallback: anonymous flat files (rate-limited for runner IPs under load —
+# see docs/layers/wildfire-live.md). USA region file + Canada and
+# Central_America (incl. Mexico) country files, for S-NPP and NOAA-20.
+# read_viirs_csvs dedups across them, so border overlap between files is
+# fine. Alaska has no flat-file feed — API path only.
 FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
 VIIRS_URLS = [
     f"{FIRMS_BASE}/suomi-npp-viirs-c2/USA_contiguous_and_Hawaii/SUOMI_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv",
@@ -122,7 +132,12 @@ def _fetch_viirs_csv(url: str) -> str:
     for attempt in range(3):
         try:
             with urllib.request.urlopen(url, timeout=60) as r:
-                return r.read().decode("utf-8")
+                text = r.read().decode("utf-8")
+            # FIRMS reports errors (bad key, over quota) as HTTP-200 text;
+            # a truncated/HTML body must fail loudly, not parse as 0 rows.
+            if not text.startswith("latitude"):
+                raise ValueError(f"unexpected response: {text[:80]!r}")
+            return text
         except Exception as e:
             if attempt == 2:
                 raise
@@ -143,6 +158,9 @@ def read_viirs_csvs(csv_texts: list[str], now: datetime) -> list[dict]:
             seen.add(key)
             acq_dt = _parse_acq_dt(row.get("acq_date", ""), row.get("acq_time", ""))
             age_hours = round((now - acq_dt).total_seconds() / 3600, 1) if acq_dt else None
+            # Rolling 24 h window: the API path over-fetches (2 UTC days).
+            if age_hours is not None and age_hours > 24:
+                continue
             features.append({
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [float(row["longitude"]), float(row["latitude"])]},
@@ -381,8 +399,12 @@ def main():
         print("Reading local VIIRS CSVs…", file=sys.stderr)
         csv_texts = [open(p, newline="").read() for p in args.viirs_csvs]
     else:
-        print("Fetching FIRMS VIIRS CSVs…", file=sys.stderr)
-        csv_texts = [_fetch_viirs_csv(u) for u in VIIRS_URLS]
+        key = os.environ.get("FIRMS_MAP_KEY")
+        urls = ([FIRMS_API_URL.format(key=key, sensor=s) for s in FIRMS_API_SENSORS]
+                if key else VIIRS_URLS)
+        print(f"Fetching FIRMS VIIRS CSVs ({'API' if key else 'anonymous flat files'})…",
+              file=sys.stderr)
+        csv_texts = [_fetch_viirs_csv(u) for u in urls]
     hotspots = read_viirs_csvs(csv_texts, now)
     print(f"  {len(hotspots)} hotspots", file=sys.stderr)
 

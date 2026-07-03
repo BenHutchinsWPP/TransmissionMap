@@ -42,6 +42,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch all feeds → wildfire_live.geojson
+        env:
+          # FIRMS quota'd area API; script falls back to the anonymous
+          # flat files if unset. GitHub masks the key in logs.
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
         run: |
           # Scripts live on main; grab without switching branches.
           # The script fetches everything itself (VIIRS CSVs, perimeters,
