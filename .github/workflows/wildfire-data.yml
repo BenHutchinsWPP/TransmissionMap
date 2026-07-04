@@ -46,18 +46,48 @@ jobs:
           ref: data                        # orphan branch — only the data file
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch all feeds → wildfire_live.geojson
+      - name: Force IPv4 for network stability
+        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
+        # See: https://github.com/actions/runner-images/issues/668
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - name: Verify network connectivity to data sources
+        # Fails fast if a required service is unreachable, saving runner minutes and providing a clear error.
+        run: |
+          echo "::group::Pinging data services..."
+          endpoints=(
+            "https://firms.modaps.eosdis.nasa.gov"
+            "https://services3.arcgis.com"
+            "https://cwfis.cfs.nrcan.gc.ca"
+            "https://satepsanone.nesdis.noaa.gov"
+          )
+          for endpoint in "${endpoints[@]}"; do
+            if ! curl -s --fail --connect-timeout 15 -o /dev/null "$endpoint"; then
+              echo "::error::Failed to connect to $endpoint. Aborting."
+              exit 1
+            else
+              echo "✅ Connection to $endpoint successful."
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Fetch all feeds → wildfire_live.geojson (with retries)
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_on: error
+          command: |
+            # Scripts live on main; grab without switching branches.
+            # The script fetches everything itself (VIIRS CSVs, perimeters,
+            # incidents, smoke) when no CSV paths are passed.
+            git fetch origin main
+            git show origin/main:scripts/fetch_wildfire_live.py > /tmp/fetch_wildfire_live.py
+            python3 /tmp/fetch_wildfire_live.py -o data/layers/wildfire_live.geojson
         env:
           # FIRMS quota'd area API; script falls back to the anonymous
           # flat files if unset. GitHub masks the key in logs.
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
-        run: |
-          # Scripts live on main; grab without switching branches.
-          # The script fetches everything itself (VIIRS CSVs, perimeters,
-          # incidents, smoke) when no CSV paths are passed.
-          git fetch origin main
-          git show origin/main:scripts/fetch_wildfire_live.py > /tmp/fetch_wildfire_live.py
-          python3 /tmp/fetch_wildfire_live.py -o data/layers/wildfire_live.geojson
 
       - name: Amend rolling commit and force-push
         run: |
