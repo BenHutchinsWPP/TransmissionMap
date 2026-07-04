@@ -19,11 +19,25 @@ import csv
 import io
 import json
 import os
+import socket
 import struct
 import sys
 import urllib.request
 import zipfile
 from datetime import datetime, timedelta, timezone
+
+# GitHub-hosted runners sometimes have a broken/unreachable IPv6 route while
+# IPv4 works fine; urllib picks whichever getaddrinfo() returns first, which
+# is often the AAAA record, causing "Network is unreachable" (errno 101).
+# Force IPv4-only resolution everywhere in this process.
+_orig_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+
+socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 # ── WFIGS endpoints ───────────────────────────────────────────────────────────
 NIFC_PERIMETERS_URL = (
