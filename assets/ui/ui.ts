@@ -334,16 +334,22 @@ function wireCreditsDialog() {
 function wireDisclaimerDialog() {
   const dialog    = document.getElementById("disclaimerDialog") as HTMLDialogElement | null;
   const acceptBtn = document.getElementById("disclaimerAccept");
-  if (!dialog) return;
-
-  if (!localStorage.getItem("tm_disclaimer_accepted")) {
+  if (dialog && !localStorage.getItem("tm_disclaimer_accepted")) {
     dialog.showModal();
   }
-
-  if (acceptBtn) {
+  if (acceptBtn && dialog) {
     acceptBtn.addEventListener("click", () => {
       localStorage.setItem("tm_disclaimer_accepted", "1");
       dialog.close();
+    });
+  }
+
+  const tribalDialog = document.getElementById("tribalDisclaimerDialog") as HTMLDialogElement | null;
+  const tribalAcceptBtn = document.getElementById("tribalDisclaimerAccept");
+  if (tribalAcceptBtn && tribalDialog) {
+    tribalAcceptBtn.addEventListener("click", () => {
+      localStorage.setItem("tm_tribal_acknowledged", "1");
+      tribalDialog.close();
     });
   }
 }

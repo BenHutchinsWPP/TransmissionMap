@@ -44,8 +44,9 @@ American Indian / Alaska Native / Native Hawaiian areas from Census TIGER/Line.
 
 ## Caveats
 
-- **Statistical/administrative geography, not a legal boundary.** Do not use for
-  land-tenure, jurisdiction, or sovereignty determinations.
+- **Statistical/administrative geography, not a legal boundary.** 
+  > "The boundary information in the TIGER/Line Shapefiles is for statistical data collection and tabulation purposes only; their depiction and designation for statistical purposes do not constitute a determination of jurisdictional authority or rights of ownership or entitlement and they are not legal land descriptions."
+  Do not use for land-tenure, jurisdiction, or sovereignty determinations.
 - Includes statistical areas that are **not** reservations (State-/Tribal-Designated
   Statistical Areas, Oklahoma Tribal Statistical Areas) — see `area_type`.
 - TIGER/Line 2025 vintage; Census refreshes annually. Bump the download year for newer data.

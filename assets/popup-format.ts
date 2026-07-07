@@ -269,10 +269,11 @@ const _defs = [
     row("Established", p.yr_est) +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Filtered highlight of selected features — not the complete USGS PAD-US database</div>`],
   [["tribal-fill"], (p: Record<string, unknown>) =>
-    title((p.name as string) || "Tribal Land") +
+    title((p.name as string) || "Tribal (Census)") +
     row("Area type", p.area_type) +
     row("Recognition", p.recognized) +
-    row("Land acres", p.acres_land ? Number(p.acres_land).toLocaleString() : null)],
+    row("Land acres", p.acres_land ? Number(p.acres_land).toLocaleString() : null) +
+    `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">Census administrative boundary. Not intended for consultation or determining historical extent.</div>`],
   [["crithab-fill"], (p: Record<string, unknown>) =>
     title((p.comname as string) || (p.sciname as string) || "Critical Habitat") +
     row("Scientific name", p.sciname) +

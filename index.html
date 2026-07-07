@@ -395,6 +395,24 @@
 
   </div><!-- /.app -->
 
+  <!-- Tribal layer disclaimer dialog -->
+  <dialog class="disclaimer-dialog" id="tribalDisclaimerDialog">
+    <div class="disclaimer-content">
+      <div class="disclaimer-header">
+        <h2>Tribal Layer Context</h2>
+      </div>
+      <p class="disclaimer-body">
+        The boundary information in the TIGER/Line Shapefiles is for statistical data collection and tabulation purposes only; their depiction and designation for statistical purposes do not constitute a determination of jurisdictional authority or rights of ownership or entitlement and they are not legal land descriptions.
+        <br><br>
+        This layer <strong>does not represent full Tribal ancestral lands or sacred sites</strong>. 
+        For consultation purposes or to understand broader ancestral footprints, please refer to authoritative contact databases (like <a href="https://egis.hud.gov/TDAT/" target="_blank" rel="noopener">HUD TDAT</a> or BIA), explore resources like <a href="https://native-land.ca/" target="_blank" rel="noopener">Native-Land.ca</a>, and engage in direct Tribal consultation rather than relying solely on this boundary map.
+      </p>
+      <div class="disclaimer-footer">
+        <button class="disclaimer-accept" id="tribalDisclaimerAccept" type="button">I understand</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Disclaimer dialog (first visit only) -->
   <dialog class="disclaimer-dialog" id="disclaimerDialog">
     <div class="disclaimer-content">
@@ -478,7 +496,7 @@
           <span data-source-credit="hifld-ba"><a href="https://source.coop/seerai/hifld/control-areas/control-areas/control-areas.parquet" target="_blank" rel="noopener">Balancing Authorities</a></span>,
           <span data-source-credit="hifld-retail"><a href="https://source.coop/seerai/hifld/electric-retail-service-territories/retail-service-territories/retail-service-territories.parquet" target="_blank" rel="noopener">Retail Territories</a></span>
         </li>
-        <li data-source-credit="hifld-tribal"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line 2025</a> — AIANNH — public domain</li>
+        <li data-source-credit="hifld-tribal"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line 2025</a> — AIANNH — public domain. <strong>Display note:</strong> Administrative boundaries only; not for consultation or determining historical extent.</li>
         <li data-source-credit="ogf"><a href="https://ourgridfuture.org" target="_blank" rel="noopener">Our Grid Future</a> / Horizon Energy Systems — June 2026 — non-commercial use</li>
         <li data-source-credit="eia"><a href="https://www.eia.gov/electricity/data/eia860/" target="_blank" rel="noopener">EIA Form 860</a> — 2025 early-release — public domain</li>
         <li data-source-credit="msha-mines"><a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp" target="_blank" rel="noopener">MSHA Mine Data Retrieval System</a> — large mines only (peak quarterly employment ≥ 50); filtered subset, not the full dataset. Public domain (US DOL).</li>

@@ -43,7 +43,7 @@ export const LEGEND_FILTERS = [
     title: "PAD-US — land type", swatch: "color", apply: applyPadusClassFilter },
   { key: "tribal", groupCode: "t", buckets: TRIBAL_BUCKETS,
     masterId: "tribalAllCb", legendId: "tribalLegend", itemsId: "tribalLegendItems",
-    title: "Tribal Lands (AIANNH)", swatch: "color", apply: applyTribalClassFilter },
+    title: "Tribal (Census)", swatch: "color", apply: applyTribalClassFilter },
   { key: "natgasLine", groupCode: "n", buckets: NATGAS_PIPE_TYPE_BUCKETS,
     masterId: "natgasLineAllCb", legendId: "natgasLineLegend", itemsId: "natgasLineLegendItems",
     title: "Pipeline type", swatch: "color", apply: applyNatgasLineFilter },

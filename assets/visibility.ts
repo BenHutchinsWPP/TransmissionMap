@@ -26,6 +26,11 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
   }
   if (entry.heatLayerId) applyGenMode(registryId);
   writeUrlState();
+
+  if (registryId === "tribal-lands" && visible && !localStorage.getItem("tm_tribal_acknowledged")) {
+    const tribalDlg = document.getElementById("tribalDisclaimerDialog") as HTMLDialogElement | null;
+    if (tribalDlg && !tribalDlg.open) tribalDlg.showModal();
+  }
 }
 
 export function applyGenMode(registryId: string) {
