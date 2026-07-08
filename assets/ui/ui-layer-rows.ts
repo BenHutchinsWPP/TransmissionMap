@@ -50,10 +50,10 @@ function downloadMenuHtml(entry: LayerDef) {
   // page, reachable via the info button — one fewer link to maintain.
   if (!csv && !geojson && !shp && !tif) return "";
   const items = [
-    csv ? `<a href="${DATA_ORIGIN}${csv}" download>Download CSV</a>` : "",
-    geojson ? `<a href="${DATA_ORIGIN}${geojson}" download>Download GeoJSON</a>` : "",
-    shp ? `<a href="${DATA_ORIGIN}${shp}" download>Download SHP</a>` : "",
-    tif ? `<a href="${DATA_ORIGIN}${tif}" download>Download GeoTIFF</a>` : "",
+    csv ? `<a href="${DATA_ORIGIN}${csv}" download>CSV</a>` : "",
+    geojson ? `<a href="${DATA_ORIGIN}${geojson}" download>GeoJSON</a>` : "",
+    shp ? `<a href="${DATA_ORIGIN}${shp}" download>SHP</a>` : "",
+    tif ? `<a href="${DATA_ORIGIN}${tif}" download>GeoTIFF</a>` : "",
     url ? `<a href="${url}" target="_blank" rel="noopener">Source data ↗</a>` : "",
   ].filter(Boolean).join("");
   return `
