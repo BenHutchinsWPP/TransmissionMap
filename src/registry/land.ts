@@ -17,7 +17,7 @@ export const landLayers: LayerDef[] = [
   {
     id:            "tribal-lands",
     urlCode:       "TRB",
-    label:         "Tribal Lands (AIANNH)",
+    label:         "Tribal (Census)",
     group:         "land",
     sourceId:      "hifld-tribal",
     swatch:        "#7c3aed",
