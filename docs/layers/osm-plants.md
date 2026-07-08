@@ -20,7 +20,12 @@ Both layers served as **gzipped GeoJSON** (many small geometries).
 
 ## Download pack
 
-`osm-plants.zip` — `osm-plants-points.geojson` · `osm-plants-points.csv` · `osm-plants-polygons.geojson` · `osm-plants.md` · `disclaimer.txt`
+Two separate packs (one per map layer):
+
+- **Points** (`osm-plants-points.zip`) — CSV only: `osm-plants-points.csv`
+- **Polygons** — `osm-plants-polygons.zip` (GeoJSON) / `osm-plants-polygons-shp.zip` (SHP): geometry + `osm-plants-polygons.csv`
+
+Every zip also includes `osm-plants.txt` (this doc) + `disclaimer.txt`.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 

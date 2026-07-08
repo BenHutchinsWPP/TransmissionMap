@@ -3,8 +3,11 @@ import type { Map as MaplibreMap, Popup } from 'maplibre-gl';
 import type MapboxDraw from '@mapbox/mapbox-gl-draw';
 
 export interface Downloads {
-  zip?: string | null;   // ZIP download (relative path)
-  url?: string | null;   // external source link (opens in new tab)
+  csv?: string | null;      // point layers — CSV-only pack
+  geojson?: string | null;  // line/polygon layers — GeoJSON pack (also holds CSV)
+  shp?: string | null;      // line/polygon layers — Shapefile pack (also holds CSV)
+  tif?: string | null;      // raster layers — GeoTIFF pack
+  url?: string | null;      // external source link (opens in new tab)
 }
 
 export interface RampDef {

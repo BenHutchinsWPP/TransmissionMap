@@ -19,7 +19,12 @@ Both layers served as **gzipped GeoJSON**, not PMTiles — tens of thousands of 
 
 ## Download pack
 
-`osm-substations.zip` — `osm-substations-points.geojson` · `osm-substations-points.csv` · `osm-substations-polygons.geojson` · `osm-substations.md` · `disclaimer.txt`
+Two separate packs (one per map layer):
+
+- **Points** (`osm-substations-points.zip`) — CSV only: `osm-substations-points.csv`
+- **Polygons** — `osm-substations-polygons.zip` (GeoJSON) / `osm-substations-polygons-shp.zip` (SHP): geometry + `osm-substations-polygons.csv`
+
+Every zip also includes `osm-substations.txt` (this doc) + `disclaimer.txt`.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 

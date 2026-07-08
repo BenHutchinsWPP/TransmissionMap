@@ -2,12 +2,21 @@
 """
 build_releases.py — Build per-layer download ZIP packs.
 
-Reads scripts/release_manifest.yaml and produces one ZIP per layer in
-data/releases/, each containing:
-  - <name>.geojson + <name>.csv  (vector layers)
-  - <name>.tif                   (raster layers)
-  - <layer-id>.txt               (layer documentation, converted from .md via pandoc)
-  - disclaimer.txt               (static)
+Reads scripts/release_manifest.yaml and produces, per layer, one of:
+
+  - raster (has `tif:`)       → <layer-id>.zip
+        {<layer-id>.tif, <layer-id>.txt, disclaimer.txt}
+  - point (`csv_only: true`)  → <layer-id>.zip
+        {<name>.csv, <layer-id>.txt, disclaimer.txt}
+  - line/polygon (else)       → <layer-id>.zip AND <layer-id>-shp.zip
+        <layer-id>.zip:     {<name>.geojson, <name>.csv, <layer-id>.txt, disclaimer.txt}
+        <layer-id>-shp.zip: {<name>.shp/.shx/.dbf/.prj/.cpg, <name>.csv, <layer-id>.txt, disclaimer.txt}
+
+CSV rides inside every vector zip (both the GeoJSON pack and the SHP pack) as
+an attribute preview; there is no standalone CSV-only pack for line/polygon
+layers. `files:` (multi-source entries) is supported for layers like WECC
+Paths that legitimately bundle more than one geometry file into a single map
+layer's pack.
 
 Requires pandoc for .md → .txt conversion; falls back to raw .md if not found.
 
@@ -21,6 +30,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -133,21 +143,18 @@ def _clean_geometry(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gdf.set_geometry(geom)
 
 
-def write_vector_files(
-    gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile, csv_only: bool = False
-) -> None:
-    """Write GeoJSON + CSV (or CSV only) into an open ZipFile."""
+def _prep_geometry(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Reproject to EPSG:4326 and repair geometries. Shared by all vector writers."""
     if gdf.crs and gdf.crs.to_epsg() != 4326:
         gdf = gdf.to_crs("EPSG:4326")
+    return _clean_geometry(gdf)
 
-    gdf = _clean_geometry(gdf)
 
-    if not csv_only:
-        buf = BytesIO()
-        gdf.to_file(buf, driver="GeoJSON")
-        zf.writestr(f"{stem}.geojson", buf.getvalue())
+def _write_csv(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> None:
+    """Write <stem>.csv (attributes + lon/lat representative point) into zf.
 
-    # CSV — attributes + lon/lat representative point
+    Assumes gdf has already been through `_prep_geometry`.
+    """
     pts = gdf.representative_point()
     csv_df = gdf.drop(columns="geometry").copy()
     csv_df.insert(0, "lon", pts.x.round(6))
@@ -155,31 +162,121 @@ def write_vector_files(
     zf.writestr(f"{stem}.csv", csv_df.to_csv(index=False))
 
 
-def build_vector_zip(
+def write_csv_only(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> None:
+    """Write just <stem>.csv — used for csv_only (point) layers."""
+    gdf = _prep_geometry(gdf)
+    _write_csv(gdf, stem, zf)
+
+
+def write_geojson_and_csv(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> None:
+    """Write <stem>.geojson + <stem>.csv — used for the GeoJSON pack."""
+    gdf = _prep_geometry(gdf)
+    buf = BytesIO()
+    gdf.to_file(buf, driver="GeoJSON")
+    zf.writestr(f"{stem}.geojson", buf.getvalue())
+    _write_csv(gdf, stem, zf)
+
+
+def write_shp_and_csv(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> None:
+    """Write a Shapefile fileset (.shp/.shx/.dbf/.prj[/.cpg]) + <stem>.csv.
+
+    Shapefiles have a 10-char field-name limit — geopandas/fiona truncate
+    silently; that's an accepted limitation of the format, not a bug here.
+
+    A Shapefile also holds a single geometry family. The CSV keeps every
+    feature, but the shapefile keeps only the dominant family (Polygon / Line /
+    Point, folding Multi- in) and drops any stray mixed-in geometry, which
+    GDAL's ESRI Shapefile driver would otherwise reject mid-write. This assumes
+    one dominant family with only noise around it; a layer that is genuinely
+    mixed-geometry should be `geojson_only: true` instead (see WECC Paths).
+    """
+    gdf = _prep_geometry(gdf)
+    _write_csv(gdf, stem, zf)  # full attribute table — all features
+
+    fam = gdf.geom_type.str.replace("Multi", "", regex=False)
+    dominant = fam.mode(dropna=True).iloc[0]
+    keep = fam == dominant
+    if (~keep).any():
+        log.warning("    %s: dropping %d non-%s feature(s) from the shapefile",
+                    stem, int((~keep).sum()), dominant)
+        gdf = gdf[keep]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        shp_path = Path(tmp) / f"{stem}.shp"
+        gdf.to_file(shp_path, driver="ESRI Shapefile")
+        for f in Path(tmp).iterdir():
+            if f.stem == stem:
+                zf.write(f, f.name)
+
+
+def _is_csv_only(entry: dict) -> bool:
+    """A layer is csv_only if it has no `files:` and is marked csv_only, or it
+    has `files:` and every sub-spec is csv_only (in practice: point layers)."""
+    if "files" in entry:
+        return all(spec.get("csv_only", False) for spec in entry["files"].values())
+    return entry.get("csv_only", False)
+
+
+def _sources(entry: dict, layer_id: str) -> dict:
+    """Return {stem: spec} for a layer, whether single-source or `files:`."""
+    if "files" in entry:
+        return entry["files"]
+    return {layer_id: entry}
+
+
+def build_vector_zips(
     layer_id: str,
     entry: dict,
     disclaimer: Path,
     out_dir: Path,
-) -> Path:
-    out = out_dir / f"{layer_id}.zip"
+) -> list[Path]:
+    """Build the vector pack(s) for a layer: one CSV-only zip for points, or a
+    GeoJSON zip + SHP zip pair for lines/polygons. Returns the zips written."""
     doc = ROOT / entry["doc"]
+    doc_arcname, doc_content = md_to_txt(doc)
+    sources = _sources(entry, layer_id)
+    csv_only = _is_csv_only(entry)
 
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        if "files" in entry:
-            for stem, spec in entry["files"].items():
+    outputs: list[Path] = []
+
+    if csv_only:
+        out = out_dir / f"{layer_id}.zip"
+        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for stem, spec in sources.items():
                 log.info("  loading %s ...", stem)
                 gdf = load_vector(spec)
-                write_vector_files(gdf, stem, zf, csv_only=spec.get("csv_only", False))
-        else:
-            log.info("  loading %s ...", layer_id)
-            gdf = load_vector(entry)
-            write_vector_files(gdf, layer_id, zf, csv_only=entry.get("csv_only", False))
+                write_csv_only(gdf, stem, zf)
+            zf.writestr(doc_arcname, doc_content)
+            zf.write(disclaimer, "disclaimer.txt")
+        outputs.append(out)
+        return outputs
 
-        doc_arcname, doc_content = md_to_txt(doc)
+    geojson_out = out_dir / f"{layer_id}.zip"
+    with zipfile.ZipFile(geojson_out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for stem, spec in sources.items():
+            log.info("  loading %s ...", stem)
+            gdf = load_vector(spec)
+            write_geojson_and_csv(gdf, stem, zf)
         zf.writestr(doc_arcname, doc_content)
         zf.write(disclaimer, "disclaimer.txt")
+    outputs.append(geojson_out)
 
-    return out
+    # geojson_only skips the SHP pack — used for WECC Paths, whose mixed
+    # point+line geometry a single-geometry Shapefile can't hold.
+    if entry.get("geojson_only"):
+        return outputs
+
+    shp_out = out_dir / f"{layer_id}-shp.zip"
+    with zipfile.ZipFile(shp_out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for stem, spec in sources.items():
+            log.info("  loading %s (shp) ...", stem)
+            gdf = load_vector(spec)
+            write_shp_and_csv(gdf, stem, zf)
+        zf.writestr(doc_arcname, doc_content)
+        zf.write(disclaimer, "disclaimer.txt")
+    outputs.append(shp_out)
+
+    return outputs
 
 
 def build_raster_zip(
@@ -260,11 +357,12 @@ def main() -> None:
 
         try:
             if "tif" in entry:
-                out = build_raster_zip(layer_id, entry, disclaimer, out_dir)
+                outs = [build_raster_zip(layer_id, entry, disclaimer, out_dir)]
             else:
-                out = build_vector_zip(layer_id, entry, disclaimer, out_dir)
-            size = out.stat().st_size / 1_000_000
-            log.info("  → %s  (%.1f MB)", out.relative_to(ROOT), size)
+                outs = build_vector_zips(layer_id, entry, disclaimer, out_dir)
+            for out in outs:
+                size = out.stat().st_size / 1_000_000
+                log.info("  → %s  (%.1f MB)", out.relative_to(ROOT), size)
             ok += 1
         except Exception as exc:
             log.error("  ERROR: %s", exc)

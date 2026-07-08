@@ -19,7 +19,7 @@ export const renewableLayers: LayerDef[] = [
     rasterLayer:   true,
     mapLayerIds:   ["nlr-wind-100m"],
     downloads: {
-      zip: "data/releases/nlr-wind-100m.zip",
+      tif: "data/releases/nlr-wind-100m.zip",
     },
   },
   {
@@ -49,7 +49,7 @@ export const renewableLayers: LayerDef[] = [
     rasterLayer:   true,
     mapLayerIds:   ["ihfc-geo-heatflow"],
     downloads: {
-      zip: "data/releases/ihfc-geo-heatflow.zip",
+      tif: "data/releases/ihfc-geo-heatflow.zip",
     },
   },
   {
@@ -62,7 +62,7 @@ export const renewableLayers: LayerDef[] = [
     defaultOn:   false,
     mapLayerIds: ["nrel-hydrothermal-points"],
     downloads: {
-      zip: "data/releases/nrel-hydrothermal-points.zip",
+      csv: "data/releases/nrel-hydrothermal-points.zip",
     },
   },
 ];

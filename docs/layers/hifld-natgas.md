@@ -18,7 +18,12 @@ HIFLD natural gas and petroleum pipeline lines and facility points (US).
 
 ## Download pack
 
-`hifld-natgas.zip` — `hifld-natgas-lines.geojson` · `hifld-natgas-lines.csv` · `hifld-natgas-points.geojson` · `hifld-natgas-points.csv` · `hifld-natgas.md` · `disclaimer.txt`
+Two separate packs (one per map layer):
+
+- **Lines** — `hifld-natgas-lines.zip` (GeoJSON) / `hifld-natgas-lines-shp.zip` (SHP): geometry + `hifld-natgas-lines.csv`
+- **Points** (`hifld-natgas-points.zip`) — CSV only: `hifld-natgas-points.csv`
+
+Every zip also includes `hifld-natgas.txt` (this doc) + `disclaimer.txt`.
 
 ---
 

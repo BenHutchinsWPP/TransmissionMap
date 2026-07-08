@@ -18,7 +18,17 @@ Three administrative-boundary polygon layers giving regulatory context to the in
 
 ## Download pack
 
-`hifld-regions.zip` — `nerc-regions.geojson` · `nerc-regions.csv` · `control-areas.geojson` · `control-areas.csv` · `retail-territories.geojson` · `retail-territories.csv` · `hifld-regions.md` · `disclaimer.txt`
+Three separate polygon packs (one per map layer), each offered as **GeoJSON** and
+**SHP**:
+
+- `nerc-regions.zip` (GeoJSON) / `nerc-regions-shp.zip` (SHP)
+- `control-areas.zip` (GeoJSON) / `control-areas-shp.zip` (SHP)
+- `retail-territories.zip` (GeoJSON) / `retail-territories-shp.zip` (SHP)
+
+Each GeoJSON zip holds `<id>.geojson` + `<id>.csv`; each SHP zip holds the
+shapefile set (`.shp/.shx/.dbf/.prj/.cpg`) + `<id>.csv`. Both also include
+`hifld-regions.txt` (this doc) + `disclaimer.txt`. The attribute CSV carries no
+geometry — it's a tabular preview.
 
 ## Processing (all three)
 
