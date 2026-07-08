@@ -24,6 +24,15 @@ trap 'rm -f "$GIT_INDEX_FILE"' EXIT
 
 git read-tree --empty
 git add -f data/layers data/releases
+
+# GitHub hard-rejects any file > 100 MiB. Skip oversized packs so the push
+# succeeds; they must be hosted elsewhere (e.g. R2). The UI download link for a
+# skipped pack will 404 until it is — a known limit for very large SHP packs.
+while IFS= read -r big; do
+  echo "WARNING: skipping $big ($(du -h "$big" | cut -f1)) — exceeds GitHub 100 MiB limit; host it elsewhere"
+  git rm --cached --quiet -- "$big"
+done < <(find data/layers data/releases -type f -size +104857600c)
+
 tree="$(git write-tree)"
 commit="$(git commit-tree "$tree" -m "data-static: layers + release packs — $(date -u +%FT%TZ)")"
 git push -f origin "$commit:refs/heads/data-static"

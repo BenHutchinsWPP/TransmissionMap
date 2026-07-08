@@ -241,7 +241,7 @@ def build_vector_zips(
 
     if csv_only:
         out = out_dir / f"{layer_id}.zip"
-        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
             for stem, spec in sources.items():
                 log.info("  loading %s ...", stem)
                 gdf = load_vector(spec)
@@ -252,7 +252,7 @@ def build_vector_zips(
         return outputs
 
     geojson_out = out_dir / f"{layer_id}.zip"
-    with zipfile.ZipFile(geojson_out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(geojson_out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for stem, spec in sources.items():
             log.info("  loading %s ...", stem)
             gdf = load_vector(spec)
@@ -267,7 +267,7 @@ def build_vector_zips(
         return outputs
 
     shp_out = out_dir / f"{layer_id}-shp.zip"
-    with zipfile.ZipFile(shp_out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(shp_out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for stem, spec in sources.items():
             log.info("  loading %s (shp) ...", stem)
             gdf = load_vector(spec)
@@ -289,7 +289,7 @@ def build_raster_zip(
     doc = ROOT / entry["doc"]
     out = out_dir / f"{layer_id}.zip"
 
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         zf.write(tif, f"{layer_id}.tif")
         doc_arcname, doc_content = md_to_txt(doc)
         zf.writestr(doc_arcname, doc_content)
