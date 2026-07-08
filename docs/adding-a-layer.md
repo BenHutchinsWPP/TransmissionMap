@@ -107,7 +107,19 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   defaultOn:   false,               // visible on page load?
   mapLayerIds: ["my-layer-circles"],// all MapLibre layer IDs this entry controls
   downloads: {
-    zip: "data/releases/my-layer.zip", // per-layer pack built by build_releases.py
+    // Format-named packs built by build_releases.py. Set the fields for this
+    // layer's geometry (the dropdown label follows the field name):
+    //   point   → csv
+    //   line    → geojson + shp
+    //   polygon → geojson + shp
+    //   raster  → tif
+    // point example:
+    csv: "data/releases/my-layer.zip",
+    // line/polygon example:
+    //   geojson: "data/releases/my-layer.zip",
+    //   shp:     "data/releases/my-layer-shp.zip",
+    // raster example:
+    //   tif: "data/releases/my-layer.zip",
     url: null,                         // optional external "source data" link
   },
 }
@@ -335,9 +347,12 @@ in this order** (add layer-specific sections in between as needed, e.g. "OSM tag
    `Attribution`, `Served` (the `data/layers/*` file(s)), `Built by` (the script), and one
    of `Raw input` / `Download` / `Download origin` for the upstream file. Add `Vintage`,
    `Coverage`, `Version`, `Acquired` where known.
-3. **`## Download pack`** — the ZIP contents (`<id>.zip` — list the files). If no pack ships,
-   say so explicitly and link the upstream source (e.g. live services, no-redistribution,
-   or too-large layers — these are `skip: true` in `release_manifest.yaml`).
+3. **`## Download pack`** — the ZIP contents. One pack per layer, format-named
+   (point → CSV `<id>.zip`; line/polygon → GeoJSON `<id>.zip` + SHP `<id>-shp.zip`,
+   each also containing the attribute CSV; raster → GeoTIFF `<id>.zip`). Every ZIP
+   also holds `<id>.txt` (doc) + `disclaimer.txt`. If no pack ships, say so
+   explicitly and link the upstream source (live services, no-redistribution, or
+   too-large layers — these are `skip: true` in `release_manifest.yaml`).
 4. **`## Fields`** (vector) — a table with columns `Field | % filled | Example values`. For a
    **raster**, use **`## Raster values`** instead — describe units, observed value range,
    the hover readout, and color scale (no per-feature columns).

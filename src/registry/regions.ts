@@ -14,7 +14,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:     false,
     mapLayerIds:   ["osm-dc-circles"],
     downloads: {
-      zip: "data/releases/osm-datacenters.zip",
+      csv: "data/releases/osm-datacenters.zip",
     },
   },
   {
@@ -30,7 +30,7 @@ export const regionLayers: LayerDef[] = [
     rasterLayer:   true,
     mapLayerIds:   ["worldpop-pop-density"],
     downloads: {
-      zip: "data/releases/worldpop-pop-density.zip",
+      tif: "data/releases/worldpop-pop-density.zip",
     },
   },
 
@@ -47,7 +47,8 @@ export const regionLayers: LayerDef[] = [
     hoverField:   "sub_nm",
     mapLayerIds:  ["nerc-fill", "nerc-outline"],
     downloads: {
-      zip: "data/releases/hifld-regions.zip",
+      geojson: "data/releases/nerc-regions.zip",
+      shp: "data/releases/nerc-regions-shp.zip",
     },
   },
   {
@@ -61,7 +62,8 @@ export const regionLayers: LayerDef[] = [
     hoverField:   "name",
     mapLayerIds:  ["ba-fill", "ba-outline", "ba-label"],
     downloads: {
-      zip: "data/releases/hifld-regions.zip",
+      geojson: "data/releases/control-areas.zip",
+      shp: "data/releases/control-areas-shp.zip",
     },
   },
   {
@@ -76,7 +78,8 @@ export const regionLayers: LayerDef[] = [
     hoverField:   "name",
     mapLayerIds:  ["retail-fill", "retail-outline"],
     downloads: {
-      zip: "data/releases/hifld-regions.zip",
+      geojson: "data/releases/retail-territories.zip",
+      shp: "data/releases/retail-territories-shp.zip",
     },
   },
 

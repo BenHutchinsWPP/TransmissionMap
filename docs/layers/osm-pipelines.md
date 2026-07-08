@@ -18,7 +18,12 @@ For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld
 
 ## Download pack
 
-`osm-pipelines.zip` — `osm-pipeline-routes.geojson` · `osm-pipeline-routes.csv` · `osm-pipeline-points.geojson` · `osm-pipeline-points.csv` · `osm-pipelines.md` · `disclaimer.txt`
+Two separate packs (one per map layer):
+
+- **Lines** — `osm-pipelines-lines.zip` (GeoJSON) / `osm-pipelines-lines-shp.zip` (SHP): geometry + `osm-pipelines-lines.csv`
+- **Points** (`osm-pipelines-points.zip`) — CSV only: `osm-pipelines-points.csv`
+
+Every zip also includes `osm-pipelines.txt` (this doc) + `disclaimer.txt`.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 

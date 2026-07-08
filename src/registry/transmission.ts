@@ -16,7 +16,7 @@ export const transmissionLayers: LayerDef[] = [
     filterType:    "kv",
     filterField:   "nominal_kv",
     downloads: {
-      zip: "data/releases/osm-substations.zip",
+      csv: "data/releases/osm-substations-points.zip",
     },
   },
   {
@@ -33,7 +33,8 @@ export const transmissionLayers: LayerDef[] = [
     filterType:    "kv",
     filterField:   "nominal_kv",
     downloads: {
-      zip: "data/releases/osm-substations.zip",
+      geojson: "data/releases/osm-substations-polygons.zip",
+      shp: "data/releases/osm-substations-polygons-shp.zip",
     },
   },
   {
@@ -49,7 +50,7 @@ export const transmissionLayers: LayerDef[] = [
     filterType:    "kv",
     filterField:   "max_kv",
     downloads: {
-      zip: "data/releases/hifld-substations.zip",
+      csv: "data/releases/hifld-substations.zip",
     },
   },
 
@@ -68,7 +69,8 @@ export const transmissionLayers: LayerDef[] = [
     filterType:    "kv",
     filterField:   "nominal_kv",
     downloads: {
-      zip: "data/releases/osm-transmission-lines.zip",
+      geojson: "data/releases/osm-transmission-lines.zip",
+      shp: "data/releases/osm-transmission-lines-shp.zip",
     },
   },
   {
@@ -85,7 +87,8 @@ export const transmissionLayers: LayerDef[] = [
     filterType:    "kv",
     filterField:   "VOLTAGE",
     downloads: {
-      zip: "data/releases/hifld-transmission-lines.zip",
+      geojson: "data/releases/hifld-transmission-lines.zip",
+      shp: "data/releases/hifld-transmission-lines-shp.zip",
     },
   },
   {
@@ -113,7 +116,7 @@ export const transmissionLayers: LayerDef[] = [
     mapLayerIds: ["wecc-path-corridors", "wecc-path-corridors-outline",
                   "wecc-path-lines-highlight", "wecc-paths-circles", "wecc-paths-label"],
     downloads: {
-      zip: "data/releases/wecc-paths.zip",
+      geojson: "data/releases/wecc-paths.zip",
       url: "https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf",
     },
   },

@@ -15,7 +15,8 @@ export const pipelineLayers: LayerDef[] = [
     mapLayerIds:         ["hifld-natgas-interstate", "hifld-natgas-intrastate",
                           "hifld-natgas-hgl", "hifld-natgas-gathering"],
     downloads: {
-      zip: "data/releases/hifld-natgas.zip",
+      geojson: "data/releases/hifld-natgas-lines.zip",
+      shp: "data/releases/hifld-natgas-lines-shp.zip",
     },
   },
   {
@@ -29,7 +30,7 @@ export const pipelineLayers: LayerDef[] = [
     natgasPtsLayer: true,
     mapLayerIds:    ["hifld-natgas-points"],
     downloads: {
-      zip: "data/releases/hifld-natgas.zip",
+      csv: "data/releases/hifld-natgas-points.zip",
     },
   },
   // Hidden 2026-07: crude/refined-oil delivery has no grid-planning value
@@ -48,9 +49,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:      false,
     natgasPtsLayer: true,
     mapLayerIds:    ["hifld-petroleum-facilities"],
-    downloads: {
-      zip: "data/releases/hifld-natgas.zip",
-    },
+    downloads:      {},   // no pack; wire a csv/geojson pack if restored
   },
   {
     id:                "eia-crude-pipelines",
@@ -92,7 +91,8 @@ export const pipelineLayers: LayerDef[] = [
     lineHighlightKeys: ["name"],
     mapLayerIds:       ["osm-pipelines-lines"],
     downloads: {
-      zip: "data/releases/osm-pipelines.zip",
+      geojson: "data/releases/osm-pipelines-lines.zip",
+      shp: "data/releases/osm-pipelines-lines-shp.zip",
     },
   },
   // Restored 2026-07: complements HIFLD Gas Facilities (inline equipment —
@@ -108,7 +108,7 @@ export const pipelineLayers: LayerDef[] = [
     pipelineLayer: true,
     mapLayerIds:   ["osm-pipelines-points"],
     downloads: {
-      zip: "data/releases/osm-pipelines.zip",
+      csv: "data/releases/osm-pipelines-points.zip",
     },
   },
 ];

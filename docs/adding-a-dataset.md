@@ -180,7 +180,7 @@ duplicate that here.
 [ ] Makefile                      — pipeline step (manifest) OR standalone target (raster)
 [ ] scripts/tile_manifest.yaml    — one block  (manifest layers only)
 [ ] run: extract script → make tiles → file appears in data/layers/
-[ ] release_manifest.yaml         — download pack, or skip:true if non-redistributable
+[ ] release_manifest.yaml         — one pack per layer (point→csv_only; line/polygon→geojson+shp; raster→tif), or skip:true if non-redistributable
 [ ] make publish-data             — push data/layers + data/releases → orphan 'data-static' branch (prod host)
 [ ] → continue in adding-a-layer.md for all frontend wiring
 ```

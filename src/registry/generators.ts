@@ -17,7 +17,7 @@ export const generatorLayers: LayerDef[] = [
     filterType:  "fuel_osm",
     filterField: "source",
     downloads: {
-      zip: "data/releases/osm-plants.zip",
+      csv: "data/releases/osm-plants-points.zip",
     },
   },
   {
@@ -34,7 +34,8 @@ export const generatorLayers: LayerDef[] = [
     filterType:  "fuel_osm",
     filterField: "source",
     downloads: {
-      zip: "data/releases/osm-plants.zip",
+      geojson: "data/releases/osm-plants-polygons.zip",
+      shp: "data/releases/osm-plants-polygons-shp.zip",
     },
   },
   {
@@ -50,7 +51,7 @@ export const generatorLayers: LayerDef[] = [
     filterType:  "fuel_osm",
     filterField: "source",
     downloads: {
-      zip: "data/releases/osm-generators.zip",
+      csv: "data/releases/osm-generators.zip",
     },
   },
   {
@@ -77,7 +78,7 @@ export const generatorLayers: LayerDef[] = [
       { id: "proposed",   label: "Proposed",           color: "#22c55e", urlCode: "p", default: false },
     ],
     downloads: {
-      zip: "data/releases/eia-generators.zip",
+      csv: "data/releases/eia-generators.zip",
     },
   },
 ];

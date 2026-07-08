@@ -44,35 +44,55 @@ These live under `data/` and must be present for the app to function.
 
 ## User download packs — offered as downloads from the app UI
 
-These live under `data/releases/` as one ZIP per layer, served as download links in
-the layer panel (`downloads.zip` in the registry → `assets/ui/ui-layer-rows.ts`).
-In prod they are fetched from the orphan `data-static` branch via
-`raw.githubusercontent.com` (pushed by `make publish-data`), not from `main` or Pages.
-`build_releases.py` builds them from `scripts/release_manifest.yaml`; each ZIP bundles
-the data (GeoJSON + CSV for vectors, or a COG GeoTIFF for rasters), the layer doc
-(`<layer-id>.txt`, via pandoc), and `disclaimer.txt`. Sizes vary and are not pinned here.
+These live under `data/releases/`, served as download links in the layer panel
+(`downloads` in the registry → `assets/ui/ui-layer-rows.ts`). In prod they are
+fetched from the orphan `data-static` branch via `raw.githubusercontent.com`
+(pushed by `make publish-data`), not from `main` or Pages. `build_releases.py`
+builds them from `scripts/release_manifest.yaml`.
 
-| ZIP (`data/releases/`) | Contents |
-|---|---|
-| `hifld-transmission-lines.zip` | HIFLD transmission lines (GeoJSON + CSV) |
-| `hifld-substations.zip` | HIFLD substation points (CSV) |
-| `osm-transmission-lines.zip` | OSM transmission lines (GeoJSON + CSV) |
-| `osm-substations.zip` | OSM substation points (CSV) + polygons (GeoJSON + CSV) |
-| `eia-generators.zip` | EIA Form 860 generator units (CSV) |
-| `osm-generators.zip` | OSM generators (CSV) |
-| `osm-plants.zip` | OSM power plant points (CSV) + polygons (GeoJSON + CSV) |
-| `hifld-natgas.zip` | HIFLD natural-gas pipeline lines (GeoJSON + CSV) + points (CSV) |
-| `osm-pipelines.zip` | OSM pipeline routes (GeoJSON + CSV) + feature points (CSV) |
-| `eia-petroleum.zip` | EIA crude-oil + petroleum-product pipelines (GeoJSON + CSV) |
-| `nlr-wind-100m.zip` | NREL/NLR mean wind speed @ 100 m — COG GeoTIFF, real m/s (EPSG:4326, Float32) |
-| `gsa-solar-pvout.zip` | Global Solar Atlas PVOUT — COG GeoTIFF, real kWh/kWp/day (~2 km) — CC BY 4.0 |
-| `ihfc-geo-heatflow.zip` | IHFC heat flow — COG GeoTIFF, real mW/m² (0.5°) — CC BY 4.0 |
-| `nrel-hydrothermal-points.zip` | NREL/DOE low-temp hydrothermal systems (GeoJSON + CSV, 1,214 points) |
-| `tribal-lands.zip` | Tribal lands (GeoJSON + CSV) |
-| `hifld-regions.zip` | NERC regions + control areas + retail territories (GeoJSON + CSV each) |
-| `railroads.zip` | NARN rail lines (GeoJSON + CSV) |
-| `osm-datacenters.zip` | OSM data centers (CSV) |
-| `worldpop-pop-density.zip` | WorldPop 2020 population density — COG GeoTIFF |
+**Convention (one pack per map layer, format-named):** every download link maps
+to exactly one map layer — packs never bundle two layers together. The download
+dropdown is labeled by the *format*, not "ZIP". Geometry determines what ships:
+
+| Geometry | Menu option(s) | ZIP(s) | Contents |
+|---|---|---|---|
+| point | **CSV** | `<layer-id>.zip` | `<name>.csv` (lat/lon + attributes; no GeoJSON) |
+| line / polygon | **GeoJSON**, **SHP** | `<layer-id>.zip`, `<layer-id>-shp.zip` | GeoJSON zip: `<name>.geojson` + `<name>.csv`; SHP zip: `.shp/.shx/.dbf/.prj/.cpg` + `<name>.csv` |
+| raster | **GeoTIFF** | `<layer-id>.zip` | `<layer-id>.tif` (COG) |
+
+Every ZIP also bundles the layer doc (`<layer-id>.txt`, via pandoc) and
+`disclaimer.txt`. The attribute-only CSV rides inside *both* the GeoJSON and SHP
+zips so users can preview the tabular data without downloading geometry. Sizes
+vary and are not pinned here.
+
+| Layer | Geometry | Pack(s) in `data/releases/` |
+|---|---|---|
+| `hifld-transmission-lines` | line | `.zip` + `-shp.zip` |
+| `hifld-substations` | point | `.zip` (CSV) |
+| `osm-transmission-lines` | line | `.zip` + `-shp.zip` |
+| `osm-substations-points` | point | `.zip` (CSV) |
+| `osm-substations-polygons` | polygon | `.zip` + `-shp.zip` |
+| `wecc-paths` | vector (1 pack, points + highlight lines) | `.zip` (GeoJSON only — mixed geometry; SHP deferred) |
+| `eia-generators` | point | `.zip` (CSV) |
+| `osm-generators` | point | `.zip` (CSV) |
+| `osm-plants-points` | point | `.zip` (CSV) |
+| `osm-plants-polygons` | polygon | `.zip` + `-shp.zip` |
+| `hifld-natgas-lines` | line | `.zip` + `-shp.zip` |
+| `hifld-natgas-points` | point | `.zip` (CSV) |
+| `osm-pipelines-lines` | line | `.zip` + `-shp.zip` |
+| `osm-pipelines-points` | point | `.zip` (CSV) |
+| `nlr-wind-100m` | raster | `.zip` — COG GeoTIFF, real m/s (EPSG:4326, Float32) |
+| `ihfc-geo-heatflow` | raster | `.zip` — COG GeoTIFF, real mW/m² (0.5°) — CC BY 4.0 |
+| `nrel-hydrothermal-points` | point | `.zip` (CSV) |
+| `nerc-regions` | polygon | `.zip` + `-shp.zip` |
+| `control-areas` | polygon | `.zip` + `-shp.zip` |
+| `retail-territories` | polygon | `.zip` + `-shp.zip` |
+| `osm-datacenters` | point | `.zip` (CSV) |
+| `worldpop-pop-density` | raster | `.zip` — COG GeoTIFF |
+
+Layers that link to source instead of shipping a pack (registry `downloads.url`
+only): `tribal-lands` (Census), `railroads` (BTS), `gsa-solar-pvout`
+(energydata.info), plus the `skip: true` layers below.
 
 Layers marked `skip: true` in the manifest produce no ZIP: the OurGridFuture
 planned-transmission layer (no redistribution — link out to ourgridfuture.org),
