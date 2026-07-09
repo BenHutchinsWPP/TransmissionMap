@@ -212,6 +212,51 @@ describe('renderRetail', () => {
   });
 });
 
+// ─── OSM Data Centers (osm-dc-circles) ────────────────────────────────────────
+
+describe('Data Center popup (osm-dc-circles)', () => {
+  const base = {
+    name: 'Equinix DC5', operator: 'Equinix', website: '', addr_city: 'Ashburn',
+    addr_state: 'Virginia', start_date: '2010', osm_type: 'way' as const, osm_id: 123456,
+  };
+
+  it('renders IM3 size when im3_sqft present and > 0', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base, im3_sqft: 158463 });
+    expect(out).toContain('158,463 sq ft (IM3)');
+  });
+
+  it('renders IM3 size from a string value (CSV-built GeoJSON props are strings)', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base, im3_sqft: '103663' });
+    expect(out).toContain('103,663 sq ft (IM3)');
+  });
+
+  it('omits size row when im3_sqft is an empty string', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base, im3_sqft: '' });
+    expect(out).not.toContain('sq ft');
+  });
+
+  it('omits size row when im3_sqft is absent', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base });
+    expect(out).not.toContain('sq ft');
+  });
+
+  it('omits size row when im3_sqft is 0', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base, im3_sqft: 0 });
+    expect(out).not.toContain('sq ft');
+  });
+
+  it('renders site code when im3_ref present', () => {
+    const out = buildPopupHtml('osm-dc-circles', { ...base, im3_ref: 'IAD69' });
+    expect(out).toContain('Site code');
+    expect(out).toContain('IAD69');
+  });
+
+  it('omits site code row when im3_ref absent', () => {
+    const out = buildPopupHtml('osm-dc-circles', base);
+    expect(out).not.toContain('Site code');
+  });
+});
+
 // ─── buildUserFeatureHtml() ───────────────────────────────────────────────────
 
 describe('buildUserFeatureHtml', () => {

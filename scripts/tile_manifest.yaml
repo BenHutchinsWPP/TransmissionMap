@@ -63,7 +63,7 @@ layers:
   - id: osm_datacenters
     src: data/build/datacenter_osm.csv
     format: geojson
-    select: [osm_id, name, operator, website, addr_city, addr_state, start_date]
+    select: [osm_id, osm_type, name, operator, website, addr_city, addr_state, start_date, im3_sqft, im3_ref]
 
   - id: railroads
     src: data/raw/railroads/narn_rail_lines.geojson

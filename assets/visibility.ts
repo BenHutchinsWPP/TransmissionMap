@@ -24,7 +24,7 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
       state.map.setLayoutProperty(mlId, "visibility", v);
     }
   }
-  if (entry.heatLayerId) applyGenMode(registryId);
+  if (entry.heatLayerId || entry.modes) applyGenMode(registryId);
   writeUrlState();
 
   if (registryId === "tribal-lands" && visible && !localStorage.getItem("tm_tribal_acknowledged")) {
@@ -35,9 +35,22 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
 
 export function applyGenMode(registryId: string) {
   const entry = layerById(registryId);
-  if (!entry || !entry.heatLayerId || !state.mapReady || !state.map) return;
-  const on        = !!state.layerVisibility[registryId];
-  const mode      = state.genMode[registryId] || "icons";
+  if (!entry || !(entry.heatLayerId || entry.modes) || !state.mapReady || !state.map) return;
+  const on   = !!state.layerVisibility[registryId];
+  const mode = state.genMode[registryId] || entry.defaultMode || "icons";
+
+  if (entry.modes) {
+    const active = entry.modes.find(m => m.id === mode) || entry.modes[0];
+    for (const mlId of entry.mapLayerIds) {
+      if (!state.map.getLayer(mlId)) continue;
+      const wanted = on && active.layers.includes(mlId);
+      state.map.setLayoutProperty(mlId, "visibility", wanted ? "visible" : "none");
+    }
+    const rampEl = document.getElementById(`${registryId}-heat-ramp`);
+    if (rampEl) rampEl.hidden = !(on && !!entry.heatLayerId && active.layers.includes(entry.heatLayerId));
+    return;
+  }
+
   const showHeat  = on && (mode === "heat"  || mode === "both");
   const showIcons = on && (mode === "icons" || mode === "both");
   for (const mlId of entry.mapLayerIds) {
@@ -50,7 +63,7 @@ export function applyGenMode(registryId: string) {
 }
 
 export function applyAllGenModes() {
-  for (const entry of LAYERS) if (entry.heatLayerId) applyGenMode(entry.id);
+  for (const entry of LAYERS) if (entry.heatLayerId || entry.modes) applyGenMode(entry.id);
 }
 
 // ─── OGF planned-lines color-by ───────────────────────────────────────────────

@@ -12,7 +12,15 @@ export const regionLayers: LayerDef[] = [
     sourceId:      "osm",
     swatch:        "#6366f1",
     defaultOn:     false,
-    mapLayerIds:   ["osm-dc-circles"],
+    mapLayerIds:   ["osm-dc-circles", "osm-dc-heat", "osm-dc-clusters", "osm-dc-cluster-count", "osm-dc-points", "osm-dc-heat-points"],
+    heatLayerId:   "osm-dc-heat",
+    genModeCode:   "d",
+    defaultMode:   "icons",
+    modes: [
+      { id: "icons",    label: "Points",   layers: ["osm-dc-points"] },
+      { id: "clusters", label: "Clusters", layers: ["osm-dc-clusters", "osm-dc-cluster-count", "osm-dc-circles"] },
+      { id: "heat",     label: "Heatmap",  layers: ["osm-dc-heat", "osm-dc-heat-points"] },
+    ],
     downloads: {
       csv: "data/releases/osm-datacenters.zip",
     },

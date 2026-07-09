@@ -242,13 +242,17 @@ const _defs = [
   [["osm-pipelines-points"], (p: Record<string, unknown>) =>
     title((p.pipeline as string) || "Pipeline Feature") +
     row("Operator", p.operator)],
-  [["osm-dc-circles"], (p: Record<string, unknown>) =>
+  [["osm-dc-circles", "osm-dc-points", "osm-dc-heat-points"], (p: Record<string, unknown>) =>
     title((p.name as string) || "Data Center") +
     row("Operator", p.operator) +
+    row("Site code", p.im3_ref) +
     websiteRow(p.website as string) +
     row("City", p.addr_city) +
     row("State", p.addr_state) +
-    row("Since", p.start_date)],
+    row("Since", p.start_date) +
+    row("Size", Number(p.im3_sqft) > 0 ? Number(p.im3_sqft).toLocaleString() + " sq ft (IM3)" : null) +
+    // osm_type absent in pre-2026-07 builds; skip the link rather than guess the type
+    (p.osm_type ? osmLink(p.osm_type as "node" | "way" | "relation", p.osm_id) : "")],
   [["mines-icons"], (p: Record<string, unknown>) =>
     title((p.name as string) || "Mine") +
     row("Commodity", p.commodity) +

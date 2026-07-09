@@ -9,7 +9,8 @@ documentation linked below. This page is the license and attribution index.
 
 | Source | Layers | License | Attribution |
 |---|---|---|---|
-| **OpenStreetMap** | [Transmission lines](layers/osm-transmission-lines.md) · [Substations](layers/osm-substations.md) · [Generators](layers/osm-generators.md) · [Plants](layers/osm-plants.md) · [Pipelines](layers/osm-pipelines.md) · [Data centers](layers/osm-datacenters.md) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike | © OpenStreetMap contributors |
+| **OpenStreetMap** | [Transmission lines](layers/osm-transmission-lines.md) · [Substations](layers/osm-substations.md) · [Generators](layers/osm-generators.md) · [Plants](layers/osm-plants.md) · [Pipelines](layers/osm-pipelines.md) · [Data centers](layers/osm-datacenters.md)* | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike | © OpenStreetMap contributors |
+| **IM3 Open Source Data Center Atlas** (PNNL/DOE) | [Data centers](layers/osm-datacenters.md)* (enrichment — facility footprint area) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — IM3 locations are OSM-derived | "© OpenStreetMap contributors; IM3 Open Source Data Center Atlas (PNNL/DOE)" |
 | **HIFLD** (DHS/CISA) | [Transmission lines](layers/hifld-transmission-lines.md) · [Substations](layers/hifld-substations.md) · [Natural gas & petroleum](layers/hifld-natgas.md) · [Regions](layers/hifld-regions.md) | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) | "HIFLD / DHS CISA" |
 | **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
 | **EIA** | [Generators (Form 860)](layers/eia-generators.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: U.S. EIA, Form EIA-860" |
@@ -33,6 +34,8 @@ documentation linked below. This page is the license and attribution index.
 > [`LICENSE`](../LICENSE). Data files under `data/` carry the upstream license of their
 > source. OSM-derived files (PMTiles/GeoJSON incorporating OSM data) are ODbL derivative
 > databases and are redistributed under ODbL.
+
+\* **Data centers:** enriched with facility footprint area from IM3 Open Source Data Center Atlas (PNNL/DOE); see [osm-datacenters.md](layers/osm-datacenters.md) for join method and attribution.
 
 ---
 

@@ -54,6 +54,10 @@ export interface LayerDef {
   voltageLayer?: boolean;
   heatLayerId?: string;
   genModeCode?: string;
+  // Custom display-mode set (overrides the default Icons/Heatmap/Both):
+  // each mode names the mapLayerIds visible while it is active.
+  modes?: { id: string; label: string; layers: string[] }[];
+  defaultMode?: string;
   filterType?: string;
   filterField?: string;
   yearFilterLayer?: boolean;

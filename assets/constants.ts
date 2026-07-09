@@ -110,7 +110,9 @@ export const SOURCE_ATTRIB: Record<string, string> = {
   "osm-generators":           OSM_ATTRIB,
   "osm-pipelines-lines":      OSM_ATTRIB,
   "osm-pipelines-points":     OSM_ATTRIB,
-  "osm-datacenters":          OSM_ATTRIB,
+  // OSM_ATTRIB prefix stays byte-identical so MapLibre substring-dedup still
+  // collapses it with the basemap credit; IM3 rides behind it.
+  "osm-datacenters":          OSM_ATTRIB + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>",
 };
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────

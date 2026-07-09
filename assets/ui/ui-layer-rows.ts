@@ -132,15 +132,18 @@ function ogfColorByBlockHtml(entry: LayerDef) {
 }
 
 function genModeBlockHtml(entry: LayerDef) {
-  if (!entry.heatLayerId) return "";
-  const mode = state.genMode[entry.id] || "icons";
+  if (!entry.heatLayerId && !entry.modes) return "";
+  const mode = state.genMode[entry.id] || entry.defaultMode || "icons";
   const btn = (m: string, label: string) =>
     `<button type="button" class="gen-mode-btn${mode === m ? " gen-mode-btn--active" : ""}"` +
     ` data-gen-mode-layer="${entry.id}" data-gen-mode="${m}">${label}</button>`;
+  const buttons = entry.modes
+    ? entry.modes.map(m => btn(m.id, m.label)).join("")
+    : btn("icons", "Icons") + btn("heat", "Heatmap") + btn("both", "Both");
   return `
     <div class="gen-mode">
       <div class="gen-mode-toggle" role="group" aria-label="Display mode for ${escapeHtml(entry.label)}">
-        ${btn("icons", "Icons")}${btn("heat", "Heatmap")}${btn("both", "Both")}
+        ${buttons}
       </div>
       <div class="gen-heat-ramp" id="${entry.id}-heat-ramp" hidden>
         ${rampLegendHtml({ id: entry.id + "-heat", ramp: HEAT_RAMP })}

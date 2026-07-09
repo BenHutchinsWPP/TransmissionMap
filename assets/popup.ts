@@ -68,6 +68,8 @@ const CLICKABLE_LAYERS = [
   "nrel-hydrothermal-points",
   "mines-icons",
   "osm-dc-circles",
+  "osm-dc-points",
+  "osm-dc-heat-points",
   "osm-transmission-lines-hv", "osm-transmission-lines-mv", "osm-transmission-lines-lv", "osm-transmission-lines-unknown",
   "hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown",
   "hifld-natgas-interstate", "hifld-natgas-intrastate",

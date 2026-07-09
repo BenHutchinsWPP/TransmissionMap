@@ -71,6 +71,9 @@ data/raw/fema/
 # ASCE Wind Vectors hub; see docs/layers/design-wind.md). Tiles built by build_tiles.py.
 data/raw/noaa/
 
+# IM3 US Data Center Locations GeoPackage (~843 KB; auto-downloaded by extract_osm_datacenters.py)
+data/raw/im3/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are
