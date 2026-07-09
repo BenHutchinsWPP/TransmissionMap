@@ -184,6 +184,7 @@ const _defs = [
   [["osm-transmission-lines-hv", "osm-transmission-lines-mv", "osm-transmission-lines-lv", "osm-transmission-lines-unknown"], (p: Record<string, unknown>) =>
     title((p.name as string) || "Transmission Line") +
     row("Voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
+    row("Placement", p.is_undergrnd ? "Underground" : null) +
     row("Operator", p.operator) +
     osmLink("way", p.osm_id)],
   [["hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown"], (p: Record<string, unknown>) =>
