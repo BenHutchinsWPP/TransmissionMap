@@ -14,8 +14,8 @@
 //   Old cache buckets are deleted automatically on activate.
 // =============================================================================
 
-const STATIC_VERSION = 'v33';  // network-first static strategy (purges stale cache-first bundles)
-const DATA_VERSION   = 'v2';   // ← bump this after running build_tiles.sh
+const STATIC_VERSION = 'v34';  // network-first static strategy (purges stale cache-first bundles)
+const DATA_VERSION   = 'v3';   // ← bump this after running build_tiles.sh
 
 const STATIC_CACHE = `tm-static-${STATIC_VERSION}`;
 const DATA_CACHE   = `tm-data-${DATA_VERSION}`;
@@ -24,7 +24,10 @@ const DATA_CACHE   = `tm-data-${DATA_VERSION}`;
 // other static assets are cached on first fetch by handleStatic() below.
 // To pre-cache the full bundle, integrate vite-plugin-pwa which can inject
 // the correct hashed filenames at build time.
-const PRECACHE_URLS = ['/'];
+// './' resolves against the SW scope, so it works both at the domain root
+// (local dev) and under the /TransmissionMap/ GitHub Pages base — an absolute
+// '/' 404s on the project site and kills install (addAll rejects on any 404).
+const PRECACHE_URLS = ['./'];
 
 // ── Install: pre-cache static shell ───────────────────────────────────────────
 self.addEventListener('install', event => {
