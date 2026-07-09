@@ -191,7 +191,9 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
     clearFeatureInfo();
   } else {
     clearLineHighlight();
-    highlightUserFeature(f, { info: !clipped });
+    // f is a MapGeoJSONFeature class instance; setData serializes to the worker,
+    // which rejects non-plain objects ("unregistered class") — hand it plain GeoJSON.
+    highlightUserFeature(f.toJSON(), { info: !clipped });
   }
 
   // Feature-state-joined layers (ODIN outages) carry their data in f.state, not
