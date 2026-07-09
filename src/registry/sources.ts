@@ -134,4 +134,9 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: WECC 2026 Path Rating Catalog (Public Version) — path definitions, ratings, and directionality",
     creditId: "wecc-paths",
   },
+  "ornl-odin": {
+    label: "ORNL ODIN",
+    tooltip: "Source: ORNL ODIN (Oak Ridge National Laboratory) — live county-level power-outage aggregates; utilities self-report, coverage is partial",
+    creditId: "ornl-odin",
+  },
 };

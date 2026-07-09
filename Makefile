@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev validate tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev seismic boundaries validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -42,6 +42,7 @@ help:
 	@echo "  make geo         build IHFC heat flow raster → data/layers/ihfc_geo_heatflow.pmtiles + COG in data/build/"
 	@echo "  make hydro-pts   build NREL/DOE hydrothermal points → data/layers/nrel_hydrothermal_pts.geojson.gz"
 	@echo "  make popden      build WorldPop 2020 population density → data/layers/worldpop_pop_density.pmtiles + COG in data/build/"
+	@echo "  make boundaries  build shared county-boundary PMTiles (Census TIGER) → data/layers/county_boundaries.pmtiles"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
@@ -251,6 +252,15 @@ wildfire-dev:
 # LUT + COG download. Public domain (US Government work).
 seismic:
 	@bash $(SCRIPTS)/build_seismic_hazard.sh
+
+# ── Shared county boundaries (Census TIGER cartographic, join infra) ────────
+# Self-contained vector pipeline (gdal + tippecanoe, no venv). Downloads the
+# cb_2024_us_county_500k cartographic boundary zip → data/build/county_boundaries.geojson
+# → data/layers/county_boundaries.pmtiles (source layer `county_boundaries`). Draws nothing
+# on its own — future county-keyed layers (outages, risk indices) join onto it
+# via feature-state. Public domain (US Government work).
+boundaries:
+	@bash $(SCRIPTS)/build_boundaries.sh
 
 # ── Validate: build inputs + layer outputs ──────────────────────────────────
 # Run after `make pipeline` (checks data/build/ shapefiles) and again after

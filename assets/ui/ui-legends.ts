@@ -244,6 +244,7 @@ const LEGEND_VISIBILITY = [
   { el: "smokeLiveLegend",        show: () => !!state.layerVisibility["wildfire-smoke"] },
   { el: "wildfireLiveLegend",    show: () => !!state.layerVisibility["wildfire-live"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },
+  { el: "odinLegend",            show: () => !!state.layerVisibility["odin-outages"] },
   { el: "dataCounterLegend",     show: () => { const cb = document.getElementById("dataCounterToggle") as HTMLInputElement | null; return !cb || cb.checked; } },
 ];
 

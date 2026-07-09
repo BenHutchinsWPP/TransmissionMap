@@ -95,6 +95,35 @@ export function initialVisibility(registryId: string): "visible" | "none" {
   return state.layerVisibility[registryId] ? "visible" : "none";
 }
 
+// ─── Shared county-boundary source (data-join infra) ──────────────────────────
+// Census TIGER county polygons, added ONCE and reused by every county-keyed data
+// layer (ODIN outages today; risk indices etc. later). Those layers ship no
+// geometry — only FIPS→value — and paint via MapLibre feature-state.
+// `promoteId` makes each feature's id its GEOID, which is what setFeatureState
+// addresses. GEOID is a zero-padded 5-digit string ("08123") — never parseInt it.
+// Consumers MUST namespace their feature-state keys (e.g. `odin_out`), since all
+// of them share one per-feature state bag on these same features.
+export const COUNTY_SRC = "county_boundaries";
+export const COUNTY_SRC_LAYER = "county_boundaries";   // tippecanoe names the layer after the manifest id
+
+export function ensureCountyBoundaries() {
+  if (!state.map || state.map.getSource(COUNTY_SRC)) return;
+  state.map.addSource(COUNTY_SRC, {
+    type: "vector",
+    url: pmtilesUrl(DATA.county_boundaries),
+    promoteId: { [COUNTY_SRC_LAYER]: "GEOID" },
+    // MapLibre attributes SOURCES, not layers, and only while a layer using the
+    // source is visible — so this string must credit the geometry (Census) AND
+    // whatever data is painted on it. ODIN is the sole consumer today. When a
+    // second county-keyed layer lands, this over-credits ODIN whenever that
+    // other layer is on alone: move each layer's credit out to the credits panel
+    // (registry `creditId`) and leave only Census here.
+    attribution:
+      '<a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas.html">US Census TIGER</a>' +
+      ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>',
+  });
+}
+
 export function genPlantTextLayout(nameExpr: ExpressionSpecification, mwExpr: ExpressionSpecification) {
   return {
     "text-field": ["step", ["zoom"],

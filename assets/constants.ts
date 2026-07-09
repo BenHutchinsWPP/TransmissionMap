@@ -72,6 +72,13 @@ export const DATA = {
   wildfire_live: import.meta.env.DEV
     ? DATA_ORIGIN + "data/layers/wildfire_live.geojson"
     : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson",
+  county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
+  // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
+  // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]
+  // snapshot joined onto county_boundaries via MapLibre feature-state (see odin-outages.ts).
+  odin_outages: import.meta.env.DEV
+    ? DATA_ORIGIN + "data/layers/odin_outages.json"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/odin_outages.json",
 };
 
 // ─── Per-source attribution shorthand ─────────────────────────────────────────

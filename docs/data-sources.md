@@ -12,7 +12,7 @@ documentation linked below. This page is the license and attribution index.
 | **OpenStreetMap** | [Transmission lines](layers/osm-transmission-lines.md) · [Substations](layers/osm-substations.md) · [Generators](layers/osm-generators.md) · [Plants](layers/osm-plants.md) · [Pipelines](layers/osm-pipelines.md) · [Data centers](layers/osm-datacenters.md)* | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike | © OpenStreetMap contributors |
 | **IM3 Open Source Data Center Atlas** (PNNL/DOE) | [Data centers](layers/osm-datacenters.md)* (enrichment — facility footprint area) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — IM3 locations are OSM-derived | "© OpenStreetMap contributors; IM3 Open Source Data Center Atlas (PNNL/DOE)" |
 | **HIFLD** (DHS/CISA) | [Transmission lines](layers/hifld-transmission-lines.md) · [Substations](layers/hifld-substations.md) · [Natural gas & petroleum](layers/hifld-natgas.md) · [Regions](layers/hifld-regions.md) | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) | "HIFLD / DHS CISA" |
-| **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
+| **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) · [County boundaries (join infra)](layers/boundaries.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
 | **BIA** (Bureau of Indian Affairs) | [Tribal lands (BIA)](layers/bia-tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Bureau of Indian Affairs - Branch of Geospatial Support" |
 | **EIA** | [Generators (Form 860)](layers/eia-generators.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: U.S. EIA, Form EIA-860" |
 | **USGS** | [PAD-US protected & managed lands](layers/padus-protected-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | USGS Gap Analysis Project |
@@ -30,6 +30,7 @@ documentation linked below. This page is the license and attribution index.
 | **USGS NSHM** | [Seismic hazard (PGA)](layers/seismic-hazard.md) | Public domain — US federal work, 17 U.S.C. § 105 | "USGS 2018 National Seismic Hazard Model" |
 | **NASA FIRMS / NIFC WFIGS** | [Live wildfire (hotspots, perimeters, incidents)](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NASA FIRMS VIIRS + NIFC WFIGS" |
 | **NOAA HMS** | [Live wildfire smoke](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA Hazard Mapping System (HMS)" |
+| **ORNL ODIN** | [Power outages (live)](layers/outages.md) | No license declared (DOE/ORNL public program) | "ORNL ODIN" |
 
 > **License of this repo:** application code (HTML/JS/CSS/Python/shell) is MIT — see
 > [`LICENSE`](../LICENSE). Data files under `data/` carry the upstream license of their

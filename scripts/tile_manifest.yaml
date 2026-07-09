@@ -197,6 +197,23 @@ layers:
     simplification: 5
     flags: [--drop-densest-as-needed, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
 
+  # Shared county-boundary infra (Census TIGER cartographic, cb_2024_us_county_500k).
+  # Also built standalone by scripts/build_boundaries.sh (`make boundaries`), which
+  # produces this same data/build/county_boundaries.geojson intermediate — this
+  # manifest block is the ONLY place its tiling params live (build_boundaries.sh
+  # shells out to build_tiles.py --only county_boundaries). Draws nothing on its
+  # own: future county-keyed layers join onto it via feature-state. Source layer
+  # name `county_boundaries` (= this id) and string `GEOID` are a load-bearing
+  # contract — see docs/layers/boundaries.md.
+  - id: county_boundaries
+    src: data/build/county_boundaries.geojson
+    format: pmtiles
+    select: [GEOID, NAME, STUSPS, STATE_NAME]
+    min_zoom: 2
+    max_zoom: 8
+    simplification: 8
+    flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+
   # Served raw (lazy-loaded), not tiled. Loaded as-is from the OGF export.
   - id: ogf_planned_transmission
     src: data/build/ogf_planned_transmission.gpkg

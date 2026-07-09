@@ -1,6 +1,9 @@
 // ─── Hazard layers ────────────────────────────────────────────────────────────
 // Role: MapLibre builders for the hazards group — baked-color raster PMTiles
-//       (wildfire hazard potential, seismic PGA) and live GeoJSON (smoke, wildfire, incidents).
+//       (wildfire hazard potential, seismic PGA), live GeoJSON (smoke, wildfire,
+//       incidents), and the live ODIN county-outage choropleth (feature-state
+//       data-join onto the shared county_boundaries PMTiles — the FIPS→[out,n]
+//       join itself lives in ../odin-outages.ts; this file only builds the source/layers).
 // Deps: layer-init.ts (pmtilesUrl, initialVisibility), state (DATA).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
@@ -12,7 +15,7 @@
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC } from '../state.js';
-import { pmtilesUrl, initialVisibility } from './layer-init.js';
+import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
 export function addWildfireLive() {
   if (!state.map || state.map.getSource("wildfire-live")) return;
@@ -199,6 +202,65 @@ export function addSeismicHazard() {
     source: "usgs-seismic-pga",
     layout: { visibility: initialVisibility("usgs-seismic-pga") },
     paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
+  } as LayerSpecification);
+}
+
+// ─── ODIN live county-outage choropleth ───────────────────────────────────────
+// A geometry-less FIPS→[customers_out, incident_count] snapshot is joined onto
+// the shared county_boundaries PMTiles by MapLibre feature-state — promoteId
+// makes each county feature's id its 5-digit GEOID string (never parseInt a
+// FIPS — leading zeros matter). Counties with NO feature-state paint fully
+// transparent; the null guard comes first because arithmetic on a null
+// feature-state value poisons the whole expression. The join + refresh logic
+// lives in ../odin-outages.ts.
+export function addOdinOutages() {
+  if (!state.map || state.map.getLayer("odin-outages-fill")) return;
+  // The source is SHARED infra owned by layer-init.ts — guard on our own layer
+  // above, never on the source, or a future county layer that adds it first
+  // would silently suppress these layers.
+  ensureCountyBoundaries();
+
+  const vis = initialVisibility("odin-outages");
+
+  // YlOrRd choropleth — customers-out buckets: <100 / 100–1k / 1k–5k / 5k+.
+  // Guard null FIRST (no feature-state → transparent), else step by count.
+  state.map.addLayer({
+    id: "odin-outages-fill",
+    type: "fill",
+    source: COUNTY_SRC,
+    "source-layer": COUNTY_SRC_LAYER,
+    layout: { visibility: vis },
+    paint: {
+      "fill-color": [
+        "case",
+        ["==", ["feature-state", "odin_out"], null], "rgba(0,0,0,0)",
+        ["step", ["feature-state", "odin_out"],
+          "#fed976",          // <100
+          100,  "#fd8d3c",    // 100–1k
+          1000, "#e31a1c",    // 1k–5k
+          5000, "#800026",    // 5k+
+        ],
+      ],
+      "fill-opacity": 0.6,
+    },
+  } as LayerSpecification);
+
+  // Thin outline, only where there's data (transparent otherwise).
+  state.map.addLayer({
+    id: "odin-outages-line",
+    type: "line",
+    source: COUNTY_SRC,
+    "source-layer": COUNTY_SRC_LAYER,
+    layout: { visibility: vis },
+    paint: {
+      "line-color": [
+        "case",
+        ["==", ["feature-state", "odin_out"], null], "rgba(0,0,0,0)",
+        "#800026",
+      ],
+      "line-width": 0.6,
+      "line-opacity": 0.7,
+    },
   } as LayerSpecification);
 }
 

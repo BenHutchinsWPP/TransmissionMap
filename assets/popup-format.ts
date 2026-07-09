@@ -321,6 +321,18 @@ const _defs = [
       row("Discovered", fmtDt(p.discovery_dt)) +
       row("Current as of", fmtDt(p.modified_dt));
   }],
+  [["odin-outages-fill"], (p: Record<string, unknown>) => {
+    // Numbers come from the feature-state join (merged into p by popup.ts);
+    // county NAME/STATE_NAME come from the county_boundaries tile properties.
+    // No join value → unlit county → no popup.
+    if (p.odin_out == null) return "";
+    const county = (p.NAME as string) || "County";
+    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
+    return title(heading) +
+      row("Customers affected", typeof p.odin_out === "number" ? Number(p.odin_out).toLocaleString() : p.odin_out) +
+      row("Active incidents", p.odin_n) +
+      `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Data from ORNL ODIN — utilities self-report; coverage is partial.</div>`;
+  }],
   [["smoke-live-fill"], (p: Record<string, unknown>) =>
     title("Smoke Plume") +
     row("Density", p.density as string) +

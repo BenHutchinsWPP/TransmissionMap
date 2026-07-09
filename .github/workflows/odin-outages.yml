@@ -1,0 +1,125 @@
+name: Update ODIN outage data
+# Fetches a county-aggregated live power-outage snapshot from the ORNL ODIN
+# Opendatasoft portal (server-side group_by/sum/count — no per-outage geometry,
+# no pagination) into odin_outages.json.
+# Writes to the orphan `data` branch via a single amended commit (no history growth).
+# Frontend fetches from raw.githubusercontent.com (CORS ok on public repos).
+# main is never touched by this workflow.
+#
+# Bootstrap: create the orphan branch once before this workflow runs (skip if
+# the `data` branch already exists from the wildfire workflow — just add the file):
+#   git checkout data
+#   mkdir -p data/layers
+#   echo '{"generated_utc":null,"source_modified":null,"county_count":0,"total_customers_out":0,"counties":{}}' > data/layers/odin_outages.json
+#   git add data/layers/odin_outages.json
+#   git commit -m "init: odin outages data"
+#   git push origin data
+#   git checkout main
+
+# Trigger is workflow_dispatch ONLY — an external cron-job.org job fires this
+# on a schedule, same as wildfire-data.yml's primary trigger. Unlike wildfire,
+# we deliberately do NOT add a sparse GitHub `schedule:` backup here: a
+# workflow that never runs on its own can't raise a failure alert either way,
+# so if cron-job.org dies this workflow goes silent and the map just serves an
+# aging snapshot (the frontend surfaces the snapshot's age to the user). We
+# accept that tradeoff for now; a sparse backup cron can be added later if
+# this feed proves popular enough to warrant it (see wildfire-data.yml for
+# the pattern).
+on:
+  workflow_dispatch:
+
+# Don't let a slow run race the next cycle's force-push; queue instead of overlap.
+# Shared with wildfire-data.yml — see the note there. Both force-push the orphan
+# `data` branch, so they must serialize against each other, not just themselves.
+# (Every run pushes: `generated_utc` changes each pull, so the "no change" guard
+# below never fires. That keeps the collision window wide — hence one group.)
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write        # failure-alert step
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: data                        # orphan branch — only the data file
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Force IPv4 for network stability
+        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
+        # See: https://github.com/actions/runner-images/issues/668
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - name: Verify network connectivity to data sources
+        # Fails fast if a required service is unreachable, saving runner minutes and providing a clear error.
+        run: |
+          echo "::group::Pinging data services..."
+          endpoints=(
+            "https://ornl.opendatasoft.com"
+          )
+          for endpoint in "${endpoints[@]}"; do
+            if ! curl -s --fail --connect-timeout 15 -o /dev/null "$endpoint"; then
+              echo "::error::Failed to connect to $endpoint. Aborting."
+              exit 1
+            else
+              echo "✅ Connection to $endpoint successful."
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Fetch county outage aggregates → odin_outages.json (with retries)
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 8
+          max_attempts: 3
+          retry_on: error
+          command: |
+            # Script lives on main; grab without switching branches. It must
+            # already be merged to main before this workflow can run, since
+            # this reads it from origin/main rather than the checked-out
+            # `data` ref (same pattern as the wildfire workflow).
+            git fetch origin main
+            git show origin/main:scripts/fetch_odin_outages.py > /tmp/fetch_odin_outages.py
+            python3 /tmp/fetch_odin_outages.py -o data/layers/odin_outages.json
+        env:
+          # Optional. ORNL Opendatasoft's anonymous quota is 5000 req/day per
+          # IP, and GitHub-hosted runners share pooled IPs, so a key (billed
+          # to our account) removes a small shared-neighbour 429 risk. We do
+          # NOT pass --require-key here: without a key the script warns and
+          # proceeds anonymously; a rare 429 just fails this one cycle and the
+          # map keeps serving the previous snapshot. If 429s start showing up,
+          # set this secret and add --require-key to the command above.
+          ODIN_ODS_APIKEY: ${{ secrets.ODIN_ODS_APIKEY }}
+
+      - name: Amend rolling commit and force-push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/layers/odin_outages.json
+          git diff --cached --quiet && echo "No change — skipping" && exit 0
+          git commit --amend --no-edit --date=now
+          git push --force-with-lease
+
+      # Failed runs otherwise surface only as a stale/aging snapshot on the
+      # map — open (or bump) a tracking issue so the operator gets notified.
+      - name: Alert on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          msg="Run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          n=$(gh issue list --label odin-feed-down --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --body "$msg"
+          else
+            gh label create odin-feed-down --color D93F0B --force
+            gh issue create --title "ODIN outage data workflow failing" \
+              --label odin-feed-down \
+              --body "$msg — map serves the last good pull; close when green again."
+          fi

@@ -113,7 +113,11 @@ def main():
     start = time.time()
     for layer in layers:
         build_layer(layer)
-    gzip_served_geojson()
+    # The gzip pass consumes (and unlinks) every *.geojson in data/layers/, so a
+    # scoped --only run must not trigger it for unrelated layers — it would eat
+    # e.g. the local wildfire_live.geojson that `make wildfire-dev` produced.
+    if any(L["format"] == "geojson" for L in layers):
+        gzip_served_geojson()
     print(f"\n=== {args.only or 'All tiles'} built in {int(time.time() - start)}s ===")
 
 

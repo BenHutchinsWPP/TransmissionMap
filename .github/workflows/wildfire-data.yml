@@ -28,8 +28,12 @@ on:
   workflow_dispatch:
 
 # Don't let a slow run race the next hour's force-push; queue instead of overlap.
+# Shared with odin-outages.yml: every workflow that force-pushes the orphan
+# `data` branch must sit in ONE group. Two groups = two runs can check out the
+# same tip, and the second `--force-with-lease` push is (correctly) rejected,
+# failing that run and opening a spurious feed-down issue.
 concurrency:
-  group: wildfire-data
+  group: data-branch
   cancel-in-progress: false
 
 jobs:

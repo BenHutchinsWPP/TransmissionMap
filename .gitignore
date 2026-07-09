@@ -71,12 +71,14 @@ data/raw/fema/
 # ASCE Wind Vectors hub; see docs/layers/design-wind.md). Tiles built by build_tiles.py.
 data/raw/noaa/
 
+# County boundaries source zip (~12 MB — Census TIGER cartographic
+# cb_2024_us_county_500k; re-fetch via build_boundaries.sh, which downloads it
+# automatically)
 # IM3 US Data Center Locations GeoPackage (~843 KB; auto-downloaded by extract_osm_datacenters.py)
 data/raw/im3/
 
 # BIA AIAN-LAR GeoJSON (auto-downloaded by extract_bia_tribal.py; see docs/layers/bia-tribal-lands.md)
 data/raw/bia/
-# Census cartographic county boundaries (county-boundaries experimental work)
 data/raw/boundaries/
 
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.

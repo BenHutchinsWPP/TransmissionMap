@@ -55,6 +55,20 @@ export const hazardLayers: LayerDef[] = [
       url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
     },
   },
+  /* DISABLED until the ODIN data feed is live — everything gates on this entry; delete this line and the closing one to ship. urlCode "OUT" stays reserved.
+  {
+    id:          "odin-outages",
+    urlCode:     "OUT",
+    label:       "Power Outages (live)",
+    group:       "hazards",
+    sourceId:    "ornl-odin",
+    swatch:      "#fd8d3c",   // mid-bucket (100–1k) of the YlOrRd outage ramp
+    live:        true,
+    defaultOn:   false,
+    mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
+    downloads: { url: "https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" },
+  },
+  */
   {
     id:           "usgs-seismic-pga",
     urlCode:      "PGA",

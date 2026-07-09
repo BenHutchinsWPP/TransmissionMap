@@ -75,7 +75,17 @@ Administrative and operational boundaries for understanding grid organization.
 
 Physical-risk layers for siting and resilience analysis.
 
-**Seismic hazard** ([seismic-hazard](seismic-hazard.md)) is the USGS 2018 National Seismic Hazard Model peak ground acceleration (2% probability of exceedance in 50 years), a baked-color raster with a hover readout. **Wildfire hazard** ([wildfire-hazard](wildfire-hazard.md)) is the USFS RMRS Fire Lab Wildfire Hazard Potential 2023 — a categorized raster of relative wildfire risk. **Live wildfire** ([wildfire-live](wildfire-live.md)) adds three hourly-refreshed layers — active perimeters + VIIRS hotspots, named incidents, and NOAA HMS smoke — served off the orphan `data` branch.
+**Seismic hazard** ([seismic-hazard](seismic-hazard.md)) is the USGS 2018 National Seismic Hazard Model peak ground acceleration (2% probability of exceedance in 50 years), a baked-color raster with a hover readout. **Wildfire hazard** ([wildfire-hazard](wildfire-hazard.md)) is the USFS RMRS Fire Lab Wildfire Hazard Potential 2023 — a categorized raster of relative wildfire risk. **Live wildfire** ([wildfire-live](wildfire-live.md)) adds three hourly-refreshed layers — active perimeters + VIIRS hotspots, named incidents, and NOAA HMS smoke — served off the orphan `data` branch. **Power outages** ([outages](outages.md)) is a live county-level ODIN choropleth (customers affected) joined onto the shared county-boundary tiles by MapLibre feature-state — the data file carries no geometry.
+
+---
+
+## Shared infrastructure (not a map layer)
+
+**County boundaries** ([boundaries](boundaries.md)) is a Census TIGER county
+tileset that draws nothing on its own. County-FIPS-keyed datasets join their
+values onto it via MapLibre `feature-state` rather than shipping duplicate
+polygon geometry — so such a layer is only a `{fips: value}` JSON plus a fill
+layer. First consumer: [power outages](outages.md).
 
 ---
 

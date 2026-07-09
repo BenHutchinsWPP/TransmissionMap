@@ -22,7 +22,7 @@ import { addPopDensity, addOsmDataCenters } from './map-layers-load.js';
 import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
 import { addPetroleumPipelines } from './map-layers-petroleum.js';
-import { addWildfireHazard, addWildfireLive, addSeismicHazard } from './map-layers-hazards.js';
+import { addWildfireHazard, addWildfireLive, addSeismicHazard, addOdinOutages } from './map-layers-hazards.js';
 import { addMines } from './map-layers-mines.js';
 import { addHighlightLayers } from '../highlights.js';
 
@@ -35,6 +35,7 @@ export function addAllLayers() {
   addSeismicHazard();   // raster — sits low so vector infra draws on top
   addWildfireHazard();  // raster — sits low so vector infra draws on top
   addWildfireLive();    // live GeoJSON — smoke + perimeters + hotspots + incidents (one source)
+  addOdinOutages();     // live county-outage choropleth — polygon fill, sits low so infra draws on top
 
   addRetailTerritories();
   addControlAreas();

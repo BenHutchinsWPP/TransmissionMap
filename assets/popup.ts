@@ -83,6 +83,7 @@ const CLICKABLE_LAYERS = [
   "wildfire-perimeters-fill",
   "tribal-fill", "bia-tribal-fill", "padus-fill", "crithab-fill",
   "nerc-fill", "ba-fill", "retail-fill",
+  "odin-outages-fill",
 ];
 
 function activeClickableLayers() {
@@ -193,7 +194,13 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
     highlightUserFeature(f, { info: !clipped });
   }
 
-  const html = buildPopupHtml(f.layer.id, (f.properties || {}) as Record<string, unknown>);
+  // Feature-state-joined layers (ODIN outages) carry their data in f.state, not
+  // f.properties — merge it in so the renderer sees both the tile attributes
+  // (county NAME/STATE_NAME) and the joined numbers (out, n).
+  const props = f.state && Object.keys(f.state).length
+    ? { ...(f.properties || {}), ...f.state }
+    : (f.properties || {});
+  const html = buildPopupHtml(f.layer.id, props as Record<string, unknown>);
   if (html) {
     state.popup!.setLngLat(lngLat).setHTML(html).addTo(state.map!);
   }
