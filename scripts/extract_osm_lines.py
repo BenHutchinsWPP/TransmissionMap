@@ -23,6 +23,8 @@ from pathlib import Path
 
 import yaml
 
+from osm_common import SHARED_FILTER_TAGS
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
@@ -349,10 +351,13 @@ def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False
                         os_filters.append(f"{key}={v}")
                 else:
                     os_filters.append(f"{key}={vals}")
-        os_filters = sorted(set(os_filters))
         if not os_filters:
             log.warning("  No filters for %s, skipping", stem)
             continue
+        # Union in the tags the other extract scripts need, so this single
+        # tags-filter pass produces an intermediate they can all reuse
+        # (see SHARED_FILTER_TAGS / find_pbf in osm_common.py).
+        os_filters = sorted(set(os_filters) | set(SHARED_FILTER_TAGS))
 
         if stem.endswith("_filtered"):
             work_pbf = pbf_path
@@ -360,7 +365,13 @@ def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False
             log.info("  Input is already filtered, skipping tags-filter")
         else:
             filtered = Path(output_dir) / f"{stem}_filtered.osm.pbf"
-            if filtered.exists() and filtered.stat().st_mtime >= pbf_path.stat().st_mtime:
+            sidecar = Path(str(filtered) + ".filters")
+            # Reuse only if fresh AND built with the same tag set — a stale
+            # sidecar means the filtered pbf is missing tags someone added.
+            if (filtered.exists()
+                    and filtered.stat().st_mtime >= pbf_path.stat().st_mtime
+                    and sidecar.exists()
+                    and sorted(sidecar.read_text().split()) == os_filters):
                 log.info("  Filtered file exists (%s), skipping tags-filter", filtered.name)
             else:
                 cmd = ["osmium", "tags-filter", str(pbf_path)] + os_filters \
@@ -369,6 +380,7 @@ def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False
                 if not _run(cmd, "osmium tags-filter"):
                     log.error("  osmium tags-filter failed for %s", stem)
                     sys.exit(1)
+                sidecar.write_text("\n".join(os_filters) + "\n")
             work_pbf = filtered
 
         if not all_na and bb and bb.get("min_lon") is not None:

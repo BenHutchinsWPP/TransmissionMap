@@ -67,8 +67,13 @@ Run via `make pipeline`:
 1. **Download** — Geofabrik publishes daily `.osm.pbf` extracts; this build uses
    `north-america-latest.osm.pbf` (~18 GB).
 2. **Filter** — `osmium tags-filter` + `osmium extract` reduce the full continental PBF
-   to a ~110 MB power+pipeline subset, selecting only relevant tags and clipping to the
-   target bounding box.
+   to a small subset, selecting only relevant tags and clipping to the target bounding
+   box. This runs **once**, in `extract_osm_lines.py`: the filter is the union of every
+   OSM extract script's tags (`SHARED_FILTER_TAGS` in `osm_common.py`), and the
+   intermediate (`data/build/*_filtered.osm.pbf` + a `.filters` sidecar recording the
+   tag set) is reused by the substation/generator/plant/datacenter scripts via
+   `find_pbf(need_tags=…)` — they fall back to the full 18 GB pbf only when the
+   intermediate is missing, stale, or was built without their tags.
 3. **Convert** — `ogr2ogr` reads the filtered PBF via the GDAL OSM driver (with a
    project-local `osmconf.ini` that promotes `power` to the closed-way polygon list) and
    writes GeoJSON. Shapefile is avoided here: it truncates field names to 10 chars, hits

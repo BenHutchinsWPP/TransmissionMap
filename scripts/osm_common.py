@@ -28,14 +28,47 @@ def _has(tool):
     return shutil.which(tool) is not None
 
 
-def find_pbf(input_dir):
-    """Return the first non-nested PBF in input_dir (prefers a single _filtered file)."""
+# Tags every OSM extract script needs, unioned into the ONE osmium tags-filter
+# pass run by extract_osm_lines.py. Its filtered intermediate then serves
+# substations/generators/plants/datacenters too (via find_pbf need_tags below),
+# so the 18 GB pbf is scanned once per pipeline run instead of five times.
+# Adding a new extract script? Add its tags here AND pass them as need_tags.
+SHARED_FILTER_TAGS = [
+    "power=substation",
+    "power=generator",
+    "power=plant",
+    "telecom=data_center",
+    "building=data_center",
+    "building=data_centre",
+]
+
+
+def find_pbf(input_dir, need_tags=None, build_dir="data/build"):
+    """Return the first non-nested PBF in input_dir (prefers a single _filtered file).
+
+    With ``need_tags``, first look in build_dir for a filtered intermediate
+    (written by extract_osm_lines.py) whose ``.filters`` sidecar proves it was
+    filtered with every needed tag and that is no older than the raw pbf —
+    otherwise fall back to the full pbf. The sidecar check is what makes reuse
+    safe: a filtered file built with different tags silently drops features.
+    """
     all_pbf = sorted(glob.glob(os.path.join(input_dir, "*.osm.pbf")))
+    originals = [f for f in all_pbf if "_filtered" not in os.path.basename(f)]
+    if need_tags:
+        newest_src = max((os.path.getmtime(f) for f in originals), default=0)
+        for f in sorted(glob.glob(os.path.join(build_dir, "*_filtered.osm.pbf"))):
+            sidecar = f + ".filters"
+            if not os.path.exists(sidecar):
+                continue
+            with open(sidecar) as fh:
+                have = set(fh.read().split())
+            if set(need_tags) <= have and os.path.getmtime(f) >= newest_src:
+                log.info("Reusing shared filtered pbf: %s", f)
+                return f
     single_filtered = [f for f in all_pbf
                        if re.search(r'_filtered(?!.*_filtered)', os.path.basename(f))]
     if single_filtered:
         return single_filtered[0]
-    originals = [f for f in all_pbf if "_filtered" not in os.path.basename(f)]
     if originals:
         return originals[0]
     return all_pbf[0] if all_pbf else None

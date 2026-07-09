@@ -350,7 +350,7 @@ def main():
     if args.input:
         pbf = Path(args.input)
     else:
-        pbf = find_pbf(args.input_dir)
+        pbf = find_pbf(args.input_dir, need_tags=["power=plant"])
         if not pbf:
             log.error("No .osm.pbf found in %s — pass -i <file>", args.input_dir)
             sys.exit(1)
