@@ -29,7 +29,6 @@ import { addHighlightLayers } from '../highlights.js';
 // >>> ADD-LAYER: add-all-layers
 export function addAllLayers() {
   addPopDensity();
-  addOsmDataCenters();
   addSolarResource();
   addWindResource();
   addGeoResource();
@@ -66,6 +65,7 @@ export function addAllLayers() {
   addOsmPlants();
   addEiaGenerators();
   addOsmGenerators();
+  addOsmDataCenters();  // load points sit above lines, below substation dots
 
   addOsmSubstationPoints();
   addHifldSubstationPoints();
