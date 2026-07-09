@@ -26,6 +26,10 @@ make tiles
 # 5. (deploying) Push data/layers/ + data/releases/ to the orphan 'data-static'
 #    branch that prod fetches from — local dev reads data/layers/ directly
 make publish-data
+
+# 6. Bump DATA_VERSION in sw.js (commit to main) — the service worker caches
+#    PMTiles byte ranges cache-first; ranges cached from the old file corrupt
+#    reads against a rebuilt one
 ```
 
 HIFLD and EIA reference data are auto-downloaded on first run to `data/raw/hifld/` and
