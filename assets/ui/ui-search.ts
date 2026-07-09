@@ -36,7 +36,7 @@ const SEARCH_SOURCES = [
   { sourceId: "control-areas",   sourceLayer: null,             label: "Balancing Authority", fields: ["name", "state"] },
   { sourceId: "retail-territories", sourceLayer: "retail_territories", label: "Retail Territory", fields: ["name", "state"] },
   { sourceId: "padus",          sourceLayer: "padus",          label: "Protected Land",     fields: ["name", "desig", "mng_agency", "state"] },
-  { sourceId: "tribal-lands",   sourceLayer: "tribal_lands",   label: "Tribal (Census)",      fields: ["name"] },
+  { sourceId: "tribal-lands",   sourceLayer: null,             label: "Tribal (Census)",      fields: ["name"] },
   { sourceId: "bia-tribal-lands", sourceLayer: null,             label: "Tribal (BIA)",       fields: ["LARNAME"] },
   { sourceId: "crithab",        sourceLayer: "crithab",        label: "Critical Habitat",   fields: ["comname", "sciname", "unitname"] },
   { sourceId: "wildfire-live",  sourceLayer: null,             label: "Active Fire",         fields: ["name", "fire_id", "state"] },

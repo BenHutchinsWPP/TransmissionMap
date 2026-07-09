@@ -146,11 +146,8 @@ layers:
 
   - id: tribal_lands
     src: data/build/tribal_lands.gpkg
-    format: pmtiles
-    min_zoom: 3
-    max_zoom: 10
-    simplification: 4
-    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+    format: geojson
+    precision: 5
 
   - id: bia_tribal_lands
     src: data/build/bia_tribal_lands.geojson

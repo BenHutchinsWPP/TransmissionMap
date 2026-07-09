@@ -40,7 +40,7 @@ export const DATA = {
   eia_product_pipelines: DATA_ORIGIN + "data/layers/eia_product_pipelines.geojson.gz", // EIA petroleum-product pipelines
   railroads:            DATA_ORIGIN + "data/layers/railroads.pmtiles",  // BTS NARN rail network lines
   padus:          DATA_ORIGIN + "data/layers/padus.pmtiles",          // USGS PAD-US: GAP 1-3 conservation + GAP 4 federal (DoD/DOE/USACE)
-  tribal_lands:   DATA_ORIGIN + "data/layers/tribal_lands.pmtiles",   // Census TIGER Tribal (AIANNH)
+  tribal_lands:   DATA_ORIGIN + "data/layers/tribal_lands.geojson.gz", // Census TIGER Tribal (AIANNH) — lazy GeoJSON (copyable features)
   bia_tribal_lands: DATA_ORIGIN + "data/layers/bia_tribal_lands.geojson.gz", // BIA AIAN-LAR Tribal Lands — lazy GeoJSON (copyable features)
   crithab:        DATA_ORIGIN + "data/layers/crithab.pmtiles",         // USFWS Critical Habitat (T&E species)
   mines:          DATA_ORIGIN + "data/layers/mines.geojson.gz",        // MSHA large mines (filtered) — lazy GeoJSON

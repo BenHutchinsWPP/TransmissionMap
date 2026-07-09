@@ -30,8 +30,8 @@ export function addHifldSubstationPoints() {
 
 export function addTribalLands() {
   addPolygonLayer({
-    sourceId: "tribal-lands", source: { type: "vector", url: pmtilesUrl(DATA.tribal_lands) },
-    sourceLayer: "tribal_lands", prefix: "tribal",
+    sourceId: "tribal-lands", source: { type: "geojson", data: EMPTY_FC },
+    prefix: "tribal",
     color: bucketColorExpr("area_type", TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR),
     fillMinzoom: 3, fillOpacity: 0.30,
     outlineMinzoom: 5, outlineWidth: 0.8, outlineOpacity: 0.6,
