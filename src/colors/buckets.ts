@@ -21,6 +21,15 @@ export const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"],
   13, 3.5
 ];
 
+// ─── Underground transmission line detection ────────────────────────────────
+export const OSM_UNDERGROUND_EXPR = ["==", ["coalesce", ["get", "is_undergrnd"], 0], 1] as ExpressionSpecification;
+export const HIFLD_UNDERGROUND_EXPR = ["!=", ["index-of", "UNDERGROUND", ["coalesce", ["get", "TYPE"], ""]], -1] as ExpressionSpecification;
+
+export const LINE_PLACEMENT_BUCKETS: BucketDef[] = [
+  { id: "overhead",    label: "Overhead",    color: "#a78bfa", urlCode: "o" },
+  { id: "underground", label: "Underground", color: "#a78bfa", urlCode: "u" },
+];
+
 export function subRadius(kvField: string): ExpressionSpecification {
   const kv = ["to-number", ["get", kvField], -1];
   function kvBucket(lo: number, mid: number, hi: number, vhi: number) {

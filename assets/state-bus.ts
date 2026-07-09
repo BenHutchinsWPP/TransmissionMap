@@ -5,6 +5,7 @@
 type Events = {
   'filter:generators':    void;   // MW / fuel / year / status changed
   'filter:voltage':       void;
+  'filter:underground':   void;
   'filter:natgas-line':   void;
   'filter:natgas-pts':    void;
   'filter:ogf-status':    void;

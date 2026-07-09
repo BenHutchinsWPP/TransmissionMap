@@ -26,7 +26,7 @@ OSM transmission line and cable features (North America).
 
 - **Selected:** `power=line` and `power=cable` ways → **~327,000 features**
 - **Row filter:** none
-- **Computed:** `nominal_kv` parsed to integer kV from raw OSM voltage text; `-1` sentinel = unknown
+- **Computed:** `nominal_kv` parsed to integer kV from raw OSM voltage text; `-1` sentinel = unknown; `is_undergrnd` flag derived from `power=cable` / `location` tags
 - **Columns kept:** `nominal_kv`, `operator`, `name`
 - **Simplification:** tippecanoe per-zoom default (z2–11)
 
@@ -40,6 +40,7 @@ OSM transmission line and cable features (North America).
 | `circuits` | ~55% | `1`, `2`, `4` | Number of circuits; not rendered in popup |
 | `operator` | ~35% | BC Hydro, Bonneville Power Administration, Hydro One | Operating utility |
 | `name` | ~11% | "Big Eddy–DeMoss No 1", "Bonneville PH 1–Hood River No 1" | Most OSM lines unnamed |
+| `is_undergrnd` | 100% | `0`, `1` | `1` when `power=cable` or `location=underground\|underwater`; drives dashed rendering + Line placement filter |
 
 ## Caveats
 

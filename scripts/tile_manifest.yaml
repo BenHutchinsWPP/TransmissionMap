@@ -190,7 +190,7 @@ layers:
   - id: osm_transmission_lines
     src: data/build/transmission_lines.gpkg
     format: pmtiles
-    select: [osm_id, nominal_kv, cables, circuits, operator, name]
+    select: [osm_id, nominal_kv, cables, circuits, operator, name, is_undergrnd]
     precision: 6
     min_zoom: 2
     max_zoom: 11

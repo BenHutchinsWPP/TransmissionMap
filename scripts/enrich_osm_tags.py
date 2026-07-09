@@ -37,6 +37,7 @@ T_CABLES   = re.compile(r'"cables"=>"(\d+)"')
 T_CIRCUITS = re.compile(r'"circuits"=>"(\d+)"')
 T_FREQ     = re.compile(r'"frequency"=>"([^"]+)"')
 T_LOCATION = re.compile(r'"location"=>"([^"]+)"')
+T_POWER    = re.compile(r'"power"=>"([^"]+)"')
 T_LINETYPE = re.compile(r'"line"=>"([^"]+)"')
 T_WIRES    = re.compile(r'"wires"=>"([^"]+)"')
 T_REF      = re.compile(r'"ref"=>"([^"]+)"')
@@ -193,6 +194,7 @@ line_fdefs = [
     ("circuits",    OFTInteger, 6,   lambda o: _get_int(o, T_CIRCUITS) or -1),
     ("frequency",   OFTString,  20,  lambda o: _get(o, T_FREQ) or ''),
     ("location",    OFTString,  20,  lambda o: _get(o, T_LOCATION) or ''),
+    ("power",       OFTString,  20,  lambda o: _get(o, T_POWER) or ''),
     ("operator",    OFTString,  80,  lambda o: _get(o, T_OP) or ''),
     ("op_wikidata", OFTString,  20,  lambda o: _get(o, T_OP_WD) or ''),
     ("line_type",   OFTString,  40,  lambda o: _get(o, T_LINETYPE) or ''),
@@ -355,9 +357,15 @@ def main():
     #   - pipeline     → pipeline_routes.shp
     #   - pipeline_feature → pipeline_points.csv
     def _line_post_hook(gdf):
-        """Fill kV from name, then bucket into kv_range."""
+        """Fill kV from name, bucket into kv_range, derive is_undergrnd flag."""
         gdf = _fill_kv_from_name(gdf)
-        return _add_kv_range(gdf)
+        gdf = _add_kv_range(gdf)
+        gdf["is_undergrnd"] = (
+            (gdf["power"] == "cable")
+            | gdf["location"].isin(["underground", "underwater"])
+        ).astype("int32")
+        gdf = gdf.drop(columns=["power"])
+        return gdf
 
     jobs = [
         ("Power lines",       "power_line*lines.shp",          wkbLineString, line_fdefs,          None,                 _line_post_hook),

@@ -18,6 +18,7 @@ import {
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
   SECTOR_BUCKETS, SECTOR_MAP,
+  OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, LINE_PLACEMENT_BUCKETS,
 } from '../src/colors/buckets.js';
 import {
   MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
@@ -223,12 +224,30 @@ export function applyRetailTypeFilter() {
     "type", state.legendFilters.retail, RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP);
 }
 
+// osm/hifld transmission lines carry an overhead/underground placement flag;
+// other "kv" entries (substations) have no such field and get no filter.
+function buildUndergroundExpr(entryId: string): FilterSpecification | null {
+  const undergroundExpr =
+    entryId === "osm-transmission-lines"   ? OSM_UNDERGROUND_EXPR
+    : entryId === "hifld-transmission-lines" ? HIFLD_UNDERGROUND_EXPR
+    : null;
+  if (!undergroundExpr) return null;
+
+  const active = state.legendFilters.underground;
+  if (!active) return null;
+  if (active.size === LINE_PLACEMENT_BUCKETS.length) return null; // both on → no filter
+  if (active.size === 0) return anyOfConds([]); // none active → match nothing
+  if (active.has("underground")) return undergroundExpr as unknown as FilterSpecification;
+  return ["!", undergroundExpr] as unknown as FilterSpecification;
+}
+
 export function applyVoltageFilter() {
   if (!state.mapReady) return;
   for (const entry of LAYERS) {
     if (entry.filterType !== "kv") continue;
     const bucketExpr = buildKvFilterExpr(entry.filterField!, state.legendFilters.kv, KV_BUCKETS);
-    setBucketFilter(entry.mapLayerIds, bucketExpr);
+    const ugExpr = buildUndergroundExpr(entry.id);
+    setBucketFilter(entry.mapLayerIds, combineFilters(bucketExpr, ugExpr));
   }
 }
 
@@ -393,6 +412,7 @@ export function applyLayerFilter(registryId: string) {
 import { on } from './state-bus.js';
 on('filter:generators',    applyGeneratorFilters);
 on('filter:voltage',       applyVoltageFilter);
+on('filter:underground',   applyVoltageFilter);
 on('filter:natgas-line',   applyNatgasLineFilter);
 on('filter:natgas-pts',    applyNatgasPtsFilter);
 on('filter:ogf-status',    applyOGFFilters);

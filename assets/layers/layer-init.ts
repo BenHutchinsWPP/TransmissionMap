@@ -179,9 +179,9 @@ export function addPolygonLayer({ sourceId, source, sourceLayer = undefined as (
 
 // ─── Transmission lines helper ────────────────────────────────────────────────
 export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, prefix,
-                               kvExpr, color, opacity, nameField = undefined as (string | undefined) }: {
+                               kvExpr, color, opacity, nameField = undefined as (string | undefined), undergroundExpr = undefined as (ExpressionSpecification | undefined) }: {
   sourceId: string; url: string; sourceLayer: string; registryId: string; prefix: string;
-  kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string;
+  kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string; undergroundExpr?: ExpressionSpecification;
 }) {
   if (!state.map || state.map.getSource(sourceId)) return;
   state.map.addSource(sourceId, { type: "vector", url: pmtilesUrl(url), attribution: SOURCE_ATTRIB[sourceId] });
@@ -195,11 +195,15 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
   ];
   for (const t of tiers) {
     const id = `${prefix}-${t.id}`;
+    const paint: Record<string, unknown> = { "line-color": color, "line-width": LINE_WIDTH, "line-opacity": opacity[t.id] };
+    if (undergroundExpr) {
+      paint["line-dasharray"] = ["case", undergroundExpr, ["literal", [3, 3]], ["literal", [1, 0]]] as unknown as ExpressionSpecification;
+    }
     state.map.addLayer({
       id, type: "line", source: sourceId, "source-layer": sourceLayer,
       minzoom: t.minzoom, filter: t.filter,
       layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": color, "line-width": LINE_WIDTH, "line-opacity": opacity[t.id] },
+      paint: paint as unknown as Record<string, unknown>,
     } as LayerSpecification);
     registerBaseFilter(id, t.filter);
   }

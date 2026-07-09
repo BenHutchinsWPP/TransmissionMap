@@ -5,7 +5,7 @@ import type { ExpressionSpecification, FilterSpecification, LayerSpecification }
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { OSM_GEN_ICON, OSM_GEN_COLOR, genIconSize } from '../../src/colors/fuel.js';
-import { PIPELINE_LINE_COLOR } from '../../src/colors/buckets.js';
+import { PIPELINE_LINE_COLOR, OSM_UNDERGROUND_EXPR } from '../../src/colors/buckets.js';
 import { HEAT_MW_STOPS, OSM_MW_FLOOR, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
@@ -22,6 +22,7 @@ export function addOsmTransmission() {
     color: voltageColorExpr("nominal_kv", "#c4b5fd"),
     opacity: { hv: 0.9, mv: 0.9, unknown: 0.6, lv: 0.75 },
     nameField: "name",
+    undergroundExpr: OSM_UNDERGROUND_EXPR,
   });
 }
 

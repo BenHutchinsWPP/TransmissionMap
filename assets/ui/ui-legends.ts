@@ -8,7 +8,7 @@ import {
   KV_BUCKETS, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
-  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS, SECTOR_BUCKETS,
+  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
 } from '../../src/colors/buckets.js';
 import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
@@ -26,6 +26,9 @@ export const LEGEND_FILTERS = [
     masterId: "kvAllCb", legendId: "voltageLegend", itemsId: "voltageLegendItems",
     title: "Voltage (kV)", swatch: "color",
     defaultActive: ["550+", "500-549", "300-499", "200-299"], apply: applyVoltageFilter },
+  { key: "underground", groupCode: "o", buckets: LINE_PLACEMENT_BUCKETS,
+    masterId: "linePlacementAllCb", legendId: "linePlacementLegend", itemsId: "linePlacementLegendItems",
+    title: "Line placement", swatch: "line", apply: applyVoltageFilter },
   { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
     masterId: "fuelAllCb", legendId: "fuelLegend", itemsId: "fuelLegendItems",
     title: "Fuel Type", swatch: "icon", apply: applyGeneratorFilters },
@@ -128,6 +131,8 @@ function buildLegendSection(cfg: LegendFilter) {
       ? `<svg class="legend-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${ICON_SVG[(b as { icon?: string }).icon ?? ""] ?? ""}</svg>`
       : cfg.swatch === "none"
       ? ""
+      : cfg.swatch === "line"
+      ? `<span class="legend-line-swatch${b.id === "underground" ? " legend-line-swatch--dashed" : ""}"></span>`
       : `<span class="legend-swatch" style="background:${b.color}"></span>`;
     return `<label class="legend-item legend-filter-item">
        <input type="checkbox" class="legend-filter-cb" data-legend-key="${cfg.key}" data-bucket-id="${b.id}"${checked}>
@@ -224,6 +229,7 @@ export function buildLegends() {
 
 const LEGEND_VISIBILITY = [
   { el: "voltageLegend",    show: () => LAYERS.some(l => l.voltageLayer  && state.layerVisibility[l.id]) },
+  { el: "linePlacementLegend", show: () => !!state.layerVisibility["osm-transmission-lines"] || !!state.layerVisibility["hifld-transmission-lines"] },
   { el: "fuelLegend",       show: () => LAYERS.some(l => l.fuelLayer     && state.layerVisibility[l.id]) },
   { el: "pipelineLegend",   show: () => LAYERS.some(l => l.pipelineLayer && state.layerVisibility[l.id]) },
   { el: "sectorLegend",     show: () => !!state.layerVisibility["eia-generators"] },

@@ -4,7 +4,7 @@
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import { bucketColorExpr, ogfColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS } from '../../src/colors/buckets.js';
+import { bucketColorExpr, ogfColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, HIFLD_UNDERGROUND_EXPR } from '../../src/colors/buckets.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
   pmtilesUrl, initialVisibility, registerBaseFilter,
@@ -17,6 +17,7 @@ export function addHifldTransmission() {
     kvExpr: ["to-number", ["get", "VOLTAGE"], -1],
     color: voltageColorExpr("VOLTAGE", "#a78bfa"),
     opacity: { hv: 0.85, mv: 0.85, unknown: 0.6, lv: 0.85 },
+    undergroundExpr: HIFLD_UNDERGROUND_EXPR,
   });
 }
 

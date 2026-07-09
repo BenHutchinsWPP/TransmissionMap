@@ -38,7 +38,7 @@ _Counts approximate, from the SeerAI HIFLD archive snapshot (`transmission_lines
 | `ID` | 100% | `141176` (HIFLD object ID) |
 | `VOLTAGE` | 100% | 115 (21k), 138 (14k), 230 (7.1k), 161 (4.5k), 345 (2.5k), 500 (795), 765 (46) |
 | `VOLT_CLASS` | 100% | `100-161`, `220-287`, `345`, `500`, `735 And Above` |
-| `TYPE` | 100% | "AC; OVERHEAD" (50k), "OVERHEAD" (1.4k), "AC; UNDERGROUND" (281), "DC; OVERHEAD" (5) |
+| `TYPE` | 100% | "AC; OVERHEAD" (50k), "OVERHEAD" (1.4k), "AC; UNDERGROUND" (281), "DC; OVERHEAD" (5). UNDERGROUND drives dashed rendering + Line placement filter |
 | `STATUS` | 100% | "IN SERVICE" (41k), "NOT AVAILABLE" (11k), "INACTIVE" (53), "UNDER CONSTRUCTION" (11), "PROPOSED" (1) |
 | `OWNER` | 100% | "MIDWEST ENERGY INC", "WHEAT BELT PUBLIC POWER DIST" |
 | `SUB_1`, `SUB_2` | 100% | Terminal substation names. Mostly `UNKNOWN######` / `TAP######` placeholders |
