@@ -152,6 +152,13 @@ layers:
     simplification: 4
     flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
 
+  - id: bia_tribal_lands
+    src: data/build/bia_tribal_lands.geojson
+    format: pmtiles
+    select: [LARNAME, AGENCY]
+    min_zoom: 3
+    max_zoom: 10
+
   - id: padus
     src: data/build/padus.gpkg
     format: pmtiles

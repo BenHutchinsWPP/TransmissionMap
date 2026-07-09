@@ -12,7 +12,7 @@ import {
   addOsmPlantPolygons, addOsmPlants, addOsmGenerators, addPipelineLines, addPipelinePoints,
 } from './map-layers-osm.js';
 import {
-  addHifldTransmission, addHifldSubstationPoints, addTribalLands,
+  addHifldTransmission, addHifldSubstationPoints, addTribalLands, addBiaTribalLands,
   addHifldNatgasLines, addHifldNatgasPts, addNercRegions, addControlAreas,
   addOGFPlannedTransmission, addRetailTerritories,
 } from './map-layers-hifld.js';
@@ -43,6 +43,7 @@ export function addAllLayers() {
 
   addPadus();
   addTribalLands();
+  addBiaTribalLands();
   addCritHab();
   addMines();
 

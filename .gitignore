@@ -74,6 +74,11 @@ data/raw/noaa/
 # IM3 US Data Center Locations GeoPackage (~843 KB; auto-downloaded by extract_osm_datacenters.py)
 data/raw/im3/
 
+# BIA AIAN-LAR GeoJSON (auto-downloaded by extract_bia_tribal.py; see docs/layers/bia-tribal-lands.md)
+data/raw/bia/
+# Census cartographic county boundaries (county-boundaries experimental work)
+data/raw/boundaries/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

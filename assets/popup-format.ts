@@ -278,6 +278,10 @@ const _defs = [
     row("Recognition", p.recognized) +
     row("Land acres", p.acres_land ? Number(p.acres_land).toLocaleString() : null) +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">Census administrative boundary. Not intended for consultation or determining historical extent.</div>`],
+  [["bia-tribal-fill"], (p: Record<string, unknown>) =>
+    title((p.LARNAME as string) || "Tribal (BIA)") +
+    row("Agency", p.AGENCY) +
+    `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">Boundary for illustrative purposes. Does not constitute legal jurisdiction or land title.</div>`],
   [["crithab-fill"], (p: Record<string, unknown>) =>
     title((p.comname as string) || (p.sciname as string) || "Critical Habitat") +
     row("Scientific name", p.sciname) +

@@ -29,6 +29,11 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: U.S. Census Bureau, TIGER/Line — AIANNH areas",
     creditId: "hifld-tribal",
   },
+  "bia-bogs": {
+    label: "BIA AIAN-LAR",
+    tooltip: "Source: Bureau of Indian Affairs - Branch of Geospatial Support",
+    creditId: "bia-bogs",
+  },
   "hifld-nerc": {
     label: "HIFLD NERC Regions",
     tooltip: "Source: HIFLD NERC regions",

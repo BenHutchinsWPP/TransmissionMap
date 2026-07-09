@@ -59,7 +59,7 @@ Where electricity demand concentrates.
 
 Layers that show where land-use constraints affect transmission siting.
 
-**PAD-US** ([padus-protected-lands](padus-protected-lands.md)) is the USGS authoritative inventory of US protected and managed lands — national forests, wilderness areas, BLM land, state parks, conservation areas, and more. Filtered to GAP status 1–3 (excludes city parks with no protection mandate). **Tribal lands** ([tribal-lands](tribal-lands.md)) shows American Indian, Alaska Native, and Native Hawaiian Areas from the Census TIGER/Line dataset. **Critical Habitat** ([crithab](crithab.md)) is the USFWS national critical-habitat polygons (pre-baked to PMTiles) — threatened and endangered species designations under the Endangered Species Act.
+**PAD-US** ([padus-protected-lands](padus-protected-lands.md)) is the USGS authoritative inventory of US protected and managed lands — national forests, wilderness areas, BLM land, state parks, conservation areas, and more. Filtered to GAP status 1–3 (excludes city parks with no protection mandate). **Tribal lands** ([tribal-lands](tribal-lands.md) & [bia-tribal-lands](bia-tribal-lands.md)) shows American Indian, Alaska Native, and Native Hawaiian Areas from the Census TIGER/Line dataset, as well as the BIA AIAN-LAR dataset. **Critical Habitat** ([crithab](crithab.md)) is the USFWS national critical-habitat polygons (pre-baked to PMTiles) — threatened and endangered species designations under the Endangered Species Act.
 
 ---
 

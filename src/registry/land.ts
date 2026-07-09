@@ -29,6 +29,21 @@ export const landLayers: LayerDef[] = [
     },
   },
   {
+    id:            "bia-tribal-lands",
+    urlCode:       "BIA",
+    label:         "Tribal (BIA AIAN-LAR)",
+    group:         "land",
+    sourceId:      "bia-bogs",
+    swatch:        "#8b5cf6",
+    defaultOn:     false,
+    hoverField:    "LARNAME",
+    mapLayerIds:   ["bia-tribal-fill", "bia-tribal-outline"],
+    downloads: {
+      geojson: "data/releases/bia-tribal-lands.zip",
+      shp: "data/releases/bia-tribal-lands-shp.zip",
+    },
+  },
+  {
     id:            "mines",
     urlCode:       "MNE",
     label:         "✂️ Large Mines (MSHA, Filtered)",

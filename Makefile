@@ -122,6 +122,8 @@ pipeline:
 	@echo "=== 9/9  Land layers (Census TIGER Tribal + USGS PAD-US) ==="
 	@$(PY) $(SCRIPTS)/extract_tribal_lands.py || \
 	    echo "  [skip] tribal lands — place input at data/raw/aiannh/tl_2025_us_aiannh.zip (see script header)"
+	@$(PY) $(SCRIPTS)/extract_bia_tribal.py || \
+	    echo "  [skip] bia tribal lands — place input at data/raw/bia/bia_aian_national_lar.geojson (see script header)"
 	@$(PY) $(SCRIPTS)/extract_padus.py || \
 	    echo "  [skip] PAD-US — place input at data/raw/padus/PADUS4_1Geodatabase.gdb (see script header)"
 	@$(PY) $(SCRIPTS)/extract_crithab.py || \
@@ -167,6 +169,7 @@ land:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@mkdir -p $(BUILD)
 	@$(PY) $(SCRIPTS)/extract_tribal_lands.py
+	@$(PY) $(SCRIPTS)/extract_bia_tribal.py
 	@$(PY) $(SCRIPTS)/extract_padus.py
 	@$(PY) $(SCRIPTS)/extract_crithab.py || \
 	    echo "  [skip] crithab — place input at data/raw/crithab/crithab_all_layers.zip (see script header)"

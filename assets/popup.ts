@@ -81,7 +81,7 @@ const CLICKABLE_LAYERS = [
   "wildfire-incidents-circle",
   "wildfire-hotspots-circle",
   "wildfire-perimeters-fill",
-  "tribal-fill", "padus-fill", "crithab-fill",
+  "tribal-fill", "bia-tribal-fill", "padus-fill", "crithab-fill",
   "nerc-fill", "ba-fill", "retail-fill",
 ];
 

@@ -13,6 +13,7 @@ documentation linked below. This page is the license and attribution index.
 | **IM3 Open Source Data Center Atlas** (PNNL/DOE) | [Data centers](layers/osm-datacenters.md)* (enrichment — facility footprint area) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — IM3 locations are OSM-derived | "© OpenStreetMap contributors; IM3 Open Source Data Center Atlas (PNNL/DOE)" |
 | **HIFLD** (DHS/CISA) | [Transmission lines](layers/hifld-transmission-lines.md) · [Substations](layers/hifld-substations.md) · [Natural gas & petroleum](layers/hifld-natgas.md) · [Regions](layers/hifld-regions.md) | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) | "HIFLD / DHS CISA" |
 | **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
+| **BIA** (Bureau of Indian Affairs) | [Tribal lands (BIA)](layers/bia-tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Bureau of Indian Affairs - Branch of Geospatial Support" |
 | **EIA** | [Generators (Form 860)](layers/eia-generators.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: U.S. EIA, Form EIA-860" |
 | **USGS** | [PAD-US protected & managed lands](layers/padus-protected-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | USGS Gap Analysis Project |
 | **MSHA** (US DOL) | [Large mines (filtered)](layers/mines.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: MSHA Mine Data (US DOL)" |

@@ -139,6 +139,10 @@ layers:
   tribal-lands:
     skip: true  # link-out only (Census TIGER/Line); registry links source, no pack
 
+  bia-tribal-lands:
+    doc: docs/layers/bia-tribal-lands.md
+    geojson: data/build/bia_tribal_lands.geojson
+
   crithab:
     skip: true  # no redistribution; users link out to ECOS (local pmtiles built by extract_crithab.py)
 
