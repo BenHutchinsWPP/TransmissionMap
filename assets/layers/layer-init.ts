@@ -38,6 +38,7 @@ const LAZY_GEOJSON: Record<string, string> = {
   "wecc-path-lines":            DATA.wecc_path_lines,
   "nerc-regions":               DATA.nerc_regions,
   "control-areas":              DATA.control_areas,
+  "bia-tribal-lands":           DATA.bia_tribal_lands,
   "wildfire-live":              DATA.wildfire_live,
 };
 

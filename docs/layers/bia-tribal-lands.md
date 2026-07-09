@@ -11,7 +11,7 @@ American Indian and Alaska Native Land Area Representation (AIAN-LAR) from the B
 | **Download** | Federal ArcGIS REST API Endpoint |
 | **License** | Public domain |
 | **Attribution** | "Bureau of Indian Affairs - Branch of Geospatial Support" |
-| **Served** | `data/layers/bia_tribal_lands.pmtiles` — PMTiles |
+| **Served** | `data/layers/bia_tribal_lands.geojson.gz` — lazy GeoJSON (full geometry; features copyable in the UI) |
 | **Built by** | `extract_bia_tribal.py` → `data/build/bia_tribal_lands.{geojson,shp}` |
 | **Raw input** | `data/raw/bia/bia_aian_national_lar.geojson` |
 

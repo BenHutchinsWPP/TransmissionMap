@@ -40,8 +40,8 @@ export function addTribalLands() {
 
 export function addBiaTribalLands() {
   addPolygonLayer({
-    sourceId: "bia-tribal-lands", source: { type: "vector", url: pmtilesUrl(DATA.bia_tribal_lands) },
-    sourceLayer: "bia_tribal_lands", prefix: "bia-tribal",
+    sourceId: "bia-tribal-lands", source: { type: "geojson", data: EMPTY_FC },
+    prefix: "bia-tribal",
     color: "#8b5cf6",
     fillMinzoom: 3, fillOpacity: 0.30,
     outlineMinzoom: 5, outlineWidth: 0.8, outlineOpacity: 0.6,
