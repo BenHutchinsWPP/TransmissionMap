@@ -125,13 +125,24 @@ export function addWildfireLive() {
     paint: {
       "heatmap-weight": [
         "interpolate", ["linear"], ["to-number", ["get", "frp"], 0],
-        0, 0, 10, 0.1, 50, 0.3, 200, 0.6, 500, 0.85, 2000, 1,
+        0, 0.05,
+        10, 0.1,
+        50, 0.3,
+        200, 0.6,
+        500, 0.85,
+        2000, 1,
+      ],
+      "heatmap-intensity": [
+        "interpolate", ["linear"], ["zoom"],
+        0, 2.5,
+        9, 1,
       ],
       "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 4, 8, 9, 20],
       "heatmap-color": [
         "interpolate", ["linear"], ["heatmap-density"],
         0,   "rgba(255,200,0,0)",
-        0.2, "rgba(255,200,0,0.7)",
+        0.02, "rgba(255,200,0,0.25)",
+        0.2, "rgba(255,180,0,0.7)",
         0.5, "rgba(255,100,0,0.9)",
         1.0, "rgba(180,0,0,1)",
       ],
