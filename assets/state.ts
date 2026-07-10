@@ -38,6 +38,7 @@ export const state: AppState = {
   yearPlayback: { active: false, interval: null, speedMs: 600 },        // year-scrub animation
   sourcesLoaded: {},    // registryId → boolean — tracks which GeoJSON sources have been fetched
   sourcesData:   {},    // registryId → Feature[] — in-memory cache of fetched GeoJSON features
+  liveFcMeta:    {},    // registryId → { generated_utc?, feed_status? } — FeatureCollection-level metadata stash (fallback when features[] is empty, e.g. zero-alert NWS feeds)
   rasterLut:        {}, // raster layer id → { meta, data:Int16Array } — hover value grids (wind/solar)
   rasterLutLoading: {}, // raster layer id → boolean — guards concurrent LUT fetches
 };

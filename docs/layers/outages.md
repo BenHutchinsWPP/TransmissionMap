@@ -30,9 +30,18 @@ provider, different pipeline.
 
 ```json
 {"generated_utc":"2026-07-09T00:20:23Z","source_modified":null,
- "county_count":242,"total_customers_out":17707,
+ "county_count":242,"total_customers_out":17707,"dropped":0,"legacy_fips":0,
  "counties":{"48201":[3208,167,[["CENTERPOINT ENERGY",3100,160],["FOO, BAR COOP",108,7]]],"41033":[2367,8]}}
 ```
+
+`dropped` (always present, `0` when clean) counts rows whose `communitydescriptor`
+failed the FIPS regex and were skipped entirely (not written anywhere). `legacy_fips`
+(always present, `0` when clean) counts rows keyed to a known pre-Census-vintage FIPS
+(legacy Connecticut counties or the old Alaska Valdez-Cordova code) — these rows
+**are kept** in `counties` (still useful to consumers reading the raw snapshot) but
+will not paint on the map because the `county_boundaries` tileset no longer has a
+matching `GEOID`. In CI (`GITHUB_ACTIONS` set), a nonzero `dropped` or `legacy_fips`
+also emits a `::warning::` annotation to stdout.
 
 `counties[fips] = [customers_out, incident_count, utils]`. `customers_out` is ODIN's
 `metersaffected` (customers-affected, summed per county); `incident_count` is the
@@ -121,3 +130,9 @@ mirrored by the legend in `index.html` (`#odinLegend`):
 - **FIPS are strings with leading zeros** (e.g. `"08123"`). The join keys on the
   string `GEOID`; never `parseInt` a FIPS or Colorado/Connecticut counties silently
   drop their leading zero and fail to match.
+- **Legacy CT/AK FIPS never paint.** If a utility reports the pre-2022 Connecticut
+  county codes (`09001`-`09015` odd) and the pre-2019 Alaska Valdez-Cordova code
+  (`02261`), but `county_boundaries.pmtiles` is Census GENZ2024 vintage (CT planning
+  regions `09110`-`09190`; AK split into `02063`/`02066`), so those rows have no
+  matching `GEOID` and silently fail to join — they're still kept in the snapshot's
+  `counties` (see `legacy_fips` count) but won't render on the map.

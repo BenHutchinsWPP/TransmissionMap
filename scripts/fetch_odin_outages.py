@@ -64,6 +64,19 @@ ODIN_METADATA_URL = ODIN_BASE
 FIPS_RE = re.compile(r"^\d{5}$")
 UTILITY_ID_SUFFIX_RE = re.compile(r",\d+$")
 
+# The county tileset (county_boundaries.pmtiles) is Census GENZ2024 vintage.
+# These FIPS codes are pre-2022/2019 and will never match a GENZ2024 GEOID, so
+# rows keyed to them silently fail the frontend feature-state join (no crash,
+# just an unpainted county) — flag them instead of guessing:
+#   - Connecticut's 8 legacy counties (09001-09015, odd only) were replaced by
+#     planning regions 09110-09190 in the 2022 Census vintage.
+#   - Alaska's Valdez-Cordova census area (02261) was split into Chugach
+#     (02063) and Copper River (02066) in 2019.
+LEGACY_FIPS = frozenset({
+    "09001", "09003", "09005", "09007", "09009", "09011", "09013", "09015",
+    "02261",
+})
+
 
 # ── Fetch helper ──────────────────────────────────────────────────────────────
 
@@ -110,11 +123,22 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
     # records lack it, so None is a normal value, not an error.
     counties: dict[str, list] = {}
     total = 0
+    dropped = 0
+    legacy_fips_seen: set[str] = set()
+    legacy_fips_count = 0
     for row in results:
         fips = row.get("communitydescriptor")
         if not isinstance(fips, str) or not FIPS_RE.match(fips):
             print(f"  WARNING: skipping row with bad FIPS {fips!r}", file=sys.stderr)
+            dropped += 1
             continue
+        if fips in LEGACY_FIPS:
+            legacy_fips_count += 1
+            if fips not in legacy_fips_seen:
+                legacy_fips_seen.add(fips)
+                print(f"  WARNING: county row uses pre-2022 legacy FIPS {fips!r} "
+                      "(CT planning region / AK Valdez-Cordova split) — will not "
+                      "paint on map", file=sys.stderr)
         out = row.get("out") or 0
         n = row.get("n") or 0
         since = row.get("since") or None
@@ -150,6 +174,8 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
         "source_modified": source_modified,
         "county_count": len(counties),
         "total_customers_out": total,
+        "dropped": dropped,
+        "legacy_fips": legacy_fips_count,
         "counties": dict(sorted(counties.items())),
     }
 
@@ -171,11 +197,16 @@ def _self_check():
         {"communitydescriptor": "bad", "name": "SOMEUTIL,1", "out": 999, "n": 1},  # invalid FIPS, must be skipped
         # None/empty name -> "Unknown utility".
         {"communitydescriptor": "06001", "name": None, "out": 50, "n": 2},
+        # Legacy pre-2022 CT FIPS: kept (not dropped) but counted + warned.
+        {"communitydescriptor": "09001", "name": "LEGACY UTIL,1", "out": 12, "n": 1},
     ]
     snap = build_snapshot(results, "2026-07-08T23:45:00Z", now)
-    assert snap["county_count"] == 3, snap
-    assert snap["total_customers_out"] == 3000 + 208 + 2367 + 50, snap
+    assert snap["county_count"] == 4, snap
+    assert snap["total_customers_out"] == 3000 + 208 + 2367 + 50 + 12, snap
     assert "bad" not in snap["counties"], snap
+    assert snap["dropped"] == 1, snap  # only the "bad" FIPS row
+    assert snap["legacy_fips"] == 1, snap  # the 09001 row
+    assert snap["counties"]["09001"] == [12, 1, [["LEGACY UTIL", 12, 1, None]]], snap["counties"]["09001"]
 
     assert snap["counties"]["48201"][0] == 3208, snap
     assert snap["counties"]["48201"][1] == 167, snap
@@ -205,6 +236,9 @@ def _self_check():
     dup_snap = build_snapshot(dup_results, None, now)
     assert dup_snap["counties"]["48201"] == \
         [150, 8, [["SAME UTIL", 150, 8, "2026-07-08T14:30:00+00:00"]]], dup_snap["counties"]["48201"]
+    # Clean input (no bad/legacy FIPS) -> both counters present and zero.
+    assert dup_snap["dropped"] == 0, dup_snap
+    assert dup_snap["legacy_fips"] == 0, dup_snap
 
     # source_modified missing → None, must not raise.
     snap2 = build_snapshot(results, None, now)
@@ -283,6 +317,15 @@ def main():
         f"({snapshot['total_customers_out']} customers out) → {args.output}",
         file=sys.stderr,
     )
+
+    # GH Actions annotations are parsed from stdout only, not stderr.
+    if os.environ.get("GITHUB_ACTIONS"):
+        if snapshot["dropped"] > 0:
+            print(f"::warning::fetch_odin_outages: {snapshot['dropped']} row(s) "
+                  "dropped (bad communitydescriptor)")
+        if snapshot["legacy_fips"] > 0:
+            print(f"::warning::fetch_odin_outages: {snapshot['legacy_fips']} "
+                  "county row(s) use pre-2022 FIPS (CT/AK) — will not paint on map")
 
 
 if __name__ == "__main__":

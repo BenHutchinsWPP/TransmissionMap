@@ -67,6 +67,15 @@ export function ensureLayerData(registryId: string): Promise<void> {
       const geojson = await fetchGeojson(url);
       state.sourcesLoaded[registryId] = true;
       state.sourcesData[registryId] = geojson.features || [];
+      // Stash FeatureCollection-level metadata (generated_utc/feed_status) as a
+      // fallback for live layers when `features` is empty — harmless no-op for
+      // non-live layers since these keys simply come out undefined.
+      if (geojson.generated_utc !== undefined || geojson.feed_status !== undefined) {
+        state.liveFcMeta[registryId] = {
+          generated_utc: geojson.generated_utc,
+          feed_status: geojson.feed_status,
+        };
+      }
       (state.map!.getSource(registryId) as GeoJSONSource).setData(geojson);
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId } }));
     } catch (err) {

@@ -240,12 +240,13 @@ export function buildLegends() {
     const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
     if (registryId === "wildfire-live") {
       const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-      liveGeneratedUtc = first?.generated_utc as string | undefined;
-      liveFeedStatus = first?.feed_status as Record<string, string> | undefined;
+      const fcMeta = state.liveFcMeta["wildfire-live"];
+      liveGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
+      liveFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
       renderLiveAge();
     } else if (registryId === "nws-alerts") {
       const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-      nwsGeneratedUtc = first?.generated_utc as string | undefined;
+      nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? state.liveFcMeta["nws-alerts"]?.generated_utc;
       renderNwsAge();
     }
   });
