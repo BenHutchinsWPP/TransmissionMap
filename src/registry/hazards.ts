@@ -5,6 +5,7 @@ import type { LayerDef } from '../types.js';
 import { SEIS_RAMP_STOPS, SEIS_RAMP_MAX } from '../colors/ramps.js';
 
 export const hazardLayers: LayerDef[] = [
+  /* DISABLED until the cron-job.org cadence is wired (feed otherwise goes stale in 3h) — everything gates on this entry; delete this line and the closing one to ship. urlCode "NWS" stays reserved.
   {
     id:          "nws-alerts",
     urlCode:     "NWS",
@@ -17,6 +18,7 @@ export const hazardLayers: LayerDef[] = [
     mapLayerIds: ["nws-alerts-fill", "nws-alerts-line"],
     downloads: { url: "https://www.weather.gov/alerts" },
   },
+  */
   {
     id:          "wildfire-live",
     urlCode:     "WFL",
