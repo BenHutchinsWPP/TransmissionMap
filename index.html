@@ -383,6 +383,18 @@
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">ORNL ODIN — utilities self-report; coverage is partial (~34–38 states).</div>
           </div>
         </div>
+        <!-- Static categorical legend — NEXRAD radar tiles are baked colors, no per-class filter -->
+        <div class="legend collapsed" id="radarLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Radar Intensity</span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#04e304"></span><span>Light</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fdf802"></span><span>Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fd9500"></span><span>Heavy</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#d40000"></span><span>Extreme</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f800fd"></span><span>Hail possible</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">NEXRAD composite reflectivity · IEM · auto-refreshes ~5 min</div>
+          </div>
+        </div>
         <!-- Static categorical legend — WHP raster has baked colors, no per-class filter -->
         <div class="legend collapsed" id="whpLegend" hidden data-collapsible>
           <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Hazard Potential</span></div>
@@ -558,6 +570,7 @@
         <li data-source-credit="bts-narn"><a href="https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about" target="_blank" rel="noopener">BTS / FRA NARN</a> — May 2026 — public domain</li>
         <li data-source-credit="noaa-nws"><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NOAA National Weather Service</a> — Active weather alerts. US Government work, public domain.</li>
         <li data-source-credit="eccc-msc"><a href="https://api.weather.gc.ca/" target="_blank" rel="noopener">Environment and Climate Change Canada (MSC GeoMet)</a> — Active weather alerts.</li>
+        <li data-source-credit="iem-nexrad"><a href="https://mesonet.agron.iastate.edu/GIS/ridge.phtml" target="_blank" rel="noopener">Iowa Environmental Mesonet</a> — NEXRAD composite reflectivity radar tiles. Underlying NWS data is US Government work, public domain.</li>
         <li data-source-credit="nasa-firms-nifc"><a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS VIIRS</a> (LANCE / ESDIS) + <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a> — active fire detections (rolling 24-hour window; hourly pull + ~1–3&nbsp;h satellite processing) + current perimeters — public domain. Not for tactical firefighting.</li>
         <li data-source-credit="noaa-hms"><a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">NOAA HMS Smoke Detection</a> (OSPO / NESDIS) — analyst-drawn satellite smoke polygons, latest available analysis (may trail real time by several hours) — public domain.</li>
         <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>

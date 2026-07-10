@@ -278,6 +278,7 @@ const LEGEND_VISIBILITY = [
   { el: "nwsGroupLegend",        show: () => !!state.layerVisibility["nws-alerts"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },
   { el: "odinLegend",            show: () => !!state.layerVisibility["odin-outages"] },
+  { el: "radarLegend",           show: () => !!state.layerVisibility["nexrad-radar"] },
   { el: "dataCounterLegend",     show: () => { const cb = document.getElementById("dataCounterToggle") as HTMLInputElement | null; return !cb || cb.checked; } },
 ];
 
