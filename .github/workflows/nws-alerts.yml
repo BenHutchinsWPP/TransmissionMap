@@ -1,8 +1,8 @@
 name: Update NWS weather alerts
-# Fetches curated polygon-bearing NWS alerts into nws_alerts.geojson on the
-# orphan `data` branch via a single amended commit (no history growth).
-# Frontend fetches from raw.githubusercontent.com (CORS ok on public repos).
-# main is never touched by this workflow.
+# Fetches curated polygon-bearing NWS alerts into nws_alerts.geojson.
+# Body lives in data-feed.yml (shared with wildfire-data.yml and
+# odin-outages.yml): writes to the orphan `data` branch via a single amended
+# commit; frontend fetches from raw.githubusercontent.com; main is never touched.
 #
 # Trigger is workflow_dispatch ONLY for now — cron-job.org will fire this
 # every ~10 min once configured, same pattern as wildfire-data.yml's primary
@@ -31,65 +31,14 @@ concurrency:
 
 jobs:
   fetch:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    uses: ./.github/workflows/data-feed.yml
     permissions:
       contents: write
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          # Fully qualified on purpose: an unqualified `data` makes checkout
-          # fetch with a `refs/heads/data*` glob, which also pulls the ~1 GB
-          # `data-static` tiles branch every run (~80 s of dead time).
-          ref: refs/heads/data             # orphan branch — only the data file
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Force IPv4 for network stability
-        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
-        # See: https://github.com/actions/runner-images/issues/668
-        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
-
-      - name: Verify network connectivity to data sources
-        # Fails fast if a required service is unreachable, saving runner minutes and providing a clear error.
-        run: |
-          echo "::group::Pinging data services..."
-          endpoints=(
-            "https://api.weather.gov"
-          )
-          for endpoint in "${endpoints[@]}"; do
-            if ! curl -s --fail --connect-timeout 15 -o /dev/null "$endpoint"; then
-              echo "::error::Failed to connect to $endpoint. Aborting."
-              exit 1
-            else
-              echo "✅ Connection to $endpoint successful."
-            fi
-          done
-          echo "::endgroup::"
-
-      - name: Install Python deps
-        # shapely: needed to simplify ECCC (Canada) alert polygons before
-        # merging them into the feed (see fetch_nws_alerts.py eccc_to_feature).
-        run: pip install --quiet shapely
-
-      - name: Fetch alerts → nws_alerts.geojson (with retries)
-        # Plain bash retry loop — the retry action ran on the deprecated
-        # node20 runtime; job-level timeout-minutes is the hang backstop.
-        run: |
-          # Script lives on main; grab without switching branches.
-          git fetch origin main
-          git show origin/main:scripts/fetch_nws_alerts.py > /tmp/fetch_nws_alerts.py
-          for i in 1 2 3; do
-            python3 /tmp/fetch_nws_alerts.py -o data/layers/nws_alerts.geojson && exit 0
-            echo "Attempt $i failed; retrying in 30s…"; sleep 30
-          done
-          exit 1
-
-      - name: Amend rolling commit and force-push
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/layers/nws_alerts.geojson
-          git diff --cached --quiet && echo "No change — skipping" && exit 0
-          git commit --amend --no-edit --date=now
-          git push --force-with-lease
+    secrets: inherit
+    with:
+      script: scripts/fetch_nws_alerts.py
+      output: data/layers/nws_alerts.geojson
+      endpoints: https://api.weather.gov
+      # shapely: needed to simplify ECCC (Canada) alert polygons before
+      # merging them into the feed (see fetch_nws_alerts.py eccc_to_feature).
+      pip-packages: shapely

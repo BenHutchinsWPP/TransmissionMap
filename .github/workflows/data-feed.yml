@@ -1,0 +1,106 @@
+name: Live data feed (reusable)
+# Shared body for the live-data workflows (wildfire, NWS alerts, ODIN outages):
+# check out the orphan `data` branch, fetch a script from main, run it with
+# retries, and force-push the amended rolling commit. Callers own their own
+# triggers/cadence and the shared `data-branch` concurrency group.
+#
+# Callers pass `secrets: inherit`; the fetch step exposes the union of secrets
+# any feed script reads (each script treats an unset/empty var as absent).
+
+on:
+  workflow_call:
+    inputs:
+      script:
+        description: "Fetch script path on main, e.g. scripts/fetch_wildfire_live.py"
+        type: string
+        required: true
+      output:
+        description: "Output file path on the data branch, e.g. data/layers/wildfire_live.geojson"
+        type: string
+        required: true
+      endpoints:
+        description: "Whitespace-separated URLs to connectivity-check before fetching"
+        type: string
+        required: true
+      timeout-minutes:
+        description: "Job timeout — guard against a hung upstream fetch (default GitHub timeout is 6h)"
+        type: number
+        default: 10
+      pip-packages:
+        description: "Optional space-separated pip packages the script needs"
+        type: string
+        default: ""
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Fully qualified on purpose: an unqualified `data` makes checkout
+          # fetch with a `refs/heads/data*` glob, which also pulls the ~1 GB
+          # `data-static` tiles branch every run (~80 s of dead time).
+          ref: refs/heads/data             # orphan branch — only the data files
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Force IPv4 for network stability
+        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
+        # See: https://github.com/actions/runner-images/issues/668
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - name: Verify network connectivity to data sources
+        # Fails fast if a required service is unreachable, saving runner minutes and providing a clear error.
+        env:
+          ENDPOINTS: ${{ inputs.endpoints }}
+        run: |
+          echo "::group::Pinging data services..."
+          for endpoint in $ENDPOINTS; do
+            if ! curl -s --fail --connect-timeout 15 -o /dev/null "$endpoint"; then
+              echo "::error::Failed to connect to $endpoint. Aborting."
+              exit 1
+            else
+              echo "✅ Connection to $endpoint successful."
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Install Python deps
+        if: inputs.pip-packages != ''
+        run: pip install --quiet ${{ inputs.pip-packages }}
+
+      - name: Fetch ${{ inputs.output }} (with retries)
+        # Plain bash retry loop — job-level timeout-minutes is the hang backstop.
+        run: |
+          # Script lives on main; grab without switching branches. It must
+          # already be merged to main before this workflow can run, since
+          # this reads it from origin/main rather than the checked-out
+          # `data` ref.
+          git fetch origin main
+          git show "origin/main:${{ inputs.script }}" > /tmp/fetch_feed.py
+          for i in 1 2 3; do
+            python3 /tmp/fetch_feed.py -o "${{ inputs.output }}" && exit 0
+            echo "Attempt $i failed; retrying in 30s…"; sleep 30
+          done
+          exit 1
+        env:
+          # FIRMS quota'd area API (wildfire); script falls back to the
+          # anonymous flat files if unset. GitHub masks the key in logs.
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          # Optional (ODIN). ORNL Opendatasoft's anonymous quota is 5000
+          # req/day per IP and runners share pooled IPs; a key removes a small
+          # shared-neighbour 429 risk. Without it the script warns and
+          # proceeds anonymously (no --require-key here).
+          ODIN_ODS_APIKEY: ${{ secrets.ODIN_ODS_APIKEY }}
+
+      - name: Amend rolling commit and force-push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.output }}"
+          git diff --cached --quiet && echo "No change — skipping" && exit 0
+          git commit --amend --no-edit --date=now
+          git push --force-with-lease

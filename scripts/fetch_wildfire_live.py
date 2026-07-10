@@ -24,6 +24,7 @@ import struct
 import sys
 import urllib.request
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 # GitHub-hosted runners sometimes have a broken/unreachable IPv6 route while
@@ -409,62 +410,74 @@ def main():
     now = datetime.now(timezone.utc)
     generated_utc = now.strftime("%Y-%m-%dT%H:%MZ")
 
-    if args.viirs_csvs:
-        print("Reading local VIIRS CSVs…", file=sys.stderr)
-        csv_texts = [open(p, newline="").read() for p in args.viirs_csvs]
-    else:
+    def fetch_viirs_texts() -> list[str]:
+        if args.viirs_csvs:
+            print("Reading local VIIRS CSVs…", file=sys.stderr)
+            return [open(p, newline="").read() for p in args.viirs_csvs]
         key = os.environ.get("FIRMS_MAP_KEY")
-        csv_texts = None
         if key:
             print("Fetching FIRMS VIIRS CSVs (API)…", file=sys.stderr)
             try:
-                csv_texts = [_fetch_viirs_csv(FIRMS_API_URL.format(key=key, sensor=s))
-                             for s in FIRMS_API_SENSORS]
+                with ThreadPoolExecutor(len(FIRMS_API_SENSORS)) as ex:
+                    return list(ex.map(
+                        lambda s: _fetch_viirs_csv(FIRMS_API_URL.format(key=key, sensor=s)),
+                        FIRMS_API_SENSORS))
             except Exception as e:
                 # Bad/expired key or API outage — the flat files may still work.
                 print(f"  WARNING: API failed ({e}); falling back to flat files", file=sys.stderr)
-        if csv_texts is None:
-            print("Fetching FIRMS VIIRS CSVs (anonymous flat files)…", file=sys.stderr)
-            csv_texts = [_fetch_viirs_csv(u) for u in VIIRS_URLS]
-    hotspots = read_viirs_csvs(csv_texts, now)
-    print(f"  {len(hotspots)} hotspots", file=sys.stderr)
+        print("Fetching FIRMS VIIRS CSVs (anonymous flat files)…", file=sys.stderr)
+        with ThreadPoolExecutor(len(VIIRS_URLS)) as ex:
+            return list(ex.map(_fetch_viirs_csv, VIIRS_URLS))
 
-    # Perimeters/incidents/smoke each degrade to [] on upstream failure so one
-    # flaky source (ArcGIS especially) doesn't blank the whole hourly update.
-    # feed_status records those degradations for the frontend (legend chips) —
-    # a fresh generated_utc must not mask a silently-missing feed.
-    feed_status = {"perimeters_us": "ok", "perimeters_ca": "ok", "incidents": "ok"}
+    # The five feeds are independent I/O — fetch them concurrently; run time is
+    # the slowest feed instead of the sum. Exceptions surface at .result(), so
+    # each feed keeps exactly the error isolation it had when sequential.
+    print("Fetching all feeds in parallel…", file=sys.stderr)
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        f_viirs = pool.submit(fetch_viirs_texts)
+        f_us_perims = pool.submit(_fetch_paginated, NIFC_PERIMETERS_URL)
+        f_ca_perims = pool.submit(_fetch_wfs_paginated, CWFIS_PERIMETERS_URL)
+        f_incidents = pool.submit(_fetch_paginated, NIFC_INCIDENTS_URL)
+        f_smoke = pool.submit(fetch_hms_smoke)
 
-    print("Fetching NIFC perimeters…", file=sys.stderr)
-    try:
-        perimeters = [normalize_perimeter(f) for f in _fetch_paginated(NIFC_PERIMETERS_URL) if f.get("geometry")]
-        print(f"  {len(perimeters)} perimeters", file=sys.stderr)
-    except Exception as e:
-        perimeters = []
-        feed_status["perimeters_us"] = "failed"
-        print(f"  WARNING: perimeters unavailable: {e}", file=sys.stderr)
+        # VIIRS hotspots are the core feed — a failure here fails the run
+        # (workflow retries), same as before.
+        hotspots = read_viirs_csvs(f_viirs.result(), now)
+        print(f"  {len(hotspots)} hotspots", file=sys.stderr)
 
-    print("Fetching CWFIS Canada perimeter estimates…", file=sys.stderr)
-    try:
-        ca_perimeters = [normalize_cwfis_perimeter(f)
-                         for f in _fetch_wfs_paginated(CWFIS_PERIMETERS_URL) if f.get("geometry")]
-        perimeters += ca_perimeters
-        print(f"  {len(ca_perimeters)} CA perimeter estimates", file=sys.stderr)
-    except Exception as e:
-        feed_status["perimeters_ca"] = "failed"
-        print(f"  WARNING: CWFIS perimeters unavailable: {e}", file=sys.stderr)
+        # Perimeters/incidents/smoke each degrade to [] on upstream failure so one
+        # flaky source (ArcGIS especially) doesn't blank the whole hourly update.
+        # feed_status records those degradations for the frontend (legend chips) —
+        # a fresh generated_utc must not mask a silently-missing feed.
+        feed_status = {"perimeters_us": "ok", "perimeters_ca": "ok", "incidents": "ok"}
 
-    print("Fetching WFIGS incidents…", file=sys.stderr)
-    try:
-        incidents = [normalize_incident(f) for f in _fetch_paginated(NIFC_INCIDENTS_URL) if f.get("geometry")]
-        print(f"  {len(incidents)} incidents", file=sys.stderr)
-    except Exception as e:
-        incidents = []
-        feed_status["incidents"] = "failed"
-        print(f"  WARNING: incidents unavailable: {e}", file=sys.stderr)
+        try:
+            perimeters = [normalize_perimeter(f) for f in f_us_perims.result() if f.get("geometry")]
+            print(f"  {len(perimeters)} perimeters", file=sys.stderr)
+        except Exception as e:
+            perimeters = []
+            feed_status["perimeters_us"] = "failed"
+            print(f"  WARNING: perimeters unavailable: {e}", file=sys.stderr)
 
-    print("Fetching NOAA HMS smoke…", file=sys.stderr)
-    smoke, feed_status["smoke"] = fetch_hms_smoke()
+        try:
+            ca_perimeters = [normalize_cwfis_perimeter(f)
+                             for f in f_ca_perims.result() if f.get("geometry")]
+            perimeters += ca_perimeters
+            print(f"  {len(ca_perimeters)} CA perimeter estimates", file=sys.stderr)
+        except Exception as e:
+            feed_status["perimeters_ca"] = "failed"
+            print(f"  WARNING: CWFIS perimeters unavailable: {e}", file=sys.stderr)
+
+        try:
+            incidents = [normalize_incident(f) for f in f_incidents.result() if f.get("geometry")]
+            print(f"  {len(incidents)} incidents", file=sys.stderr)
+        except Exception as e:
+            incidents = []
+            feed_status["incidents"] = "failed"
+            print(f"  WARNING: incidents unavailable: {e}", file=sys.stderr)
+
+        # fetch_hms_smoke handles its own errors and returns ([], "failed").
+        smoke, feed_status["smoke"] = f_smoke.result()
 
     all_features = hotspots + perimeters + incidents + smoke
     for feat in all_features:
