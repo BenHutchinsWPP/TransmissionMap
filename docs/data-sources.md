@@ -34,6 +34,7 @@ documentation linked below. This page is the license and attribution index.
 | **NWS** (WSOM zone shapefiles) | [Live weather alerts — zone/county join](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |
 | **Environment and Climate Change Canada** (MSC GeoMet) | [Live weather alerts (Canada)](layers/nws-alerts.md) | Open Government Licence – Canada — attribution required | "Environment and Climate Change Canada (MSC GeoMet)" |
 | **ORNL ODIN** | [Power outages (live)](layers/outages.md) | No license declared (DOE/ORNL public program) | "ORNL ODIN" |
+| **Iowa Environmental Mesonet** | [Weather: Radar (live)](layers/weather-radar.md) | Public domain — underlying NWS NEXRAD data is US federal work, 17 U.S.C. § 105 | "Iowa Environmental Mesonet" |
 
 > **License of this repo:** application code (HTML/JS/CSS/Python/shell) is MIT — see
 > [`LICENSE`](../LICENSE). Data files under `data/` carry the upstream license of their

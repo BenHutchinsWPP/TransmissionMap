@@ -149,4 +149,9 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: Environment and Climate Change Canada (MSC GeoMet) — active weather alerts",
     creditId: "eccc-msc",
   },
+  "iem-nexrad": {
+    label: "Iowa Environmental Mesonet",
+    tooltip: "Source: Iowa Environmental Mesonet — NEXRAD composite reflectivity tiles (public NWS data)",
+    creditId: "iem-nexrad",
+  },
 };

@@ -16,9 +16,13 @@
 // addNwsAlerts() is a separate live GeoJSON source ("nws-alerts") — NOAA/NWS
 // active alert polygons, colored by the server-computed `_group` prop.
 // Registry entry: nws-alerts → nws-alerts-fill, nws-alerts-line.
+//
+// addNexradRadar() is a live external raster tile source ("nexrad-radar") —
+// IEM NEXRAD composite reflectivity (RADAR_TILE_URL); no data pipeline. Ships
+// disabled — registry entry is commented out in src/registry/hazards.ts.
 
-import type { LayerSpecification, ExpressionSpecification } from "maplibre-gl";
-import { state, DATA, EMPTY_FC } from '../state.js';
+import type { LayerSpecification, ExpressionSpecification, RasterTileSource } from "maplibre-gl";
+import { state, DATA, EMPTY_FC, RADAR_TILE_URL } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
 export function addWildfireLive() {
@@ -255,6 +259,38 @@ export function addSeismicHazard() {
     layout: { visibility: initialVisibility("usgs-seismic-pga") },
     paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
   } as LayerSpecification);
+}
+
+// ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
+// Ships disabled (registry entry commented out) — see docs/layers/weather-radar.md.
+let radarTimer: ReturnType<typeof setInterval> | undefined;
+
+export function addNexradRadar() {
+  if (!state.map || state.map.getSource("nexrad-radar")) return;
+  state.map.addSource("nexrad-radar", {
+    type: "raster",
+    tiles: [RADAR_TILE_URL],
+    tileSize: 256,
+    attribution: '<a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
+  });
+  state.map.addLayer({
+    id: "nexrad-radar",
+    type: "raster",
+    source: "nexrad-radar",
+    layout: { visibility: initialVisibility("nexrad-radar") },
+    paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
+  } as LayerSpecification);
+
+  // Tile path "-0" = latest frame; IEM caches server-side ~5 min, so poll on
+  // the same cadence and cache-bust the query string to force MapLibre to
+  // refetch (it otherwise treats an unchanged tile URL template as static).
+  radarTimer ??= setInterval(() => {
+    const map = state.map;
+    if (!map?.getLayer("nexrad-radar")) return;
+    if (map.getLayoutProperty("nexrad-radar", "visibility") !== "visible") return;
+    (map.getSource("nexrad-radar") as RasterTileSource | undefined)
+      ?.setTiles([RADAR_TILE_URL + "?_=" + Date.now()]);
+  }, 5 * 60_000);
 }
 
 // ─── ODIN live county-outage choropleth ───────────────────────────────────────

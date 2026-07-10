@@ -144,6 +144,11 @@ export const CARTO_VOYAGER_TILE_URLS = ["https://a.basemaps.cartocdn.com/rastert
                                   "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
                                   "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"];
 export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+
+// ─── Live layer tile sources ──────────────────────────────────────────────────
+// IEM NEXRAD composite reflectivity (USCOMP N0Q, latest frame) — nexrad-radar layer.
+export const RADAR_TILE_URL = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::USCOMP-N0Q-0/{z}/{x}/{y}.png";
+
 const GLYPHS_URL      = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
 // MapLibre requires a style object even when we control all sources ourselves.

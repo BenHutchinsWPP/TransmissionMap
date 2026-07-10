@@ -80,6 +80,20 @@ export const hazardLayers: LayerDef[] = [
     mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
     downloads: { url: "https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" },
   },
+  // Weather: radar — wired but disabled; uncomment to enable (see docs/layers/weather-radar.md)
+  {
+    id:          "nexrad-radar",
+    urlCode:     "RAD",
+    label:       "Weather: Radar (live)",
+    group:       "hazards",
+    sourceId:    "iem-nexrad",
+    swatch:      "#04e304",
+    live:        true,
+    rasterLayer: true,
+    defaultOn:   false,
+    mapLayerIds: ["nexrad-radar"],
+    downloads: { url: "https://mesonet.agron.iastate.edu/GIS/ridge.phtml" },
+  },
   */
   {
     id:           "usgs-seismic-pga",
