@@ -24,8 +24,7 @@ on:
 # Shared with wildfire-data.yml and odin-outages.yml: every workflow that
 # force-pushes the orphan `data` branch must sit in ONE group. Two groups =
 # two runs can check out the same tip, and the second `--force-with-lease`
-# push is (correctly) rejected, failing that run and opening a spurious
-# feed-down issue.
+# push is (correctly) rejected, failing that run.
 concurrency:
   group: data-branch
   cancel-in-progress: false
@@ -36,7 +35,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-      issues: write        # failure-alert step
 
     steps:
       - uses: actions/checkout@v5
@@ -91,21 +89,3 @@ jobs:
           git diff --cached --quiet && echo "No change — skipping" && exit 0
           git commit --amend --no-edit --date=now
           git push --force-with-lease
-
-      # Failed runs otherwise surface only as a stale/aging snapshot on the
-      # map — open (or bump) a tracking issue so the operator gets notified.
-      - name: Alert on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          msg="Run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          n=$(gh issue list --label nws-alerts-feed-down --state open --json number -q '.[0].number')
-          if [ -n "$n" ]; then
-            gh issue comment "$n" --body "$msg"
-          else
-            gh label create nws-alerts-feed-down --color D93F0B --force
-            gh issue create --title "NWS alerts workflow failing" \
-              --label nws-alerts-feed-down \
-              --body "$msg — map serves the last good pull; close when green again."
-          fi
