@@ -1,6 +1,6 @@
 # Power Outages (live)
 
-A **live** county-level power-outage choropleth in the **Hazards** panel group.
+A **live** county-level power-outage choropleth in the **Conditions** panel group.
 Registry id `odin-outages`, `urlCode` `OUT`. The served data file carries **no
 geometry** — only `FIPS → [customers_out, incident_count]`. It is joined onto the
 shared `county_boundaries` PMTiles at runtime by **MapLibre `feature-state`**
@@ -91,7 +91,7 @@ back to a plain "Customers affected" row.
 ### Choropleth ramp (customers out)
 
 Static 4-bucket YlOrRd ramp (visually distinct from the wildfire fire-glow
-palette), defined in `assets/layers/map-layers-hazards.ts` (`addOdinOutages`) and
+palette), defined in `assets/layers/map-layers-conditions.ts` (`addOdinOutages`) and
 mirrored by the legend in `index.html` (`#odinLegend`):
 
 | Bucket | Color |

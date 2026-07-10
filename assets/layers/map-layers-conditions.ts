@@ -1,5 +1,5 @@
 // ─── Hazard layers ────────────────────────────────────────────────────────────
-// Role: MapLibre builders for the hazards group — baked-color raster PMTiles
+// Role: MapLibre builders for the conditions group — baked-color raster PMTiles
 //       (wildfire hazard potential, seismic PGA), live GeoJSON (smoke, wildfire,
 //       incidents), and the live ODIN county-outage choropleth (feature-state
 //       data-join onto the shared county_boundaries PMTiles — the FIPS→[out,n]
@@ -18,11 +18,11 @@
 // Registry entry: nws-alerts → nws-alerts-fill, nws-alerts-line.
 //
 // addNexradRadar() is a live external raster tile source ("nexrad-radar") —
-// IEM NEXRAD composite reflectivity (RADAR_TILE_URL); no data pipeline. Ships
-// disabled — registry entry is commented out in src/registry/hazards.ts.
+// IEM NEXRAD composite reflectivity; no data pipeline. Frame consistency comes
+// from polling IEM's tms.json for the current timestamped layer name.
 
 import type { LayerSpecification, ExpressionSpecification, RasterTileSource } from "maplibre-gl";
-import { state, DATA, EMPTY_FC, RADAR_TILE_URL } from '../state.js';
+import { state, DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
 export function addWildfireLive() {
@@ -262,14 +262,38 @@ export function addSeismicHazard() {
 }
 
 // ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
-// Ships disabled (registry entry commented out) — see docs/layers/weather-radar.md.
+// IEM's "-0" latest-frame alias resolves per tile inside their cache, so during
+// a frame rollover adjacent tiles can come from different volume scans (visible
+// seams). tms.json names the current frame atomically (ridge::USCOMP-N0Q-
+// YYYYMMDDHHMM); polling it and swapping in the timestamped layer name keeps
+// every tile on the same scan. New frames land ~5 min apart; the 60s poll of
+// the tiny JSON keeps swap lag low, and setTiles only fires on a frame change.
 let radarTimer: ReturnType<typeof setInterval> | undefined;
+let radarFrame = "";   // last applied timestamped layer name
+
+async function refreshRadarFrame() {
+  const map = state.map;
+  if (!map?.getLayer("nexrad-radar")) return;
+  if (map.getLayoutProperty("nexrad-radar", "visibility") !== "visible") return;
+  try {
+    const res = await fetch(RADAR_TMS_JSON_URL);
+    if (!res.ok) return;
+    const tms = await res.json() as { services?: { id: string; layername: string }[] };
+    const layername = tms.services?.find(s => s.id === "ridge_uscomp_n0q")?.layername;
+    if (!layername || layername === radarFrame || !map.getSource("nexrad-radar")) return;
+    radarFrame = layername;
+    (map.getSource("nexrad-radar") as RasterTileSource)
+      .setTiles([RADAR_TILE_TEMPLATE.replace("{layer}", layername)]);
+  } catch {
+    // transient network failure — keep showing the current frame
+  }
+}
 
 export function addNexradRadar() {
   if (!state.map || state.map.getSource("nexrad-radar")) return;
   state.map.addSource("nexrad-radar", {
     type: "raster",
-    tiles: [RADAR_TILE_URL],
+    tiles: [RADAR_TILE_URL],   // "-0" alias until the first tms.json answer
     tileSize: 256,
     attribution: '<a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
   });
@@ -281,16 +305,8 @@ export function addNexradRadar() {
     paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
   } as LayerSpecification);
 
-  // Tile path "-0" = latest frame; IEM caches server-side ~5 min, so poll on
-  // the same cadence and cache-bust the query string to force MapLibre to
-  // refetch (it otherwise treats an unchanged tile URL template as static).
-  radarTimer ??= setInterval(() => {
-    const map = state.map;
-    if (!map?.getLayer("nexrad-radar")) return;
-    if (map.getLayoutProperty("nexrad-radar", "visibility") !== "visible") return;
-    (map.getSource("nexrad-radar") as RasterTileSource | undefined)
-      ?.setTiles([RADAR_TILE_URL + "?_=" + Date.now()]);
-  }, 5 * 60_000);
+  void refreshRadarFrame();
+  radarTimer ??= setInterval(() => void refreshRadarFrame(), 60_000);
 }
 
 // ─── ODIN live county-outage choropleth ───────────────────────────────────────

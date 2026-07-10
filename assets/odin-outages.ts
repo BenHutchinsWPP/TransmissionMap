@@ -12,7 +12,7 @@
 //       wildfire-staleness.ts, which this must NOT touch/generalize).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, DATA, layerVisibility). Legend age chip = #odinAge in index.html.
-//       The map source/layers are built by layers/map-layers-hazards.ts
+//       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from odinSnapshot().
 // Wired from ui/ui.ts init() via initOdinOutages().
 

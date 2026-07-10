@@ -71,7 +71,7 @@ Administrative and operational boundaries for understanding grid organization.
 
 ---
 
-## 🔥 Hazards
+## 🌡 Conditions
 
 Physical-risk layers for siting and resilience analysis.
 

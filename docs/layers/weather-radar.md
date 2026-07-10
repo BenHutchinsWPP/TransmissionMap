@@ -1,8 +1,7 @@
 # Weather: Radar (live)
 
-Live NEXRAD composite reflectivity raster overlay, hazards group. Ships **wired but
-disabled** — the registry entry is commented out in `src/registry/hazards.ts`; uncomment
-to enable.
+Live NEXRAD composite reflectivity raster overlay, conditions group. Registry entry:
+`nexrad-radar` in `src/registry/conditions.ts`.
 
 ## Source
 
@@ -40,10 +39,10 @@ baked color ramp by the IEM tile server (no client-side ramp, no hover readout).
 - **Clear-air artifacts** — low-dBZ returns can be birds, insects, or ground clutter
   rather than precipitation.
 - **Radial velocity deliberately excluded** — this layer is reflectivity only.
-- **Ships disabled** — the registry entry is commented out in
-  `src/registry/hazards.ts`; the builder, legend, and credit wiring are otherwise live.
-- **Refresh**: the tile source itself always serves the latest frame (`-0` in the tile
-  path); a 5-minute `setInterval` in `addNexradRadar()` (`assets/layers/map-layers-hazards.ts`)
-  cache-busts the tile URL so MapLibre re-fetches, matching IEM's own ~5-minute
-  server-side cache.
+- **Refresh**: the source starts on IEM's `-0` (latest-frame) alias, but that alias
+  resolves per tile in IEM's cache, so adjacent tiles can mix volume scans during a
+  frame rollover. A 60-second `setInterval` in `addNexradRadar()`
+  (`assets/layers/map-layers-conditions.ts`) polls IEM's `tms.json` for the current
+  timestamped layer name (`ridge::USCOMP-N0Q-YYYYMMDDHHMM`) and calls `setTiles()`
+  when the frame changes, so every tile renders the same scan.
 - Precip-type overlays and animation are tracked as future work — see roadmap notes.

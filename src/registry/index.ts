@@ -7,7 +7,7 @@ import { renewableLayers }    from './renewable.js';
 import { landLayers }         from './land.js';
 import { regionLayers }       from './regions.js';
 import { railLayers }         from './rail.js';
-import { hazardLayers }       from './hazards.js';
+import { conditionLayers }    from './conditions.js';
 import type { LayerDef }      from '../types.js';
 
 export const LAYERS = [
@@ -18,7 +18,7 @@ export const LAYERS = [
   ...renewableLayers,
   ...landLayers,
   ...regionLayers,
-  ...hazardLayers,
+  ...conditionLayers,
 ];
 
 export { LAYER_SOURCES } from './sources.js';

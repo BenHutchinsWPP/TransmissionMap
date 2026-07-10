@@ -146,8 +146,14 @@ export const CARTO_VOYAGER_TILE_URLS = ["https://a.basemaps.cartocdn.com/rastert
 export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
 
 // ─── Live layer tile sources ──────────────────────────────────────────────────
-// IEM NEXRAD composite reflectivity (USCOMP N0Q, latest frame) — nexrad-radar layer.
-export const RADAR_TILE_URL = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::USCOMP-N0Q-0/{z}/{x}/{y}.png";
+// IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
+// {layer} is an IEM layer name: "ridge::USCOMP-N0Q-0" is the latest-frame alias,
+// but IEM resolves it per tile so adjacent tiles can mix scans during rollover;
+// RADAR_TMS_JSON_URL names the current frame (ridge::USCOMP-N0Q-YYYYMMDDHHMM),
+// which is consistent across all tiles.
+export const RADAR_TILE_TEMPLATE = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/{layer}/{z}/{x}/{y}.png";
+export const RADAR_TILE_URL      = RADAR_TILE_TEMPLATE.replace("{layer}", "ridge::USCOMP-N0Q-0");
+export const RADAR_TMS_JSON_URL  = "https://mesonet.agron.iastate.edu/json/tms.json";
 
 const GLYPHS_URL      = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
