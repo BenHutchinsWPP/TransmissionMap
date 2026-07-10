@@ -66,6 +66,11 @@ jobs:
           done
           echo "::endgroup::"
 
+      - name: Install Python deps
+        # shapely: needed to simplify ECCC (Canada) alert polygons before
+        # merging them into the feed (see fetch_nws_alerts.py eccc_to_feature).
+        run: pip install --quiet shapely
+
       - name: Fetch alerts → nws_alerts.geojson (with retries)
         uses: nick-invision/retry@v3
         with:

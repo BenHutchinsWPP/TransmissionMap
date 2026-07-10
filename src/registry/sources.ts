@@ -144,4 +144,9 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: NOAA/NWS active alerts — US Government work, public domain",
     creditId: "noaa-nws",
   },
+  "eccc-msc": {
+    label: "Environment and Climate Change Canada (MSC GeoMet)",
+    tooltip: "Source: Environment and Climate Change Canada (MSC GeoMet) — active weather alerts",
+    creditId: "eccc-msc",
+  },
 };

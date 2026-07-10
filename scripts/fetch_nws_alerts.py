@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
-"""Fetch NWS active alerts (api.weather.gov) → curated, polygon-only GeoJSON.
+"""Fetch NWS active alerts (api.weather.gov) + ECCC active alerts (MSC GeoMet)
+→ curated GeoJSON. See HANDOFF.md "PHASE 2 PLAN" Stage 0 findings for the
+locked ECCC mapping/recipe this file implements.
 
 Phase 1 scope (see HANDOFF.md "NWS Weather Alerts" section, "Design decisions
 (locked)"): only a curated allowlist of events is kept, grouped server-side
 into a `_group` prop (convective/flood/fire/heat/wind/winter/tropical/other).
-Alerts with null geometry are dropped (heat/red-flag alerts are forecast-zone
-only) — the count of curated-but-dropped alerts is logged per group so a
-future phase-2 county join can pick them up via geocode.SAME.
+
+Phase 2 additions:
+- Curated US alerts with null geometry (forecast-zone-only, e.g. Heat
+  Advisory/Red Flag Warning) are no longer dropped — they're emitted into a
+  top-level `zone_alerts` sidecar array (parsed from `affectedZones` +
+  `geocode.SAME`) for a frontend zone-polygon join. Old frontends ignore
+  unknown top-level keys.
+- Canadian alerts (ECCC / MSC GeoMet, real polygon geometry) are merged into
+  the same `features` array with `country: "CA"` (US features get
+  `country: "US"`). ECCC fetch/parse failure degrades to US-only (never a
+  hard fail) and is recorded via a `feed_status` dict on feature[0]'s
+  properties, mirroring the `feed_status` pattern in fetch_wildfire_live.py
+  (dict of sub-key → "ok"/"failed", read by assets/ui/ui-legends.ts).
 
 Usage (dev + GH Actions — fetches live):
   python3 scripts/fetch_nws_alerts.py -o data/layers/nws_alerts.geojson
 
-Usage (offline — pass a pre-downloaded `alerts/active` response instead of
-fetching):
-  python3 scripts/fetch_nws_alerts.py --input saved_response.json -o output.geojson
+Usage (offline — pass pre-downloaded responses instead of fetching):
+  python3 scripts/fetch_nws_alerts.py --input saved_nws.json \\
+      --input-eccc saved_eccc.json -o output.geojson
 """
 
 import argparse
@@ -22,10 +34,12 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active?status=actual"
+ECCC_ALERTS_URL = "https://api.weather.gc.ca/collections/weather-alerts/items?f=json&limit=1000"
 USER_AGENT = "TransmissionMap (benrhutchins@gmail.com)"
 
 # ── Curated event allowlist → _group (HANDOFF "Design decisions (locked)") ───
@@ -74,6 +88,45 @@ EVENT_GROUPS: dict[str, str] = {
     "Ashfall Warning": "other",
 }
 
+# ── ECCC (MSC GeoMet) alert_name_en → _group (HANDOFF Stage 0, locked) ───────
+# Matched on lowercase alert_name_en. Excluded by design (parity with US
+# curation): special weather statement, air quality warning.
+ECCC_EVENT_GROUPS: dict[str, str] = {
+    # convective
+    "tornado warning": "convective",
+    "tornado watch": "convective",
+    "severe thunderstorm warning": "convective",
+    "severe thunderstorm watch": "convective",
+    # flood
+    "rainfall warning": "flood",
+    "flood warning": "flood",
+    # heat
+    "heat warning": "heat",
+    # wind
+    "wind warning": "wind",
+    "arctic outflow warning": "wind",
+    "dust storm warning": "wind",
+    # winter
+    "blizzard warning": "winter",
+    "blizzard watch": "winter",
+    "winter storm warning": "winter",
+    "winter storm watch": "winter",
+    "snowfall warning": "winter",
+    "snowfall watch": "winter",
+    "snow squall warning": "winter",
+    "snow squall watch": "winter",
+    "freezing rain warning": "winter",
+    "extreme cold warning": "winter",
+    "flash freeze warning": "winter",
+    # tropical
+    "hurricane warning": "tropical",
+    "hurricane watch": "tropical",
+    "tropical storm warning": "tropical",
+    "tropical storm watch": "tropical",
+    "storm surge warning": "tropical",
+    "storm surge watch": "tropical",
+}
+
 KEPT_PROPS = [
     "event", "severity", "certainty", "urgency", "headline",
     "onset", "ends", "expires", "areaDesc", "senderName", "id",
@@ -117,6 +170,28 @@ def fetch_all_alerts(start_url: str) -> list[dict]:
     return all_features
 
 
+def fetch_all_eccc(start_url: str) -> list[dict]:
+    """Follow OGC API Features `links` rel="next" until absent."""
+    all_features: list[dict] = []
+    url = start_url
+    page = 1
+    while url:
+        print(f"  fetching ECCC page {page}…", file=sys.stderr)
+        data = _fetch_json(url)
+        feats = data.get("features", [])
+        all_features.extend(feats)
+        next_url = None
+        for link in data.get("links") or []:
+            if link.get("rel") == "next":
+                next_url = link.get("href")
+                break
+        url = next_url
+        if not feats or page >= 10:
+            break
+        page += 1
+    return all_features
+
+
 def _round_coords(coords):
     """Recursively round nested coordinate arrays to 4 decimals."""
     if isinstance(coords, (int, float)):
@@ -124,12 +199,28 @@ def _round_coords(coords):
     return [_round_coords(c) for c in coords]
 
 
-def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], dict, dict]:
-    """Filter to allowlisted events with non-null geometry. Returns
-    (kept_features, kept_counts_by_group, dropped_null_geom_counts_by_group)."""
+def _parse_zone_url(url: str) -> tuple[str, str] | None:
+    """`/zones/forecast/<UGC>` -> ("forecast", UGC); `/zones/fire/<UGC>` ->
+    ("fire", UGC); `/zones/county/...` (or anything else) -> None (omit —
+    county alerts are handled via `fips`)."""
+    path = urllib.parse.urlparse(url).path
+    parts = [p for p in path.split("/") if p]
+    if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire"):
+        return (parts[1], parts[2])
+    return None
+
+
+def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict]:
+    """Filter to allowlisted events. Non-null geometry -> polygon feature
+    (kept). Null geometry -> zone_alerts sidecar entry (zone-joined), unless
+    it has neither zones nor fips, in which case it's truly dropped (logged
+    loudly). Returns (kept_features, zone_alerts, kept_counts_by_group,
+    zone_joined_counts_by_group)."""
     kept: list[dict] = []
+    zone_alerts: list[dict] = []
     kept_counts: dict[str, int] = {}
-    dropped_counts: dict[str, int] = {}
+    zone_joined_counts: dict[str, int] = {}
+    still_dropped = 0
 
     for f in features:
         props = f.get("properties") or {}
@@ -137,56 +228,188 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], dict, 
         group = EVENT_GROUPS.get(event)
         if group is None:
             continue
-        if not f.get("geometry"):
-            dropped_counts[group] = dropped_counts.get(group, 0) + 1
-            continue
-        geom = dict(f["geometry"])
-        geom["coordinates"] = _round_coords(geom["coordinates"])
-        out_props = {k: props.get(k) for k in KEPT_PROPS}
-        out_props["_group"] = group
-        out_props["generated_utc"] = generated_utc
-        kept.append({"type": "Feature", "geometry": geom, "properties": out_props})
-        kept_counts[group] = kept_counts.get(group, 0) + 1
 
-    return kept, kept_counts, dropped_counts
+        if f.get("geometry"):
+            geom = dict(f["geometry"])
+            geom["coordinates"] = _round_coords(geom["coordinates"])
+            out_props = {k: props.get(k) for k in KEPT_PROPS}
+            out_props["_group"] = group
+            out_props["country"] = "US"
+            out_props["generated_utc"] = generated_utc
+            kept.append({"type": "Feature", "geometry": geom, "properties": out_props})
+            kept_counts[group] = kept_counts.get(group, 0) + 1
+            continue
+
+        # Null geometry: try to zone/county-join.
+        zones: list[list[str]] = []
+        for zurl in props.get("affectedZones") or []:
+            parsed = _parse_zone_url(zurl)
+            if parsed:
+                zones.append([parsed[0], parsed[1]])
+        same = ((props.get("geocode") or {}).get("SAME")) or []
+        fips = [s[1:] if s.startswith("0") else s for s in same]
+
+        if not zones and not fips:
+            still_dropped += 1
+            print(
+                f"  WARNING: dropped (no zones/fips) group={group} "
+                f"event={event!r} id={props.get('id')!r}",
+                file=sys.stderr,
+            )
+            continue
+
+        entry = {k: props.get(k) for k in KEPT_PROPS}
+        entry["_group"] = group
+        entry["zones"] = zones
+        entry["fips"] = fips
+        zone_alerts.append(entry)
+        zone_joined_counts[group] = zone_joined_counts.get(group, 0) + 1
+
+    if still_dropped:
+        print(f"  WARNING: {still_dropped} curated alert(s) truly dropped (no zones/fips)", file=sys.stderr)
+
+    return kept, zone_alerts, kept_counts, zone_joined_counts
+
+
+def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | None]:
+    """Map one ECCC weather-alerts item to a curated Feature. Returns
+    (feature_or_None, excluded_name_lower_or_None)."""
+    from shapely.geometry import mapping, shape
+
+    props = f.get("properties") or {}
+    if (props.get("status_en") or "").lower() == "ended":
+        return None, None
+
+    name_en = (props.get("alert_name_en") or "").strip()
+    name_lower = name_en.lower()
+    group = ECCC_EVENT_GROUPS.get(name_lower)
+    if group is None:
+        return None, name_lower
+
+    geom_in = f.get("geometry")
+    if not geom_in:
+        return None, name_lower
+
+    shp = shape(geom_in).simplify(0.01, preserve_topology=True)
+    geom_out = mapping(shp)
+    geom_out = {"type": geom_out["type"], "coordinates": _round_coords(geom_out["coordinates"])}
+
+    alert_type = props.get("alert_type")
+    severity = {"warning": "Severe", "watch": "Moderate"}.get(alert_type)
+    area = props.get("feature_name_en") or ""
+    out_props = {
+        "event": name_en.title(),
+        "severity": severity,
+        "certainty": None,
+        "urgency": None,
+        "headline": f"{name_en}, {area}" if area else name_en,
+        "onset": props.get("validity_datetime"),
+        "ends": props.get("event_end_datetime"),
+        "expires": props.get("expiration_datetime"),
+        "areaDesc": area,
+        "senderName": "Environment and Climate Change Canada",
+        "id": props.get("id"),
+        "_group": group,
+        "country": "CA",
+        "generated_utc": generated_utc,
+    }
+    return {"type": "Feature", "geometry": geom_out, "properties": out_props}, None
+
+
+def curate_eccc(features: list[dict], generated_utc: str) -> tuple[list[dict], dict, dict]:
+    """Returns (kept_features, kept_counts_by_group, excluded_counts_by_name)."""
+    kept: list[dict] = []
+    kept_counts: dict[str, int] = {}
+    excluded_counts: dict[str, int] = {}
+    for f in features:
+        feat, excluded_name = eccc_to_feature(f, generated_utc)
+        if feat is not None:
+            kept.append(feat)
+            g = feat["properties"]["_group"]
+            kept_counts[g] = kept_counts.get(g, 0) + 1
+        elif excluded_name:
+            excluded_counts[excluded_name] = excluded_counts.get(excluded_name, 0) + 1
+    return kept, kept_counts, excluded_counts
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", help="pre-downloaded alerts/active JSON; omit to fetch live")
+    ap.add_argument("--input", help="pre-downloaded NWS alerts/active JSON; omit to fetch live")
+    ap.add_argument("--input-eccc", help="pre-downloaded ECCC weather-alerts JSON; omit to fetch live")
     ap.add_argument("-o", "--output", default="data/layers/nws_alerts.geojson")
     args = ap.parse_args()
 
     generated_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    # ── NWS (US) ──────────────────────────────────────────────────────────
     if args.input:
-        print(f"Reading saved response {args.input}…", file=sys.stderr)
+        print(f"Reading saved NWS response {args.input}…", file=sys.stderr)
         with open(args.input) as f:
             data = json.load(f)
-        features = data.get("features", [])
+        nws_features = data.get("features", [])
         # Still follow pagination.next if the saved sample happens to carry one.
         next_url = (data.get("pagination") or {}).get("next")
         if next_url:
-            features += fetch_all_alerts(next_url)
+            nws_features += fetch_all_alerts(next_url)
     else:
         print("Fetching NWS active alerts…", file=sys.stderr)
         try:
-            features = fetch_all_alerts(NWS_ALERTS_URL)
+            nws_features = fetch_all_alerts(NWS_ALERTS_URL)
         except Exception as e:
-            print(f"ERROR: fetch failed after retries: {e}", file=sys.stderr)
+            print(f"ERROR: NWS fetch failed after retries: {e}", file=sys.stderr)
             sys.exit(1)
 
-    total_fetched = len(features)
-    kept, kept_counts, dropped_counts = curate(features, generated_utc)
+    total_fetched = len(nws_features)
+    kept, zone_alerts, kept_counts, zone_joined_counts = curate(nws_features, generated_utc)
 
-    for group in sorted(set(kept_counts) | set(dropped_counts)):
+    for group in sorted(set(kept_counts) | set(zone_joined_counts)):
         print(
             f"  {group}: kept {kept_counts.get(group, 0)}, "
-            f"dropped (null geometry) {dropped_counts.get(group, 0)}",
+            f"zone-joined {zone_joined_counts.get(group, 0)}",
             file=sys.stderr,
         )
 
-    fc = {"type": "FeatureCollection", "features": kept}
+    # ── ECCC (Canada) — degrades to US-only on any failure ─────────────────
+    # feed_status mirrors fetch_wildfire_live.py's pattern (dict of sub-key
+    # -> "ok"/"failed", read by assets/ui/ui-legends.ts) so the frontend
+    # legend-chip logic transfers unchanged in a later stage.
+    feed_status = {"eccc": "ok"}
+    eccc_kept: list[dict] = []
+    try:
+        if args.input_eccc:
+            print(f"Reading saved ECCC response {args.input_eccc}…", file=sys.stderr)
+            with open(args.input_eccc) as f:
+                eccc_data = json.load(f)
+            eccc_features = eccc_data.get("features", [])
+            next_url = None
+            for link in eccc_data.get("links") or []:
+                if link.get("rel") == "next":
+                    next_url = link.get("href")
+                    break
+            if next_url:
+                eccc_features += fetch_all_eccc(next_url)
+        else:
+            print("Fetching ECCC active alerts…", file=sys.stderr)
+            eccc_features = fetch_all_eccc(ECCC_ALERTS_URL)
+
+        eccc_kept, eccc_kept_counts, eccc_excluded_counts = curate_eccc(eccc_features, generated_utc)
+        for group in sorted(eccc_kept_counts):
+            print(f"  eccc/{group}: kept {eccc_kept_counts[group]}", file=sys.stderr)
+        if eccc_excluded_counts:
+            top = sorted(eccc_excluded_counts.items(), key=lambda kv: -kv[1])
+            print(f"  eccc excluded (unmatched/parity): {top}", file=sys.stderr)
+    except Exception as e:
+        feed_status["eccc"] = "failed"
+        print(f"WARNING: ECCC fetch/parse failed, degrading to US-only: {e}", file=sys.stderr)
+        eccc_kept = []
+
+    all_features = kept + eccc_kept
+
+    fc: dict = {"type": "FeatureCollection", "features": all_features}
+    if zone_alerts:
+        fc["zone_alerts"] = zone_alerts
+    if all_features:
+        all_features[0]["properties"]["feed_status"] = feed_status
 
     out_dir = os.path.dirname(args.output)
     if out_dir:
@@ -197,11 +420,13 @@ def main():
     os.replace(tmp_path, args.output)
 
     total_kept = len(kept)
-    total_dropped = sum(dropped_counts.values())
+    total_zone_joined = len(zone_alerts)
+    total_eccc = len(eccc_kept)
     size = os.path.getsize(args.output)
     print(
-        f"Wrote {total_kept} alerts (fetched {total_fetched}, "
-        f"dropped-null-geom {total_dropped}) → {args.output} ({size} bytes)",
+        f"Wrote {total_kept} US polygon alerts + {total_eccc} CA alerts "
+        f"(fetched {total_fetched} US, zone-joined {total_zone_joined}, "
+        f"feed_status={feed_status}) → {args.output} ({size} bytes)",
         file=sys.stderr,
     )
 

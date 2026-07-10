@@ -2,6 +2,7 @@
 
 import { escapeHtml } from './utils/utils.js';
 import { NATGAS_FAC_TYPE_BUCKETS } from '../src/colors/buckets.js';
+import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -177,6 +178,39 @@ export function renderRetail(p: Record<string, unknown>) {
 
 export const POPUP_RENDERERS: Record<string, (p: Record<string, unknown>) => string> = {};
 
+// ── Joined zone/county alert-list popups (nws-zone-fill / nws-county-fill) ──
+// Several alerts can name one zone/county; list all of them (not just the
+// feature-state "winner" nws-zone-join.ts paints with), same severity-desc /
+// earliest-ends-first ordering as that module's pickWinner (replicated here,
+// not imported — nws-zone-join.ts only exports the lookup indexes).
+const _ZONE_SEV_RANK: Record<string, number> = { Extreme: 4, Severe: 3, Moderate: 2, Minor: 1 };
+function _zoneSevRank(sev?: string): number {
+  return sev ? (_ZONE_SEV_RANK[sev] ?? 0) : 0;
+}
+function _zoneEndsMs(e: ZoneAlertEntry): number {
+  const t = e.ends ? Date.parse(e.ends) : NaN;
+  return Number.isNaN(t) ? Infinity : t;
+}
+function sortZoneAlerts(entries: ZoneAlertEntry[]): ZoneAlertEntry[] {
+  return [...entries].sort((a, b) =>
+    _zoneSevRank(b.severity) - _zoneSevRank(a.severity) || _zoneEndsMs(a) - _zoneEndsMs(b));
+}
+function fmtZoneDt(iso: unknown): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso as string).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+  } catch { return iso as string; }
+}
+function renderZoneAlertBlock(e: ZoneAlertEntry): string {
+  const eccc = e.senderName === "Environment and Climate Change Canada";
+  return `<div class="popup-row"><strong>${escapeHtml(e.event)}${eccc ? " (ECCC)" : ""}</strong></div>` +
+    row("Headline", e.headline) +
+    row("Ends", fmtZoneDt(e.ends || e.expires));
+}
+function renderZoneAlertList(entries: ZoneAlertEntry[]): string {
+  return sortZoneAlerts(entries).map(renderZoneAlertBlock).join("");
+}
+
 // >>> ADD-LAYER: popup-renderers — see docs/adding-a-layer.md §10. Add a
 // [ [mapLayerIds…], (p) => html ] tuple; the loop below registers it into POPUP_RENDERERS.
 const _defs = [
@@ -330,7 +364,9 @@ const _defs = [
       } catch { return iso as string; }
     };
     const severity = p.urgency ? `${p.severity} (${p.urgency})` : (p.severity as string | undefined) || null;
-    return title((p.event as string) || "Weather Alert") +
+    const eccc = p.country === "CA";
+    const eventTitle = ((p.event as string) || "Weather Alert") + (eccc ? " (ECCC)" : "");
+    return title(eventTitle) +
       row("Severity", severity) +
       row("Onset", fmtDt(p.onset)) +
       row("Ends", fmtDt(p.ends || p.expires)) +
@@ -349,6 +385,27 @@ const _defs = [
       row("Customers affected", typeof p.odin_out === "number" ? Number(p.odin_out).toLocaleString() : p.odin_out) +
       row("Active incidents", p.odin_n) +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Data from ORNL ODIN — utilities self-report; coverage is partial.</div>`;
+  }],
+  [["nws-zone-fill"], (p: Record<string, unknown>) => {
+    // nws_group comes from the feature-state join (merged into p by popup.ts).
+    // No join value → unlit zone → no popup.
+    if (p.nws_group == null) return "";
+    const type = p.type as string;
+    const ugc = p.ugc as string;
+    const entries = lookupByZone(type, ugc);
+    if (!entries.length) return "";
+    const heading = (p.name as string || "Weather Zone") + (type === "fire" ? " (fire weather zone)" : "");
+    return title(heading) + renderZoneAlertList(entries);
+  }],
+  [["nws-county-fill"], (p: Record<string, unknown>) => {
+    // Same unlit-feature guard as nws-zone-fill, keyed by county GEOID instead.
+    if (p.nws_group == null) return "";
+    const geoid = p.GEOID as string;
+    const entries = lookupByFips(geoid);
+    if (!entries.length) return "";
+    const county = (p.NAME as string) || "County";
+    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
+    return title(heading) + renderZoneAlertList(entries);
   }],
   [["smoke-live-fill"], (p: Record<string, unknown>) =>
     title("Smoke Plume") +

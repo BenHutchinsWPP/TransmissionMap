@@ -78,6 +78,7 @@ const CLICKABLE_LAYERS = [
   "eia-crude-pipelines", "eia-product-pipelines",
   "railroads",
   "nws-alerts-fill",
+  "nws-zone-fill", "nws-county-fill",
   "smoke-live-fill",
   "wildfire-incidents-circle",
   "wildfire-hotspots-circle",

@@ -25,6 +25,7 @@ import {
   MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
   MINES_STATUS_BUCKETS, MINES_STATUS_MAP,
 } from '../src/colors/minerals.js';
+import { setZoneGroupFilter } from './nws-zone-join.js';
 
 const OSM_FUEL_MAP = {
   wind:       ["wind"],
@@ -239,6 +240,14 @@ export function applyNwsGroupFilter() {
   applyBucketFilterToLayers(
     ["nws-alerts-fill", "nws-alerts-line"],
     "_group", state.legendFilters.nwsGroup, NWS_GROUP_BUCKETS, NWS_GROUP_MAP);
+
+  // Joined zone/county layers (nws-zone-join.ts) paint via feature-state, which
+  // setFilter/BucketFilterToLayers above can't see — drive their opacity
+  // directly instead. Same active-set semantics: all buckets active → null
+  // ("all groups on", uses the default null-guard paint); otherwise the exact
+  // active bucket ids (possibly empty → nothing visible).
+  const active = state.legendFilters.nwsGroup;
+  setZoneGroupFilter(active.size === NWS_GROUP_BUCKETS.length ? null : [...active]);
 }
 
 // osm/hifld transmission lines carry an overhead/underground placement flag;

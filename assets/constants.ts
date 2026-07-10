@@ -77,6 +77,7 @@ export const DATA = {
     ? DATA_ORIGIN + "data/layers/nws_alerts.geojson"
     : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/nws_alerts.geojson",
   county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
+  nws_zones: DATA_ORIGIN + "data/layers/nws_zones.pmtiles", // NWS public forecast + fire weather zone polygons — shared join infra, no standalone layer/legend
   // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
   // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]
   // snapshot joined onto county_boundaries via MapLibre feature-state (see odin-outages.ts).

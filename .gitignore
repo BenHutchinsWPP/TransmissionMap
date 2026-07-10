@@ -81,6 +81,10 @@ data/raw/im3/
 data/raw/bia/
 data/raw/boundaries/
 
+# NWS public forecast + fire weather zone shapefiles (auto-downloaded by
+# extract_nws_zones.py; see docs/layers/boundaries.md / HANDOFF "Stage 1")
+data/raw/nws_zones/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

@@ -66,3 +66,7 @@ consumer (e.g. an outages or risk-index layer) that sources this PMTiles and
 sets per-feature `feature-state` keyed by `GEOID`. See
 [adding-a-layer.md](../adding-a-layer.md) for how to wire a new map layer once
 that consumer exists.
+
+County-coded [NWS weather alerts](nws-alerts.md) (curated US alerts issued
+against `/zones/county/`, joined via `geocode.SAME`) also join onto this
+tileset by `GEOID`, alongside [ODIN outages](outages.md).

@@ -214,6 +214,25 @@ layers:
     simplification: 8
     flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
 
+  # Shared NWS zone infra (public forecast + fire weather zone shapefiles,
+  # dissolved by (ugc, type) in scripts/extract_nws_zones.py). Same
+  # join-target pattern as county_boundaries directly above: draws nothing on
+  # its own — the NWS weather-alerts layer's phase-2 zone join (see
+  # HANDOFF.md "Stage 1"/"Stage 3") attaches feature-state onto it via
+  # (type, ugc). Source layer name `nws_zones` (= this id) and strings
+  # `ugc`+`type`+`key` are a load-bearing contract: `key` ("z"/"f" prefix +
+  # ugc, computed in extract_nws_zones.py) is the pmtiles promoteId target
+  # assets/nws-zone-join.ts joins feature-state onto, since bare ugc collides
+  # across the forecast/fire zone sets.
+  - id: nws_zones
+    src: data/build/nws_zones.geojson
+    format: pmtiles
+    select: [ugc, type, name, key]
+    min_zoom: 2
+    max_zoom: 8
+    simplification: 8
+    flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+
   # Served raw (lazy-loaded), not tiled. Loaded as-is from the OGF export.
   - id: ogf_planned_transmission
     src: data/build/ogf_planned_transmission.gpkg

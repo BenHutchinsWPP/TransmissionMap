@@ -32,6 +32,7 @@ import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
+import { initNwsZoneJoin } from '../nws-zone-join.js';
 
 function resetLayerState() {
   for (const entry of LAYERS) {
@@ -64,6 +65,7 @@ export function init() {
   initWildfireStaleness();
   initNwsStaleness();
   initOdinOutages();
+  initNwsZoneJoin();
 
   // Bandwidth tracking system
   const toggle = document.getElementById("dataCounterToggle") as HTMLInputElement | null;

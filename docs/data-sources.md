@@ -31,6 +31,8 @@ documentation linked below. This page is the license and attribution index.
 | **NASA FIRMS / NIFC WFIGS** | [Live wildfire (hotspots, perimeters, incidents)](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NASA FIRMS VIIRS + NIFC WFIGS" |
 | **NOAA HMS** | [Live wildfire smoke](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA Hazard Mapping System (HMS)" |
 | **NOAA / NWS** | [Live weather alerts](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |
+| **NWS** (WSOM zone shapefiles) | [Live weather alerts — zone/county join](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |
+| **Environment and Climate Change Canada** (MSC GeoMet) | [Live weather alerts (Canada)](layers/nws-alerts.md) | Open Government Licence – Canada — attribution required | "Environment and Climate Change Canada (MSC GeoMet)" |
 | **ORNL ODIN** | [Power outages (live)](layers/outages.md) | No license declared (DOE/ORNL public program) | "ORNL ODIN" |
 
 > **License of this repo:** application code (HTML/JS/CSS/Python/shell) is MIT — see
