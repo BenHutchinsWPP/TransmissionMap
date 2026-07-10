@@ -30,6 +30,7 @@ import { buildLayersPanel } from './ui-layer-rows.js';
 import { wireMenubar } from './ui-menubar.js';
 import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
+import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
 
 function resetLayerState() {
@@ -61,6 +62,7 @@ export function init() {
   buildLegends();
   wireUI();
   initWildfireStaleness();
+  initNwsStaleness();
   initOdinOutages();
 
   // Bandwidth tracking system

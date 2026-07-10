@@ -40,6 +40,7 @@ const SEARCH_SOURCES = [
   { sourceId: "bia-tribal-lands", sourceLayer: null,             label: "Tribal (BIA)",       fields: ["LARNAME"] },
   { sourceId: "crithab",        sourceLayer: "crithab",        label: "Critical Habitat",   fields: ["comname", "sciname", "unitname"] },
   { sourceId: "wildfire-live",  sourceLayer: null,             label: "Active Fire",         fields: ["name", "fire_id", "state"] },
+  { sourceId: "nws-alerts",     sourceLayer: null,             label: "Weather Alert",       fields: ["event", "areaDesc", "headline"] },
   { sourceId: "wecc-paths",     sourceLayer: null,             label: "WECC Path",           fields: ["name", "number"] },
 ];
 

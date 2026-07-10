@@ -322,6 +322,22 @@ const _defs = [
       row("Discovered", fmtDt(p.discovery_dt)) +
       row("Current as of", fmtDt(p.modified_dt));
   }],
+  [["nws-alerts-fill"], (p: Record<string, unknown>) => {
+    const fmtDt = (iso: unknown) => {
+      if (!iso) return null;
+      try {
+        return new Date(iso as string).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+      } catch { return iso as string; }
+    };
+    const severity = p.urgency ? `${p.severity} (${p.urgency})` : (p.severity as string | undefined) || null;
+    return title((p.event as string) || "Weather Alert") +
+      row("Severity", severity) +
+      row("Onset", fmtDt(p.onset)) +
+      row("Ends", fmtDt(p.ends || p.expires)) +
+      row("Area", p.areaDesc) +
+      row("Issued by", p.senderName) +
+      row("Headline", p.headline);
+  }],
   [["odin-outages-fill"], (p: Record<string, unknown>) => {
     // Numbers come from the feature-state join (merged into p by popup.ts);
     // county NAME/STATE_NAME come from the county_boundaries tile properties.

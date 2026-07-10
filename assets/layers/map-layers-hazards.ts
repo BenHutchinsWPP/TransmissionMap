@@ -12,8 +12,12 @@
 //   wildfire-smoke     → wildfire-smoke-fill, wildfire-smoke-line
 //   wildfire-live      → wildfire-perimeters-fill/line, wildfire-hotspots-heat/circle
 //   wildfire-incidents → wildfire-incidents-circle
+//
+// addNwsAlerts() is a separate live GeoJSON source ("nws-alerts") — NOAA/NWS
+// active alert polygons, colored by the server-computed `_group` prop.
+// Registry entry: nws-alerts → nws-alerts-fill, nws-alerts-line.
 
-import type { LayerSpecification } from "maplibre-gl";
+import type { LayerSpecification, ExpressionSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
@@ -184,6 +188,54 @@ export function addWildfireLive() {
       ],
       "circle-stroke-width": 2,
       "circle-opacity": 0.9,
+    },
+  } as LayerSpecification);
+}
+
+// ─── NWS active weather alerts (live) ──────────────────────────────────────
+// Curated, polygon-bearing alerts only (phase 1). Colored by `_group`
+// (server-side grouping of NWS event types — see scripts/fetch_nws_alerts.py).
+const NWS_GROUP_COLOR: ExpressionSpecification = [
+  "match", ["get", "_group"],
+  "convective", "#a855f7",
+  "flood",      "#22c55e",
+  "fire",       "#ef4444",
+  "heat",       "#f97316",
+  "wind",       "#eab308",
+  "winter",     "#38bdf8",
+  "tropical",   "#14b8a6",
+  /* other */   "#9ca3af",
+];
+
+export function addNwsAlerts() {
+  if (!state.map || state.map.getSource("nws-alerts")) return;
+
+  state.map.addSource("nws-alerts", {
+    type: "geojson",
+    data: EMPTY_FC,
+  });
+
+  const vis = initialVisibility("nws-alerts");
+
+  state.map.addLayer({
+    id: "nws-alerts-fill",
+    type: "fill",
+    source: "nws-alerts",
+    layout: { visibility: vis },
+    paint: {
+      "fill-color": NWS_GROUP_COLOR,
+      "fill-opacity": 0.25,
+    },
+  } as LayerSpecification);
+
+  state.map.addLayer({
+    id: "nws-alerts-line",
+    type: "line",
+    source: "nws-alerts",
+    layout: { visibility: vis },
+    paint: {
+      "line-color": NWS_GROUP_COLOR,
+      "line-width": ["case", ["==", ["get", "severity"], "Extreme"], 2.5, 1.5],
     },
   } as LayerSpecification);
 }

@@ -9,12 +9,14 @@ import {
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
   OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
+  NWS_GROUP_BUCKETS,
 } from '../../src/colors/buckets.js';
 import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
   applyCritHabFilter, applyPadusClassFilter, applyTribalClassFilter,
   applyNatgasLineFilter, applyNatgasPtsFilter, applyNercFilter,
   applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter, applyMinesFilter,
+  applyNwsGroupFilter,
 } from '../filters.js';
 import { MINES_COMMODITY_BUCKETS, MINES_STATUS_BUCKETS } from '../../src/colors/minerals.js';
 import { escapeHtml } from '../utils/utils.js';
@@ -78,6 +80,9 @@ export const LEGEND_FILTERS = [
   { key: "minesStatus", groupCode: "d", buckets: MINES_STATUS_BUCKETS,
     masterId: "minesStatusAllCb", legendId: "minesStatusLegend", itemsId: "minesStatusLegendItems",
     title: "Mines — status", swatch: "none", defaultActive: ["active"], apply: applyMinesFilter },
+  { key: "nwsGroup", groupCode: "q", buckets: NWS_GROUP_BUCKETS,
+    masterId: "nwsGroupAllCb", legendId: "nwsGroupLegend", itemsId: "nwsGroupLegendItems",
+    title: "Weather Alerts", swatch: "color", apply: applyNwsGroupFilter },
 ];
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
@@ -171,7 +176,7 @@ function feedIssue(feed: string, status: string): string | null {
   return m ? `${name} from ${m[1]}d ago` : `${name} feed down`;
 }
 
-function relAge(tsIso: string): { short: string; level: string; abs: string } {
+function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: string; level: string; abs: string } {
   const then = Date.parse(tsIso);
   if (Number.isNaN(then)) return { short: "", level: "", abs: "" };
   // Show the pull time in the viewer's local timezone (e.g. "Pulled Jun 28, 7:30 AM PDT").
@@ -184,10 +189,25 @@ function relAge(tsIso: string): { short: string; level: string; abs: string } {
     : min < 60   ? `pulled ${min}m ago`
     : min < 1440 ? `pulled ${Math.round(min / 60)}h ago`
     :              `pulled ${Math.round(min / 1440)}d ago`;
-  // Cron misses of 1–3h are routine and VIIRS obs are hours old anyway — warn
-  // only when meaningfully behind; "stale" aligns with the 6h kill-switch.
-  const level = min <= 180 ? "fresh" : min <= 360 ? "aging" : "stale";
+  // Wildfire defaults: cron misses of 1–3h are routine and VIIRS obs are hours
+  // old anyway — warn only when meaningfully behind; "stale" aligns with the
+  // 6h kill-switch. Faster feeds (NWS alerts) pass tighter thresholds.
+  const level = min <= freshMaxMin ? "fresh" : min <= agingMaxMin ? "aging" : "stale";
   return { short, level, abs };
+}
+
+// NWS alerts: single feed, ~10 min cadence, 3 h kill-switch — tighter
+// thresholds than wildfire and no per-feed degradation flags.
+let nwsGeneratedUtc: string | undefined;
+
+function renderNwsAge() {
+  if (!nwsGeneratedUtc) return;
+  const el = document.getElementById("nwsAge");
+  if (!el) return;
+  const { short, level, abs } = relAge(nwsGeneratedUtc, 60, 180);
+  el.textContent = short;
+  el.title = abs + " — when the map last fetched the alert feed; expired alerts are removed automatically";
+  el.className = "legend-age legend-age--" + level;
 }
 
 function renderLiveAge() {
@@ -218,13 +238,18 @@ export function buildLegends() {
   // every minute so the displayed age stays honest while the page is open.
   window.addEventListener("tm:layerdata", (e) => {
     const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
-    if (registryId !== "wildfire-live") return;
-    const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-    liveGeneratedUtc = first?.generated_utc as string | undefined;
-    liveFeedStatus = first?.feed_status as Record<string, string> | undefined;
-    renderLiveAge();
+    if (registryId === "wildfire-live") {
+      const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
+      liveGeneratedUtc = first?.generated_utc as string | undefined;
+      liveFeedStatus = first?.feed_status as Record<string, string> | undefined;
+      renderLiveAge();
+    } else if (registryId === "nws-alerts") {
+      const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
+      nwsGeneratedUtc = first?.generated_utc as string | undefined;
+      renderNwsAge();
+    }
   });
-  setInterval(renderLiveAge, 60_000);
+  setInterval(() => { renderLiveAge(); renderNwsAge(); }, 60_000);
 }
 
 const LEGEND_VISIBILITY = [
@@ -249,6 +274,7 @@ const LEGEND_VISIBILITY = [
   { el: "minesStatusLegend",     show: () => !!state.layerVisibility["mines"] },
   { el: "smokeLiveLegend",        show: () => !!state.layerVisibility["wildfire-smoke"] },
   { el: "wildfireLiveLegend",    show: () => !!state.layerVisibility["wildfire-live"] },
+  { el: "nwsGroupLegend",        show: () => !!state.layerVisibility["nws-alerts"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },
   { el: "odinLegend",            show: () => !!state.layerVisibility["odin-outages"] },
   { el: "dataCounterLegend",     show: () => { const cb = document.getElementById("dataCounterToggle") as HTMLInputElement | null; return !cb || cb.checked; } },

@@ -139,4 +139,9 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: ORNL ODIN (Oak Ridge National Laboratory) — live county-level power-outage aggregates; utilities self-report, coverage is partial",
     creditId: "ornl-odin",
   },
+  "noaa-nws": {
+    label: "NOAA National Weather Service",
+    tooltip: "Source: NOAA/NWS active alerts — US Government work, public domain",
+    creditId: "noaa-nws",
+  },
 };

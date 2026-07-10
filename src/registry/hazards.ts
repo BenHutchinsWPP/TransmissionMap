@@ -6,6 +6,18 @@ import { SEIS_RAMP_STOPS, SEIS_RAMP_MAX } from '../colors/ramps.js';
 
 export const hazardLayers: LayerDef[] = [
   {
+    id:          "nws-alerts",
+    urlCode:     "NWS",
+    label:       "Weather Alerts (live)",
+    group:       "hazards",
+    sourceId:    "noaa-nws",
+    swatch:      "#a855f7",
+    live:        true,
+    defaultOn:   false,
+    mapLayerIds: ["nws-alerts-fill", "nws-alerts-line"],
+    downloads: { url: "https://www.weather.gov/alerts" },
+  },
+  {
     id:          "wildfire-live",
     urlCode:     "WFL",
     label:       "Active Wildfire (~24h)",

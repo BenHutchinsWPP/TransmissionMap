@@ -72,6 +72,10 @@ export const DATA = {
   wildfire_live: import.meta.env.DEV
     ? DATA_ORIGIN + "data/layers/wildfire_live.geojson"
     : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson",
+  // Dev: local file (run `make nws-alerts-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok).
+  nws_alerts: import.meta.env.DEV
+    ? DATA_ORIGIN + "data/layers/nws_alerts.geojson"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/nws_alerts.geojson",
   county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
   // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
   // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]

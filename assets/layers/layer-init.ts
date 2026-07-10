@@ -41,6 +41,7 @@ const LAZY_GEOJSON: Record<string, string> = {
   "tribal-lands":               DATA.tribal_lands,
   "bia-tribal-lands":           DATA.bia_tribal_lands,
   "wildfire-live":              DATA.wildfire_live,
+  "nws-alerts":                 DATA.nws_alerts,
 };
 
 // Registry IDs that share a source with another registry ID.

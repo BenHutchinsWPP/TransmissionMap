@@ -18,6 +18,7 @@ type Events = {
   'filter:crithab':       void;
   'filter:nerc':          void;
   'filter:retail':        void;
+  'filter:nwsGroup':      void;
   'filter:layer': { id: string }; // per-layer bucket filter changed
   'filter:all':           void;   // re-apply every filter (used by reset)
   'gen:mode':    { id: string };  // generator display mode changed

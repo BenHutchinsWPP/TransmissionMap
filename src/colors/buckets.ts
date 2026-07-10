@@ -224,6 +224,21 @@ export const NERC_BUCKETS = [
 ];
 export const NERC_MAP = Object.fromEntries(NERC_BUCKETS.map(b => [b.id, b.values]));
 
+// ─── NWS active weather alert groups ─────────────────────────────────────────
+// Mirrors NWS_GROUP_COLOR in assets/layers/map-layers-hazards.ts — keep colors
+// in sync (that expression paints the map; this bucket set drives the legend
+// filter chips over the same `_group` field).
+export const NWS_GROUP_BUCKETS: BucketDef[] = [
+  { id: "convective", label: "Convective",     color: "#a855f7", urlCode: "c" },
+  { id: "flood",       label: "Flood",          color: "#22c55e", urlCode: "l" },
+  { id: "fire",        label: "Fire weather",   color: "#ef4444", urlCode: "f" },
+  { id: "heat",        label: "Heat",           color: "#f97316", urlCode: "h" },
+  { id: "wind",        label: "Wind/Dust",      color: "#eab308", urlCode: "w" },
+  { id: "winter",      label: "Winter",         color: "#38bdf8", urlCode: "i" },
+  { id: "tropical",    label: "Tropical",       color: "#14b8a6", urlCode: "t" },
+  { id: "other",       label: "Other",          color: "#9ca3af", urlCode: "o" },
+];
+
 // ─── Retail service territory types ──────────────────────────────────────────
 export const RETAIL_TYPE_BUCKETS = [
   { id: "iou",     urlCode: "I", label: "Investor Owned",    color: "#3b82f6",

@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev seismic boundaries validate tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev seismic boundaries validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -245,6 +245,15 @@ whp:
 wildfire-dev:
 	@$(PY) $(SCRIPTS)/fetch_wildfire_live.py \
 		-o data/layers/wildfire_live.geojson
+
+# ── Active NWS weather alerts live layer (local dev) ─────────────────────────
+# Fetches api.weather.gov active alerts, curates to an allowlisted set of
+# polygon-bearing events (see scripts/fetch_nws_alerts.py) →
+# data/layers/nws_alerts.geojson. Pass --input to the script directly for
+# offline use. In production this runs via .github/workflows/nws-alerts.yml.
+nws-alerts-dev:
+	@$(PY) $(SCRIPTS)/fetch_nws_alerts.py \
+		-o data/layers/nws_alerts.geojson
 
 # ── Seismic hazard raster (USGS NSHM 2018, PGA 2% in 50yr) ──────────────────
 # Self-contained raster pipeline (gdal + pmtiles, no venv). Reads the USGS NSHM

@@ -19,6 +19,7 @@ import {
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
   SECTOR_BUCKETS, SECTOR_MAP,
   OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, LINE_PLACEMENT_BUCKETS,
+  NWS_GROUP_BUCKETS,
 } from '../src/colors/buckets.js';
 import {
   MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
@@ -68,6 +69,16 @@ const NATGAS_FAC_TYPE_MAP = {
   peak_shaving:  ["peak_shaving"],
   lng_storage:   ["lng_storage"],
   pol_terminal:  ["pol_terminal"],
+};
+
+const NWS_GROUP_MAP = {
+  convective: ["convective"],
+  flood:      ["flood"],
+  fire:       ["fire"],
+  heat:       ["heat"],
+  wind:       ["wind"],
+  winter:     ["winter"],
+  tropical:   ["tropical"],
 };
 
 export const PIPELINE_TYPE_MAP = {
@@ -222,6 +233,12 @@ export function applyRetailTypeFilter() {
   applyBucketFilterToLayers(
     ["retail-fill", "retail-outline"],
     "type", state.legendFilters.retail, RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP);
+}
+
+export function applyNwsGroupFilter() {
+  applyBucketFilterToLayers(
+    ["nws-alerts-fill", "nws-alerts-line"],
+    "_group", state.legendFilters.nwsGroup, NWS_GROUP_BUCKETS, NWS_GROUP_MAP);
 }
 
 // osm/hifld transmission lines carry an overhead/underground placement flag;
@@ -425,6 +442,7 @@ on('filter:tribal',        applyTribalClassFilter);
 on('filter:crithab',       applyCritHabFilter);
 on('filter:nerc',          applyNercFilter);
 on('filter:retail',        applyRetailTypeFilter);
+on('filter:nwsGroup',      applyNwsGroupFilter);
 on('filter:layer',         ({ id }) => applyLayerFilter(id));
 on('filter:all',           () => {
   applyVoltageFilter();
@@ -440,4 +458,5 @@ on('filter:all',           () => {
   applySubstanceFilter();
   applyOGFFilters();
   applyMinesFilter();
+  applyNwsGroupFilter();
 });

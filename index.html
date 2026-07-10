@@ -332,6 +332,10 @@
           <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="retailLegendItems"></div>
         </div>
+        <div class="legend collapsed" id="nwsGroupLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span><span class="legend-age" id="nwsAge"></span></div>
+          <div class="legend-items collapsible-content" id="nwsGroupLegendItems"></div>
+        </div>
         <!-- HMS smoke detection live legend -->
         <div class="legend collapsed" id="smokeLiveLegend" hidden data-collapsible>
           <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">HMS Smoke Detection</span><span class="legend-age" id="smokeAge"></span></div>
@@ -483,6 +487,32 @@
     </div>
   </dialog>
 
+  <!-- NWS alert staleness cutoff dialog (auto-shown when live alert data is too old) -->
+  <dialog class="disclaimer-dialog wildfire-stale-dialog" id="nwsStaleDialog">
+    <div class="disclaimer-content">
+      <div class="disclaimer-header">
+        <h2>⚠ Live weather-alert data is stale</h2>
+      </div>
+      <p class="disclaimer-body">
+        The live weather-alert data is <strong id="nwsStaleAge">—</strong> old —
+        beyond the safe limit. The feed may be broken or delayed, so the
+        <strong>weather alerts layer has been turned off</strong> to avoid
+        showing outdated warnings. Expired alerts are already removed
+        automatically; what remains may still be incomplete.
+      </p>
+      <p class="disclaimer-body">
+        Do not rely on stale alert data for any safety decision. It will
+        re-enable automatically once a fresh update arrives. Meanwhile,
+        <a href="https://www.weather.gov/alerts" target="_blank" rel="noopener">weather.gov/alerts</a>
+        shows current official NWS alerts.
+      </p>
+      <div class="disclaimer-footer wildfire-stale-footer">
+        <button class="disclaimer-dismiss" id="nwsStaleDismiss" type="button">Keep disabled</button>
+        <button class="disclaimer-accept disclaimer-danger" id="nwsStaleReenable" type="button">I understand the risk — re-enable</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Credits dialog -->
   <dialog class="credits-dialog" id="creditsDialog">
     <div class="credits-content">
@@ -526,6 +556,7 @@
         <li data-source-credit="fws-crithab"><a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html" target="_blank" rel="noopener">USFWS ECOS Critical Habitat</a> — live tile service — public domain</li>
         <li data-source-credit="usgs-seismic"><a href="https://earthquake.usgs.gov/arcgis/rest/services/haz/US1hz050_2014/MapServer" target="_blank" rel="noopener">USGS Seismic Hazard Model 2014</a> — live tile service — public domain</li>
         <li data-source-credit="bts-narn"><a href="https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about" target="_blank" rel="noopener">BTS / FRA NARN</a> — May 2026 — public domain</li>
+        <li data-source-credit="noaa-nws"><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NOAA National Weather Service</a> — Active weather alerts. US Government work, public domain.</li>
         <li data-source-credit="nasa-firms-nifc"><a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS VIIRS</a> (LANCE / ESDIS) + <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a> — active fire detections (rolling 24-hour window; hourly pull + ~1–3&nbsp;h satellite processing) + current perimeters — public domain. Not for tactical firefighting.</li>
         <li data-source-credit="noaa-hms"><a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">NOAA HMS Smoke Detection</a> (OSPO / NESDIS) — analyst-drawn satellite smoke polygons, latest available analysis (may trail real time by several hours) — public domain.</li>
         <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>

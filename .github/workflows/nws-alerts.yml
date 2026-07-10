@@ -1,0 +1,106 @@
+name: Update NWS weather alerts
+# Fetches curated polygon-bearing NWS alerts into nws_alerts.geojson on the
+# orphan `data` branch via a single amended commit (no history growth).
+# Frontend fetches from raw.githubusercontent.com (CORS ok on public repos).
+# main is never touched by this workflow.
+#
+# Trigger is workflow_dispatch ONLY for now — cron-job.org will fire this
+# every ~10 min once configured, same pattern as wildfire-data.yml's primary
+# trigger and odin-outages.yml.
+#
+# Bootstrap: create the orphan branch once before this workflow runs (skip if
+# the `data` branch already exists from the wildfire workflow — just add the file):
+#   git checkout data
+#   mkdir -p data/layers
+#   echo '{"type":"FeatureCollection","features":[]}' > data/layers/nws_alerts.geojson
+#   git add data/layers/nws_alerts.geojson
+#   git commit -m "init: nws alerts data"
+#   git push origin data
+#   git checkout main
+on:
+  workflow_dispatch:
+
+# Don't let a slow run race the next cycle's force-push; queue instead of overlap.
+# Shared with wildfire-data.yml and odin-outages.yml: every workflow that
+# force-pushes the orphan `data` branch must sit in ONE group. Two groups =
+# two runs can check out the same tip, and the second `--force-with-lease`
+# push is (correctly) rejected, failing that run and opening a spurious
+# feed-down issue.
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write        # failure-alert step
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: data                        # orphan branch — only the data file
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Force IPv4 for network stability
+        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
+        # See: https://github.com/actions/runner-images/issues/668
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - name: Verify network connectivity to data sources
+        # Fails fast if a required service is unreachable, saving runner minutes and providing a clear error.
+        run: |
+          echo "::group::Pinging data services..."
+          endpoints=(
+            "https://api.weather.gov"
+          )
+          for endpoint in "${endpoints[@]}"; do
+            if ! curl -s --fail --connect-timeout 15 -o /dev/null "$endpoint"; then
+              echo "::error::Failed to connect to $endpoint. Aborting."
+              exit 1
+            else
+              echo "✅ Connection to $endpoint successful."
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Fetch alerts → nws_alerts.geojson (with retries)
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 8
+          max_attempts: 3
+          retry_on: error
+          command: |
+            # Script lives on main; grab without switching branches.
+            git fetch origin main
+            git show origin/main:scripts/fetch_nws_alerts.py > /tmp/fetch_nws_alerts.py
+            python3 /tmp/fetch_nws_alerts.py -o data/layers/nws_alerts.geojson
+
+      - name: Amend rolling commit and force-push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/layers/nws_alerts.geojson
+          git diff --cached --quiet && echo "No change — skipping" && exit 0
+          git commit --amend --no-edit --date=now
+          git push --force-with-lease
+
+      # Failed runs otherwise surface only as a stale/aging snapshot on the
+      # map — open (or bump) a tracking issue so the operator gets notified.
+      - name: Alert on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          msg="Run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          n=$(gh issue list --label nws-alerts-feed-down --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --body "$msg"
+          else
+            gh label create nws-alerts-feed-down --color D93F0B --force
+            gh issue create --title "NWS alerts workflow failing" \
+              --label nws-alerts-feed-down \
+              --body "$msg — map serves the last good pull; close when green again."
+          fi
