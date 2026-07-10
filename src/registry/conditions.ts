@@ -55,7 +55,6 @@ export const conditionLayers: LayerDef[] = [
       url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
     },
   },
-/*
   {
     id:          "nws-alerts",
     urlCode:     "NWS",
@@ -93,7 +92,6 @@ export const conditionLayers: LayerDef[] = [
     mapLayerIds: ["geomet-radar-rain", "geomet-radar-snow", "nexrad-radar"],
     downloads: { url: "https://mesonet.agron.iastate.edu/GIS/ridge.phtml" },
   },
-  */
   {
     id:           "usgs-seismic-pga",
     urlCode:      "PGA",
