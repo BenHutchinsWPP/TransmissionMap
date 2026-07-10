@@ -15,7 +15,7 @@ import { rampLegendHtml } from './ui-legends.js';
 import { escapeHtml } from '../utils/utils.js';
 
 export function buildLayersPanel() {
-  const groups = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "hazards"];
+  const groups = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "conditions"];
   for (const group of groups) {
     const container = document.getElementById(`layer-rows-${group}`);
     if (!container) continue;

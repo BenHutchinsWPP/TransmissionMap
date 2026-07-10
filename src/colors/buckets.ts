@@ -225,7 +225,7 @@ export const NERC_BUCKETS = [
 export const NERC_MAP = Object.fromEntries(NERC_BUCKETS.map(b => [b.id, b.values]));
 
 // ─── NWS active weather alert groups ─────────────────────────────────────────
-// Mirrors NWS_GROUP_COLOR in assets/layers/map-layers-hazards.ts — keep colors
+// Mirrors NWS_GROUP_COLOR in assets/layers/map-layers-conditions.ts — keep colors
 // in sync (that expression paints the map; this bucket set drives the legend
 // filter chips over the same `_group` field).
 export const NWS_GROUP_BUCKETS: BucketDef[] = [

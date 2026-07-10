@@ -1,15 +1,15 @@
-// Layer registry entries — natural hazards.
-// Role: pure-data LayerDef for the hazards group; consumed by src/registry/index.ts.
+// Layer registry entries — natural hazards & live conditions.
+// Role: pure-data LayerDef for the conditions group; consumed by src/registry/index.ts.
 // Deps: ../types (LayerDef). No side effects.
 import type { LayerDef } from '../types.js';
 import { SEIS_RAMP_STOPS, SEIS_RAMP_MAX } from '../colors/ramps.js';
 
-export const hazardLayers: LayerDef[] = [
+export const conditionLayers: LayerDef[] = [
   {
     id:          "wildfire-live",
     urlCode:     "WFL",
     label:       "Fire: Active (~24h)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#ff4400",
     live:        true,
@@ -21,7 +21,7 @@ export const hazardLayers: LayerDef[] = [
     id:          "wildfire-smoke",
     urlCode:     "SMK",
     label:       "Fire: Smoke (~24h)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "noaa-hms",
     swatch:      "#ff8c00",
     live:        true,
@@ -33,7 +33,7 @@ export const hazardLayers: LayerDef[] = [
     id:          "wildfire-incidents",
     urlCode:     "WFI",
     label:       "Fire: Incidents (~24h)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#cc0000",
     live:        true,
@@ -45,7 +45,7 @@ export const hazardLayers: LayerDef[] = [
     id:           "usfs-wildfire-potential",
     urlCode:      "WHP",
     label:        "Fire: Hazard Potential",
-    group:        "hazards",
+    group:        "conditions",
     sourceId:     "usfs-firelab",
     swatch:       "#FF0000",
     defaultOn:    false,
@@ -55,12 +55,12 @@ export const hazardLayers: LayerDef[] = [
       url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
     },
   },
-  /*
+/*
   {
     id:          "nws-alerts",
     urlCode:     "NWS",
     label:       "Weather Alerts (live)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "noaa-nws",
     swatch:      "#a855f7",
     live:        true,
@@ -72,7 +72,7 @@ export const hazardLayers: LayerDef[] = [
     id:          "odin-outages",
     urlCode:     "OUT",
     label:       "Power Outages (US, live)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "ornl-odin",
     swatch:      "#fd8d3c",   // mid-bucket (100–1k) of the YlOrRd outage ramp
     live:        true,
@@ -80,12 +80,11 @@ export const hazardLayers: LayerDef[] = [
     mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
     downloads: { url: "https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" },
   },
-  // Weather: radar — wired but disabled; uncomment to enable (see docs/layers/weather-radar.md)
   {
     id:          "nexrad-radar",
     urlCode:     "RAD",
     label:       "Weather: Radar (live)",
-    group:       "hazards",
+    group:       "conditions",
     sourceId:    "iem-nexrad",
     swatch:      "#04e304",
     live:        true,
@@ -99,7 +98,7 @@ export const hazardLayers: LayerDef[] = [
     id:           "usgs-seismic-pga",
     urlCode:      "PGA",
     label:        "Seismic Hazard (PGA, 2% in 50yr)",
-    group:        "hazards",
+    group:        "conditions",
     sourceId:     "usgs-nshm",
     swatch:       `rgb(${SEIS_RAMP_STOPS[3][1]})`,
     ramp:         { stops: SEIS_RAMP_STOPS, max: SEIS_RAMP_MAX, unit: "g" },

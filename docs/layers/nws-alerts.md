@@ -2,7 +2,7 @@
 
 A **live** layer of curated NOAA/NWS active weather alerts (tornado,
 severe thunderstorm, flash flood, fire weather, heat, high wind, winter storm, tropical,
-and a small "other" bucket), refreshed on a short cycle. Panel group: **🔥 Hazards**.
+and a small "other" bucket), refreshed on a short cycle. Panel group: **🌡 Conditions**.
 
 Coverage as of phase 2: (1) US storm-based alerts with real polygon geometry
 (tornado/severe-tstorm/flash-flood warnings, etc.), rendered directly; (2)

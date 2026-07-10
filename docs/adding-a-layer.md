@@ -82,7 +82,7 @@ Anchor: `>>> ADD-LAYER: data-urls`
 
 ## 5. `src/registry/<group>.ts` — layer registry entry
 
-Every visible layer needs an entry in the right registry file. Add it to the array in the file matching its group — the imports in `src/registry/index.ts` list every registry file (generators, transmission, pipelines, renewable, land, regions, hazards, rail, …). New sources go in `src/registry/sources.ts`.
+Every visible layer needs an entry in the right registry file. Add it to the array in the file matching its group — the imports in `src/registry/index.ts` list every registry file (generators, transmission, pipelines, renewable, land, regions, conditions, rail, …). New sources go in `src/registry/sources.ts`.
 
 ### `src/registry/sources.ts` (if new data provider)
 

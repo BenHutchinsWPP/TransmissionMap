@@ -29,7 +29,7 @@
 // Deps: state (map, DATA, layerVisibility), layers/layer-init.ts
 //       (ensureCountyBoundaries, COUNTY_SRC/COUNTY_SRC_LAYER, pmtilesUrl,
 //       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
-//       palette map-layers-hazards.ts's NWS_GROUP_COLOR paints the storm
+//       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
 //       polygons with; reused here, not duplicated).
 // Wired from ui/ui.ts init() via initNwsZoneJoin(), which listens for the
 //       `tm:layerdata` event (registryId "nws-alerts") dispatched by
@@ -94,7 +94,7 @@ function pickWinner(entries: ZoneAlertEntry[]): ZoneAlertEntry {
   });
 }
 
-// ── Colors, reused from the same palette map-layers-hazards.ts paints the
+// ── Colors, reused from the same palette map-layers-conditions.ts paints the
 //    storm-polygon layer with (do not hand-roll hex values here). ──────────
 const OTHER_COLOR = NWS_GROUP_BUCKETS.find(b => b.id === "other")?.color ?? "#9ca3af";
 function groupColor(group: string): string {
