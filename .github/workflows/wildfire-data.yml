@@ -46,7 +46,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: data                        # orphan branch — only the data file
+          # Fully qualified on purpose: an unqualified `data` makes checkout
+          # fetch with a `refs/heads/data*` glob, which also pulls the ~1 GB
+          # `data-static` tiles branch every run (~80 s of dead time).
+          ref: refs/heads/data             # orphan branch — only the data file
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Force IPv4 for network stability
@@ -75,18 +78,19 @@ jobs:
           echo "::endgroup::"
 
       - name: Fetch all feeds → wildfire_live.geojson (with retries)
-        uses: nick-invision/retry@v3
-        with:
-          timeout_minutes: 15
-          max_attempts: 3
-          retry_on: error
-          command: |
-            # Scripts live on main; grab without switching branches.
-            # The script fetches everything itself (VIIRS CSVs, perimeters,
-            # incidents, smoke) when no CSV paths are passed.
-            git fetch origin main
-            git show origin/main:scripts/fetch_wildfire_live.py > /tmp/fetch_wildfire_live.py
-            python3 /tmp/fetch_wildfire_live.py -o data/layers/wildfire_live.geojson
+        # Plain bash retry loop — the retry action ran on the deprecated
+        # node20 runtime; job-level timeout-minutes is the hang backstop.
+        run: |
+          # Scripts live on main; grab without switching branches.
+          # The script fetches everything itself (VIIRS CSVs, perimeters,
+          # incidents, smoke) when no CSV paths are passed.
+          git fetch origin main
+          git show origin/main:scripts/fetch_wildfire_live.py > /tmp/fetch_wildfire_live.py
+          for i in 1 2 3; do
+            python3 /tmp/fetch_wildfire_live.py -o data/layers/wildfire_live.geojson && exit 0
+            echo "Attempt $i failed; retrying in 30s…"; sleep 30
+          done
+          exit 1
         env:
           # FIRMS quota'd area API; script falls back to the anonymous
           # flat files if unset. GitHub masks the key in logs.
