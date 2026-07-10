@@ -8,7 +8,9 @@
 //       re-enables them. Optionally prunes expired features (e.g. NWS alerts
 //       past their `ends`/`expires` time) before every setData.
 // Source of truth for age = the `generated_utc` property on the first
-//       feature of state.sourcesData[cfg.sourceKey].
+//       feature of state.sourcesData[cfg.sourceKey], falling back to the
+//       FeatureCollection-level `generated_utc` stashed in
+//       state.liveFcMeta[cfg.sourceKey] (needed when `features` is empty).
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
 //       visibility.ts (setLayerVisibility — which itself writes URL state),
 //       ui/ui-legends.ts (updateLegends). Modal DOM ids come from cfg.
@@ -49,7 +51,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
 
   function generatedUtc(): string | undefined {
     const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
-    return f?.properties?.generated_utc as string | undefined;
+    return (f?.properties?.generated_utc as string | undefined)
+      ?? state.liveFcMeta[sourceKey]?.generated_utc;
   }
 
   // Pull age in ms (now − generated_utc), or null if unknown/unparseable.
@@ -124,7 +127,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
 
       // Check if the data has actually changed by comparing generated_utc timestamps
       const currentGenerated = generatedUtc();
-      const newGenerated = geojson.features?.[0]?.properties?.generated_utc as string | undefined;
+      const newGenerated = (geojson.features?.[0]?.properties?.generated_utc as string | undefined)
+        ?? (geojson.generated_utc as string | undefined);
       if (currentGenerated && newGenerated && currentGenerated === newGenerated) {
         return; // No change in data, skip updating map/UI
       }
@@ -132,6 +136,12 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
       let features: GeoJSON.Feature[] = geojson.features || [];
       if (pruneExpired) features = pruneExpired(features);
       state.sourcesData[sourceKey] = features;
+      if (geojson.generated_utc !== undefined || geojson.feed_status !== undefined) {
+        state.liveFcMeta[sourceKey] = {
+          generated_utc: geojson.generated_utc as string | undefined,
+          feed_status: geojson.feed_status as Record<string, string> | undefined,
+        };
+      }
       src.setData({ ...geojson, features });
       // Same event the legend age chip listens for → it (and checkStaleness) refresh.
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId: sourceKey } }));

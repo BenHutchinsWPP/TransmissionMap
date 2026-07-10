@@ -75,6 +75,8 @@ EVENT_GROUPS: dict[str, str] = {
     "Extreme Cold Watch": "winter",
     "Freeze Warning": "winter",
     "Snow Squall Warning": "winter",
+    "Winter Storm Warning": "winter",
+    "Winter Storm Watch": "winter",
     # tropical
     "Hurricane Warning": "tropical",
     "Hurricane Watch": "tropical",
@@ -210,17 +212,18 @@ def _parse_zone_url(url: str) -> tuple[str, str] | None:
     return None
 
 
-def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict]:
+def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict, int, int]:
     """Filter to allowlisted events. Non-null geometry -> polygon feature
     (kept). Null geometry -> zone_alerts sidecar entry (zone-joined), unless
     it has neither zones nor fips, in which case it's truly dropped (logged
     loudly). Returns (kept_features, zone_alerts, kept_counts_by_group,
-    zone_joined_counts_by_group)."""
+    zone_joined_counts_by_group, still_dropped, same_statewide_skipped)."""
     kept: list[dict] = []
     zone_alerts: list[dict] = []
     kept_counts: dict[str, int] = {}
     zone_joined_counts: dict[str, int] = {}
     still_dropped = 0
+    same_statewide_skipped = 0
 
     for f in features:
         props = f.get("properties") or {}
@@ -247,7 +250,24 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
             if parsed:
                 zones.append([parsed[0], parsed[1]])
         same = ((props.get("geocode") or {}).get("SAME")) or []
-        fips = [s[1:] if s.startswith("0") else s for s in same]
+        fips: list[str] = []
+        for s in same:
+            if len(s) == 6:
+                # SAME format PSSCCC: P is a portion digit (can be 1-9 for
+                # partial-county coverage, e.g. Puerto Rico); last 5 chars are
+                # always state+county FIPS. County part "000" = statewide —
+                # no county to join, so skip (counted for stats).
+                if s[-3:] == "000":
+                    same_statewide_skipped += 1
+                    continue
+                fips.append(s[1:])
+            else:
+                print(
+                    f"  WARNING: suspect SAME code (not 6 digits): {s!r} "
+                    f"event={event!r} id={props.get('id')!r}",
+                    file=sys.stderr,
+                )
+                fips.append(s)
 
         if not zones and not fips:
             still_dropped += 1
@@ -267,8 +287,10 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
 
     if still_dropped:
         print(f"  WARNING: {still_dropped} curated alert(s) truly dropped (no zones/fips)", file=sys.stderr)
+    if same_statewide_skipped:
+        print(f"  {same_statewide_skipped} statewide SAME code(s) skipped (no county to join)", file=sys.stderr)
 
-    return kept, zone_alerts, kept_counts, zone_joined_counts
+    return kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped
 
 
 def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | None]:
@@ -360,7 +382,9 @@ def main():
             sys.exit(1)
 
     total_fetched = len(nws_features)
-    kept, zone_alerts, kept_counts, zone_joined_counts = curate(nws_features, generated_utc)
+    kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped = curate(
+        nws_features, generated_utc
+    )
 
     for group in sorted(set(kept_counts) | set(zone_joined_counts)):
         print(
@@ -410,6 +434,18 @@ def main():
         fc["zone_alerts"] = zone_alerts
     if all_features:
         all_features[0]["properties"]["feed_status"] = feed_status
+    # Top-level mirrors of generated_utc/feed_status (R3) — always present, even
+    # when features is empty, unlike the features[0] write above.
+    fc["generated_utc"] = generated_utc
+    fc["feed_status"] = feed_status
+    fc["stats"] = {
+        "fetched": total_fetched,
+        "kept": len(kept),
+        "zone_joined": len(zone_alerts),
+        "eccc_kept": len(eccc_kept),
+        "dropped": still_dropped,
+        "same_statewide_skipped": same_statewide_skipped,
+    }
 
     out_dir = os.path.dirname(args.output)
     if out_dir:
@@ -418,6 +454,9 @@ def main():
     with open(tmp_path, "w") as f:
         json.dump(fc, f, separators=(",", ":"))
     os.replace(tmp_path, args.output)
+
+    if still_dropped > 0 and os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning::fetch_nws_alerts: {still_dropped} curated alert(s) dropped (no zones/fips)")
 
     total_kept = len(kept)
     total_zone_joined = len(zone_alerts)

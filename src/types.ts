@@ -132,6 +132,7 @@ export interface AppState {
   yearPlayback: YearPlayback;
   sourcesLoaded: Record<string, boolean>;
   sourcesData: Record<string, unknown[]>;
+  liveFcMeta: Record<string, { generated_utc?: string; feed_status?: Record<string, string> }>;
   rasterLut: Record<string, { meta: RasterMeta; data: Int16Array }>;
   rasterLutLoading: Record<string, boolean>;
 }

@@ -39,7 +39,7 @@ entirely, regardless of geometry:
 | `fire` | Red Flag Warning, Fire Weather Watch, Extreme Fire Danger |
 | `heat` | Extreme Heat Warning, Extreme Heat Watch, Heat Advisory |
 | `wind` | High Wind Warning, High Wind Watch, Extreme Wind Warning, Dust Storm Warning, Blowing Dust Warning |
-| `winter` | Ice Storm Warning, Blizzard Warning, Extreme Cold Warning, Extreme Cold Watch, Freeze Warning, Snow Squall Warning |
+| `winter` | Ice Storm Warning, Blizzard Warning, Extreme Cold Warning, Extreme Cold Watch, Freeze Warning, Snow Squall Warning, Winter Storm Warning, Winter Storm Watch |
 | `tropical` | Hurricane Warning, Hurricane Watch, Tropical Storm Warning, Tropical Storm Watch, Storm Surge Warning, Storm Surge Watch |
 | `other` | Nuclear Power Plant Warning, Radiological Hazard Warning, Ashfall Warning |
 
@@ -78,13 +78,30 @@ dropped as null-geometry (0 kept for those two groups that pull).
 | `_group` | Curated bucket computed by `fetch_nws_alerts.py` from `event` (see allowlist table above) | `"convective"` |
 | `generated_utc` | Pull timestamp (UTC) — identical across every feature in the file, read by the staleness kill-switch | `"2026-07-09T18:05:00Z"` |
 | `country` | `"US"` or `"CA"` (phase 2) — set on every polygon feature | `"US"` |
-| `feed_status` | Only present on `features[0]`'s properties (phase 2). `{"eccc": "ok"|"failed"}` — mirrors `fetch_wildfire_live.py`'s dict-of-subkey pattern, read by `assets/ui/ui-legends.ts` for the amber degraded-feed chip | `{"eccc": "ok"}` |
+| `feed_status` | Present on `features[0]`'s properties for back-compat (phase 2), **and** mirrored at the FeatureCollection top level (see "Feed metadata & stats" below). `{"eccc": "ok"|"failed"}` — mirrors `fetch_wildfire_live.py`'s dict-of-subkey pattern, read by `assets/ui/ui-legends.ts` for the amber degraded-feed chip | `{"eccc": "ok"}` |
+
+## Feed metadata & stats
+
+In addition to the per-feature `generated_utc`/`feed_status` properties above (and the
+`features[0]`-only `feed_status` kept for back-compat with older frontends), the
+FeatureCollection itself now always carries three top-level keys, written even when
+`features` is empty:
+
+| Key | Description |
+|---|---|
+| `generated_utc` | Same pull timestamp as every feature's `generated_utc` property |
+| `feed_status` | Same `{"eccc": "ok"|"failed"}` dict as `features[0]`'s copy |
+| `stats` | `{"fetched", "kept", "zone_joined", "eccc_kept", "dropped", "same_statewide_skipped"}` — `fetched` is total US alerts fetched before curation; `kept` is US polygon alerts kept; `zone_joined` is the length of `zone_alerts`; `eccc_kept` is Canadian alerts kept; `dropped` is curated-but-unjoinable alerts (no zones/fips) truly dropped; `same_statewide_skipped` is statewide (county part `000`) SAME codes skipped during zone/county join parsing |
+
+When run under GitHub Actions (`GITHUB_ACTIONS` env var set) and `stats.dropped > 0`,
+`fetch_nws_alerts.py` prints a `::warning::` workflow command to stdout so the dropped
+count surfaces as a CI annotation on the workflow run.
 
 ## Zone/county join (phase 2)
 
 Curated US alerts issued against forecast zones, fire weather zones, or counties (no
 polygon geometry in the NWS API) are parsed from each alert's `affectedZones` (zone type
-+ UGC) and `geocode.SAME` (county FIPS, `SAME` minus its leading `"0"`) into a top-level
++ UGC) and `geocode.SAME` (county FIPS) into a top-level
 **`zone_alerts`** sidecar array on the FeatureCollection — a key old frontends ignore, so
 the file stays backward compatible:
 
@@ -110,6 +127,14 @@ the file stays backward compatible:
   ]
 }
 ```
+
+SAME codes follow the format `PSSCCC` — a leading portion digit `P` (1-9 for partial-county
+coverage, e.g. Puerto Rico, `0` for full coverage) followed by 5-digit state+county FIPS.
+`fetch_nws_alerts.py` strips the portion digit for any 6-digit SAME code, but **skips**
+(does not emit into `fips`) any whose county part is `"000"` — a statewide code with no
+county polygon to join — counting the skips into `stats.same_statewide_skipped` (see
+"Feed metadata & stats" above). Non-6-digit SAME codes are passed through unchanged and
+logged as suspect to stderr.
 
 A zone or county can carry several alerts at once; the frontend picks a display winner by
 severity rank (Extreme > Severe > Moderate > Minor > unknown), tie-broken by earliest
