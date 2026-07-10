@@ -1,9 +1,10 @@
 // ─── ODIN live county-outage feature-state join + refresh ─────────────────────
 // Role: fetch the geometry-less ODIN snapshot (FIPS → [customers_out,
-//       incident_count]) and join it onto the SHARED `county_boundaries` vector
-//       source (owned by layers/layer-init.ts, promoteId=GEOID) via MapLibre
-//       feature-state, under the namespaced keys `odin_out`/`odin_n` so other
-//       county-keyed layers can share the same per-feature state bag. Feature-state only sticks to features in currently-loaded
+//       incident_count, utilities?]) and join it onto the SHARED
+//       `county_boundaries` vector source (owned by layers/layer-init.ts,
+//       promoteId=GEOID) via MapLibre feature-state, under the namespaced keys
+//       `odin_out`/`odin_n`/`odin_utils` so other county-keyed layers can share
+//       the same per-feature state bag. Feature-state only sticks to features in currently-loaded
 //       tiles, so we keep the parsed snapshot in module scope and RE-APPLY it on
 //       the source's `sourcedata` event, so panning/zooming into new tiles paints.
 //       Refreshes every 15 min while the layer is visible; a snapshot older than
@@ -26,8 +27,14 @@ const REFRESH_MS = 15 * 60_000;
 // Above this pull age the snapshot is treated as unsafe and NOT painted.
 const MAX_AGE_MS = 6 * 60 * 60_000;   // 6 hours
 
+// A single utility's rollup within a county:
+// [displayName, customers_out, incident_count, earliest_start_iso?].
+// The 4th slot is null/absent when no incident in the group reported a start time.
+type OdinUtil = [string, number, number, (string | null)?];
+
 // Parsed snapshot kept in module scope so `sourcedata` can re-apply it.
-let snapshot: Record<string, [number, number]> = {};
+// Third tuple slot (per-utility breakdown) is absent in older snapshots.
+let snapshot: Record<string, [number, number, OdinUtil[]?]> = {};
 // FIPS we currently have feature-state on, so a refresh can clear counties that
 // dropped out of the new snapshot (else restored counties stay lit forever).
 let appliedFips = new Set<string>();
@@ -36,7 +43,7 @@ let inflight = false;
 
 // Popup (popup-format.ts) reads the numbers for a clicked county from here as a
 // fallback; the primary path merges feature-state in popup.ts.
-export function odinSnapshot(): Record<string, [number, number]> {
+export function odinSnapshot(): Record<string, [number, number, OdinUtil[]?]> {
   return snapshot;
 }
 
@@ -49,7 +56,7 @@ function applyJoin() {
     const v = snapshot[fips];
     state.map.setFeatureState(
       { source: SRC, sourceLayer: SRC_LAYER, id: fips },
-      { odin_out: v[0], odin_n: v[1] },
+      { odin_out: v[0], odin_n: v[1], odin_utils: v[2] ?? null },
     );
   }
 }
@@ -61,6 +68,7 @@ function clearFips(fips: string) {
   const target = { source: SRC, sourceLayer: SRC_LAYER, id: fips };
   state.map.removeFeatureState(target, "odin_out");
   state.map.removeFeatureState(target, "odin_n");
+  state.map.removeFeatureState(target, "odin_utils");
 }
 
 // Unpaint everything we've painted (used when a snapshot goes stale).
@@ -91,7 +99,7 @@ async function refetch(): Promise<void> {
       return;
     }
 
-    const next = (data.counties || {}) as Record<string, [number, number]>;
+    const next = (data.counties || {}) as Record<string, [number, number, OdinUtil[]?]>;
     // Clear feature-state for counties that dropped out of the new snapshot.
     for (const fips of appliedFips) {
       if (!(fips in next)) clearFips(fips);

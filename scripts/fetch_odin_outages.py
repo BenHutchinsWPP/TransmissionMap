@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Fetch a server-side-aggregated snapshot of live US power outages from the
-ORNL ODIN Opendatasoft portal (Opendatasoft explore API, county aggregation).
+ORNL ODIN Opendatasoft portal (Opendatasoft explore API, county+utility
+aggregation).
 
 Single upstream call — server does the group_by/sum/count, so we never
 paginate and never fetch per-outage geometry. `communitydescriptor` is a
 5-digit county FIPS string; `out` is customers-affected (summed);
-`n` is incident count.
+`n` is incident count. Rows come back per (county, utility); this script
+aggregates them client-side into `counties[fips] = [out, n, utils]` where
+`out`/`n` are the county totals and `utils` is a list of
+`[displayName, out, n, since]` sorted by `out` descending (`since` = earliest
+`reportedstarttime` in the group, ISO string or null — sparse upstream).
 
 Usage:
   python3 scripts/fetch_odin_outages.py -o data/layers/odin_outages.json
@@ -48,14 +53,16 @@ socket.getaddrinfo = _ipv4_only_getaddrinfo
 ODIN_BASE = "https://ornl.opendatasoft.com/api/explore/v2.1/catalog/datasets/odin-real-time-outages-county"
 ODIN_RECORDS_URL = (
     f"{ODIN_BASE}/records"
-    "?select=communitydescriptor,sum(metersaffected)%20as%20out,count(*)%20as%20n"
-    "&group_by=communitydescriptor"
+    "?select=communitydescriptor,name,sum(metersaffected)%20as%20out,count(*)%20as%20n,"
+    "min(reportedstarttime)%20as%20since"
+    "&group_by=communitydescriptor,name"
     "&order_by=out%20desc"
     "&limit=-1"
 )
 ODIN_METADATA_URL = ODIN_BASE
 
 FIPS_RE = re.compile(r"^\d{5}$")
+UTILITY_ID_SUFFIX_RE = re.compile(r",\d+$")
 
 
 # ── Fetch helper ──────────────────────────────────────────────────────────────
@@ -97,6 +104,10 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
     if not results:
         raise ValueError("empty results — treating as upstream failure, not zero outages")
 
+    # fips -> [out, n, {displayName: [out, n, since]}] while accumulating; the
+    # utils dict is converted to a sorted list at the end. `since` is the
+    # earliest reportedstarttime (ISO string) or None — ~31% of upstream
+    # records lack it, so None is a normal value, not an error.
     counties: dict[str, list] = {}
     total = 0
     for row in results:
@@ -106,8 +117,33 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
             continue
         out = row.get("out") or 0
         n = row.get("n") or 0
-        counties[fips] = [out, n]
+        since = row.get("since") or None
+
+        name = row.get("name")
+        if not name:
+            display_name = "Unknown utility"
+        else:
+            display_name = UTILITY_ID_SUFFIX_RE.sub("", name)
+
+        county = counties.setdefault(fips, [0, 0, {}])
+        county[0] += out
+        county[1] += n
+        util = county[2].setdefault(display_name, [0, 0, None])
+        util[0] += out
+        util[1] += n
+        # min of non-null ISO timestamps (lexicographic min == chronological min).
+        if since and (util[2] is None or since < util[2]):
+            util[2] = since
+
         total += out
+
+    for fips, county in counties.items():
+        utils = sorted(
+            ([name, u[0], u[1], u[2]] for name, u in county[2].items()),
+            key=lambda u: u[1],
+            reverse=True,
+        )
+        county[2] = utils
 
     return {
         "generated_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -123,21 +159,52 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
 def _self_check():
     now = datetime(2026, 7, 8, 23, 59, 0, tzinfo=timezone.utc)
 
-    # Normal case: FIPS filtering + total sum.
+    # Normal case: FIPS filtering + total sum + multi-utility aggregation.
     results = [
-        {"communitydescriptor": "48201", "out": 3208, "n": 167},
-        {"communitydescriptor": "41033", "out": 2367, "n": 8},
-        {"communitydescriptor": "bad", "out": 999, "n": 1},  # invalid FIPS, must be skipped
+        # 48201: two utility rows -> county totals sum, utils sorted by out desc.
+        {"communitydescriptor": "48201", "name": "CENTERPOINT ENERGY,8901", "out": 3000, "n": 150,
+         "since": "2026-07-08T18:55:00+00:00"},
+        {"communitydescriptor": "48201", "name": "FOO, BAR COOP,123", "out": 208, "n": 17},  # no since
+        # 41033: single utility.
+        {"communitydescriptor": "41033", "name": "PACIFIC POWER,456", "out": 2367, "n": 8,
+         "since": "2026-07-08T15:00:00+00:00"},
+        {"communitydescriptor": "bad", "name": "SOMEUTIL,1", "out": 999, "n": 1},  # invalid FIPS, must be skipped
+        # None/empty name -> "Unknown utility".
+        {"communitydescriptor": "06001", "name": None, "out": 50, "n": 2},
     ]
     snap = build_snapshot(results, "2026-07-08T23:45:00Z", now)
-    assert snap["county_count"] == 2, snap
-    assert snap["total_customers_out"] == 3208 + 2367, snap
+    assert snap["county_count"] == 3, snap
+    assert snap["total_customers_out"] == 3000 + 208 + 2367 + 50, snap
     assert "bad" not in snap["counties"], snap
-    assert snap["counties"]["48201"] == [3208, 167], snap
-    assert snap["counties"]["41033"] == [2367, 8], snap
+
+    assert snap["counties"]["48201"][0] == 3208, snap
+    assert snap["counties"]["48201"][1] == 167, snap
+    utils_48201 = snap["counties"]["48201"][2]
+    assert utils_48201 == [
+        ["CENTERPOINT ENERGY", 3000, 150, "2026-07-08T18:55:00+00:00"],
+        ["FOO, BAR COOP", 208, 17, None],
+    ], utils_48201  # sorted by out desc; interior comma preserved, trailing ,<id> stripped
+
+    assert snap["counties"]["41033"] == [2367, 8, [["PACIFIC POWER", 2367, 8, "2026-07-08T15:00:00+00:00"]]], \
+        snap["counties"]["41033"]
+
+    assert snap["counties"]["06001"] == [50, 2, [["Unknown utility", 50, 2, None]]], snap["counties"]["06001"]
+
     assert list(snap["counties"].keys()) == sorted(snap["counties"].keys()), "keys must be sorted"
     assert snap["source_modified"] == "2026-07-08T23:45:00Z"
     assert snap["generated_utc"] == "2026-07-08T23:59:00Z"
+
+    # Duplicate displayName within a county (same utility, e.g. two id variants
+    # collapsing to the same stripped name) must merge, not create two entries.
+    dup_results = [
+        {"communitydescriptor": "48201", "name": "SAME UTIL,111", "out": 100, "n": 5,
+         "since": "2026-07-08T20:00:00+00:00"},
+        {"communitydescriptor": "48201", "name": "SAME UTIL,222", "out": 50, "n": 3,
+         "since": "2026-07-08T14:30:00+00:00"},  # earlier — must win the merge
+    ]
+    dup_snap = build_snapshot(dup_results, None, now)
+    assert dup_snap["counties"]["48201"] == \
+        [150, 8, [["SAME UTIL", 150, 8, "2026-07-08T14:30:00+00:00"]]], dup_snap["counties"]["48201"]
 
     # source_modified missing → None, must not raise.
     snap2 = build_snapshot(results, None, now)

@@ -288,6 +288,48 @@ describe('buildUserFeatureHtml', () => {
   });
 });
 
+// ─── odin-outages-fill renderer ──────────────────────────────────────────────
+
+describe('odin-outages-fill renderer', () => {
+  it('renders utility rows with google search link when odin_utils present', () => {
+    const out = buildPopupHtml('odin-outages-fill', {
+      NAME: 'Sample County', STATE_NAME: 'Ohio',
+      odin_out: 1234, odin_n: 2,
+      odin_utils: [['AEP Ohio', 1000, 1, '2026-07-08T18:55:00+00:00'], ['Duke Energy', 234, 1, null]],
+    });
+    expect(out).toContain('google.com/search');
+    expect(out).toContain('AEP Ohio');
+    expect(out).toContain('Duke Energy');
+    expect(out).toContain(encodeURIComponent('AEP Ohio power outage map'));
+    // Null since renders the placeholder dash; the real one renders a time.
+    expect(out).toContain('–');
+    expect(out).toContain('Total customers affected');
+  });
+
+  it('escapes HTML in utility name while still encoding the href', () => {
+    const out = buildPopupHtml('odin-outages-fill', {
+      NAME: 'Sample County', STATE_NAME: 'Ohio',
+      odin_out: 100, odin_n: 1,
+      odin_utils: [['<script>evil</script>', 100, 1]],
+    });
+    expect(out).not.toContain('<script>');
+    expect(out).toContain('&lt;script&gt;');
+    expect(out).toContain(encodeURIComponent('<script>evil</script> power outage map'));
+  });
+
+  it('renders county rows without utility breakdown when odin_utils absent', () => {
+    const out = buildPopupHtml('odin-outages-fill', {
+      NAME: 'Sample County', STATE_NAME: 'Ohio',
+      odin_out: 500, odin_n: 3,
+    });
+    expect(out).toContain('Sample County, Ohio');
+    expect(out).toContain('Customers affected');
+    expect(out).toContain('500');
+    expect(out).toContain('Active incidents');
+    expect(out).not.toContain('google.com/search');
+  });
+});
+
 // ─── buildPopupHtml() ─────────────────────────────────────────────────────────
 
 describe('buildPopupHtml', () => {

@@ -985,6 +985,36 @@ details.popup-row {
   word-break: break-word;
 }
 
+/* Small key/value table inside popups (e.g. ODIN per-utility breakdown). */
+.popup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  margin: 5px 0 3px;
+}
+.popup-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-light);
+  border-bottom: 1px solid rgba(107, 114, 128, 0.25);
+  padding: 1px 0 2px;
+}
+.popup-table td {
+  color: var(--text-mid);
+  padding: 2px 0 1px;
+  word-break: break-word;
+}
+.popup-table tr.popup-table-total td {
+  font-weight: 600;
+  color: var(--text);
+  border-top: 1px solid rgba(107, 114, 128, 0.25);
+}
+.popup-table th:last-child, .popup-table td:last-child {
+  text-align: right;
+  padding-left: 8px;
+  white-space: nowrap;
+}
+
 .copy-popup-name {
   font-weight: 600;
   margin-bottom: 8px;
