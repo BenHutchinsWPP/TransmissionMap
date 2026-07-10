@@ -19,10 +19,12 @@
 //
 // addNexradRadar() is a live external raster tile source ("nexrad-radar") —
 // IEM NEXRAD composite reflectivity; no data pipeline. Frame consistency comes
-// from polling IEM's tms.json for the current timestamped layer name.
+// from polling IEM's tms.json for the current timestamped layer name. Canada
+// coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
+// -snow) added underneath and toggled by the same registry row.
 
 import type { LayerSpecification, ExpressionSpecification, RasterTileSource } from "maplibre-gl";
-import { state, DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL } from '../state.js';
+import { state, DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL, GEOMET_RADAR_TILE_TEMPLATE } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
 export function addWildfireLive() {
@@ -282,6 +284,16 @@ export function addSeismicHazard() {
 let radarTimer: ReturnType<typeof setInterval> | undefined;
 let radarFrame = "";   // last applied timestamped layer name
 
+// Canada: ECCC GeoMet WMS, one source per product (GeoMet rejects multi-layer
+// GetMap). Both toggle with the nexrad-radar row via the registry mapLayerIds.
+const GEOMET_RADAR = [
+  ["geomet-radar-rain", "RADAR_1KM_RRAI"],
+  ["geomet-radar-snow", "RADAR_1KM_RSNO"],
+] as const;
+
+const geometTiles = (wmsLayer: string, bust: string) =>
+  [GEOMET_RADAR_TILE_TEMPLATE.replace("{layer}", wmsLayer).replace("{bust}", bust)];
+
 async function refreshRadarFrame() {
   const map = state.map;
   if (!map?.getLayer("nexrad-radar")) return;
@@ -295,6 +307,12 @@ async function refreshRadarFrame() {
     radarFrame = layername;
     (map.getSource("nexrad-radar") as RasterTileSource)
       .setTiles([RADAR_TILE_TEMPLATE.replace("{layer}", layername)]);
+    // GeoMet has no frame index we poll; TIME-less GetMap always serves the
+    // latest frame, so cache-busting on the IEM frame change (~5 min) is enough.
+    for (const [srcId, wmsLayer] of GEOMET_RADAR) {
+      const src = map.getSource(srcId) as RasterTileSource | undefined;
+      src?.setTiles(geometTiles(wmsLayer, layername));
+    }
   } catch {
     // transient network failure — keep showing the current frame
   }
@@ -302,6 +320,24 @@ async function refreshRadarFrame() {
 
 export function addNexradRadar() {
   if (!state.map || state.map.getSource("nexrad-radar")) return;
+
+  // GeoMet (Canada) first so the IEM layer draws on top where coverage overlaps.
+  for (const [srcId, wmsLayer] of GEOMET_RADAR) {
+    state.map.addSource(srcId, {
+      type: "raster",
+      tiles: geometTiles(wmsLayer, "0"),
+      tileSize: 256,
+      attribution: '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>',
+    });
+    state.map.addLayer({
+      id: srcId,
+      type: "raster",
+      source: srcId,
+      layout: { visibility: initialVisibility("nexrad-radar") },
+      paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
+    } as LayerSpecification);
+  }
+
   state.map.addSource("nexrad-radar", {
     type: "raster",
     tiles: [RADAR_TILE_URL],   // "-0" alias until the first tms.json answer

@@ -154,6 +154,13 @@ export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/r
 export const RADAR_TILE_TEMPLATE = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/{layer}/{z}/{x}/{y}.png";
 export const RADAR_TILE_URL      = RADAR_TILE_TEMPLATE.replace("{layer}", "ridge::USCOMP-N0Q-0");
 export const RADAR_TMS_JSON_URL  = "https://mesonet.agron.iastate.edu/json/tms.json";
+// ECCC GeoMet WMS radar (Canada) — drawn under the IEM layer in the same
+// nexrad-radar row. GeoMet rejects multi-layer GetMap, so rain (RADAR_1KM_RRAI)
+// and snow (RADAR_1KM_RSNO) are separate sources. Omitting TIME returns the
+// latest frame; {bust} is an ignored extra param swapped on each IEM frame
+// change so MapLibre refetches the Canadian tiles on the same cadence.
+export const GEOMET_RADAR_TILE_TEMPLATE =
+  "https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS={layer}&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=true&_={bust}";
 
 const GLYPHS_URL      = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 

@@ -90,7 +90,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     rasterLayer: true,
     defaultOn:   false,
-    mapLayerIds: ["nexrad-radar"],
+    mapLayerIds: ["geomet-radar-rain", "geomet-radar-snow", "nexrad-radar"],
     downloads: { url: "https://mesonet.agron.iastate.edu/GIS/ridge.phtml" },
   },
   */
