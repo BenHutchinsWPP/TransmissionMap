@@ -23,7 +23,7 @@ provider, different pipeline.
 | **Attribution** | "ORNL ODIN" |
 | **Served (prod)** | `odin_outages.json` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok). URL in `assets/constants.ts` → `DATA.odin_outages`. |
 | **Served (dev)** | Local `data/layers/odin_outages.json` — **not in git** (`data/layers/` is gitignored). Produced by the fetch script below. |
-| **Built by** | `scripts/fetch_odin_outages.py` — one server-side-aggregated Opendatasoft call (`group_by=communitydescriptor`, `sum(metersaffected)`, `count(*)`); no per-outage geometry is ever fetched. ~3.6 KB output. |
+| **Built by** | `scripts/fetch_odin_outages.py` — one server-side-aggregated Opendatasoft call (`group_by=communitydescriptor,name`, `sum(metersaffected)`, `count(*)`); no per-outage geometry is ever fetched. ~440 rows worst case; output is still a few KB. |
 | **Boundaries** | Joined onto `data/layers/county_boundaries.pmtiles` (Census TIGER counties; source layer `county_boundaries`, attributes `GEOID`, `NAME`, `STUSPS`, `STATE_NAME`). Shared join infrastructure, not part of this layer's data. |
 
 ### Snapshot shape
@@ -31,12 +31,19 @@ provider, different pipeline.
 ```json
 {"generated_utc":"2026-07-09T00:20:23Z","source_modified":null,
  "county_count":242,"total_customers_out":17707,
- "counties":{"48201":[3208,167],"41033":[2367,8]}}
+ "counties":{"48201":[3208,167,[["CENTERPOINT ENERGY",3100,160],["FOO, BAR COOP",108,7]]],"41033":[2367,8]}}
 ```
 
-`counties[fips] = [customers_out, incident_count]`. `customers_out` is ODIN's
+`counties[fips] = [customers_out, incident_count, utils]`. `customers_out` is ODIN's
 `metersaffected` (customers-affected, summed per county); `incident_count` is the
-number of outage records.
+number of outage records. `utils` (optional, slot `[2]`) is an array of per-utility
+breakdowns: `[[utilityDisplayName, customers_out, incident_count, since], ...]`, sorted
+by customers-out descending. `since` is the earliest `reportedstarttime` in the group
+(ISO string, or `null` — ~31% of upstream records lack it). `utilityDisplayName` is
+ODIN's `name` field with the
+trailing `,<utility_id>` suffix stripped (the id is the EIA utility ID); missing
+names default to `"Unknown utility"`; duplicate display names within a county are
+merged. Older snapshots may lack slot `[2]`; the frontend tolerates that.
 
 ## Download pack
 
@@ -56,9 +63,21 @@ writes into the same per-feature state bag:
 |---|---|---|---|---|
 | `odin_out` | `[0]` | `metersaffected` summed | `3208` | Customers affected. Drives the choropleth buckets. |
 | `odin_n` | `[1]` | `count(*)` | `167` | Number of outage incidents in the county. |
+| `odin_utils` | `[2]` | per-utility group rows | `[["CENTERPOINT ENERGY",3100,160,"2026-07-08T18:55:00+00:00"],["FOO, BAR COOP",108,7,null]]` | Per-utility breakdown array (one entry per unique utility in the county), sorted by customers-out descending; 4th slot = earliest `reportedstarttime` or null. Null when absent. |
 
 County identity/labels come from the `county_boundaries` tile properties
 (`NAME`, `STATE_NAME`, `GEOID`), merged with the feature-state in the click popup.
+
+### Popup behavior
+
+On click, the popup shows the county name and active-incident count, then a per-utility table
+(`odin_utils`) with columns Utility / Out / Since. The county total is the table's
+bold final row; the Since cell is the utility's earliest reported start time ("–"
+when unreported). Each utility name is a clickable link to a Google search for
+`<utility name> power outage map`, opening in a new tab. (ODIN publishes no
+outage-map URLs; a search link is the zero-maintenance way to route users to the
+utility's own, de facto original, outage map.) Snapshots without `odin_utils` fall
+back to a plain "Customers affected" row.
 
 ### Choropleth ramp (customers out)
 
@@ -92,7 +111,11 @@ mirrored by the legend in `index.html` (`#odinLegend`):
 - **`metersaffected` is customers-affected**, summed per county — utilities report
   it inconsistently, so absolute counts are approximate.
 - **Many upstream fields are sparse** (`cause`, `statuskind`, etc.), so the layer
-  intentionally surfaces only the two robust aggregates (`out`, `n`).
+  intentionally surfaces only the robust aggregates (`out`, `n`) plus the
+  100%-filled utility `name`.
+- **Per-utility search links are not verified URLs.** The utility-name link is a web
+  search, not a guaranteed URL — the top result is almost always the utility's own
+  outage map, but it is not guaranteed.
 - **Not for emergency use.** Live, unauthenticated, best-effort data — do not rely
   on it for operational or safety decisions.
 - **FIPS are strings with leading zeros** (e.g. `"08123"`). The join keys on the

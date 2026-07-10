@@ -183,15 +183,18 @@ function onMapClick(e: MapMouseEvent | MapTouchEvent) {
   renderFeature(e.lngLat, features[0]);
 }
 
-// Common title-ish fields across our layers; first non-empty wins.
-const LABEL_FIELDS = ["name", "Name", "label", "title", "plant_name", "operator",
-  "pipeline", "comname", "unitname", "OWNER", "RROWNER"];
+// Common title-ish fields across our layers; first non-empty wins. "NAME" is
+// the Census TIGER county-name field (county_boundaries source, e.g. ODIN
+// outages) — without it, picker rows for that source all fall through to the
+// generic layer-id label and look like duplicate entries.
+const LABEL_FIELDS = ["name", "Name", "NAME", "label", "title", "plant_name",
+  "operator", "pipeline", "comname", "unitname", "OWNER", "RROWNER"];
 
 function featureLabel(f: MapGeoJSONFeature) {
   const p = f.properties || {};
   for (const k of LABEL_FIELDS) {
     if (p[k]) {
-      const label = String(p[k]);
+      const label = k === "NAME" && p.STATE_NAME ? `${p[k]}, ${p.STATE_NAME}` : String(p[k]);
       const mw = p.nameplate_mw ?? p.output_mw;
       return mw ? `${label} (${mw} MW)` : label;
     }
