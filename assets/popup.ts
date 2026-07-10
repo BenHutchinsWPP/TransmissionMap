@@ -8,6 +8,7 @@ import { highlightUserFeature, clearUserHighlight, copyFeatureToMyData } from '.
 import { clearFeatureInfo } from './user-data/user-data-geom.js';
 import { buildPopupHtml } from './popup-format.js';
 import { clearWeccHighlight } from './layers/map-layers-wecc.js';
+import { zoneFeatureLit } from './nws-zone-join.js';
 import { ICON_SVG } from './icons.js';
 import { escapeHtml } from './utils/utils.js';
 
@@ -95,6 +96,21 @@ function activeClickableLayers() {
   return [...userLayerIds, ...CLICKABLE_LAYERS].filter(id => state.map!.getLayer(id));
 }
 
+// Feature-state-joined choropleths (ODIN outages, NWS zone/county) draw EVERY
+// county/zone from the shared boundary tiles and paint unlit ones transparent
+// (setFilter can't read feature-state), but queryRenderedFeatures still
+// hit-tests transparent fills — so invisible polygons were selectable. Each
+// predicate mirrors its layer's opacity paint expression; a feature is a valid
+// hit only when it's actually painted.
+const HIT_LIT: Record<string, (f: MapGeoJSONFeature) => boolean> = {
+  "odin-outages-fill": f => f.state?.odin_out != null,
+  "nws-zone-fill":     f => zoneFeatureLit(f.state),
+  "nws-county-fill":   f => zoneFeatureLit(f.state),
+};
+function hitLit(f: MapGeoJSONFeature): boolean {
+  return HIT_LIT[f.layer.id]?.(f) ?? true;
+}
+
 function tryHighlightLine(feature: MapGeoJSONFeature) {
   return !feature.layer.id.startsWith("user-") &&
          highlightLine(feature.layer.id, feature.properties || {});
@@ -131,7 +147,7 @@ function onMapClick(e: MapMouseEvent | MapTouchEvent) {
 
   // Edit mode: click any feature (including user loaded layers) to get a Copy button.
   if (state.editMode === 'edit') {
-    const cands = state.map.queryRenderedFeatures(box, { layers: activeLayers });
+    const cands = state.map.queryRenderedFeatures(box, { layers: activeLayers }).filter(hitLit);
     // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
     // borders, so copies would be truncated — only allow GeoJSON-backed features.
     const copyable = cands.filter(ft => !ft.sourceLayer);
@@ -147,7 +163,7 @@ function onMapClick(e: MapMouseEvent | MapTouchEvent) {
     return;
   }
 
-  const features = state.map.queryRenderedFeatures(box, { layers: activeLayers });
+  const features = state.map.queryRenderedFeatures(box, { layers: activeLayers }).filter(hitLit);
   if (!features.length) {
     state.popup.remove(); clearUserHighlight(); clearLineHighlight(); clearWeccHighlight(); return;
   }
@@ -306,9 +322,23 @@ export function initPopups() {
   });
 
   for (const layerId of CLICKABLE_LAYERS) {
-    state.map.on("mouseenter", layerId, () => {
-      if (!state.measure.active) state.map!.getCanvas().style.cursor = "pointer";
-    });
+    // Feature-state-joined layers hit-test their transparent (unlit) features
+    // too, and with e.g. ODIN on an unlit county covers the whole map —
+    // mouseenter would show a pointer everywhere. Decide per mousemove instead,
+    // querying all clickable layers so a lit feature under an unlit polygon
+    // still gets the pointer.
+    if (HIT_LIT[layerId]) {
+      state.map.on("mousemove", layerId, e => {
+        if (state.measure.active) return;
+        const lit = e.features?.some(hitLit) ||
+          state.map!.queryRenderedFeatures(e.point, { layers: activeClickableLayers() }).some(hitLit);
+        state.map!.getCanvas().style.cursor = lit ? "pointer" : "";
+      });
+    } else {
+      state.map.on("mouseenter", layerId, () => {
+        if (!state.measure.active) state.map!.getCanvas().style.cursor = "pointer";
+      });
+    }
     state.map.on("mouseleave", layerId, () => {
       if (!state.measure.active) state.map!.getCanvas().style.cursor = "";
     });

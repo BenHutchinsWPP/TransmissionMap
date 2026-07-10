@@ -280,6 +280,16 @@ export function setZoneGroupFilter(active: string[] | null): void {
   applyZoneGroupFilterPaint();
 }
 
+// True when a zone/county feature is actually painted (non-zero opacity):
+// it has a joined alert AND that alert's group passes the active legend
+// filter. Mirrors fillOpacityExpr() — keep them in sync. Used by popup.ts to
+// drop hit-test matches on transparent features.
+export function zoneFeatureLit(featureState: Record<string, unknown> | undefined): boolean {
+  const g = featureState?.nws_group;
+  if (g == null) return false;
+  return activeGroupFilter === null || activeGroupFilter.includes(String(g));
+}
+
 // ── Feature-state clear (namespaced — NEVER a bare removeFeatureState) ─────
 function clearKey(key: string) {
   if (!state.map) return;
