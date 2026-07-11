@@ -468,4 +468,8 @@ on('filter:all',           () => {
   applyOGFFilters();
   applyMinesFilter();
   applyNwsGroupFilter();
+  // Per-layer legend-chip filters (state.layerFilters), driven off whichever
+  // registry entries declare filterBuckets — derived at runtime so a future
+  // registry addition is covered automatically instead of needing a new line here.
+  for (const entry of LAYERS) if (entry.filterBuckets) applyLayerFilter(entry.id);
 });

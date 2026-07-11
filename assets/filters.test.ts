@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   buildMwFilterExpr, buildKvFilterExpr, buildValueFilterExpr, MW_SLIDER_MAX,
 } from './filters.js';
@@ -66,4 +68,31 @@ describe('buildKvFilterExpr', () => {
   it('returns null when every bucket is active', () => {
     expect(buildKvFilterExpr('kv', new Set(['a', 'b', 'c']), buckets)).toBeNull();
   });
+});
+
+// ─── Drift guard: 'filter:all' must reapply every apply*Filter/Filters export ──
+// map-load and the Reset button both go through 'filter:all' (see map.ts and
+// ui.ts). If a new applyXFilter() is added here without adding it to the
+// 'filter:all' handler, Reset (and the initial load) silently stop covering
+// it — exactly the bug this test guards against. Source-text comparison is
+// deliberately simple/permanent: it survives refactors of the functions'
+// internals as long as the handler still calls each export by name.
+describe('filter:all drift guard', () => {
+  const src = readFileSync(fileURLToPath(new URL('./filters.ts', import.meta.url)), 'utf8');
+
+  const exportedApplyFns = [...src.matchAll(/^export function (apply\w+)/gm)].map(m => m[1]);
+
+  const handlerMatch = src.match(/on\('filter:all',\s*\(\) => \{([\s\S]*?)\n\}\);/);
+  if (!handlerMatch) throw new Error("could not locate the 'filter:all' handler body in filters.ts");
+  const handlerBody = handlerMatch[1];
+
+  it('found at least one exported apply*Filter/Filters function to check', () => {
+    expect(exportedApplyFns.length).toBeGreaterThan(0);
+  });
+
+  for (const fn of exportedApplyFns) {
+    it(`'filter:all' handler invokes ${fn}`, () => {
+      expect(handlerBody).toContain(fn);
+    });
+  }
 });

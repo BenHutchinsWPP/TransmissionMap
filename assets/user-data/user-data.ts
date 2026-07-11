@@ -425,6 +425,7 @@ export function copyFeatureToMyData(f: MapGeoJSONFeature) {
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const _STORAGE_KEY = 'tm-user-data';
+let _storageQuotaAlertShown = false;
 
 // Cache of the last-known drawn FeatureCollection, kept in sync whenever
 // state.draw is available. Lets saveUserData() preserve drawn shapes even
@@ -447,6 +448,10 @@ export function saveUserData() {
     localStorage.setItem(_STORAGE_KEY, JSON.stringify(payload));
   } catch (e: unknown) {
     console.warn('[TransmissionMap] saveUserData failed:', (e as Error).message);
+    if (!_storageQuotaAlertShown) {
+      _storageQuotaAlertShown = true;
+      alert('Storage full: could not save your data. Please delete some layers or drawings.');
+    }
   }
 }
 

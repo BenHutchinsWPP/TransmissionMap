@@ -408,7 +408,7 @@ def main():
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc)
-    generated_utc = now.strftime("%Y-%m-%dT%H:%MZ")
+    generated_utc = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def fetch_viirs_texts() -> list[str]:
         if args.viirs_csvs:
@@ -454,6 +454,12 @@ def main():
         try:
             perimeters = [normalize_perimeter(f) for f in f_us_perims.result() if f.get("geometry")]
             print(f"  {len(perimeters)} perimeters", file=sys.stderr)
+            if not perimeters:
+                # NIFC never legitimately has zero US wildfire perimeters — an
+                # empty result here means the ArcGIS feed hiccuped, not that
+                # fires stopped existing. Flag it instead of reporting "ok".
+                feed_status["perimeters_us"] = "degraded"
+                print("  WARNING: perimeters_us returned 0 features", file=sys.stderr)
         except Exception as e:
             perimeters = []
             feed_status["perimeters_us"] = "failed"
@@ -464,6 +470,9 @@ def main():
                              for f in f_ca_perims.result() if f.get("geometry")]
             perimeters += ca_perimeters
             print(f"  {len(ca_perimeters)} CA perimeter estimates", file=sys.stderr)
+            if not ca_perimeters:
+                feed_status["perimeters_ca"] = "degraded"
+                print("  WARNING: perimeters_ca returned 0 features", file=sys.stderr)
         except Exception as e:
             feed_status["perimeters_ca"] = "failed"
             print(f"  WARNING: CWFIS perimeters unavailable: {e}", file=sys.stderr)
@@ -471,6 +480,9 @@ def main():
         try:
             incidents = [normalize_incident(f) for f in f_incidents.result() if f.get("geometry")]
             print(f"  {len(incidents)} incidents", file=sys.stderr)
+            if not incidents:
+                feed_status["incidents"] = "degraded"
+                print("  WARNING: incidents returned 0 features", file=sys.stderr)
         except Exception as e:
             incidents = []
             feed_status["incidents"] = "failed"
@@ -488,6 +500,11 @@ def main():
         all_features[0]["properties"]["feed_status"] = feed_status
 
     fc = {"type": "FeatureCollection", "features": all_features}
+    # Top-level mirrors of generated_utc/feed_status — always present, even
+    # when all_features is empty, so the frontend staleness kill-switch
+    # (which reads root metadata) fires instead of silently going stale.
+    fc["generated_utc"] = generated_utc
+    fc["feed_status"] = feed_status
     with open(args.output, "w") as f:
         json.dump(fc, f, separators=(",", ":"))
     print(
