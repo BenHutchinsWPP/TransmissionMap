@@ -84,6 +84,12 @@ jobs:
           # Shared helper the fetch scripts import (write_json_atomic). The
           # script runs from /tmp, so its sibling module must be there too.
           git show "origin/main:scripts/geo_common.py" > /tmp/geo_common.py
+          # Zone-key list fetch_nws_alerts.py validates against (R7 vintage
+          # drift check); harmless extra copy for the other feeds. Fail-open:
+          # if it's ever missing on main, remove the empty redirect target so
+          # the script skips validation instead of flagging every zone.
+          git show "origin/main:scripts/nws_zone_keys.txt" > /tmp/nws_zone_keys.txt \
+            || rm -f /tmp/nws_zone_keys.txt
           for i in 1 2 3; do
             python3 /tmp/fetch_feed.py -o "${{ inputs.output }}" && exit 0
             echo "Attempt $i failed; retrying in 30s…"; sleep 30

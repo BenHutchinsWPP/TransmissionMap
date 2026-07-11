@@ -136,6 +136,29 @@ KEPT_PROPS = [
     "onset", "ends", "expires", "areaDesc", "senderName", "id",
 ]
 
+# Marine area codes (R6): marine UGCs are served under /zones/forecast/ too,
+# but our nws_zones tileset is land-only (PublicZones) — they'd become keys
+# that join nothing. Skip + count them instead.
+MARINE_UGC_PREFIXES = {
+    "AM", "AN", "GM", "PZ", "PK", "PH", "PM", "PS",
+    "LE", "LH", "LM", "LO", "LC", "LS", "SL",
+}
+
+# State/territory abbrev → FIPS (R5): lets county UGCs (SSC###) derive a
+# county FIPS when geocode.SAME is absent (SAME is not a required CAP field).
+STATE_FIPS = {
+    "AL": "01", "AK": "02", "AZ": "04", "AR": "05", "CA": "06", "CO": "08",
+    "CT": "09", "DE": "10", "DC": "11", "FL": "12", "GA": "13", "HI": "15",
+    "ID": "16", "IL": "17", "IN": "18", "IA": "19", "KS": "20", "KY": "21",
+    "LA": "22", "ME": "23", "MD": "24", "MA": "25", "MI": "26", "MN": "27",
+    "MS": "28", "MO": "29", "MT": "30", "NE": "31", "NV": "32", "NH": "33",
+    "NJ": "34", "NM": "35", "NY": "36", "NC": "37", "ND": "38", "OH": "39",
+    "OK": "40", "OR": "41", "PA": "42", "RI": "44", "SC": "45", "SD": "46",
+    "TN": "47", "TX": "48", "UT": "49", "VT": "50", "VA": "51", "WA": "53",
+    "WV": "54", "WI": "55", "WY": "56",
+    "AS": "60", "GU": "66", "MP": "69", "PR": "72", "VI": "78",
+}
+
 
 def _fetch_json(url: str) -> dict:
     req = urllib.request.Request(
@@ -205,28 +228,61 @@ def _round_coords(coords):
 
 def _parse_zone_url(url: str) -> tuple[str, str] | None:
     """`/zones/forecast/<UGC>` -> ("forecast", UGC); `/zones/fire/<UGC>` ->
-    ("fire", UGC); `/zones/county/...` (or anything else) -> None (omit —
-    county alerts are handled via `fips`)."""
+    ("fire", UGC); `/zones/county/<UGC>` -> ("county", UGC) — used only as a
+    FIPS fallback when geocode.SAME is absent (R5). Marine UGCs (which share
+    the /zones/forecast/ path) -> ("marine", UGC) so callers can count skips
+    (R6). Anything else -> None."""
     path = urllib.parse.urlparse(url).path
     parts = [p for p in path.split("/") if p]
-    if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire"):
-        return (parts[1], parts[2])
+    if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire", "county"):
+        ztype, ugc = parts[1], parts[2]
+        if ztype != "county" and ugc[:2] in MARINE_UGC_PREFIXES:
+            return ("marine", ugc)
+        return (ztype, ugc)
     return None
 
 
-def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict, int, int, int]:
+def _load_zone_keys() -> set[str] | None:
+    """Load the committed nws_zone_keys.txt sitting next to this script
+    (data-feed.yml copies both to /tmp) for zone-vintage drift detection
+    (R7). Fail-open: missing file -> None -> validation skipped."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nws_zone_keys.txt")
+    try:
+        with open(path) as f:
+            return {line.strip() for line in f if line.strip()}
+    except OSError:
+        print(f"  WARNING: {path} not found — zone-key validation skipped", file=sys.stderr)
+        return None
+
+
+def _county_ugc_to_fips(ugc: str) -> str | None:
+    """County UGC `SSC###` -> 5-digit county FIPS (stateFIPS + ###), else None."""
+    if len(ugc) == 6 and ugc[2] == "C" and ugc[3:].isdigit():
+        state = STATE_FIPS.get(ugc[:2])
+        if state:
+            return state + ugc[3:]
+    return None
+
+
+def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict, dict]:
     """Filter to allowlisted events. Non-null geometry -> polygon feature
     (kept). Null geometry -> zone_alerts sidecar entry (zone-joined), unless
     it has neither zones nor fips, in which case it's truly dropped (logged
     loudly). Returns (kept_features, zone_alerts, kept_counts_by_group,
-    zone_joined_counts_by_group, still_dropped, same_statewide_skipped, malformed_same)."""
+    zone_joined_counts_by_group, stats)."""
     kept: list[dict] = []
     zone_alerts: list[dict] = []
     kept_counts: dict[str, int] = {}
     zone_joined_counts: dict[str, int] = {}
-    still_dropped = 0
-    same_statewide_skipped = 0
-    malformed_same = 0
+    stats = {
+        "dropped": 0,
+        "same_statewide_skipped": 0,
+        "malformed_same": 0,
+        "marine_zones_skipped": 0,
+        "county_ugc_fallback": 0,
+        "unknown_zone_keys": 0,
+    }
+    zone_keys = _load_zone_keys()
 
     for f in features:
         props = f.get("properties") or {}
@@ -248,10 +304,29 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
 
         # Null geometry: try to zone/county-join.
         zones: list[list[str]] = []
+        county_ugcs: list[str] = []
         for zurl in props.get("affectedZones") or []:
             parsed = _parse_zone_url(zurl)
-            if parsed:
-                zones.append([parsed[0], parsed[1]])
+            if not parsed:
+                continue
+            ztype, ugc = parsed
+            if ztype == "marine":
+                stats["marine_zones_skipped"] += 1
+            elif ztype == "county":
+                county_ugcs.append(ugc)
+            else:
+                # R7 drift check: key format mirrors assets/nws-zone-join.ts
+                # tileKey() — an alert naming a UGC absent from the tileset
+                # vintage would silently no-paint.
+                tile_key = ("z" if ztype == "forecast" else "f") + ugc
+                if zone_keys is not None and tile_key not in zone_keys:
+                    stats["unknown_zone_keys"] += 1
+                    print(
+                        f"  WARNING: zone key {tile_key} not in tileset "
+                        f"(vintage drift?) event={event!r} id={props.get('id')!r}",
+                        file=sys.stderr,
+                    )
+                zones.append([ztype, ugc])
         same = ((props.get("geocode") or {}).get("SAME")) or []
         fips: list[str] = []
         for s in same:
@@ -261,7 +336,7 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
                 # always state+county FIPS. County part "000" = statewide —
                 # no county to join, so skip (counted for stats).
                 if s[-3:] == "000":
-                    same_statewide_skipped += 1
+                    stats["same_statewide_skipped"] += 1
                     continue
                 fips.append(s[1:])
             else:
@@ -270,11 +345,21 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
                     f"event={event!r} id={props.get('id')!r}",
                     file=sys.stderr,
                 )
-                malformed_same += 1
+                stats["malformed_same"] += 1
                 continue
 
+        # R5: SAME is not a required CAP field — when absent, derive county
+        # FIPS from the county UGCs instead of dropping the alert.
+        if not fips and county_ugcs:
+            for ugc in county_ugcs:
+                code = _county_ugc_to_fips(ugc)
+                if code and code not in fips:
+                    fips.append(code)
+            if fips:
+                stats["county_ugc_fallback"] += 1
+
         if not zones and not fips:
-            still_dropped += 1
+            stats["dropped"] += 1
             print(
                 f"  WARNING: dropped (no zones/fips) group={group} "
                 f"event={event!r} id={props.get('id')!r}",
@@ -289,19 +374,27 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
         zone_alerts.append(entry)
         zone_joined_counts[group] = zone_joined_counts.get(group, 0) + 1
 
-    if still_dropped:
-        print(f"  WARNING: {still_dropped} curated alert(s) truly dropped (no zones/fips)", file=sys.stderr)
-    if same_statewide_skipped:
-        print(f"  {same_statewide_skipped} statewide SAME code(s) skipped (no county to join)", file=sys.stderr)
-    if malformed_same:
-        print(f"  {malformed_same} malformed SAME code(s) skipped", file=sys.stderr)
+    if stats["dropped"]:
+        print(f"  WARNING: {stats['dropped']} curated alert(s) truly dropped (no zones/fips)", file=sys.stderr)
+    for key, label in (
+        ("same_statewide_skipped", "statewide SAME code(s) skipped (no county to join)"),
+        ("malformed_same", "malformed SAME code(s) skipped"),
+        ("marine_zones_skipped", "marine UGC(s) skipped (land-only zone tileset)"),
+        ("county_ugc_fallback", "alert(s) used county-UGC FIPS fallback (no SAME)"),
+        ("unknown_zone_keys", "zone key(s) not in tileset — rebuild nws_zones? (make nws-zones)"),
+    ):
+        if stats[key]:
+            print(f"  {stats[key]} {label}", file=sys.stderr)
 
-    return kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped, malformed_same
+    return kept, zone_alerts, kept_counts, zone_joined_counts, stats
 
 
 def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | None]:
     """Map one ECCC weather-alerts item to a curated Feature. Returns
-    (feature_or_None, excluded_name_lower_or_None)."""
+    (feature_or_None, exclusion_reason_or_None) — reason is the lowercase
+    alert name for deliberate/unmatched exclusions, or "(geometry null)" for
+    an allowlisted alert missing geometry (R8: counted separately from
+    parity exclusions)."""
     from shapely.geometry import mapping, shape
 
     props = f.get("properties") or {}
@@ -316,7 +409,7 @@ def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | Non
 
     geom_in = f.get("geometry")
     if not geom_in:
-        return None, name_lower
+        return None, "(geometry null)"
 
     shp = shape(geom_in).simplify(0.01, preserve_topology=True)
     geom_out = mapping(shp)
@@ -350,13 +443,13 @@ def curate_eccc(features: list[dict], generated_utc: str) -> tuple[list[dict], d
     kept_counts: dict[str, int] = {}
     excluded_counts: dict[str, int] = {}
     for f in features:
-        feat, excluded_name = eccc_to_feature(f, generated_utc)
+        feat, reason = eccc_to_feature(f, generated_utc)
         if feat is not None:
             kept.append(feat)
             g = feat["properties"]["_group"]
             kept_counts[g] = kept_counts.get(g, 0) + 1
-        elif excluded_name:
-            excluded_counts[excluded_name] = excluded_counts.get(excluded_name, 0) + 1
+        elif reason:
+            excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
     return kept, kept_counts, excluded_counts
 
 
@@ -388,7 +481,7 @@ def main():
             sys.exit(1)
 
     total_fetched = len(nws_features)
-    kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped, malformed_same = curate(
+    kept, zone_alerts, kept_counts, zone_joined_counts, curate_stats = curate(
         nws_features, generated_utc
     )
 
@@ -427,7 +520,7 @@ def main():
             print(f"  eccc/{group}: kept {eccc_kept_counts[group]}", file=sys.stderr)
         if eccc_excluded_counts:
             top = sorted(eccc_excluded_counts.items(), key=lambda kv: -kv[1])
-            print(f"  eccc excluded (unmatched/parity): {top}", file=sys.stderr)
+            print(f"  eccc excluded (unmatched/parity/geometry-null): {top}", file=sys.stderr)
     except Exception as e:
         feed_status["eccc"] = "failed"
         print(f"WARNING: ECCC fetch/parse failed, degrading to US-only: {e}", file=sys.stderr)
@@ -449,9 +542,7 @@ def main():
         "kept": len(kept),
         "zone_joined": len(zone_alerts),
         "eccc_kept": len(eccc_kept),
-        "dropped": still_dropped,
-        "same_statewide_skipped": same_statewide_skipped,
-        "malformed_same": malformed_same,
+        **curate_stats,
     }
 
     out_dir = os.path.dirname(args.output)
@@ -459,8 +550,14 @@ def main():
         os.makedirs(out_dir, exist_ok=True)
     write_json_atomic(fc, args.output, separators=(",", ":"))
 
-    if still_dropped > 0 and os.environ.get("GITHUB_ACTIONS"):
-        print(f"::warning::fetch_nws_alerts: {still_dropped} curated alert(s) dropped (no zones/fips)")
+    if os.environ.get("GITHUB_ACTIONS"):
+        if curate_stats["dropped"] > 0:
+            print(f"::warning::fetch_nws_alerts: {curate_stats['dropped']} curated alert(s) dropped (no zones/fips)")
+        if curate_stats["unknown_zone_keys"] > 0:
+            print(
+                f"::warning::fetch_nws_alerts: {curate_stats['unknown_zone_keys']} zone key(s) "
+                f"not in nws_zones tileset — vintage drift, rebuild via `make nws-zones`"
+            )
 
     total_kept = len(kept)
     total_zone_joined = len(zone_alerts)
