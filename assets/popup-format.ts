@@ -22,6 +22,7 @@ export function websiteRow(url: string) {
   // Browsers strip ASCII control chars/whitespace when parsing a URL scheme,
   // so "java\tscript:alert(1)" navigates as javascript: — strip the same
   // range before checking or the guard is bypassable.
+  // eslint-disable-next-line no-control-regex -- control chars are the point: strip what browsers strip
   if (url.replace(/[\u0000-\u0020]/g, '').toLowerCase().startsWith('javascript:')) return "";
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">Website</a></div>`;
 }
