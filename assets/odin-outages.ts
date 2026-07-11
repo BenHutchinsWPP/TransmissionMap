@@ -165,13 +165,18 @@ const rawCache = new Map<string, { t: number; total: number; recs: Record<string
 // values carry no information and are hidden (the row is omitted instead).
 const JUNK_CAUSE = /^(null|not available)$/i;
 
-// "Jul 10, 2:51 PM" — compact local time for card rows.
+// "Jul 10, 2:51 PM (4h ago)" — compact local time + relative age for card
+// rows. Future times (ERTs) read "(in 7h)"; a blown ERT just reads "(2h ago)".
 function fmtCardTime(iso: unknown): string | null {
   if (typeof iso !== "string") return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString(undefined,
+  const abs = d.toLocaleString(undefined,
     { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const min = Math.round((Date.now() - d.getTime()) / 60_000);
+  const n = Math.abs(min);
+  const span = n < 60 ? `${n}m` : n < 1440 ? `${Math.round(n / 60)}h` : `${Math.round(n / 1440)}d`;
+  return `${abs} (${min < 0 ? `in ${span}` : `${span} ago`})`;
 }
 
 // estimatedrestorationtime is always the embedded-JSON string {"ert": "<ISO>"}.
