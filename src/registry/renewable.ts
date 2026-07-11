@@ -74,11 +74,11 @@ export const renewableLayers: LayerDef[] = [
     swatch:      "#0ea5e9",
     defaultOn:   false,
     hoverField:  "lease",
-    mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-line"],
+    mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-outline"],
     downloads: {
       url: "https://www.boem.gov/renewable-energy/mapping-and-data",
-      geojson: "data/releases/boem-wind-leases.geojson.zip",
-      shp: "data/releases/boem-wind-leases.shp.zip",
+      geojson: "data/releases/boem-wind-leases.zip",
+      shp: "data/releases/boem-wind-leases-shp.zip",
     },
   },
 ];
