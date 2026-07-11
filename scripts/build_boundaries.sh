@@ -54,7 +54,7 @@ echo "--- 1/3 download (Census TIGER cartographic boundary, cb_2024_us_county_50
 if [ -f "$ZIP" ]; then
   echo "  [skip] $ZIP already present"
 else
-  curl -fsSL -o "$ZIP" "$ZIP_URL"
+  curl -fsSL -o "$ZIP.part" "$ZIP_URL" && mv "$ZIP.part" "$ZIP"
   echo "  [ok] $ZIP  $(du -sh "$ZIP" | cut -f1)"
 fi
 

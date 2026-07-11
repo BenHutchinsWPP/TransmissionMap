@@ -126,6 +126,9 @@ export const SOURCE_ATTRIB: Record<string, string> = {
   // OSM_ATTRIB prefix stays byte-identical so MapLibre substring-dedup still
   // collapses it with the basemap credit; IM3 rides behind it.
   "osm-datacenters":          OSM_ATTRIB + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>",
+  "wecc-paths":               '<a href="https://www.wecc.org/">WECC</a>',
+  "bia-tribal-lands":         '<a href="https://biamaps.geoplatform.gov/biatracts/">Bureau of Indian Affairs</a>',
+  "mines":                    '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>',
 };
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────

@@ -27,7 +27,10 @@ import type { LayerSpecification, ExpressionSpecification, RasterTileSource } fr
 import { state, DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL, GEOMET_RADAR_TILE_TEMPLATE } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER } from './layer-init.js';
 
-export function addWildfireLive() {
+// Split into two builders so add-all-layers.ts can slot the polygon half
+// (smoke + perimeters) below infra vectors and the point half (hotspots +
+// incidents) above them — all area fills under all lines/points.
+export function addWildfireLiveAreas() {
   if (!state.map || state.map.getSource("wildfire-live")) return;
 
   state.map.addSource("wildfire-live", {
@@ -37,7 +40,6 @@ export function addWildfireLive() {
 
   const smokeVis     = initialVisibility("wildfire-smoke");
   const wildfireVis  = initialVisibility("wildfire-live");
-  const incidentVis  = initialVisibility("wildfire-incidents");
 
   // ── Smoke layers (bottom — below fire perimeters) ──────────────────────────
   state.map.addLayer({
@@ -116,6 +118,21 @@ export function addWildfireLive() {
     },
   } as LayerSpecification);
 
+}
+
+export function addWildfireLivePoints() {
+  if (!state.map || !state.map.getSource("wildfire-live")
+      || state.map.getLayer("wildfire-hotspots-heat")) return;
+
+  const wildfireVis  = initialVisibility("wildfire-live");
+  const incidentVis  = initialVisibility("wildfire-incidents");
+
+  // The heatmap is a soft area wash at national zoom — slot it below the
+  // point block (anchor = bottom-most point layer) so generator/substation
+  // dots stay visible over it; the discrete circles below go on top as usual.
+  const heatBefore = state.map.getLayer("osm-substations-points-hv")
+    ? "osm-substations-points-hv" : undefined;
+
   // ── Hotspot heatmap — FRP-weighted, shown at low zoom ─────────────────────
   state.map.addLayer({
     id: "wildfire-hotspots-heat",
@@ -153,7 +170,7 @@ export function addWildfireLive() {
       ],
       "heatmap-opacity": 0.85,
     },
-  } as LayerSpecification);
+  } as LayerSpecification, heatBefore);
 
   // ── Hotspot circles — individual dots at high zoom, colored by confidence ──
   state.map.addLayer({

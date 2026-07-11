@@ -4,13 +4,13 @@
 // Colors/icons come from src/colors/minerals.ts; filter logic in
 // assets/filters.ts (applyMinesFilter); popup in assets/popup-format.ts.
 import type { LayerSpecification } from "maplibre-gl";
-import { state, EMPTY_FC } from '../state.js';
+import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { minesIconExpr } from '../../src/colors/minerals.js';
 import { initialVisibility, registerBaseFilter } from './layer-init.js';
 
 export function addMines() {
   if (!state.map || state.map.getSource("mines")) return;
-  state.map.addSource("mines", { type: "geojson", data: EMPTY_FC });
+  state.map.addSource("mines", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["mines"] });
   const vis = initialVisibility("mines");
   const retired = ["==", ["get", "status"], "retired"];
   // Size scales with mine size (peak employment) — same shape as genIconSize()

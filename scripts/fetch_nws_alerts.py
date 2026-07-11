@@ -38,6 +38,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+from geo_common import write_json_atomic
+
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active?status=actual"
 ECCC_ALERTS_URL = "https://api.weather.gc.ca/collections/weather-alerts/items?f=json&limit=1000"
 USER_AGENT = "TransmissionMap (benrhutchins@gmail.com)"
@@ -212,18 +214,19 @@ def _parse_zone_url(url: str) -> tuple[str, str] | None:
     return None
 
 
-def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict, int, int]:
+def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[dict], dict, dict, int, int, int]:
     """Filter to allowlisted events. Non-null geometry -> polygon feature
     (kept). Null geometry -> zone_alerts sidecar entry (zone-joined), unless
     it has neither zones nor fips, in which case it's truly dropped (logged
     loudly). Returns (kept_features, zone_alerts, kept_counts_by_group,
-    zone_joined_counts_by_group, still_dropped, same_statewide_skipped)."""
+    zone_joined_counts_by_group, still_dropped, same_statewide_skipped, malformed_same)."""
     kept: list[dict] = []
     zone_alerts: list[dict] = []
     kept_counts: dict[str, int] = {}
     zone_joined_counts: dict[str, int] = {}
     still_dropped = 0
     same_statewide_skipped = 0
+    malformed_same = 0
 
     for f in features:
         props = f.get("properties") or {}
@@ -267,7 +270,8 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
                     f"event={event!r} id={props.get('id')!r}",
                     file=sys.stderr,
                 )
-                fips.append(s)
+                malformed_same += 1
+                continue
 
         if not zones and not fips:
             still_dropped += 1
@@ -289,8 +293,10 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
         print(f"  WARNING: {still_dropped} curated alert(s) truly dropped (no zones/fips)", file=sys.stderr)
     if same_statewide_skipped:
         print(f"  {same_statewide_skipped} statewide SAME code(s) skipped (no county to join)", file=sys.stderr)
+    if malformed_same:
+        print(f"  {malformed_same} malformed SAME code(s) skipped", file=sys.stderr)
 
-    return kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped
+    return kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped, malformed_same
 
 
 def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | None]:
@@ -382,7 +388,7 @@ def main():
             sys.exit(1)
 
     total_fetched = len(nws_features)
-    kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped = curate(
+    kept, zone_alerts, kept_counts, zone_joined_counts, still_dropped, same_statewide_skipped, malformed_same = curate(
         nws_features, generated_utc
     )
 
@@ -445,15 +451,13 @@ def main():
         "eccc_kept": len(eccc_kept),
         "dropped": still_dropped,
         "same_statewide_skipped": same_statewide_skipped,
+        "malformed_same": malformed_same,
     }
 
     out_dir = os.path.dirname(args.output)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    tmp_path = f"{args.output}.tmp"
-    with open(tmp_path, "w") as f:
-        json.dump(fc, f, separators=(",", ":"))
-    os.replace(tmp_path, args.output)
+    write_json_atomic(fc, args.output, separators=(",", ":"))
 
     if still_dropped > 0 and os.environ.get("GITHUB_ACTIONS"):
         print(f"::warning::fetch_nws_alerts: {still_dropped} curated alert(s) dropped (no zones/fips)")

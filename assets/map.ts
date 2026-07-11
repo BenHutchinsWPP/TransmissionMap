@@ -10,12 +10,10 @@ import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initRasterProbes } from './raster-probes.js';
 import { applyAllGenModes, applyOGFColorBy } from './visibility.js';
-import { applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
-         applyPadusClassFilter, applyTribalClassFilter, applyNercFilter,
-         applyRetailTypeFilter, applySubstanceFilter } from './filters.js';
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
 import { writeUrlState } from './url-state.js';
+import { emit } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 
@@ -69,16 +67,12 @@ export function initMap() {
     await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons()]
       .map(p => p.catch(err => console.warn('[TransmissionMap] icon load failed', err))));
     try { addAllLayers(); } finally {
-      applyVoltageFilter();
-      applyGeneratorFilters();
+      // Applies every registered filter (voltage/generators/pipeline/land/
+      // natgas/OGF/mines/NWS/per-layer legend chips) in one shot — same path
+      // as the Reset button, so initial load and reset can never drift apart.
+      emit('filter:all');
       applyAllGenModes();
       applyOGFColorBy();
-      applyPipelineTypeFilter();
-      applySubstanceFilter();
-      applyPadusClassFilter();
-      applyTribalClassFilter();
-      applyNercFilter();
-      applyRetailTypeFilter();
     }
     initPolygonHover();
     initLineHighlight();
