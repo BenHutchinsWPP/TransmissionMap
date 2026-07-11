@@ -231,26 +231,28 @@ function renderLiveAge() {
   }
 }
 
+// Register live-data listener and refresh interval once at module load.
+// Hoisted outside buildLegends() to prevent stacking multiple listeners/intervals
+// when buildLegends() is called multiple times (init + reset).
+window.addEventListener("tm:layerdata", (e) => {
+  const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
+  if (registryId === "wildfire-live") {
+    const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
+    const fcMeta = state.liveFcMeta["wildfire-live"];
+    liveGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
+    liveFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
+    renderLiveAge();
+  } else if (registryId === "nws-alerts") {
+    const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
+    nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? state.liveFcMeta["nws-alerts"]?.generated_utc;
+    renderNwsAge();
+  }
+});
+setInterval(() => { renderLiveAge(); renderNwsAge(); }, 60_000);
+
 export function buildLegends() {
   for (const cfg of LEGEND_FILTERS) buildLegendSection(cfg);
   updateLegends();
-  // Refresh the age when the shared wildfire-live source loads, then tick it
-  // every minute so the displayed age stays honest while the page is open.
-  window.addEventListener("tm:layerdata", (e) => {
-    const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
-    if (registryId === "wildfire-live") {
-      const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-      const fcMeta = state.liveFcMeta["wildfire-live"];
-      liveGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
-      liveFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
-      renderLiveAge();
-    } else if (registryId === "nws-alerts") {
-      const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-      nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? state.liveFcMeta["nws-alerts"]?.generated_utc;
-      renderNwsAge();
-    }
-  });
-  setInterval(() => { renderLiveAge(); renderNwsAge(); }, 60_000);
 }
 
 const LEGEND_VISIBILITY = [

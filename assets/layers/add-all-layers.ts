@@ -34,8 +34,6 @@ export function addAllLayers() {
   addGeoResource();
   addSeismicHazard();   // raster — sits low so vector infra draws on top
   addWildfireHazard();  // raster — sits low so vector infra draws on top
-  addNwsAlerts();       // live GeoJSON — weather alert polygons; drawn below wildfire so fire draws on top
-  addWildfireLive();    // live GeoJSON — smoke + perimeters + hotspots + incidents (one source)
   addOdinOutages();     // live county-outage choropleth — polygon fill, sits low so infra draws on top
 
   addRetailTerritories();
@@ -48,6 +46,8 @@ export function addAllLayers() {
   addCritHab();
   addMines();
 
+  addNwsAlerts();       // live GeoJSON — weather alert polygons; drawn below wildfire so fire draws on top
+  addWildfireLive();    // live GeoJSON — smoke + perimeters + hotspots + incidents (one source)
   addNexradRadar();     // live raster — external IEM tiles; above all area polygons, below infra vectors
 
   addOsmSubstationPolygons();

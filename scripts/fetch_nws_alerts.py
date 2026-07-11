@@ -38,6 +38,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+from geo_common import write_json_atomic
+
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active?status=actual"
 ECCC_ALERTS_URL = "https://api.weather.gc.ca/collections/weather-alerts/items?f=json&limit=1000"
 USER_AGENT = "TransmissionMap (benrhutchins@gmail.com)"
@@ -455,10 +457,7 @@ def main():
     out_dir = os.path.dirname(args.output)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    tmp_path = f"{args.output}.tmp"
-    with open(tmp_path, "w") as f:
-        json.dump(fc, f, separators=(",", ":"))
-    os.replace(tmp_path, args.output)
+    write_json_atomic(fc, args.output, separators=(",", ":"))
 
     if still_dropped > 0 and os.environ.get("GITHUB_ACTIONS"):
         print(f"::warning::fetch_nws_alerts: {still_dropped} curated alert(s) dropped (no zones/fips)")
