@@ -49,6 +49,12 @@ describe('websiteRow', () => {
   it('returns empty string for javascript: URI', () => {
     expect(websiteRow('javascript:alert(1)')).toBe('');
   });
+
+  it('blocks javascript: URIs with embedded control chars (browsers strip them)', () => {
+    expect(websiteRow('java\tscript:alert(1)')).toBe('');
+    expect(websiteRow('java\nscript:alert(1)')).toBe('');
+    expect(websiteRow(' JavaScript:alert(1)')).toBe('');
+  });
 });
 
 // ─── title() ─────────────────────────────────────────────────────────────────

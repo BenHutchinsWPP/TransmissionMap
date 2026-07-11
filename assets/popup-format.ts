@@ -19,7 +19,10 @@ export function row(key: string, val: unknown) {
 
 export function websiteRow(url: string) {
   if (!url) return "";
-  if (url.trim().toLowerCase().startsWith('javascript:')) return "";
+  // Browsers strip ASCII control chars/whitespace when parsing a URL scheme,
+  // so "java\tscript:alert(1)" navigates as javascript: — strip the same
+  // range before checking or the guard is bypassable.
+  if (url.replace(/[\u0000-\u0020]/g, '').toLowerCase().startsWith('javascript:')) return "";
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">Website</a></div>`;
 }
 
