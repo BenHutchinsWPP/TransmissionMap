@@ -14,6 +14,7 @@ documentation linked below. This page is the license and attribution index.
 | **HIFLD** (DHS/CISA) | [Transmission lines](layers/hifld-transmission-lines.md) · [Substations](layers/hifld-substations.md) · [Natural gas & petroleum](layers/hifld-natgas.md) · [Regions](layers/hifld-regions.md) | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) | "HIFLD / DHS CISA" |
 | **Census TIGER/Line** | [Tribal lands](layers/tribal-lands.md) · [County boundaries (join infra)](layers/boundaries.md) | Public domain — US federal work, 17 U.S.C. § 105 | "U.S. Census Bureau, TIGER/Line" |
 | **BIA** (Bureau of Indian Affairs) | [Tribal lands (BIA)](layers/bia-tribal-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Bureau of Indian Affairs - Branch of Geospatial Support" |
+| **BOEM** (Bureau of Ocean Energy Management) | [Offshore wind leases](layers/boem-wind-leases.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Bureau of Ocean Energy Management" |
 | **EIA** | [Generators (Form 860)](layers/eia-generators.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: U.S. EIA, Form EIA-860" |
 | **USGS** | [PAD-US protected & managed lands](layers/padus-protected-lands.md) | Public domain — US federal work, 17 U.S.C. § 105 | USGS Gap Analysis Project |
 | **MSHA** (US DOL) | [Large mines (filtered)](layers/mines.md) | Public domain — US federal work, 17 U.S.C. § 105 | "Source: MSHA Mine Data (US DOL)" |

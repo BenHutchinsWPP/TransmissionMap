@@ -85,6 +85,9 @@ data/raw/boundaries/
 # extract_nws_zones.py; see docs/layers/boundaries.md / HANDOFF "Stage 1")
 data/raw/nws_zones/
 
+# BOEM offshore wind lease shapefiles (auto-downloaded zip; see docs/layers/boem-wind-leases.md)
+data/raw/boem_wind/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

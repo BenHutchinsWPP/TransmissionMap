@@ -2,7 +2,7 @@
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
-import { pmtilesUrl, initialVisibility, registerBaseFilter } from './layer-init.js';
+import { pmtilesUrl, initialVisibility, registerBaseFilter, addPolygonLayer } from './layer-init.js';
 
 export function addWindResource() {
   if (!state.map || state.map.getSource("nlr-wind-100m")) return;
@@ -87,4 +87,15 @@ export function addGeoHydroPts() {
     },
   } as LayerSpecification);
   registerBaseFilter("nrel-hydrothermal-points", null);
+}
+
+export function addBoemWindLeases() {
+  addPolygonLayer({
+    sourceId: "boem-wind-leases",
+    source: { type: "geojson", data: EMPTY_FC },
+    prefix: "boem-wind-leases",
+    color: "#0ea5e9",
+    fillMinzoom: 0, fillOpacity: 0.15,
+    outlineMinzoom: 0, outlineWidth: 1.5, outlineOpacity: 1,
+  });
 }

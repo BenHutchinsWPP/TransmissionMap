@@ -426,7 +426,7 @@ const _defs = [
     const ugc = p.ugc as string;
     const entries = lookupByZone(type, ugc);
     if (!entries.length) return "";
-    const heading = (p.name as string || "Weather Zone") + (type === "fire" ? " (fire weather zone)" : "");
+    const heading = (p.name as string || "Weather Zone") + (type === "fire" ? " (fire weather zone)" : type === "marine" ? " (marine zone)" : "");
     return title(heading) + renderZoneAlertList(entries);
   }],
   [["nws-county-fill"], (p: Record<string, unknown>) => {
@@ -462,6 +462,15 @@ const _defs = [
     row("Satellite", p.satellite) +
     row("Detected", p.acq_date ? p.acq_date + (p.acq_time ? " " + String(p.acq_time).padStart(4, "0").replace(/(..)(..)/, "$1:$2") + " UTC" : "") : null) +
     row("Age", p.age_hours != null ? p.age_hours + " hrs ago" : null)],
+  [["boem-wind-leases-fill"], (p: Record<string, unknown>) =>
+    title((p.project as string) || (p.company as string) || "Offshore Wind Lease") +
+    row("Company", p.company) +
+    row("Lease no.", p.lease) +
+    row("Type", p.type) +
+    row("State", p.state) +
+    row("Acres", p.acres) +
+    row("Lease date", p.date) +
+    row("Term", p.term)],
 ] as [string[], (p: Record<string, unknown>) => string][];
 
 for (const [ids, fn] of _defs) {

@@ -154,4 +154,9 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     tooltip: "Source: Iowa Environmental Mesonet — NEXRAD composite reflectivity tiles (public NWS data); Canada via ECCC GeoMet WMS",
     creditId: "iem-nexrad",
   },
+  "boem": {
+    label: "BOEM",
+    tooltip: "Source: Bureau of Ocean Energy Management (BOEM)",
+    creditId: "boem",
+  },
 };

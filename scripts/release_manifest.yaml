@@ -115,6 +115,10 @@ layers:
 
   # ── Renewable Resources ───────────────────────────────────────────────────
 
+  boem-wind-leases:
+    doc: docs/layers/boem-wind-leases.md
+    geojson_gz: data/layers/boem_wind_leases.geojson.gz
+
   nlr-wind-100m:
     doc: docs/layers/nlr-wind-100m.md
     tif: data/build/nlr_wind_100m.tif

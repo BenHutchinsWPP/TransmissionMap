@@ -87,6 +87,7 @@ const CLICKABLE_LAYERS = [
   "tribal-fill", "bia-tribal-fill", "padus-fill", "crithab-fill",
   "nerc-fill", "ba-fill", "retail-fill",
   "odin-outages-fill",
+  "boem-wind-leases-fill",
 ];
 
 function activeClickableLayers() {

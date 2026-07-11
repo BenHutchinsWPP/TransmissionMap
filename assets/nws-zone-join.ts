@@ -7,7 +7,7 @@
 //           `nws-zone-fill`/`nws-zone-line`, gated visible only when the
 //           `nws-alerts` registry layer is on) — promoteId "key", where `key`
 //           is a tile property computed in scripts/extract_nws_zones.py as
-//           "z"+ugc (type=forecast) / "f"+ugc (type=fire). Bare ugc collides
+//           "z"+ugc (type=forecast) / "f"+ugc (type=fire) / "m"+ugc (type=marine). Bare ugc collides
 //           across the two zone sets (3016 codes shared, different geometry),
 //           so the join key is (type,ugc) via that single-char-prefixed
 //           `key` string — a load-bearing contract with extract_nws_zones.py
@@ -60,7 +60,7 @@ export const ZONE_SRC = "nws_zones";
 export const ZONE_SRC_LAYER = "nws_zones";
 
 export interface ZoneAlertEntry {
-  zones: [string, string][];   // [type, ugc]
+  zones: [string, string][];   // [type, ugc] (e.g., "forecast", "fire", "marine")
   fips: string[];
   event: string;
   severity?: string;
@@ -97,9 +97,6 @@ function pickWinner(entries: ZoneAlertEntry[]): ZoneAlertEntry {
 // ── Colors, reused from the same palette map-layers-conditions.ts paints the
 //    storm-polygon layer with (do not hand-roll hex values here). ──────────
 const OTHER_COLOR = NWS_GROUP_BUCKETS.find(b => b.id === "other")?.color ?? "#9ca3af";
-function groupColor(group: string): string {
-  return NWS_GROUP_BUCKETS.find(b => b.id === group)?.color ?? OTHER_COLOR;
-}
 
 // feature-state-driven color expression (vs. NWS_GROUP_COLOR's `["get","_group"]`
 // used by the storm-polygon layer — this reads the joined feature-state instead).
@@ -126,7 +123,7 @@ function zoneKey(type: string, ugc: string): string {
 // The tile `key` property extract_nws_zones.py computes: single-char type
 // prefix + ugc. Load-bearing contract — keep in sync with that script.
 function tileKey(type: string, ugc: string): string {
-  return `${type === "fire" ? "f" : "z"}${ugc}`;
+  return `${type === "fire" ? "f" : type === "marine" ? "m" : "z"}${ugc}`;
 }
 
 // Feature ids we currently hold feature-state on, so a refresh (or clear) can

@@ -51,6 +51,7 @@ EVENT_GROUPS: dict[str, str] = {
     "Tornado Watch": "convective",
     "Severe Thunderstorm Warning": "convective",
     "Severe Thunderstorm Watch": "convective",
+    "Special Marine Warning": "convective",
     # flood
     "Flash Flood Warning": "flood",
     "Flash Flood Watch": "flood",
@@ -70,6 +71,12 @@ EVENT_GROUPS: dict[str, str] = {
     "Extreme Wind Warning": "wind",
     "Dust Storm Warning": "wind",
     "Blowing Dust Warning": "wind",
+    "Gale Warning": "wind",
+    "Gale Watch": "wind",
+    "Storm Warning": "wind",
+    "Storm Watch": "wind",
+    "Hurricane Force Wind Warning": "wind",
+    "Hurricane Force Wind Watch": "wind",
     # winter
     "Ice Storm Warning": "winter",
     "Blizzard Warning": "winter",
@@ -137,8 +144,8 @@ KEPT_PROPS = [
 ]
 
 # Marine area codes (R6): marine UGCs are served under /zones/forecast/ too,
-# but our nws_zones tileset is land-only (PublicZones) — they'd become keys
-# that join nothing. Skip + count them instead.
+# but need a distinct type ("marine") since they join a separate marine-zone
+# tileset (key prefix "m"), not the land-only forecast-zone tileset.
 MARINE_UGC_PREFIXES = {
     "AM", "AN", "GM", "PZ", "PK", "PH", "PM", "PS",
     "LE", "LH", "LM", "LO", "LC", "LS", "SL",
@@ -230,8 +237,8 @@ def _parse_zone_url(url: str) -> tuple[str, str] | None:
     """`/zones/forecast/<UGC>` -> ("forecast", UGC); `/zones/fire/<UGC>` ->
     ("fire", UGC); `/zones/county/<UGC>` -> ("county", UGC) — used only as a
     FIPS fallback when geocode.SAME is absent (R5). Marine UGCs (which share
-    the /zones/forecast/ path) -> ("marine", UGC) so callers can count skips
-    (R6). Anything else -> None."""
+    the /zones/forecast/ path) -> ("marine", UGC), a distinct type joined onto
+    the separate marine-zone tileset (R6). Anything else -> None."""
     path = urllib.parse.urlparse(url).path
     parts = [p for p in path.split("/") if p]
     if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire", "county"):
@@ -278,7 +285,6 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
         "dropped": 0,
         "same_statewide_skipped": 0,
         "malformed_same": 0,
-        "marine_zones_skipped": 0,
         "county_ugc_fallback": 0,
         "unknown_zone_keys": 0,
     }
@@ -310,15 +316,14 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
             if not parsed:
                 continue
             ztype, ugc = parsed
-            if ztype == "marine":
-                stats["marine_zones_skipped"] += 1
-            elif ztype == "county":
+            if ztype == "county":
                 county_ugcs.append(ugc)
             else:
                 # R7 drift check: key format mirrors assets/nws-zone-join.ts
                 # tileKey() — an alert naming a UGC absent from the tileset
                 # vintage would silently no-paint.
-                tile_key = ("z" if ztype == "forecast" else "f") + ugc
+                prefix = {"forecast": "z", "fire": "f", "marine": "m"}[ztype]
+                tile_key = prefix + ugc
                 if zone_keys is not None and tile_key not in zone_keys:
                     stats["unknown_zone_keys"] += 1
                     print(
@@ -379,7 +384,6 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
     for key, label in (
         ("same_statewide_skipped", "statewide SAME code(s) skipped (no county to join)"),
         ("malformed_same", "malformed SAME code(s) skipped"),
-        ("marine_zones_skipped", "marine UGC(s) skipped (land-only zone tileset)"),
         ("county_ugc_fallback", "alert(s) used county-UGC FIPS fallback (no SAME)"),
         ("unknown_zone_keys", "zone key(s) not in tileset — rebuild nws_zones? (make nws-zones)"),
     ):

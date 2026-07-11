@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev seismic boundaries nws-zones validate tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev seismic boundaries nws-zones boem-wind validate tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -44,6 +44,7 @@ help:
 	@echo "  make popden      build WorldPop 2020 population density → data/layers/worldpop_pop_density.pmtiles + COG in data/build/"
 	@echo "  make boundaries  build shared county-boundary PMTiles (Census TIGER) → data/layers/county_boundaries.pmtiles"
 	@echo "  make nws-zones   build shared NWS zone PMTiles (public + fire weather zones) → data/layers/nws_zones.pmtiles"
+	@echo "  make boem-wind   build BOEM offshore wind leases → data/layers/boem_wind_leases.geojson.gz"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
@@ -284,6 +285,12 @@ nws-zones:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/extract_nws_zones.py
 	@$(PY) $(SCRIPTS)/build_tiles.py --only nws_zones
+
+# ── BOEM offshore wind leases ───────────────────────────────────────────────
+boem-wind:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/extract_boem_wind.py
+	@$(PY) $(SCRIPTS)/build_tiles.py --only boem_wind_leases
 
 # ── Validate: build inputs + layer outputs ──────────────────────────────────
 # Run after `make pipeline` (checks data/build/ shapefiles) and again after

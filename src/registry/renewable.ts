@@ -65,4 +65,20 @@ export const renewableLayers: LayerDef[] = [
       csv: "data/releases/nrel-hydrothermal-points.zip",
     },
   },
+  {
+    id:          "boem-wind-leases",
+    urlCode:     "BWL",
+    label:       "Offshore Wind Leases (BOEM)",
+    group:       "renewable",
+    sourceId:    "boem",
+    swatch:      "#0ea5e9",
+    defaultOn:   false,
+    hoverField:  "lease",
+    mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-line"],
+    downloads: {
+      url: "https://www.boem.gov/renewable-energy/mapping-and-data",
+      geojson: "data/releases/boem-wind-leases.geojson.zip",
+      shp: "data/releases/boem-wind-leases.shp.zip",
+    },
+  },
 ];
