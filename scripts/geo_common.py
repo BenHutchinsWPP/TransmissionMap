@@ -4,9 +4,25 @@ The CSV is the attribute table with the geometry replaced by a representative
 point (lon/lat), so it stays human-browsable without a GIS tool.
 """
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
+
+
+def write_json_atomic(obj, path, **json_kwargs):
+    """Write `obj` as JSON to `path` without ever leaving a half-written file.
+
+    Dumps to a `.tmp` sibling in the same directory (so `os.replace` stays on
+    one filesystem) then atomically renames it over `path`. An interrupted
+    write leaves the old file intact instead of a truncated/corrupt one.
+    """
+    json_kwargs.setdefault("separators", (",", ":"))
+    path = Path(path)
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(obj, f, **json_kwargs)
+    os.replace(tmp_path, path)
 
 
 def write_shp_csv(gdf, shp, indent=""):

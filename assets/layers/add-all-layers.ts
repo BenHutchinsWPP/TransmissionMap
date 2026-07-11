@@ -22,7 +22,7 @@ import { addPopDensity, addOsmDataCenters } from './map-layers-load.js';
 import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
 import { addPetroleumPipelines } from './map-layers-petroleum.js';
-import { addWildfireHazard, addWildfireLive, addSeismicHazard, addOdinOutages, addNwsAlerts, addNexradRadar } from './map-layers-conditions.js';
+import { addWildfireHazard, addWildfireLiveAreas, addWildfireLivePoints, addSeismicHazard, addOdinOutages, addNwsAlerts, addNexradRadar } from './map-layers-conditions.js';
 import { addMines } from './map-layers-mines.js';
 import { addHighlightLayers } from '../highlights.js';
 
@@ -34,9 +34,6 @@ export function addAllLayers() {
   addGeoResource();
   addSeismicHazard();   // raster — sits low so vector infra draws on top
   addWildfireHazard();  // raster — sits low so vector infra draws on top
-  addNwsAlerts();       // live GeoJSON — weather alert polygons; drawn below wildfire so fire draws on top
-  addWildfireLive();    // live GeoJSON — smoke + perimeters + hotspots + incidents (one source)
-  addOdinOutages();     // live county-outage choropleth — polygon fill, sits low so infra draws on top
 
   addRetailTerritories();
   addControlAreas();
@@ -46,22 +43,34 @@ export function addAllLayers() {
   addTribalLands();
   addBiaTribalLands();
   addCritHab();
-  addMines();
 
-  addNexradRadar();     // live raster — external IEM tiles; above all area polygons, below infra vectors
+  // Live-conditions fills sit above static context fills (land/regions):
+  // "what's happening now" beats "what's always there".
+  addOdinOutages();        // live county-outage choropleth
+  addNwsAlerts();          // live GeoJSON — weather alert polygons; above land fills, below infra vectors
+  addWildfireLiveAreas();  // live GeoJSON — smoke + perimeter POLYGONS; above NWS, below infra vectors
+  addNexradRadar();        // live raster — external IEM tiles; above all area polygons, below infra vectors
 
   addOsmSubstationPolygons();
   addOsmPlantPolygons();
 
-  addHifldTransmission();
-  addOsmTransmission();
-  addOGFPlannedTransmission();
-
+  // Line stack: rail is context (bottom), pipelines mid, transmission is the
+  // star of the map so it wins line-crossing overlaps (top).
   addRailroads();
 
   addHifldNatgasLines();
   addPetroleumPipelines();
   addPipelineLines();
+
+  addHifldTransmission();
+  addOsmTransmission();
+  addOGFPlannedTransmission();
+
+  addOsmSubstationPoints();
+  addHifldSubstationPoints();
+
+  // Point layers below draw above substation dots: gas points, generators,
+  // data centers, mines — smaller/sparser markers stay clickable on top.
   addPipelinePoints();
   addHifldNatgasPts();
   addGeoHydroPts();
@@ -69,10 +78,11 @@ export function addAllLayers() {
   addOsmPlants();
   addEiaGenerators();
   addOsmGenerators();
-  addOsmDataCenters();  // load points sit above lines, below substation dots
+  addOsmDataCenters();
 
-  addOsmSubstationPoints();
-  addHifldSubstationPoints();
+  addMines();           // above lines + substations
+
+  addWildfireLivePoints();  // hotspot heat/circles + incident POINTS — stay above infra like other markers
 
   addWeccPaths();   // path-number markers sit on top of infrastructure
 

@@ -15,14 +15,16 @@
 //       has no callback hook out of live-staleness.ts's factory, so this
 //       module watches #nwsStaleDialog's `open` attribute via
 //       MutationObserver and calls clearZoneAlerts() the instant it opens —
-//       cheaper than modifying the shared factory for a single caller.
+//       cheaper than modifying the shared factory for a single caller. The
+//       modal's re-enable button gets a matching click listener that calls
+//       refetchZoneAlerts(), since the factory only restores polygon layers.
 // Deps: live-staleness.ts (factory), state (DATA), nws-zone-join.ts
 //       (pruneExpiredZoneAlerts, clearZoneAlerts). Modal DOM in index.html.
 // Wired from ui/ui.ts init() via initNwsStaleness().
 
 import { DATA } from './state.js';
 import { initLiveStaleness } from './live-staleness.js';
-import { pruneExpiredZoneAlerts, clearZoneAlerts } from './nws-zone-join.js';
+import { pruneExpiredZoneAlerts, clearZoneAlerts, refetchZoneAlerts } from './nws-zone-join.js';
 
 export const NWS_REFRESH_MS = 5 * 60_000;        // 5 minutes (feed cadence ~10 min)
 export const NWS_MAX_AGE_MS = 3 * 60 * 60_000;   // 3 hours = many missed cycles
@@ -55,6 +57,13 @@ function watchKillSwitch(): void {
     if ((dlg as HTMLDialogElement).open) clearZoneAlerts();
   });
   observer.observe(dlg, { attributes: true, attributeFilter: ["open"] });
+  // Mirror of the clear above: the factory's re-enable button only restores
+  // the polygon layers; the zone/county join it can't see about must be
+  // re-applied here or US geometry-null alerts stay dark until the feed's
+  // generated_utc actually advances (never, for a stale snapshot).
+  document.getElementById("nwsStaleReenable")?.addEventListener("click", () => {
+    void refetchZoneAlerts();
+  });
 }
 
 export function initNwsStaleness() {

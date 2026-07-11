@@ -115,6 +115,12 @@ async function refetch(): Promise<void> {
     renderOdinAge();
   } catch (err) {
     console.warn("[TransmissionMap] ODIN refresh failed", err);
+    // Re-evaluate staleness of last-known data; if older than MAX_AGE_MS, unpaint.
+    const then = generatedUtc ? Date.parse(generatedUtc) : NaN;
+    if (!Number.isNaN(then) && Date.now() - then > MAX_AGE_MS) {
+      clearJoin();
+    }
+    renderOdinAge();
   } finally {
     inflight = false;
   }

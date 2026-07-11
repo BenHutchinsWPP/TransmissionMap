@@ -27,6 +27,12 @@ describe('row', () => {
     expect(out).not.toContain('<script>');
     expect(out).toContain('&lt;script&gt;');
   });
+
+  it('escapes HTML in key', () => {
+    const out = row('<img onerror=x>', 'value');
+    expect(out).not.toContain('<img');
+    expect(out).toContain('&lt;img');
+  });
 });
 
 // ─── websiteRow() ─────────────────────────────────────────────────────────────
@@ -39,6 +45,16 @@ describe('websiteRow', () => {
   });
 
   it('returns empty string for empty URL', () => expect(websiteRow('')).toBe(''));
+
+  it('returns empty string for javascript: URI', () => {
+    expect(websiteRow('javascript:alert(1)')).toBe('');
+  });
+
+  it('blocks javascript: URIs with embedded control chars (browsers strip them)', () => {
+    expect(websiteRow('java\tscript:alert(1)')).toBe('');
+    expect(websiteRow('java\nscript:alert(1)')).toBe('');
+    expect(websiteRow(' JavaScript:alert(1)')).toBe('');
+  });
 });
 
 // ─── title() ─────────────────────────────────────────────────────────────────

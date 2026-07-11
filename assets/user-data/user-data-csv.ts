@@ -47,7 +47,7 @@ function showPicker(
   const dlg = document.createElement('dialog');
   dlg.className = 'disclaimer-dialog';
   const coordOpts = (sel: number) => headers
-    .map((h, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>${h || `(column ${i + 1})`}</option>`)
+    .map((h, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>${escapeHtml(h || `(column ${i + 1})`)}</option>`)
     .join('');
   const nameChecks = headers
     .map((h, i) => `<label style="display:flex;gap:.3rem;align-items:center;white-space:nowrap">` +

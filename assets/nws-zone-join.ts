@@ -166,6 +166,10 @@ function ensureZoneLayers() {
   }
   ensureCountyBoundaries();
   const vis = initialVisibility("nws-alerts");
+  // These layers lazy-add on first data load, which would land them on top of
+  // the whole stack — anchor below the storm-polygon layer instead so all
+  // area fills stay under infra lines/points (z-order design rule).
+  const before = state.map.getLayer("nws-alerts-fill") ? "nws-alerts-fill" : undefined;
   if (!state.map.getLayer("nws-zone-fill")) {
     state.map.addLayer({
       id: "nws-zone-fill",
@@ -179,7 +183,7 @@ function ensureZoneLayers() {
         // zone-area fills, not storm-drawn polygons (locked design decision).
         "fill-opacity": DEFAULT_FILL_OPACITY,
       },
-    } as LayerSpecification);
+    } as LayerSpecification, before);
   }
   if (!state.map.getLayer("nws-zone-line")) {
     state.map.addLayer({
@@ -193,7 +197,7 @@ function ensureZoneLayers() {
         "line-width": 1,
         "line-opacity": DEFAULT_LINE_OPACITY,
       },
-    } as LayerSpecification);
+    } as LayerSpecification, before);
   }
   if (!state.map.getLayer("nws-county-fill")) {
     state.map.addLayer({
@@ -206,7 +210,7 @@ function ensureZoneLayers() {
         "fill-color": ZONE_GROUP_COLOR,
         "fill-opacity": DEFAULT_FILL_OPACITY,
       },
-    } as LayerSpecification);
+    } as LayerSpecification, before);
   }
   if (!state.map.getLayer("nws-county-line")) {
     state.map.addLayer({
@@ -220,7 +224,7 @@ function ensureZoneLayers() {
         "line-width": 1,
         "line-opacity": DEFAULT_LINE_OPACITY,
       },
-    } as LayerSpecification);
+    } as LayerSpecification, before);
   }
   // A filter set before this lazy-add ran (e.g. legend chips toggled prior to
   // the nws-alerts layer's first data load) must still apply once the layers
@@ -433,7 +437,12 @@ export function applyZoneAlerts(fc: { zone_alerts?: ZoneAlertEntry[] } | null | 
 //    the polygon layer's own refresh factory lands fresh data, and re-paint
 //    on tile (re)load the same way odin-outages.ts does. ───────────────────
 let inflight = false;
-async function refetchZoneAlerts(): Promise<void> {
+// Exported for nws-staleness.ts: the kill-switch modal's "re-enable" button
+// must restore the zone/county join that clearZoneAlerts() wiped when the
+// modal opened (the shared factory only restores the polygon layers, and its
+// monotonic generated_utc dedup means no tm:layerdata will re-fire for the
+// same stale snapshot).
+export async function refetchZoneAlerts(): Promise<void> {
   if (inflight) return;
   inflight = true;
   try {
