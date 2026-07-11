@@ -10,13 +10,16 @@ License:  Public domain (U.S. federal government work)
 Geometry: Polygon/MultiPolygon (EPSG:4269 → reprojected to WGS84 on read by
           geopandas)
 
-Two zone sets, listed on:
+Three zone sets, listed on:
   Public forecast zones — https://www.weather.gov/gis/PublicZones
   Fire weather zones    — https://www.weather.gov/gis/FireZones
+  Marine zones          — https://www.weather.gov/gis/MarineZones
+    (coastal mz*.zip + offshore oz*.zip, both zone_type "marine")
 Each page links a dated shapefile ZIP under
   https://www.weather.gov/source/gis/Shapefiles/WSOM/  (newest listed first;
-  public = z_*.zip, fire = fz*.zip). This script scrapes the page for the
-  FIRST matching href and downloads it if not already present.
+  public = z_*.zip, fire = fz*.zip, marine coastal = mz*.zip, marine
+  offshore = oz*.zip). This script scrapes the page for the FIRST matching
+  href and downloads it if not already present.
 
 Not a standalone map layer: this is shared join infra (same pattern as
 county_boundaries — see scripts/tile_manifest.yaml). Zone alerts (phase 2 of
@@ -24,17 +27,23 @@ the NWS weather-alerts layer, see HANDOFF.md "Stage 1") join onto this
 tileset by (type, ugc) feature-state; nothing renders it directly.
 
 Raw inputs (downloaded to data/raw/nws_zones/):
-  pub/z_*.zip un-zipped   — public forecast zones (~4157 rows)
-  fire/fz*.zip un-zipped  — fire weather zones (~3683 rows)
-  Fields used from both: STATE (2-char), ZONE (3-digit string), NAME.
+  pub/z_*.zip un-zipped              — public forecast zones (~4157 rows)
+  fire/fz*.zip un-zipped             — fire weather zones (~3683 rows)
+  marine_coastal/mz*.zip un-zipped   — marine coastal zones
+  marine_offshore/oz*.zip un-zipped  — marine offshore zones
+    (marine sets combined ~690 rows)
+  Fields: forecast/fire use STATE (2-char) + ZONE (3-digit string) + NAME;
+  marine shapefiles have no STATE/ZONE, instead carry ID (the UGC directly,
+  e.g. "AMZ130") + NAME.
 
 Output (data/build/):
-  nws_zones.geojson — fields: ugc (STATE + "Z" + ZONE), type
-  ("forecast"|"fire"), name, key ("z"+ugc for type=forecast, "f"+ugc for
-  type=fire — the (type,ugc) join key used as pmtiles promoteId, since bare
-  ugc collides across the two zone sets; see assets/nws-zone-join.ts).
+  nws_zones.geojson — fields: ugc (STATE + "Z" + ZONE for forecast/fire, or
+  ID verbatim for marine), type ("forecast"|"fire"|"marine"), name, key
+  ("z"+ugc for type=forecast, "f"+ugc for type=fire, "m"+ugc for
+  type=marine — the (type,ugc) join key used as pmtiles promoteId, since
+  bare ugc collides across zone sets; see assets/nws-zone-join.ts).
   Duplicate ugc rows (multipart zones) are dissolved by (ugc, type) —
-  ~7683 output features.
+  ~8370 output features.
 The tile_manifest builds this into data/layers/nws_zones.pmtiles (PMTiles).
 Also writes scripts/nws_zone_keys.txt (committed) — the sorted key list
 fetch_nws_alerts.py uses to detect zone-vintage drift (R7).
@@ -72,6 +81,18 @@ SOURCES = [
         re.compile(r"/source/gis/Shapefiles/WSOM/(fz[^\"'>]+\.zip)"),
         RAW / "fire",
         "fire",
+    ),
+    (
+        "https://www.weather.gov/gis/MarineZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(mz[^\"'>]+\.zip)"),
+        RAW / "marine_coastal",
+        "marine",
+    ),
+    (
+        "https://www.weather.gov/gis/MarineZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(oz[^\"'>]+\.zip)"),
+        RAW / "marine_offshore",
+        "marine",
     ),
 ]
 
@@ -114,10 +135,15 @@ def ensure_shapefile(listing_url: str, href_re: re.Pattern, subdir: Path, label:
 
 def load_zones(shp: Path, zone_type: str) -> "gpd.GeoDataFrame":
     gdf = gpd.read_file(shp)
-    gdf["ugc"] = gdf["STATE"].astype(str) + "Z" + gdf["ZONE"].astype(str)
+    if "ID" in gdf.columns:
+        # Marine shapefiles carry the UGC directly in ID (e.g. "AMZ130");
+        # no STATE/ZONE columns to concatenate.
+        gdf["ugc"] = gdf["ID"].astype(str)
+    else:
+        gdf["ugc"] = gdf["STATE"].astype(str) + "Z" + gdf["ZONE"].astype(str)
     gdf["type"] = zone_type
     gdf["name"] = gdf["NAME"]
-    prefix = "z" if zone_type == "forecast" else "f"
+    prefix = {"forecast": "z", "fire": "f", "marine": "m"}[zone_type]
     gdf["key"] = prefix + gdf["ugc"]
     gdf = gdf[["ugc", "type", "name", "key", "geometry"]]
     if gdf.crs is not None and str(gdf.crs) != "EPSG:4326":

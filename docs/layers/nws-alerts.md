@@ -13,6 +13,14 @@ client-side onto NWS zone or county polygons — see "Zone/county join
 Canada (ECCC), which carry real polygon geometry and need no join — see
 "Canada (ECCC)" below. No curated alert is dropped regardless of geometry.
 
+## Filtering caveats
+
+- **Allowlist-only curation:** Only a fixed [allowlist of events](#curated-event-allowlist) is kept (e.g. convective, flood, fire). Everything else (e.g., Small Craft Advisory, Special Weather Statement, air-quality, AMBER/admin) is excluded.
+- **Statewide SAME skipped:** Alerts with a SAME code ending in `000` (statewide) are dropped since there is no county polygon to join.
+- **High-seas zones omitted:** Marine alerts for high-seas (`hz*`) zones are not built into the tileset and will not display polygons.
+- **Approximate zone paint:** Zone and county joined alerts paint the entire region boundary, which is an approximate area (rendered at 0.12 opacity) rather than the exact storm-drawn polygon.
+- **ECCC exclusions:** Environment and Climate Change Canada (ECCC) alerts specifically exclude special weather statements and air quality warnings to maintain parity with US curation.
+
 ## Source
 
 | | |
@@ -34,11 +42,11 @@ entirely, regardless of geometry:
 
 | `_group` | Events |
 |---|---|
-| `convective` | Tornado Warning, Tornado Watch, Severe Thunderstorm Warning, Severe Thunderstorm Watch |
+| `convective` | Tornado Warning, Tornado Watch, Severe Thunderstorm Warning, Severe Thunderstorm Watch, Special Marine Warning |
 | `flood` | Flash Flood Warning, Flash Flood Watch, Flood Warning, Flood Watch |
 | `fire` | Red Flag Warning, Fire Weather Watch, Extreme Fire Danger |
 | `heat` | Extreme Heat Warning, Extreme Heat Watch, Heat Advisory |
-| `wind` | High Wind Warning, High Wind Watch, Extreme Wind Warning, Dust Storm Warning, Blowing Dust Warning |
+| `wind` | High Wind Warning, High Wind Watch, Extreme Wind Warning, Dust Storm Warning, Blowing Dust Warning, Gale Warning, Gale Watch, Storm Warning, Storm Watch, Hurricane Force Wind Warning, Hurricane Force Wind Watch |
 | `winter` | Ice Storm Warning, Blizzard Warning, Extreme Cold Warning, Extreme Cold Watch, Freeze Warning, Snow Squall Warning, Winter Storm Warning, Winter Storm Watch |
 | `tropical` | Hurricane Warning, Hurricane Watch, Tropical Storm Warning, Tropical Storm Watch, Storm Surge Warning, Storm Surge Watch |
 | `other` | Nuclear Power Plant Warning, Radiological Hazard Warning, Ashfall Warning |
@@ -91,7 +99,7 @@ FeatureCollection itself now always carries three top-level keys, written even w
 |---|---|
 | `generated_utc` | Same pull timestamp as every feature's `generated_utc` property |
 | `feed_status` | Same `{"eccc": "ok"|"failed"}` dict as `features[0]`'s copy |
-| `stats` | `{"fetched", "kept", "zone_joined", "eccc_kept", "dropped", "same_statewide_skipped", "malformed_same", "marine_zones_skipped", "county_ugc_fallback"}` — `fetched` is total US alerts fetched before curation; `kept` is US polygon alerts kept; `zone_joined` is the length of `zone_alerts`; `eccc_kept` is Canadian alerts kept; `dropped` is curated-but-unjoinable alerts (no zones/fips) truly dropped; `same_statewide_skipped` is statewide (county part `000`) SAME codes skipped; `malformed_same` is non-6-digit SAME codes skipped; `marine_zones_skipped` is marine UGCs skipped (land-only zone tileset); `county_ugc_fallback` is alerts whose FIPS came from county UGCs because SAME was absent |
+| `stats` | `{"fetched", "kept", "zone_joined", "eccc_kept", "dropped", "same_statewide_skipped", "malformed_same", "county_ugc_fallback"}` — `fetched` is total US alerts fetched before curation; `kept` is US polygon alerts kept; `zone_joined` is the length of `zone_alerts`; `eccc_kept` is Canadian alerts kept; `dropped` is curated-but-unjoinable alerts (no zones/fips) truly dropped; `same_statewide_skipped` is statewide (county part `000`) SAME codes skipped; `malformed_same` is non-6-digit SAME codes skipped; `county_ugc_fallback` is alerts whose FIPS came from county UGCs because SAME was absent |
 
 When run under GitHub Actions (`GITHUB_ACTIONS` env var set) and `stats.dropped > 0`,
 `fetch_nws_alerts.py` prints a `::warning::` workflow command to stdout so the dropped
@@ -141,10 +149,11 @@ from the alert's `/zones/county/<UGC>` URLs instead (`SSC###` → state FIPS + `
 via a static state-abbrev→FIPS map), counted into `stats.county_ugc_fallback`.
 
 Marine UGCs (prefixes `AM/AN/GM/PZ/PK/PH/PM/PS/LE/LH/LM/LO/LC/LS/SL`) share the
-`/zones/forecast/` API path but have no polygons in the land-only `nws_zones` tileset —
-they are skipped and counted into `stats.marine_zones_skipped`. Curated alerts with mixed
-land+marine zones still paint their land zones; a marine-zone tileset is a separate
-decision.
+`/zones/forecast/` API path but are parsed as a distinct `"marine"` zone type and now
+**join** onto the same tileset via `"m"+ugc` keys, alongside `"z"+ugc` (forecast) and
+`"f"+ugc` (fire) — see "Zone polygons" below for the marine shapefile sets. High-seas
+zones (`hz*`) are not built into the tileset, so high-seas UGCs still won't resolve to a
+polygon even though they parse as `"marine"`.
 
 A zone or county can carry several alerts at once; the frontend picks a display winner by
 severity rank (Extreme > Severe > Moderate > Minor > unknown), tie-broken by earliest
@@ -155,16 +164,19 @@ NWS WSOM shapefiles listed at
 [weather.gov/gis/PublicZones](https://www.weather.gov/gis/PublicZones) (public forecast
 zones, current `z_16ap26.zip`) and
 [weather.gov/gis/FireZones](https://www.weather.gov/gis/FireZones) (fire weather zones,
-current `fz16ap26.zip`), both hosted under
-`https://www.weather.gov/source/gis/Shapefiles/WSOM/`, EPSG:4269, public domain. The two
-zone sets share the UGC string format (`STATE` + `"Z"` + 3-digit `ZONE`) but are
-**different polygon sets** — 3016 UGC codes exist in both with materially different
-geometry (one sampled zone, `NCZ051`, differs 62% in area between the two) — so every join
-uses `(type, ugc)`, never bare UGC. The script dissolves multipart duplicate rows by
-`(ugc, type)` and writes `data/build/nws_zones.geojson` with fields `ugc`, `type`
-(`"forecast"|"fire"`), `name`, and `key` (`"z"+ugc` for `type=forecast`, `"f"+ugc` for
-`type=fire` — the single string used as the pmtiles `promoteId`, since MapLibre
-`promoteId` needs one scalar per feature and bare `ugc` collides). `tile_manifest.yaml`
+current `fz16ap26.zip`), plus the coastal (`mz*`) and offshore (`oz*`) marine zone
+shapefiles from [weather.gov/gis/MarineZones](https://www.weather.gov/gis/MarineZones),
+same WSOM directory (high-seas `hz*` is not built into the tileset). All sets are hosted
+under `https://www.weather.gov/source/gis/Shapefiles/WSOM/`, EPSG:4269, public domain. The
+zone sets share the UGC string format (`STATE`/`BASIN` + `"Z"` + 3-digit `ZONE`) but are
+**different polygon sets** — 3016 UGC codes exist in both the forecast and fire sets with
+materially different geometry (one sampled zone, `NCZ051`, differs 62% in area between the
+two) — so every join uses `(type, ugc)`, never bare UGC. The script dissolves multipart
+duplicate rows by `(ugc, type)` and writes `data/build/nws_zones.geojson` with fields
+`ugc`, `type` (`"forecast"|"fire"|"marine"`), `name`, and `key` (`"z"+ugc` for
+`type=forecast`, `"f"+ugc` for `type=fire`, `"m"+ugc` for `type=marine` — the single string
+used as the pmtiles `promoteId`, since MapLibre `promoteId` needs one scalar per feature
+and bare `ugc` collides). `tile_manifest.yaml`
 builds this into **`nws_zones.pmtiles`** (source layer `nws_zones`, 7683 features, 5.06
 MB). Like `county_boundaries` (see [boundaries.md](boundaries.md)), this is shared
 join infra with no `release_manifest.yaml` download-pack entry and no legend of its own.

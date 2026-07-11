@@ -238,3 +238,8 @@ layers:
     src: data/build/ogf_planned_transmission.gpkg
     format: geojson
 
+  - id: boem_wind_leases
+    src: data/build/boem_wind_leases.geojson
+    format: geojson
+    precision: 5
+

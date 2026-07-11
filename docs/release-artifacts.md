@@ -38,6 +38,7 @@ These live under `data/` and must be present for the app to function.
 | `data/layers/ihfc_geo_heatflow_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/nrel_hydrothermal_points.geojson.gz` | 40 KB | NREL/DOE low-temp hydrothermal systems (1,214 circle points, gzipped GeoJSON) |
 | `data/layers/mines.geojson.gz` | 70 KB | MSHA large mines, peak employment ≥ 50 (~2.3k points, gzipped GeoJSON) |
+| `data/layers/boem_wind_leases.geojson.gz` | 60 KB | BOEM offshore wind lease polygons (51 leases, gzipped GeoJSON) |
 | **Total** | **~218 MB** | |
 
 ---

@@ -42,6 +42,7 @@ const SEARCH_SOURCES = [
   { sourceId: "wildfire-live",  sourceLayer: null,             label: "Active Fire",         fields: ["name", "fire_id", "state"] },
   { sourceId: "nws-alerts",     sourceLayer: null,             label: "Weather Alert",       fields: ["event", "areaDesc", "headline"] },
   { sourceId: "wecc-paths",     sourceLayer: null,             label: "WECC Path",           fields: ["name", "number"] },
+  { sourceId: "boem-wind-leases", sourceLayer: null,           label: "Offshore Wind Lease", fields: ["project", "company", "lease", "state"] },
 ];
 
 function _featureCenter(feature: GeoJSON.Feature) {

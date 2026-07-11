@@ -67,6 +67,7 @@ export const DATA = {
   usgs_seismic_pga:          DATA_ORIGIN + "data/layers/usgs_seismic_pga.pmtiles",  // USGS NSHM PGA 2% in 50yr raster (baked color)
   usgs_seismic_pga_lut:      DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.i16",  // Int16 PGA(g)*1000 grid for hover readout
   usgs_seismic_pga_lut_meta: DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.json", // grid dims + bbox + scale
+  boem_wind_leases:          DATA_ORIGIN + "data/layers/boem_wind_leases.geojson.gz",
   // Dev: local file (run `make wildfire-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok, ~5min CDN lag).
   // Contains: hotspots (_type=hotspot), perimeters, named incidents, and smoke polygons.
   wildfire_live: import.meta.env.DEV

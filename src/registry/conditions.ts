@@ -58,7 +58,7 @@ export const conditionLayers: LayerDef[] = [
   {
     id:          "nws-alerts",
     urlCode:     "NWS",
-    label:       "Weather Alerts (live)",
+    label:       "✂️ Weather Alerts (live, Filtered)",
     group:       "conditions",
     sourceId:    "noaa-nws",
     swatch:      "#a855f7",

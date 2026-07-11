@@ -16,7 +16,7 @@ import {
   addHifldNatgasLines, addHifldNatgasPts, addNercRegions, addControlAreas,
   addOGFPlannedTransmission, addRetailTerritories,
 } from './map-layers-hifld.js';
-import { addWindResource, addSolarResource, addGeoResource, addGeoHydroPts } from './map-layers-renewable.js';
+import { addWindResource, addSolarResource, addGeoResource, addGeoHydroPts, addBoemWindLeases } from './map-layers-renewable.js';
 import { addEiaGenerators } from './map-layers-eia.js';
 import { addPopDensity, addOsmDataCenters } from './map-layers-load.js';
 import { addRailroads } from './map-layers-rail.js';
@@ -43,6 +43,7 @@ export function addAllLayers() {
   addTribalLands();
   addBiaTribalLands();
   addCritHab();
+  addBoemWindLeases();
 
   // Live-conditions fills sit above static context fills (land/regions):
   // "what's happening now" beats "what's always there".
