@@ -14,10 +14,14 @@
 // Deps: state (map, DATA, layerVisibility). Legend age chip = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from odinSnapshot().
+//       Also owns the popup's incident-report ‹ › pager: on-demand fetch of
+//       per-outage records from the ODIN Opendatasoft API, rendered as
+//       standard cards into the .odin-raw shell that popup-format.ts emits.
 // Wired from ui/ui.ts init() via initOdinOutages().
 
 import { state, DATA } from './state.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
+import { escapeHtml } from './utils/utils.js';
 
 const REGISTRY_ID = "odin-outages";
 
@@ -133,6 +137,115 @@ function renderOdinAge() {
   el.className = "legend-age legend-age--" + (stale ? "stale" : min <= 60 ? "fresh" : "aging");
 }
 
+// ── Per-outage incident reports (popup ‹ › pager) ─────────────────────────────
+// The snapshot only carries county/utility rollups; the per-outage records
+// (cause, metersaffected, ERT…) are fetched on demand from
+// the ODIN Opendatasoft API when the user expands "View incident reports"
+// in a county popup. CORS is `*` and the anonymous per-IP quota (5000/day) is
+// each browser's own — one request per county click, cached 15 min. The pager
+// shell (.odin-raw / .odin-raw-btn / .odin-raw-body) is emitted by
+// popup-format.ts; clicks land here via document-level delegation.
+
+// Only the fields the card renders. Deliberately dropped (2026-07 full-dataset
+// analysis): incident / incident_cause (always duplicate `cause`),
+// incident_location(_kind) (constant boilerplate), utilitydisclaimer
+// (boilerplate), geom (county polygon, huge), county/state/FIPS (popup heading
+// already shows them).
+const RAW_FIELDS = "name,cause,causekind,metersaffected,customersrestored," +
+  "reportedstarttime,estimatedrestorationtime,statuskind";
+const rawUrl = (fips: string) =>
+  "https://ornl.opendatasoft.com/api/explore/v2.1/catalog/datasets/" +
+  "odin-real-time-outages-county/records" +
+  `?where=communitydescriptor%3D%22${encodeURIComponent(fips)}%22` +
+  `&order_by=metersaffected%20desc&limit=100&select=${encodeURIComponent(RAW_FIELDS)}`;
+
+const rawCache = new Map<string, { t: number; total: number; recs: Record<string, unknown>[] }>();
+
+// "cause" is free text from each utility's outage system; these placeholder
+// values carry no information and are hidden (the row is omitted instead).
+const JUNK_CAUSE = /^(null|not available)$/i;
+
+// "Jul 10, 2:51 PM" — compact local time for card rows.
+function fmtCardTime(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined,
+    { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// estimatedrestorationtime is always the embedded-JSON string {"ert": "<ISO>"}.
+function parseErt(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  try { return fmtCardTime(JSON.parse(v).ert); } catch { return null; }
+}
+
+function renderRaw(wrap: HTMLElement) {
+  const body = wrap.querySelector<HTMLElement>(".odin-raw-body");
+  const c = rawCache.get(wrap.dataset.fips || "");
+  if (!body || !c) return;
+  if (!c.recs.length) {
+    body.innerHTML = `<div class="popup-row">No incident records returned.</div>`;
+    return;
+  }
+  const i = Math.min(Number(wrap.dataset.idx) || 0, c.recs.length - 1);
+  const rec = c.recs[i];
+
+  // Standard card: utility + customers-out header, then rows omitted when the
+  // utility didn't report that field (fill rates are 12–64% — sparse is normal).
+  const rowIf = (key: string, val: unknown) =>
+    val == null || val === "" ? "" :
+    `<div class="popup-row"><span class="popup-key">${key}</span> ` +
+    `<span class="popup-val">${escapeHtml(val)}</span></div>`;
+  const numOrNull = (v: unknown) => typeof v === "number" ? v.toLocaleString() : null;
+  const cause = [rec.cause, rec.causekind].find(
+    (v): v is string => typeof v === "string" && !!v.trim() && !JUNK_CAUSE.test(v.trim()));
+  const util = String(rec.name || "Unknown utility").replace(/,\d+$/, "");
+  const rows =
+    `<div class="odin-raw-head"><span class="odin-raw-util">${escapeHtml(util)}</span>` +
+    `<span class="odin-raw-out">${numOrNull(rec.metersaffected) ?? "?"} out</span></div>` +
+    rowIf("Cause", cause) +
+    rowIf("Status", rec.statuskind) +
+    rowIf("Started", fmtCardTime(rec.reportedstarttime)) +
+    rowIf("Est. rest.", parseErt(rec.estimatedrestorationtime)) +
+    rowIf("Restored", numOrNull(rec.customersrestored));
+  const disabled = c.recs.length < 2 ? " disabled" : "";
+  // Nav sits BELOW the card, and the card area has a CSS min-height, so the
+  // ‹ › buttons stay put while paging across cards with more/fewer rows.
+  body.innerHTML =
+    `<div class="odin-raw-card">${rows}</div>` +
+    `<div class="odin-raw-nav">` +
+    `<button type="button" class="odin-raw-prev"${disabled} aria-label="Previous report">‹</button>` +
+    `<span>Report ${i + 1} / ${c.recs.length}${c.total > c.recs.length ? ` (of ${c.total})` : ""}</span>` +
+    `<button type="button" class="odin-raw-next"${disabled} aria-label="Next report">›</button>` +
+    `</div>`;
+}
+
+async function loadRaw(wrap: HTMLElement, btn: HTMLElement) {
+  const fips = wrap.dataset.fips || "";
+  const cached = rawCache.get(fips);
+  if (!cached || Date.now() - cached.t > REFRESH_MS) {
+    btn.textContent = "Loading…";
+    try {
+      const resp = await fetch(rawUrl(fips));
+      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+      const data = await resp.json();
+      rawCache.set(fips, {
+        t: Date.now(),
+        total: (data.total_count as number) ?? 0,
+        recs: (data.results as Record<string, unknown>[]) || [],
+      });
+    } catch (err) {
+      console.warn("[TransmissionMap] ODIN raw records fetch failed", err);
+      btn.textContent = "Load failed — retry ▸";
+      return;
+    }
+  }
+  btn.style.display = "none";
+  wrap.dataset.idx = "0";
+  renderRaw(wrap);
+}
+
 function isVisible(): boolean {
   return !!state.layerVisibility[REGISTRY_ID];
 }
@@ -158,6 +271,22 @@ export function initOdinOutages() {
     const cb = (e.target as Element | null)?.closest<HTMLInputElement>(
       `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
     if (cb?.checked) void refetch();
+  });
+
+  // Raw-report pager inside the county popup (shell emitted by popup-format.ts).
+  document.addEventListener("click", (e) => {
+    const el = (e.target as Element | null)?.closest<HTMLElement>(
+      ".odin-raw-btn, .odin-raw-prev, .odin-raw-next");
+    const wrap = el?.closest<HTMLElement>(".odin-raw");
+    if (!el || !wrap) return;
+    if (el.classList.contains("odin-raw-btn")) { void loadRaw(wrap, el); return; }
+    const c = rawCache.get(wrap.dataset.fips || "");
+    if (!c || c.recs.length < 2) return;
+    const n = c.recs.length;
+    const cur = Number(wrap.dataset.idx) || 0;
+    wrap.dataset.idx = String(
+      el.classList.contains("odin-raw-next") ? (cur + 1) % n : (cur - 1 + n) % n);
+    renderRaw(wrap);
   });
 
   // URL-restored default-on (or already-visible) at load time.

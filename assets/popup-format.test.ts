@@ -301,8 +301,9 @@ describe('odin-outages-fill renderer', () => {
     expect(out).toContain('AEP Ohio');
     expect(out).toContain('Duke Energy');
     expect(out).toContain(encodeURIComponent('AEP Ohio power outage map'));
-    // Null since renders the placeholder dash; the real one renders a time.
-    expect(out).toContain('–');
+    // No "Since" column: min(start) across a utility's outages is a
+    // worst-case time (1 customer out 8h dominates 1000 out 2min).
+    expect(out).not.toContain('Since');
     expect(out).toContain('Total customers affected');
   });
 

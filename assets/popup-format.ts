@@ -382,34 +382,35 @@ const _defs = [
     const county = (p.NAME as string) || "County";
     const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
     const fmt = (v: unknown) => escapeHtml(Number(v).toLocaleString());
-    // Earliest reported start, as a compact local time ("8:55 PM" if today,
-    // "7/8, 8:55 PM" otherwise). Sparse upstream (~31% missing) → "–".
-    const fmtSince = (iso: unknown) => {
-      if (!iso || typeof iso !== "string") return "–";
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "–";
-      const opts: Intl.DateTimeFormatOptions =
-        d.toDateString() === new Date().toDateString()
-          ? { timeStyle: "short" } : { dateStyle: "short", timeStyle: "short" };
-      return escapeHtml(d.toLocaleString(undefined, opts));
-    };
+    // No "Since" column: the snapshot's per-utility `since` is min(start) across
+    // the group, so 1 customer out for 8h dominates 1000 out for 2min — a
+    // worst-case time that reads worse than reality. Per-report times live in
+    // the raw incident pager instead.
     const hasUtils = Array.isArray(p.odin_utils) && p.odin_utils.length;
     // County total lives in the table's Total row; without a per-utility
     // breakdown (older snapshot) it falls back to a plain popup row.
     const utilRows = hasUtils
-      ? `<table class="popup-table"><thead><tr><th>Utility (↗ outage map)</th><th>Out</th><th>Since</th></tr></thead><tbody>` +
-        (p.odin_utils as [string, number, number, (string | null)?][]).map(([name, out, , since]) => {
+      ? `<table class="popup-table"><thead><tr><th>Utility (↗ outage map)</th><th>Out</th></tr></thead><tbody>` +
+        (p.odin_utils as [string, number, number, (string | null)?][]).map(([name, out]) => {
           const href = `https://www.google.com/search?q=${encodeURIComponent(`${name} power outage map`)}`;
           return `<tr><td><a href="${href}" target="_blank" rel="noopener">${escapeHtml(name)} ↗</a></td>` +
-            `<td>${fmt(out)}</td><td>${fmtSince(since)}</td></tr>`;
+            `<td>${fmt(out)}</td></tr>`;
         }).join("") +
-        `<tr class="popup-table-total"><td>Total customers affected</td><td>${fmt(p.odin_out)}</td><td></td></tr>` +
+        `<tr class="popup-table-total"><td>Total customers affected</td><td>${fmt(p.odin_out)}</td></tr>` +
         `</tbody></table>`
+      : "";
+    // Per-outage report pager: shell only — records are fetched on demand
+    // and the buttons are wired by odin-outages.ts (document-level delegation).
+    const rawUi = typeof p.GEOID === "string"
+      ? `<div class="odin-raw" data-fips="${escapeHtml(p.GEOID)}">` +
+        `<button type="button" class="odin-raw-btn">View incident reports ▸</button>` +
+        `<div class="odin-raw-body"></div></div>`
       : "";
     return title(heading) +
       (hasUtils ? "" : row("Customers affected", typeof p.odin_out === "number" ? Number(p.odin_out).toLocaleString() : p.odin_out)) +
       row("Active incidents", p.odin_n) +
       utilRows +
+      rawUi +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Data from ORNL ODIN — utilities self-report; coverage is partial.</div>`;
   }],
   [["nws-zone-fill"], (p: Record<string, unknown>) => {
