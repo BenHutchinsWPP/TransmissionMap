@@ -196,18 +196,31 @@ function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: s
   return { short, level, abs };
 }
 
-// NWS alerts: single feed, ~10 min cadence, 3 h kill-switch — tighter
-// thresholds than wildfire and no per-feed degradation flags.
+// NWS alerts: ~10 min cadence, 3 h kill-switch — tighter thresholds than
+// wildfire. feed_status carries per-feed degradation (e.g. {"eccc":"failed"}
+// when the Canada pull failed and the file shipped US-only).
 let nwsGeneratedUtc: string | undefined;
+let nwsFeedStatus: Record<string, string> | undefined;
+
+const NWS_FEED_NAMES: Record<string, string> = { nws: "US", eccc: "Canada" };
+
+function nwsIssues(): string[] {
+  return Object.entries(nwsFeedStatus ?? {})
+    .filter(([, status]) => status !== "ok")
+    .map(([feed]) => `${NWS_FEED_NAMES[feed] ?? feed} feed down`);
+}
 
 function renderNwsAge() {
   if (!nwsGeneratedUtc) return;
   const el = document.getElementById("nwsAge");
   if (!el) return;
   const { short, level, abs } = relAge(nwsGeneratedUtc, 60, 180);
-  el.textContent = short;
-  el.title = abs + " — when the map last fetched the alert feed; expired alerts are removed automatically";
-  el.className = "legend-age legend-age--" + level;
+  const issues = nwsIssues();
+  el.textContent = issues.length ? `${short} · ${issues.join(", ")}` : short;
+  el.title = abs + " — when the map last fetched the alert feed; expired alerts are removed automatically"
+    + (issues.length ? ". A source feed is degraded — this layer shows the last good data, which may be incomplete." : "");
+  // A degraded feed is at least "aging" (amber), same rule as renderLiveAge.
+  el.className = "legend-age legend-age--" + (issues.length && level === "fresh" ? "aging" : level);
 }
 
 function renderLiveAge() {
@@ -244,7 +257,9 @@ window.addEventListener("tm:layerdata", (e) => {
     renderLiveAge();
   } else if (registryId === "nws-alerts") {
     const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-    nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? state.liveFcMeta["nws-alerts"]?.generated_utc;
+    const fcMeta = state.liveFcMeta["nws-alerts"];
+    nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
+    nwsFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
     renderNwsAge();
   }
 });
