@@ -113,11 +113,14 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   // service worker (same-origin dev) and the CDN/browser cache (cross-origin prod)
   // so we never re-read a stale cached copy.
   let lastFetchMs = 0;   // last refetch attempt — guards the return-to-page path
+  let inflight = false;  // concurrent-call guard (interval + visibilitychange + pageshow)
 
   async function refetchLive(): Promise<void> {
     if (!state.map) return;
     const src = state.map.getSource(sourceKey) as GeoJSONSource | undefined;
     if (!src) return;   // source not added yet (no layer ever enabled)
+    if (inflight) return; // already fetching
+    inflight = true;
     lastFetchMs = Date.now();
     const url = dataUrl();
     try {
@@ -129,8 +132,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
       const currentGenerated = generatedUtc();
       const newGenerated = (geojson.features?.[0]?.properties?.generated_utc as string | undefined)
         ?? (geojson.generated_utc as string | undefined);
-      if (currentGenerated && newGenerated && currentGenerated === newGenerated) {
-        return; // No change in data, skip updating map/UI
+      if (currentGenerated && newGenerated && newGenerated <= currentGenerated) {
+        return; // Skip if new data is not fresher (monotonic dedup)
       }
 
       let features: GeoJSON.Feature[] = geojson.features || [];
@@ -147,6 +150,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId: sourceKey } }));
     } catch (err) {
       console.warn(`[TransmissionMap] ${sourceKey} auto-refresh failed`, err);
+    } finally {
+      inflight = false;
     }
   }
 

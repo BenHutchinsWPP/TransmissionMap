@@ -14,6 +14,7 @@ Usage:
 """
 import argparse
 import gzip
+import os
 import shutil
 import subprocess
 import sys
@@ -65,16 +66,23 @@ def build_layer(layer):
 
     if layer["format"] == "geojson":
         out = OUT / f"{lid}.geojson"
-        out.unlink(missing_ok=True)
+        out_tmp = OUT / f"{lid}.geojson.tmp"
+        out_tmp.unlink(missing_ok=True)
         simplify = ["-simplify", str(layer["simplify"])] if "simplify" in layer else []
-        run(["ogr2ogr", "-f", "GeoJSON", out, src,
+        run(["ogr2ogr", "-f", "GeoJSON", out_tmp, src,
              *_src_opts(src), *_common_opts(layer), *simplify, "-lco", "RFC7946=YES"])
+        os.replace(out_tmp, out)
     elif layer["format"] == "pmtiles":
         seq, out = OUT / f"{lid}.geojsonl", OUT / f"{lid}.pmtiles"
-        seq.unlink(missing_ok=True)
-        run(["ogr2ogr", "-f", "GeoJSONSeq", seq, src,
+        seq_tmp = OUT / f"{lid}.geojsonl.tmp"
+        seq_tmp.unlink(missing_ok=True)
+        run(["ogr2ogr", "-f", "GeoJSONSeq", seq_tmp, src,
              *_src_opts(src), *_common_opts(layer), "-lco", "RFC7946=NO"])
-        tip = ["tippecanoe", "-o", out, "-l", lid,
+        os.replace(seq_tmp, seq)
+        # tmp name keeps the .pmtiles suffix — tippecanoe picks output format
+        # from the extension.
+        out_tmp = OUT / f"{lid}.tmp.pmtiles"
+        tip = ["tippecanoe", "-o", out_tmp, "-l", lid,
                f"--minimum-zoom={layer['min_zoom']}",
                f"--maximum-zoom={layer['max_zoom']}", *layer.get("flags", [])]
         if "simplification" in layer:
@@ -82,6 +90,7 @@ def build_layer(layer):
         tip += [f"--maximum-tile-bytes={layer.get('max_tile_bytes', 500000)}",
                 "--read-parallel", "--force", seq]
         run(tip)
+        os.replace(out_tmp, out)
         seq.unlink()
     else:
         sys.exit(f"ERROR: layer {lid}: unknown format {layer['format']!r}")

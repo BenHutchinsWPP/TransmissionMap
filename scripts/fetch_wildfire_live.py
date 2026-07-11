@@ -27,6 +27,8 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
+from geo_common import write_json_atomic
+
 # GitHub-hosted runners sometimes have a broken/unreachable IPv6 route while
 # IPv4 works fine; urllib picks whichever getaddrinfo() returns first, which
 # is often the AAAA record, causing "Network is unreachable" (errno 101).
@@ -505,8 +507,7 @@ def main():
     # (which reads root metadata) fires instead of silently going stale.
     fc["generated_utc"] = generated_utc
     fc["feed_status"] = feed_status
-    with open(args.output, "w") as f:
-        json.dump(fc, f, separators=(",", ":"))
+    write_json_atomic(fc, args.output, separators=(",", ":"))
     print(
         f"Wrote {len(all_features)} features "
         f"({len(hotspots)} hotspots, {len(perimeters)} perimeters, "
