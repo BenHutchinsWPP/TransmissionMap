@@ -14,11 +14,12 @@ const RAIL_NET_LABELS: Record<string, string> = {
 
 export function row(key: string, val: unknown) {
   if (val == null || val === "" || val === "0" || val === 0) return "";
-  return `<div class="popup-row"><span class="popup-key">${key}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`;
+  return `<div class="popup-row"><span class="popup-key">${escapeHtml(key)}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`;
 }
 
 export function websiteRow(url: string) {
   if (!url) return "";
+  if (url.trim().toLowerCase().startsWith('javascript:')) return "";
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">Website</a></div>`;
 }
 
