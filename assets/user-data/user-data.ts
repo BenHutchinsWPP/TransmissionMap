@@ -1,5 +1,10 @@
 // ─── User data: layer management + My Data tab + selection highlight ──────────
 // Deps: state, utils, user-data-geom, user-data-colors (no back-imports from url-state)
+// Caches loaded drawnFeatures in `_cachedDrawnFeatures` so a save that happens
+// before MapboxDraw is loaded (lazy chunk; see user-data-draw.ts) doesn't
+// overwrite localStorage with an empty FeatureCollection. `restoreDrawnFeatures()`
+// is called by `initDraw()` (user-data-draw.ts) once `state.draw` exists, to
+// replay features loaded before draw was ready.
 
 import type { GeoJSONSource, FilterSpecification, LayerSpecification, MapGeoJSONFeature } from 'maplibre-gl';
 import { state, USER_FEATURE_THRESHOLD, USER_LAYER_COLORS } from '../state.js';
@@ -421,8 +426,15 @@ export function copyFeatureToMyData(f: MapGeoJSONFeature) {
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const _STORAGE_KEY = 'tm-user-data';
 
+// Cache of the last-known drawn FeatureCollection, kept in sync whenever
+// state.draw is available. Lets saveUserData() preserve drawn shapes even
+// when called while MapboxDraw's lazy chunk hasn't loaded yet (state.draw is
+// null), and lets restoreDrawnFeatures() replay them once draw does load.
+let _cachedDrawnFeatures: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+
 export function saveUserData() {
   try {
+    if (state.draw) _cachedDrawnFeatures = state.draw.getAll();
     const payload = {
       userLayers: state.userLayers.map(l => ({
         filename: l.filename,
@@ -430,9 +442,7 @@ export function saveUserData() {
         color:    l.color,
         visible:  l.visible,
       })),
-      drawnFeatures: state.draw
-        ? state.draw.getAll()
-        : { type: 'FeatureCollection', features: [] },
+      drawnFeatures: _cachedDrawnFeatures,
     };
     localStorage.setItem(_STORAGE_KEY, JSON.stringify(payload));
   } catch (e: unknown) {
@@ -458,8 +468,21 @@ export function loadUserData() {
       console.warn('[TransmissionMap] loadUserData: failed to restore layer', l.filename, e);
     }
   }
-  if (drawnFeatures?.features?.length && state.draw) {
-    state.draw.add(drawnFeatures);
+  if (drawnFeatures?.features?.length) {
+    _cachedDrawnFeatures = drawnFeatures;
+    if (state.draw) {
+      state.draw.add(drawnFeatures);
+      renderMyDataTab();
+    }
+  }
+}
+
+// Called by initDraw() (user-data-draw.ts) right after MapboxDraw is attached
+// to the map, to replay any drawn features that were loaded from storage
+// before the lazy draw chunk was ready.
+export function restoreDrawnFeatures() {
+  if (state.draw && _cachedDrawnFeatures.features.length) {
+    state.draw.add(_cachedDrawnFeatures);
     renderMyDataTab();
   }
 }

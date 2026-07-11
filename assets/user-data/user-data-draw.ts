@@ -1,13 +1,14 @@
 // ─── Draw + edit mode + color-picker wiring ───────────────────────────────────
-// Deps: state.js, user-data-geom.js, user-data.js, user-data-colors.js,
-// tool-mode.js (deactivate measure tool without importing measure.js → breaks
-// the old circular dep).
+// Deps: state.js, user-data-geom.js, user-data.js (also calls restoreDrawnFeatures()
+// after attaching MapboxDraw, to replay shapes loaded from storage before this
+// lazy chunk was ready), user-data-colors.js, tool-mode.js (deactivate measure
+// tool without importing measure.js → breaks the old circular dep).
 
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { IControl, GeoJSONSource } from "maplibre-gl";
 import { state } from '../state.js';
 import { showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
-import { renderMyDataTab, clearUserHighlight, saveUserData } from './user-data.js';
+import { renderMyDataTab, clearUserHighlight, saveUserData, restoreDrawnFeatures } from './user-data.js';
 import { deactivateMeasureTool, registerEditExit } from '../tool-mode.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 
@@ -73,6 +74,7 @@ export function initDraw() {
     modes: { ...MapboxDraw.modes, static: StaticMode as unknown as MapboxDraw.DrawCustomMode },
   });
   state.map.addControl(state.draw as unknown as IControl);
+  restoreDrawnFeatures();
   state.map.once('load', () => { state.draw!.changeMode('static'); });
 
   state.map.on('draw.create', e => {
