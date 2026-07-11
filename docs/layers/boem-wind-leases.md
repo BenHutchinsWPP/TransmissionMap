@@ -15,26 +15,52 @@ U.S. offshore wind lease outlines and planning areas.
 | **Built by** | `scripts/extract_boem_wind.py` (`make boem-wind`) |
 | **Raw input** | `data/raw/boem_wind/boem-renewable-energy-shapefiles.zip` |
 
-## Processing
+## Download pack
 
-`extract_boem_wind.py`:
-1. Downloads the shapefile zip to `data/raw/boem_wind/` (skips if already present).
-2. Extracts the `Offshore_Wind_Leases_outlines.shp` file.
-3. Reprojects to EPSG:4326.
-4. Renames fields for frontend consumption.
-5. Writes `data/build/boem_wind_leases.geojson`.
+Offered as **GeoJSON** and **SHP**:
 
-`make boem-wind` then runs the extract script and builds it via the manifest (which writes the output to `.geojson.gz`).
+- `boem-wind-leases.zip` (GeoJSON) / `boem-wind-leases-shp.zip` (SHP)
+
+The GeoJSON zip holds `boem-wind-leases.geojson` + `boem-wind-leases.csv`; the
+SHP zip holds the shapefile set (`.shp/.shx/.dbf/.prj/.cpg`) + the CSV. Both
+include `boem-wind-leases.txt` (this doc) + `disclaimer.txt`.
 
 ## Fields
 
-| Field | Source Column | Notes |
+51 features (August 2025 vintage). Source columns from
+`Offshore_Wind_Leases_outlines.shp`, renamed by the extract script
+(`LEASE_NUMB→lease, COMPANY→company, PROJECT_NA→project, LEASE_TYPE→type,
+STATE→state, ACRES→acres, LEASE_DATE→date, LEASE_TERM→term`).
+
+| Field | % filled | Example values |
 |---|---|---|
-| `lease` | `LEASE_NUMB` | Lease number. |
-| `company` | `COMPANY` | Company name. |
-| `project` | `PROJECT_NA` | Project name. |
-| `type` | `LEASE_TYPE` | Lease type (e.g., Commercial, Easement, Research). |
-| `state` | `STATE` | Associated state. |
-| `acres` | `ACRES` | Area in acres. |
-| `date` | `LEASE_DATE` | Lease date. |
-| `term` | `LEASE_TERM` | Lease term. |
+| `lease` | 100% | `OCS-A 0506` |
+| `company` | 100% | `The Narragansett Electric Company` |
+| `project` | 60% | `sea2shore: The Renewable Link` |
+| `type` | 100% | `Commercial`, `Easement`, `Research` |
+| `state` | 100% | `Rhode Island` |
+| `acres` | 100% | `63338` (5 features are `0` — cable easements) |
+| `date` | 98% | `12/01/2014` |
+| `term` | 100% | `50 Years` |
+
+## Processing
+
+`extract_boem_wind.py` (`make boem-wind`):
+1. Downloads the shapefile zip to `data/raw/boem_wind/` (skips if already present).
+2. Extracts `Offshore_Wind_Leases_outlines.shp`.
+3. Reprojects to EPSG:4326, renames fields (table above).
+4. Writes `data/build/boem_wind_leases.geojson`; the tile manifest then gzips
+   it to `data/layers/boem_wind_leases.geojson.gz`.
+
+## Caveats
+
+- **Leases only.** The zip also ships planning areas, marine-hydrokinetic
+  leases, and lease outlines with cable routes; only
+  `Offshore_Wind_Leases_outlines` is extracted. Planning/wind-energy areas
+  that have not reached the lease stage do not appear.
+- **Static snapshot.** BOEM revises the shapefiles as lease sales close;
+  rerun `make boem-wind` (delete the cached zip in `data/raw/boem_wind/`
+  first) to refresh.
+- `project` is only ~60% filled — many leases have no named project yet; the
+  popup falls back to company name.
+- 5 features report `acres` of 0 (cable easements).

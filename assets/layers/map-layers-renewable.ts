@@ -1,4 +1,4 @@
-// ─── Renewable resource raster + geothermal layers ───────────────────────────
+// ─── Renewable resource raster + geothermal + BOEM offshore-lease layers ─────
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';

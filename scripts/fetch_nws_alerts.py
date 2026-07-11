@@ -236,12 +236,13 @@ def _round_coords(coords):
 def _parse_zone_url(url: str) -> tuple[str, str] | None:
     """`/zones/forecast/<UGC>` -> ("forecast", UGC); `/zones/fire/<UGC>` ->
     ("fire", UGC); `/zones/county/<UGC>` -> ("county", UGC) — used only as a
-    FIPS fallback when geocode.SAME is absent (R5). Marine UGCs (which share
-    the /zones/forecast/ path) -> ("marine", UGC), a distinct type joined onto
-    the separate marine-zone tileset (R6). Anything else -> None."""
+    FIPS fallback when geocode.SAME is absent (R5). Marine UGCs (observed on
+    the /zones/forecast/ path, but /zones/marine/ is accepted too) ->
+    ("marine", UGC), a distinct type joined onto the separate marine-zone
+    tileset (R6). Anything else -> None."""
     path = urllib.parse.urlparse(url).path
     parts = [p for p in path.split("/") if p]
-    if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire", "county"):
+    if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire", "county", "marine"):
         ztype, ugc = parts[1], parts[2]
         if ztype != "county" and ugc[:2] in MARINE_UGC_PREFIXES:
             return ("marine", ugc)
