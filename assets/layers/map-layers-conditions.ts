@@ -125,27 +125,30 @@ export function addWildfireLive() {
     maxzoom: 9,
     layout: { visibility: wildfireVis },
     paint: {
+      // Weight floor + low-density color stops are deliberately hot: a lone
+      // low-FRP hotspot must still glow at national zoom (z3–5), where a
+      // single detection covers only a few pixels.
       "heatmap-weight": [
         "interpolate", ["linear"], ["to-number", ["get", "frp"], 0],
-        0, 0.05,
-        10, 0.1,
-        50, 0.3,
-        200, 0.6,
+        0, 0.12,
+        10, 0.2,
+        50, 0.4,
+        200, 0.65,
         500, 0.85,
         2000, 1,
       ],
       "heatmap-intensity": [
         "interpolate", ["linear"], ["zoom"],
-        0, 2.5,
+        0, 3.2,
         9, 1,
       ],
-      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 4, 8, 9, 20],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 4, 11, 9, 22],
       "heatmap-color": [
         "interpolate", ["linear"], ["heatmap-density"],
         0,   "rgba(255,200,0,0)",
-        0.02, "rgba(255,200,0,0.25)",
-        0.2, "rgba(255,180,0,0.7)",
-        0.5, "rgba(255,100,0,0.9)",
+        0.02, "rgba(255,200,0,0.4)",
+        0.15, "rgba(255,170,0,0.8)",
+        0.45, "rgba(255,100,0,0.92)",
         1.0, "rgba(180,0,0,1)",
       ],
       "heatmap-opacity": 0.85,
