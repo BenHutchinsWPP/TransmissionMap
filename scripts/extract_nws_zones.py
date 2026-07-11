@@ -36,6 +36,8 @@ Output (data/build/):
   Duplicate ugc rows (multipart zones) are dissolved by (ugc, type) —
   ~7683 output features.
 The tile_manifest builds this into data/layers/nws_zones.pmtiles (PMTiles).
+Also writes scripts/nws_zone_keys.txt (committed) — the sorted key list
+fetch_nws_alerts.py uses to detect zone-vintage drift (R7).
 
 Usage:
   venv/bin/python scripts/extract_nws_zones.py
@@ -145,6 +147,15 @@ def main():
     dissolved.to_file(out, driver="GeoJSON")
 
     print(f"  ✓ {out} ({len(dissolved)} features)")
+
+    # Committed key list (R7): fetch_nws_alerts.py validates alert zone keys
+    # against this to detect zone-shapefile vintage drift (NWS revises zones
+    # ~annually; an alert naming a newer UGC would otherwise silently
+    # no-paint). Lives in scripts/ so data-feed.yml can copy it next to the
+    # fetch script. Commit the refreshed copy whenever the tileset is rebuilt.
+    keys_out = Path("scripts/nws_zone_keys.txt")
+    keys_out.write_text("\n".join(sorted(dissolved["key"])) + "\n")
+    print(f"  ✓ {keys_out} ({len(dissolved)} keys)")
 
 
 if __name__ == "__main__":

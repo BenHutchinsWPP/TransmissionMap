@@ -91,7 +91,7 @@ FeatureCollection itself now always carries three top-level keys, written even w
 |---|---|
 | `generated_utc` | Same pull timestamp as every feature's `generated_utc` property |
 | `feed_status` | Same `{"eccc": "ok"|"failed"}` dict as `features[0]`'s copy |
-| `stats` | `{"fetched", "kept", "zone_joined", "eccc_kept", "dropped", "same_statewide_skipped"}` — `fetched` is total US alerts fetched before curation; `kept` is US polygon alerts kept; `zone_joined` is the length of `zone_alerts`; `eccc_kept` is Canadian alerts kept; `dropped` is curated-but-unjoinable alerts (no zones/fips) truly dropped; `same_statewide_skipped` is statewide (county part `000`) SAME codes skipped during zone/county join parsing |
+| `stats` | `{"fetched", "kept", "zone_joined", "eccc_kept", "dropped", "same_statewide_skipped", "malformed_same", "marine_zones_skipped", "county_ugc_fallback"}` — `fetched` is total US alerts fetched before curation; `kept` is US polygon alerts kept; `zone_joined` is the length of `zone_alerts`; `eccc_kept` is Canadian alerts kept; `dropped` is curated-but-unjoinable alerts (no zones/fips) truly dropped; `same_statewide_skipped` is statewide (county part `000`) SAME codes skipped; `malformed_same` is non-6-digit SAME codes skipped; `marine_zones_skipped` is marine UGCs skipped (land-only zone tileset); `county_ugc_fallback` is alerts whose FIPS came from county UGCs because SAME was absent |
 
 When run under GitHub Actions (`GITHUB_ACTIONS` env var set) and `stats.dropped > 0`,
 `fetch_nws_alerts.py` prints a `::warning::` workflow command to stdout so the dropped
@@ -133,8 +133,18 @@ coverage, e.g. Puerto Rico, `0` for full coverage) followed by 5-digit state+cou
 `fetch_nws_alerts.py` strips the portion digit for any 6-digit SAME code, but **skips**
 (does not emit into `fips`) any whose county part is `"000"` — a statewide code with no
 county polygon to join — counting the skips into `stats.same_statewide_skipped` (see
-"Feed metadata & stats" above). Non-6-digit SAME codes are passed through unchanged and
-logged as suspect to stderr.
+"Feed metadata & stats" above). Non-6-digit SAME codes are skipped, logged as suspect to
+stderr, and counted into `stats.malformed_same`.
+
+`geocode.SAME` is not a required CAP field: when it's absent, county FIPS are derived
+from the alert's `/zones/county/<UGC>` URLs instead (`SSC###` → state FIPS + `###`,
+via a static state-abbrev→FIPS map), counted into `stats.county_ugc_fallback`.
+
+Marine UGCs (prefixes `AM/AN/GM/PZ/PK/PH/PM/PS/LE/LH/LM/LO/LC/LS/SL`) share the
+`/zones/forecast/` API path but have no polygons in the land-only `nws_zones` tileset —
+they are skipped and counted into `stats.marine_zones_skipped`. Curated alerts with mixed
+land+marine zones still paint their land zones; a marine-zone tileset is a separate
+decision.
 
 A zone or county can carry several alerts at once; the frontend picks a display winner by
 severity rank (Extreme > Severe > Moderate > Minor > unknown), tie-broken by earliest
@@ -166,6 +176,16 @@ Zone shapefiles change only a few times a year (NWS reissues zones periodically 
 CWA/zone boundary changes), so rebuilding `nws_zones.pmtiles` is a **manual** pipeline
 step (`make nws-zones` then `make publish-data`) — it is not part of the 10-minute feed
 cadence and not triggered automatically.
+
+**Vintage drift detection:** `extract_nws_zones.py` also writes the sorted tile-key list
+to `scripts/nws_zone_keys.txt` (committed; `data-feed.yml` copies it next to the fetch
+script). `fetch_nws_alerts.py` checks every alert's zone key against it — unknown keys
+(an alert naming a UGC created after the tileset build, which would silently no-paint)
+are counted into `stats.unknown_zone_keys`, logged, and surfaced as a CI `::warning::`
+annotation. That warning is the rebuild reminder: run `make nws-zones`, `make
+publish-data`, and commit the refreshed key list. Current vintage is valid to Apr 2026;
+expect the next NWS revision ~spring 2027. If the key file is missing the check is
+skipped (fail-open), never a feed failure.
 
 **Frontend join module:** `assets/nws-zone-join.ts` (model: `assets/odin-outages.ts`).
 On every alerts refresh it lazy-adds the `nws_zones` vector source (`promoteId: {nws_zones:
