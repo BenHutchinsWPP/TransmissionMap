@@ -10,9 +10,11 @@ import { renderMyDataTab, addUserLayer } from './user-data.js';
 export function handleFileOpen(file: File) {
   const ext = (file.name.split('.').pop() ?? '').toLowerCase();
   if (ext === 'geojson' || ext === 'json') {
-    file.text().then((text: string) => loadGeoJSON(JSON.parse(text), file.name));
+    file.text().then((text: string) => loadGeoJSON(JSON.parse(text), file.name))
+      .catch(err => alert(`Could not import ${file.name}: ${(err as Error).message}`));
   } else if (ext === 'kml') {
-    file.text().then((text: string) => loadKML(text, file.name));
+    file.text().then((text: string) => loadKML(text, file.name))
+      .catch(err => alert(`Could not import ${file.name}: ${(err as Error).message}`));
   } else if (ext === 'kmz') {
     loadKMZ(file);
   } else if (ext === 'csv') {
@@ -51,7 +53,8 @@ function loadKMZ(file: File) {
   JSZip.loadAsync(file).then(zip => {
     const kmlEntry = zip.files['doc.kml'] ?? Object.values(zip.files).find(f => f.name.endsWith('.kml'));
     if (!kmlEntry) { alert('No KML found inside KMZ'); return; }
-    kmlEntry.async('string').then(text => loadKML(text, file.name));
-  });
+    kmlEntry.async('string').then(text => loadKML(text, file.name))
+      .catch(err => alert(`Could not import ${file.name}: ${(err as Error).message}`));
+  }).catch(err => alert(`Could not import ${file.name}: ${(err as Error).message}`));
 }
 
