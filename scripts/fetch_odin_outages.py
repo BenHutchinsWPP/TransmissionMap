@@ -51,15 +51,31 @@ socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 # ── ODIN (Opendatasoft) endpoints ─────────────────────────────────────────────
 ODIN_BASE = "https://ornl.opendatasoft.com/api/explore/v2.1/catalog/datasets/odin-real-time-outages-county"
+# Per-incident records via the EXPORT endpoint (the /records endpoint hard-caps
+# at 100 rows; /exports/json returns the whole dataset — ~300 rows, ~80 KB).
+# We fetch the individual outage records ONCE and derive the county/utility
+# aggregates from them client-side (see build_snapshot), so the map choropleth
+# and the popup incident cards come from the same instant and can never disagree.
+# The per-record display fields are shipped verbatim so the frontend never has
+# to hit ODIN itself (no per-browser CORS call, no per-IP quota exposure).
+ODIN_RECORD_FIELDS = (
+    "communitydescriptor,name,cause,causekind,metersaffected,customersrestored,"
+    "reportedstarttime,estimatedrestorationtime,statuskind"
+)
 ODIN_RECORDS_URL = (
-    f"{ODIN_BASE}/records"
-    "?select=communitydescriptor,name,sum(metersaffected)%20as%20out,count(*)%20as%20n,"
-    "min(reportedstarttime)%20as%20since"
-    "&group_by=communitydescriptor,name"
-    "&order_by=out%20desc"
-    "&limit=-1"
+    f"{ODIN_BASE}/exports/json"
+    f"?select={ODIN_RECORD_FIELDS}"
+    "&order_by=metersaffected%20desc"
 )
 ODIN_METADATA_URL = ODIN_BASE
+
+# Per-record fields shipped to the frontend for the popup incident cards (the
+# `select` above also pulls communitydescriptor/name/metersaffected/
+# reportedstarttime, which the aggregation consumes; only these reach `records`).
+CARD_FIELDS = (
+    "name", "cause", "causekind", "metersaffected", "customersrestored",
+    "reportedstarttime", "estimatedrestorationtime", "statuskind",
+)
 
 FIPS_RE = re.compile(r"^\d{5}$")
 UTILITY_ID_SUFFIX_RE = re.compile(r",\d+$")
@@ -80,9 +96,10 @@ LEGACY_FIPS = frozenset({
 
 # ── Fetch helper ──────────────────────────────────────────────────────────────
 
-def _fetch_json(url: str, headers: dict) -> tuple[dict, dict]:
+def _fetch_json(url: str, headers: dict) -> tuple[object, dict]:
     """Fetch JSON with retry (3 attempts, backoff) on network error / 429 / 5xx.
-    Returns (parsed_json, response_headers)."""
+    Returns (parsed_json, response_headers). parsed_json is a dict for the
+    metadata endpoint and a list for the /exports/json records endpoint."""
     last_err = None
     for attempt in range(3):
         try:
@@ -111,7 +128,10 @@ def _fetch_json(url: str, headers: dict) -> tuple[dict, dict]:
 # ── Pure aggregation/validation (self-check target) ─────────────────────────
 
 def build_snapshot(results: list[dict], source_modified: str | None, now: datetime) -> dict:
-    """Validate + shape the raw `results` rows into the output snapshot dict.
+    """Validate + shape the raw per-incident `results` rows into the output
+    snapshot dict. Each row is ONE outage record; the county/utility aggregates
+    that drive the choropleth are derived here from the same rows that populate
+    the popup incident cards, so the two can never disagree.
     Raises ValueError if `results` is empty (treated as upstream failure —
     a genuine zero-outage nationwide snapshot is essentially impossible)."""
     if not results:
@@ -122,6 +142,9 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
     # earliest reportedstarttime (ISO string) or None — ~31% of upstream
     # records lack it, so None is a normal value, not an error.
     counties: dict[str, list] = {}
+    # fips -> [ {CARD_FIELDS…}, … ] per-incident records for the popup pager,
+    # kept in the metersaffected-desc order the upstream `order_by` gives us.
+    records: dict[str, list] = {}
     total = 0
     dropped = 0
     legacy_fips_seen: set[str] = set()
@@ -139,9 +162,9 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
                 print(f"  WARNING: county row uses pre-2022 legacy FIPS {fips!r} "
                       "(CT planning region / AK Valdez-Cordova split) — will not "
                       "paint on map", file=sys.stderr)
-        out = row.get("out") or 0
-        n = row.get("n") or 0
-        since = row.get("since") or None
+        # Each record contributes its own customers-out and counts as one incident.
+        out = row.get("metersaffected") or 0
+        since = row.get("reportedstarttime") or None
 
         name = row.get("name")
         if not name:
@@ -151,13 +174,16 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
 
         county = counties.setdefault(fips, [0, 0, {}])
         county[0] += out
-        county[1] += n
+        county[1] += 1
         util = county[2].setdefault(display_name, [0, 0, None])
         util[0] += out
-        util[1] += n
+        util[1] += 1
         # min of non-null ISO timestamps (lexicographic min == chronological min).
         if since and (util[2] is None or since < util[2]):
             util[2] = since
+
+        # Ship the raw per-record display fields verbatim for the popup cards.
+        records.setdefault(fips, []).append({k: row.get(k) for k in CARD_FIELDS})
 
         total += out
 
@@ -177,6 +203,7 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
         "dropped": dropped,
         "legacy_fips": legacy_fips_count,
         "counties": dict(sorted(counties.items())),
+        "records": dict(sorted(records.items())),
     }
 
 
@@ -185,41 +212,55 @@ def build_snapshot(results: list[dict], source_modified: str | None, now: dateti
 def _self_check():
     now = datetime(2026, 7, 8, 23, 59, 0, tzinfo=timezone.utc)
 
+    # Each input row is ONE outage record; aggregates are derived from them.
+    # Helper to write a per-incident row with the display fields the cards use.
+    def rec(fips, name, out, since=None, cause=None, status=None):
+        return {"communitydescriptor": fips, "name": name, "metersaffected": out,
+                "reportedstarttime": since, "cause": cause, "causekind": None,
+                "customersrestored": None, "estimatedrestorationtime": None,
+                "statuskind": status}
+
     # Normal case: FIPS filtering + total sum + multi-utility aggregation.
+    # 48201: CenterPoint with 2 incidents (3000 earliest, 0 later) + 1 coop incident.
     results = [
-        # 48201: two utility rows -> county totals sum, utils sorted by out desc.
-        {"communitydescriptor": "48201", "name": "CENTERPOINT ENERGY,8901", "out": 3000, "n": 150,
-         "since": "2026-07-08T18:55:00+00:00"},
-        {"communitydescriptor": "48201", "name": "FOO, BAR COOP,123", "out": 208, "n": 17},  # no since
-        # 41033: single utility.
-        {"communitydescriptor": "41033", "name": "PACIFIC POWER,456", "out": 2367, "n": 8,
-         "since": "2026-07-08T15:00:00+00:00"},
-        {"communitydescriptor": "bad", "name": "SOMEUTIL,1", "out": 999, "n": 1},  # invalid FIPS, must be skipped
-        # None/empty name -> "Unknown utility".
-        {"communitydescriptor": "06001", "name": None, "out": 50, "n": 2},
+        rec("48201", "CENTERPOINT ENERGY,8901", 3000, "2026-07-08T18:55:00+00:00", cause="Storm"),
+        rec("48201", "CENTERPOINT ENERGY,8901", 0, "2026-07-08T20:00:00+00:00"),
+        rec("48201", "FOO, BAR COOP,123", 208),  # no since
+        # 41033: single utility, single incident.
+        rec("41033", "PACIFIC POWER,456", 2367, "2026-07-08T15:00:00+00:00"),
+        rec("bad", "SOMEUTIL,1", 999),  # invalid FIPS, must be skipped
+        # None name -> "Unknown utility".
+        rec("06001", None, 50),
         # Legacy pre-2022 CT FIPS: kept (not dropped) but counted + warned.
-        {"communitydescriptor": "09001", "name": "LEGACY UTIL,1", "out": 12, "n": 1},
+        rec("09001", "LEGACY UTIL,1", 12),
     ]
     snap = build_snapshot(results, "2026-07-08T23:45:00Z", now)
     assert snap["county_count"] == 4, snap
-    assert snap["total_customers_out"] == 3000 + 208 + 2367 + 50 + 12, snap
+    assert snap["total_customers_out"] == 3000 + 0 + 208 + 2367 + 50 + 12, snap
     assert "bad" not in snap["counties"], snap
     assert snap["dropped"] == 1, snap  # only the "bad" FIPS row
     assert snap["legacy_fips"] == 1, snap  # the 09001 row
     assert snap["counties"]["09001"] == [12, 1, [["LEGACY UTIL", 12, 1, None]]], snap["counties"]["09001"]
 
     assert snap["counties"]["48201"][0] == 3208, snap
-    assert snap["counties"]["48201"][1] == 167, snap
+    assert snap["counties"]["48201"][1] == 3, snap  # 3 incident rows
     utils_48201 = snap["counties"]["48201"][2]
     assert utils_48201 == [
-        ["CENTERPOINT ENERGY", 3000, 150, "2026-07-08T18:55:00+00:00"],
-        ["FOO, BAR COOP", 208, 17, None],
-    ], utils_48201  # sorted by out desc; interior comma preserved, trailing ,<id> stripped
+        ["CENTERPOINT ENERGY", 3000, 2, "2026-07-08T18:55:00+00:00"],
+        ["FOO, BAR COOP", 208, 1, None],
+    ], utils_48201  # sorted by incident count desc; earliest since kept
 
-    assert snap["counties"]["41033"] == [2367, 8, [["PACIFIC POWER", 2367, 8, "2026-07-08T15:00:00+00:00"]]], \
+    assert snap["counties"]["41033"] == [2367, 1, [["PACIFIC POWER", 2367, 1, "2026-07-08T15:00:00+00:00"]]], \
         snap["counties"]["41033"]
 
-    assert snap["counties"]["06001"] == [50, 2, [["Unknown utility", 50, 2, None]]], snap["counties"]["06001"]
+    assert snap["counties"]["06001"] == [50, 1, [["Unknown utility", 50, 1, None]]], snap["counties"]["06001"]
+
+    # records: per-incident cards, verbatim display fields, metersaffected order preserved.
+    assert list(snap["records"].keys()) == sorted(snap["records"].keys()), "record keys must be sorted"
+    assert [r["metersaffected"] for r in snap["records"]["48201"]] == [3000, 0, 208], snap["records"]["48201"]
+    assert snap["records"]["48201"][0]["cause"] == "Storm", snap["records"]["48201"][0]
+    assert set(snap["records"]["48201"][0].keys()) == set(CARD_FIELDS), snap["records"]["48201"][0]
+    assert "bad" not in snap["records"], snap["records"]  # dropped FIPS carries no cards
 
     assert list(snap["counties"].keys()) == sorted(snap["counties"].keys()), "keys must be sorted"
     assert snap["source_modified"] == "2026-07-08T23:45:00Z"
@@ -228,14 +269,12 @@ def _self_check():
     # Duplicate displayName within a county (same utility, e.g. two id variants
     # collapsing to the same stripped name) must merge, not create two entries.
     dup_results = [
-        {"communitydescriptor": "48201", "name": "SAME UTIL,111", "out": 100, "n": 5,
-         "since": "2026-07-08T20:00:00+00:00"},
-        {"communitydescriptor": "48201", "name": "SAME UTIL,222", "out": 50, "n": 3,
-         "since": "2026-07-08T14:30:00+00:00"},  # earlier — must win the merge
+        rec("48201", "SAME UTIL,111", 100, "2026-07-08T20:00:00+00:00"),
+        rec("48201", "SAME UTIL,222", 50, "2026-07-08T14:30:00+00:00"),  # earlier — must win the merge
     ]
     dup_snap = build_snapshot(dup_results, None, now)
     assert dup_snap["counties"]["48201"] == \
-        [150, 8, [["SAME UTIL", 150, 8, "2026-07-08T14:30:00+00:00"]]], dup_snap["counties"]["48201"]
+        [150, 2, [["SAME UTIL", 150, 2, "2026-07-08T14:30:00+00:00"]]], dup_snap["counties"]["48201"]
     # Clean input (no bad/legacy FIPS) -> both counters present and zero.
     assert dup_snap["dropped"] == 0, dup_snap
     assert dup_snap["legacy_fips"] == 0, dup_snap
@@ -280,7 +319,7 @@ def main():
               "(shared per-IP quota; fine for local dev, not for CI)", file=sys.stderr)
         headers = {}
 
-    print("Fetching ODIN county outage aggregates…", file=sys.stderr)
+    print("Fetching ODIN per-incident outage records…", file=sys.stderr)
     try:
         data, resp_headers = _fetch_json(ODIN_RECORDS_URL, headers)
     except Exception as e:
@@ -291,8 +330,9 @@ def main():
     limit = resp_headers.get("X-RateLimit-Limit")
     print(f"  X-RateLimit-Remaining={remaining} X-RateLimit-Limit={limit}", file=sys.stderr)
 
-    results = data.get("results") or []
-    print(f"  {len(results)} counties in raw response", file=sys.stderr)
+    # The /exports/json endpoint returns a bare JSON array of records.
+    results = data if isinstance(data, list) else (data.get("results") or [])
+    print(f"  {len(results)} incident records in raw response", file=sys.stderr)
 
     print("Fetching ODIN dataset metadata (freshness)…", file=sys.stderr)
     source_modified = None

@@ -1,7 +1,7 @@
 name: Update ODIN outage data
-# Fetches a county-aggregated live power-outage snapshot from the ORNL ODIN
-# Opendatasoft portal (server-side group_by/sum/count — no per-outage geometry,
-# no pagination) into odin_outages.json.
+# Fetches a live power-outage snapshot from the ORNL ODIN Opendatasoft portal
+# (one /exports/json call for the per-incident records; the script derives the
+# county/utility aggregates from them and ships both) into odin_outages.json.
 # Body lives in data-feed.yml (shared with wildfire-data.yml and
 # nws-alerts.yml): writes to the orphan `data` branch via a single amended
 # commit; frontend fetches from raw.githubusercontent.com; main is never touched.
