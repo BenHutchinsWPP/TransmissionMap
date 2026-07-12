@@ -33,6 +33,22 @@ export function initMap() {
     attributionControl: false,
   });
 
+  // ── WebGL context-loss recovery ─────────────────────────────────────────────
+  // Firefox can drop the WebGL context on GPU driver hiccups, tab-backgrounding,
+  // or memory pressure — leaving a black canvas.  MapLibre emits these events on
+  // the map instance.  On loss we prevent the default (which destroys the context
+  // permanently) and request a repaint; on restore we trigger a full repaint so
+  // tiles/layers redraw.
+  const canvas = state.map.getCanvas();
+  canvas.addEventListener('webglcontextlost', (e) => {
+    console.warn('[TransmissionMap] WebGL context lost — attempting recovery');
+    e.preventDefault();  // allow context restoration
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    console.info('[TransmissionMap] WebGL context restored');
+    state.map?.triggerRepaint();
+  });
+
   // No customAttribution: every layer carries its own per-source attribution
   // (see SOURCE_ATTRIB), so credits appear/disappear with layer visibility.
   state.map.addControl(new maplibregl.AttributionControl({
