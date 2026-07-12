@@ -14,9 +14,12 @@
 // Deps: state (map, DATA, layerVisibility). Legend age chip = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from odinSnapshot().
-//       Also owns the popup's incident-report ‹ › pager: on-demand fetch of
-//       per-outage records from the ODIN Opendatasoft API, rendered as
-//       standard cards into the .odin-raw shell that popup-format.ts emits.
+//       Also owns the popup's incident-report ‹ › pager: the per-outage records
+//       ride in the SAME snapshot (`records` map, keyed by FIPS), derived
+//       server-side from the same fetch as the county aggregates, so the cards
+//       and the header/utility totals always reconcile. Rendered as standard
+//       cards into the .odin-raw shell that popup-format.ts emits — no live call
+//       to ODIN from the browser.
 // Wired from ui/ui.ts init() via initOdinOutages().
 
 import { state, DATA } from './state.js';
@@ -39,6 +42,11 @@ type OdinUtil = [string, number, number, (string | null)?];
 // Parsed snapshot kept in module scope so `sourcedata` can re-apply it.
 // Third tuple slot (per-utility breakdown) is absent in older snapshots.
 let snapshot: Record<string, [number, number, OdinUtil[]?]> = {};
+// Per-county incident records for the popup pager, shipped in the SAME snapshot
+// so the cards and the choropleth/utility totals come from one instant and can
+// never disagree (they're derived from the same upstream fetch, server-side).
+// Keyed by FIPS, in metersaffected-desc order. Absent in older snapshots.
+let records: Record<string, Record<string, unknown>[]> = {};
 // FIPS we currently have feature-state on, so a refresh can clear counties that
 // dropped out of the new snapshot (else restored counties stay lit forever).
 let appliedFips = new Set<string>();
@@ -80,6 +88,7 @@ function clearJoin() {
   for (const fips of appliedFips) clearFips(fips);
   appliedFips = new Set();
   snapshot = {};
+  records = {};
 }
 
 async function refetch(): Promise<void> {
@@ -109,6 +118,7 @@ async function refetch(): Promise<void> {
       if (!(fips in next)) clearFips(fips);
     }
     snapshot = next;
+    records = (data.records || {}) as Record<string, Record<string, unknown>[]>;
     appliedFips = new Set(Object.keys(next));
     generatedUtc = gen;
     applyJoin();
@@ -144,28 +154,18 @@ function renderOdinAge() {
 }
 
 // ── Per-outage incident reports (popup ‹ › pager) ─────────────────────────────
-// The snapshot only carries county/utility rollups; the per-outage records
-// (cause, metersaffected, ERT…) are fetched on demand from
-// the ODIN Opendatasoft API when the user expands "View incident reports"
-// in a county popup. CORS is `*` and the anonymous per-IP quota (5000/day) is
-// each browser's own — one request per county click, cached 15 min. The pager
-// shell (.odin-raw / .odin-raw-btn / .odin-raw-body) is emitted by
-// popup-format.ts; clicks land here via document-level delegation.
-
-// Only the fields the card renders. Deliberately dropped (2026-07 full-dataset
-// analysis): incident / incident_cause (always duplicate `cause`),
-// incident_location(_kind) (constant boilerplate), utilitydisclaimer
-// (boilerplate), geom (county polygon, huge), county/state/FIPS (popup heading
-// already shows them).
-const RAW_FIELDS = "name,cause,causekind,metersaffected,customersrestored," +
-  "reportedstarttime,estimatedrestorationtime,statuskind";
-const rawUrl = (fips: string) =>
-  "https://ornl.opendatasoft.com/api/explore/v2.1/catalog/datasets/" +
-  "odin-real-time-outages-county/records" +
-  `?where=communitydescriptor%3D%22${encodeURIComponent(fips)}%22` +
-  `&order_by=metersaffected%20desc&limit=100&select=${encodeURIComponent(RAW_FIELDS)}`;
-
-const rawCache = new Map<string, { t: number; total: number; recs: Record<string, unknown>[] }>();
+// The per-outage records (cause, metersaffected, ERT…) ride along in the SAME
+// snapshot as the county rollups (see `records`), fetched once server-side by
+// scripts/fetch_odin_outages.py. So expanding "View incident reports" in a
+// county popup reads already-loaded, same-instant data — no per-browser call to
+// ODIN, and the card totals always reconcile with the header/utility totals
+// (both derived from these records). The pager shell (.odin-raw / .odin-raw-btn
+// / .odin-raw-body) is emitted by popup-format.ts; clicks land here via
+// document-level delegation.
+//
+// The shipped fields (from CARD_FIELDS in the fetch script): name, cause,
+// causekind, metersaffected, customersrestored, reportedstarttime,
+// estimatedrestorationtime, statuskind.
 
 // "cause" is free text from each utility's outage system; these placeholder
 // values carry no information and are hidden (the row is omitted instead).
@@ -193,14 +193,14 @@ function parseErt(v: unknown): string | null {
 
 function renderRaw(wrap: HTMLElement) {
   const body = wrap.querySelector<HTMLElement>(".odin-raw-body");
-  const c = rawCache.get(wrap.dataset.fips || "");
-  if (!body || !c) return;
-  if (!c.recs.length) {
+  const recs = records[wrap.dataset.fips || ""] || [];
+  if (!body) return;
+  if (!recs.length) {
     body.innerHTML = `<div class="popup-row">No incident records returned.</div>`;
     return;
   }
-  const i = Math.min(Number(wrap.dataset.idx) || 0, c.recs.length - 1);
-  const rec = c.recs[i];
+  const i = Math.min(Number(wrap.dataset.idx) || 0, recs.length - 1);
+  const rec = recs[i];
 
   // Standard card: utility + customers-out header, then rows omitted when the
   // utility didn't report that field (fill rates are 12–64% — sparse is normal).
@@ -220,38 +220,20 @@ function renderRaw(wrap: HTMLElement) {
     rowIf("Started", fmtCardTime(rec.reportedstarttime)) +
     rowIf("Est. rest.", parseErt(rec.estimatedrestorationtime)) +
     rowIf("Restored", numOrNull(rec.customersrestored));
-  const disabled = c.recs.length < 2 ? " disabled" : "";
+  const disabled = recs.length < 2 ? " disabled" : "";
   // Nav sits BELOW the card, and the card area has a CSS min-height, so the
   // ‹ › buttons stay put while paging across cards with more/fewer rows.
   body.innerHTML =
     `<div class="odin-raw-card">${rows}</div>` +
     `<div class="odin-raw-nav">` +
     `<button type="button" class="odin-raw-prev"${disabled} aria-label="Previous report">‹</button>` +
-    `<span>Report ${i + 1} / ${c.recs.length}${c.total > c.recs.length ? ` (of ${c.total})` : ""}</span>` +
+    `<span>Report ${i + 1} / ${recs.length}</span>` +
     `<button type="button" class="odin-raw-next"${disabled} aria-label="Next report">›</button>` +
     `</div>`;
 }
 
-async function loadRaw(wrap: HTMLElement, btn: HTMLElement) {
-  const fips = wrap.dataset.fips || "";
-  const cached = rawCache.get(fips);
-  if (!cached || Date.now() - cached.t > REFRESH_MS) {
-    btn.textContent = "Loading…";
-    try {
-      const resp = await fetch(rawUrl(fips));
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-      const data = await resp.json();
-      rawCache.set(fips, {
-        t: Date.now(),
-        total: (data.total_count as number) ?? 0,
-        recs: (data.results as Record<string, unknown>[]) || [],
-      });
-    } catch (err) {
-      console.warn("[TransmissionMap] ODIN raw records fetch failed", err);
-      btn.textContent = "Load failed — retry ▸";
-      return;
-    }
-  }
+// No network: the records already rode in with the snapshot. Just reveal them.
+function loadRaw(wrap: HTMLElement, btn: HTMLElement) {
   btn.style.display = "none";
   wrap.dataset.idx = "0";
   renderRaw(wrap);
@@ -290,10 +272,10 @@ export function initOdinOutages() {
       ".odin-raw-btn, .odin-raw-prev, .odin-raw-next");
     const wrap = el?.closest<HTMLElement>(".odin-raw");
     if (!el || !wrap) return;
-    if (el.classList.contains("odin-raw-btn")) { void loadRaw(wrap, el); return; }
-    const c = rawCache.get(wrap.dataset.fips || "");
-    if (!c || c.recs.length < 2) return;
-    const n = c.recs.length;
+    if (el.classList.contains("odin-raw-btn")) { loadRaw(wrap, el); return; }
+    const recs = records[wrap.dataset.fips || ""] || [];
+    if (recs.length < 2) return;
+    const n = recs.length;
     const cur = Number(wrap.dataset.idx) || 0;
     wrap.dataset.idx = String(
       el.classList.contains("odin-raw-next") ? (cur + 1) % n : (cur - 1 + n) % n);
