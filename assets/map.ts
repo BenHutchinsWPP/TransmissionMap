@@ -24,52 +24,29 @@ export function initMap() {
 
   const hashView = parseLocationHash();
 
-  state.map = new maplibregl.Map({
-    container: "map",
-    style: BLANK_STYLE,
-    center:  hashView?.center ?? DEFAULT_CENTER,
-    zoom:    hashView?.zoom   ?? DEFAULT_ZOOM,
-    maxZoom: 18,
-    attributionControl: false,
-  });
+  // MapLibre v5 requires WebGL2. If the browser/GPU can't provide a context
+  // (hardware acceleration off, driver blocklisted, webgl disabled), the Map
+  // constructor throws — show a help banner instead of a silent black screen.
+  try {
+    state.map = new maplibregl.Map({
+      container: "map",
+      style: BLANK_STYLE,
+      center:  hashView?.center ?? DEFAULT_CENTER,
+      zoom:    hashView?.zoom   ?? DEFAULT_ZOOM,
+      maxZoom: 18,
+      attributionControl: false,
+    });
+  } catch (err) {
+    console.error('[TransmissionMap] Map failed to initialise (WebGL2 unavailable):', err);
+    showWebglError();
+    return;
+  }
 
-  // ── Firefox black-screen defenses ────────────────────────────────────────────
-
-  // 1. Surface map errors — MapLibre silently swallows tile/source/style errors
-  //    unless something listens.  Log them so a blank map is diagnosable.
+  // Surface map errors — MapLibre silently swallows tile/source/style errors
+  // unless something listens. Log them so a blank map is diagnosable.
   state.map.on('error', (e: maplibregl.ErrorEvent) => {
     console.error('[TransmissionMap] Map error:', e.error?.message ?? e);
   });
-
-  // 2. Force a resize after the first frame — Firefox can finalise layout
-  //    *after* the Map constructor measures the container, giving the canvas
-  //    0×0 dimensions and a black screen.  A deferred resize() re-measures.
-  requestAnimationFrame(() => state.map?.resize());
-
-  // 3. WebGL context-loss recovery — Firefox drops the context on GPU driver
-  //    hiccups, tab-backgrounding, or memory pressure.
-  const canvas = state.map.getCanvas();
-  canvas.addEventListener('webglcontextlost', (e) => {
-    console.warn('[TransmissionMap] WebGL context lost — attempting recovery');
-    e.preventDefault();  // allow context restoration
-  });
-  canvas.addEventListener('webglcontextrestored', () => {
-    console.info('[TransmissionMap] WebGL context restored');
-    state.map?.triggerRepaint();
-  });
-
-  // 4. Watchdog — if the map never reaches "idle" within 8 s of creation,
-  //    force a resize + repaint.  Covers edge cases where the canvas was
-  //    created at the wrong size or the first render silently failed.
-  let reachedIdle = false;
-  state.map.once('idle', () => { reachedIdle = true; });
-  setTimeout(() => {
-    if (!reachedIdle && state.map) {
-      console.warn('[TransmissionMap] Map never reached idle — forcing resize + repaint');
-      state.map.resize();
-      state.map.triggerRepaint();
-    }
-  }, 8000);
 
   // No customAttribution: every layer carries its own per-source attribution
   // (see SOURCE_ATTRIB), so credits appear/disappear with layer visibility.
@@ -171,6 +148,45 @@ export function switchProjection(type: string) {
   state.projection = type;
   // ponytail: only mercator | globe exist in MapLibre; no enum needed
   state.map.setProjection({ type: type as 'mercator' | 'globe' });
+}
+
+// ─── WebGL-unavailable banner ─────────────────────────────────────────────────
+// Shown when the Map constructor throws (no WebGL2 context). Adds Firefox-specific
+// remediation steps, since Firefox is the common case of WebGL2 being switched off.
+function showWebglError() {
+  hideLoading();
+  const firefox = /firefox/i.test(navigator.userAgent);
+
+  const firefoxHelp = `
+    <p><strong>It looks like you're using Firefox.</strong> WebGL2 is usually
+    blocked by a graphics-driver blocklist or a disabled performance setting.
+    To fix it:</p>
+    <ol>
+      <li><strong>Settings → General → Performance</strong> — uncheck
+        "Use recommended performance settings," then check
+        "Use hardware acceleration when available." Restart Firefox.</li>
+      <li>If that doesn't help, open <code>about:config</code> and set
+        <code>gfx.webrender.all</code> = <code>true</code>,
+        <code>webgl.force-enabled</code> = <code>true</code>, and
+        <code>layers.acceleration.disabled</code> = <code>false</code>;
+        confirm <code>webgl.disabled</code> = <code>false</code>. Restart Firefox.</li>
+      <li>Open <code>about:support</code> → <strong>Graphics</strong> → check
+        <strong>"WebGL 2 Driver Renderer."</strong> If it's blank or says
+        <em>Blocklisted</em>, update your graphics driver.</li>
+    </ol>`;
+
+  const el = document.createElement('div');
+  el.className = 'webgl-error';
+  el.innerHTML = `
+    <div class="webgl-error-card">
+      <h2>This map can't be displayed</h2>
+      <p>Your browser or graphics hardware couldn't start WebGL2, which this map
+      requires to render. Try enabling hardware acceleration in your browser
+      settings, updating your graphics driver, or opening the map in a recent
+      version of Chrome, Edge, Firefox, or Safari.</p>
+      ${firefox ? firefoxHelp : ''}
+    </div>`;
+  (document.getElementById('map') ?? document.body).appendChild(el);
 }
 
 // ─── URL hash parsing ─────────────────────────────────────────────────────────

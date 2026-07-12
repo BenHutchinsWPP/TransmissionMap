@@ -131,6 +131,43 @@ header h1 {
 #map {
   position: absolute;
   inset: 0;
+  /* Fallback so a not-yet-rendered or WebGL-failed canvas shows gray, not the
+     navy body background (which reads as an alarming black screen). */
+  background: #e8eaed;
+}
+
+/* Shown only when WebGL2 is unavailable and the map can't initialise. */
+.webgl-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #e8eaed;
+  z-index: 5;
+  overflow: auto;
+}
+.webgl-error-card {
+  max-width: 560px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--panel-shadow);
+  padding: 24px 28px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.webgl-error-card h2 { font-size: 18px; margin-bottom: 12px; }
+.webgl-error-card p { margin-bottom: 12px; }
+.webgl-error-card ol { margin: 0 0 4px 20px; }
+.webgl-error-card li { margin-bottom: 8px; }
+.webgl-error-card code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
 }
 
 /* ── Layers panel ────────────────────────────────────────────────────────── */
