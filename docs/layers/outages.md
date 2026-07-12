@@ -23,7 +23,7 @@ provider, different pipeline.
 | **Attribution** | "ORNL ODIN" |
 | **Served (prod)** | `odin_outages.json` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok). URL in `assets/constants.ts` → `DATA.odin_outages`. |
 | **Served (dev)** | Local `data/layers/odin_outages.json` — **not in git** (`data/layers/` is gitignored). Produced by the fetch script below. |
-| **Built by** | `scripts/fetch_odin_outages.py` — one server-side-aggregated Opendatasoft call (`group_by=communitydescriptor,name`, `sum(metersaffected)`, `count(*)`); no per-outage geometry is ever fetched. ~440 rows worst case; output is still a few KB. |
+| **Built by** | `scripts/fetch_odin_outages.py` — one Opendatasoft `/exports/json` call for the per-incident records (`select` = the card fields; no geometry). The county/utility aggregates that drive the choropleth are **derived from those same records** in Python, so the map and the popup cards come from one instant and can never disagree. ~300 records worst case; output ~80 KB (~6 KB gzipped over the wire). |
 | **Boundaries** | Joined onto `data/layers/county_boundaries.pmtiles` (Census TIGER counties; source layer `county_boundaries`, attributes `GEOID`, `NAME`, `STUSPS`, `STATE_NAME`). Shared join infrastructure, not part of this layer's data. |
 
 ### Snapshot shape
@@ -31,8 +31,16 @@ provider, different pipeline.
 ```json
 {"generated_utc":"2026-07-09T00:20:23Z","source_modified":null,
  "county_count":242,"total_customers_out":17707,"dropped":0,"legacy_fips":0,
- "counties":{"48201":[3208,167,[["CENTERPOINT ENERGY",3100,160],["FOO, BAR COOP",108,7]]],"41033":[2367,8]}}
+ "counties":{"48201":[3208,167,[["CENTERPOINT ENERGY",3100,160],["FOO, BAR COOP",108,7]]],"41033":[2367,8]},
+ "records":{"48201":[{"name":"CENTERPOINT ENERGY,8901","cause":"Storm","causekind":null,"metersaffected":3100,"customersrestored":null,"reportedstarttime":"2026-07-08T18:55:00+00:00","estimatedrestorationtime":"{\"ert\": \"2026-07-09T04:00:00Z\"}","statuskind":null}]}}
 ```
+
+`records` (added 2026-07) maps each FIPS to its per-incident outage records
+(the fields the popup cards render), in `metersaffected`-desc order. The
+`counties` aggregates above are derived from exactly these records in the fetch
+script, so a county's `counties[fips]` totals always equal the sum/count of its
+`records[fips]` — the popup header and the incident cards can never disagree.
+Rows whose `communitydescriptor` fails the FIPS regex carry no `records` entry.
 
 `dropped` (always present, `0` when clean) counts rows whose `communitydescriptor`
 failed the FIPS regex and were skipped entirely (not written anywhere). `legacy_fips`
@@ -87,6 +95,12 @@ when unreported). Each utility name is a clickable link to a Google search for
 outage-map URLs; a search link is the zero-maintenance way to route users to the
 utility's own, de facto original, outage map.) Snapshots without `odin_utils` fall
 back to a plain "Customers affected" row.
+
+**"View incident reports" pager.** Expanding it shows the county's individual
+outage records (`records[fips]`) as ‹ › paged cards — utility, customers out,
+cause, status, start/ERT. These records ship in the snapshot (no live call to
+ODIN from the browser), so their per-card `metersaffected` values sum to exactly
+the county total shown above. Wired in `assets/odin-outages.ts`.
 
 ### Choropleth ramp (customers out)
 
