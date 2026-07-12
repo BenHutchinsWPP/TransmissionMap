@@ -169,7 +169,16 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 const GLYPHS_URL      = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
 // MapLibre requires a style object even when we control all sources ourselves.
-export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [] };
+// The background layer prevents a black canvas while basemap tiles are loading
+// (WebGL clears to transparent-black by default; this gives a visible fallback).
+export const BLANK_STYLE = {
+  version: 8 as const,
+  glyphs: GLYPHS_URL,
+  sources: {},
+  layers: [
+    { id: 'blank-bg', type: 'background' as const, paint: { 'background-color': '#e8eaed' } },
+  ],
+};
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
 // and the search-highlight sources (highlights.ts).

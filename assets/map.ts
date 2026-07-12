@@ -33,12 +33,21 @@ export function initMap() {
     attributionControl: false,
   });
 
-  // ── WebGL context-loss recovery ─────────────────────────────────────────────
-  // Firefox can drop the WebGL context on GPU driver hiccups, tab-backgrounding,
-  // or memory pressure — leaving a black canvas.  MapLibre emits these events on
-  // the map instance.  On loss we prevent the default (which destroys the context
-  // permanently) and request a repaint; on restore we trigger a full repaint so
-  // tiles/layers redraw.
+  // ── Firefox black-screen defenses ────────────────────────────────────────────
+
+  // 1. Surface map errors — MapLibre silently swallows tile/source/style errors
+  //    unless something listens.  Log them so a blank map is diagnosable.
+  state.map.on('error', (e: maplibregl.ErrorEvent) => {
+    console.error('[TransmissionMap] Map error:', e.error?.message ?? e);
+  });
+
+  // 2. Force a resize after the first frame — Firefox can finalise layout
+  //    *after* the Map constructor measures the container, giving the canvas
+  //    0×0 dimensions and a black screen.  A deferred resize() re-measures.
+  requestAnimationFrame(() => state.map?.resize());
+
+  // 3. WebGL context-loss recovery — Firefox drops the context on GPU driver
+  //    hiccups, tab-backgrounding, or memory pressure.
   const canvas = state.map.getCanvas();
   canvas.addEventListener('webglcontextlost', (e) => {
     console.warn('[TransmissionMap] WebGL context lost — attempting recovery');
@@ -48,6 +57,19 @@ export function initMap() {
     console.info('[TransmissionMap] WebGL context restored');
     state.map?.triggerRepaint();
   });
+
+  // 4. Watchdog — if the map never reaches "idle" within 8 s of creation,
+  //    force a resize + repaint.  Covers edge cases where the canvas was
+  //    created at the wrong size or the first render silently failed.
+  let reachedIdle = false;
+  state.map.once('idle', () => { reachedIdle = true; });
+  setTimeout(() => {
+    if (!reachedIdle && state.map) {
+      console.warn('[TransmissionMap] Map never reached idle — forcing resize + repaint');
+      state.map.resize();
+      state.map.triggerRepaint();
+    }
+  }, 8000);
 
   // No customAttribution: every layer carries its own per-source attribution
   // (see SOURCE_ATTRIB), so credits appear/disappear with layer visibility.
