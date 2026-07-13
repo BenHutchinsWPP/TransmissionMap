@@ -110,19 +110,37 @@ export function initMap() {
 
 // ─── Dual basemap sources ─────────────────────────────────────────────────────
 // Aerial hands off from free USGS NAIP (below) to the metered Esri key (at and
-// above), so Esri only bills for close-in zooms. Cannot exceed 16: the USGS
-// cache 404s above z16. Below ~z12 the two are the same imagery (Esri sources
-// NAIP there); higher up they differ in capture date and grading, so the seam is
-// visible. Trade-off is documented in
+// above), so Esri only bills for close-in zooms.
+//
+// THESE CONSTANTS ARE IN MAP ZOOM, THE TILE LIMITS THEY ENCODE ARE IN TILE ZOOM,
+// AND THE TWO ARE NOT THE SAME NUMBER. A 256px raster source against MapLibre's
+// 512px reference tile resolves as
+//     tileZoom = round(mapZoom + 1)        (transform.ts coveringZoomLevel)
+// so at map zoom 7.5 MapLibre is already fetching TILE z9. Set a layer bound to
+// the raw tile limit and you get a band where the old provider is serving
+// garbage and the new one has not switched on yet.
+//
+// USGS serves real imagery across the whole lower 48 through TILE z16 and 404s
+// uniformly at z17 (verified at ten points, Seattle to Miami). tileZoom <= 16
+// holds while mapZoom < 15.5 — hence the .5. This is the hard ceiling, not a
+// preference: it leaves Esri only the last ~2.5 zoom levels.
+//
+// Below ~z12 the two are the same imagery (Esri sources NAIP there); higher up
+// they differ in capture date and grading, so the seam is visible on close
+// inspection. Accepted, to keep the Esri meter as idle as possible.
 // _private/docs/research/self-hosted-aerial-r2-pmtiles.md
-const AERIAL_SEAM_ZOOM = 15;
+const AERIAL_SEAM_ZOOM = 15.5;
 
-// USGS serves global Landsat/Blue Marble below z9, but its NAIP coverage is
-// CONUS-only: from z9 up, tiles outside the lower 48 come back HTTP 200 with a
-// BLANK image (~2.4 KB) rather than a 404, so MapLibre treats them as real data
-// and cannot overzoom the parent — the map just goes empty. Verified at Toronto,
-// Vancouver, Montreal, Mexico City and Alaska.
-const AERIAL_GAP_ZOOM = 9;
+// USGS serves global Landsat/Blue Marble through TILE z8, but its NAIP coverage
+// is CONUS-only: from TILE z9 up, tiles outside the lower 48 come back HTTP 200
+// with a BLANK image (~2.4 KB) rather than a 404, so MapLibre treats them as real
+// data and cannot overzoom the parent — the map just goes empty. Verified across
+// BC/AB (Vancouver, Calgary, Edmonton, Prince George, Kamloops…), Toronto,
+// Montreal, Mexico City and Alaska: all real at z8, all 2,419 bytes at z9.
+//
+// Per the tileZoom = round(mapZoom + 1) note above, TILE z9 is first requested at
+// MAP zoom 7.5 — so that, not 9, is where Esri has to take over outside CONUS.
+const AERIAL_GAP_ZOOM = 7.5;
 
 // A raster source's `bounds` gates which tiles are REQUESTED (TileBounds.contains
 // → hasTile), so a bounded Esri source costs zero quota inside CONUS. That is what
