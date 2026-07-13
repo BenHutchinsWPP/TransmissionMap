@@ -156,6 +156,11 @@ export const CARTO_VOYAGER_TILE_URLS = ["https://a.basemaps.cartocdn.com/rastert
                                   "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
                                   "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"];
 export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+// National Hydrography Dataset, cached as a TRANSPARENT overlay — streams, lakes,
+// dams, no land or labels. It is not a standalone basemap: the "hydro" basemap
+// stacks it over Carto Light in map.ts. Cache tops out at tile z16 (z17 is a 404),
+// same ceiling as USGSTopo.
+export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
 
 // ─── Live layer tile sources ──────────────────────────────────────────────────
 // IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.

@@ -4,8 +4,8 @@ import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
 import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, CARTO_LIGHT_TILE_URLS, CARTO_DARK_TILE_URLS,
-         CARTO_VOYAGER_TILE_URLS, USGS_TOPO_TILE_URL, AERIAL_TILE_URL,
-         USGS_AERIAL_TILE_URL } from './state.js';
+         CARTO_VOYAGER_TILE_URLS, USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
+         AERIAL_TILE_URL, USGS_AERIAL_TILE_URL } from './state.js';
 import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
@@ -159,7 +159,12 @@ const AERIAL_GAP_REGIONS: { id: string; bounds: [number, number, number, number]
   { id: "bc-ab", bounds: [-139, 49, -110, 60] },   // BC + Alberta
 ];
 
-// One entry per basemap layer. `aerial` owns three tiers: USGS below the seam,
+// One entry per basemap layer. `hydro` owns two: the USGS NHD cache is a
+// transparent overlay (water only — no land, no labels), so it is stacked over
+// Carto Light, which supplies the ground underneath. Two layers, one shared
+// source with the `light` basemap; MapLibre reuses the tiles it already has.
+//
+// `aerial` owns three tiers: USGS below the seam,
 // bounded Esri patches over the non-CONUS gap from z9, and global Esri above the
 // seam. A layer outside its [minzoom, maxzoom) is isHidden() to MapLibre, which
 // marks its source unused and fetches no tiles for it — that, plus source bounds,
@@ -174,6 +179,9 @@ const BASEMAP_LAYER_DEFS: {
   { basemap: "dark",    id: "carto-dark-bg",    source: "carto-dark-tiles"    },
   { basemap: "voyager", id: "carto-voyager-bg", source: "carto-voyager-tiles" },
   { basemap: "topo",    id: "usgs-topo-bg",     source: "usgs-topo-tiles"     },
+  // Ground first, water over it — order in this array is the paint order.
+  { basemap: "hydro",   id: "hydro-base-bg",    source: "carto-light-tiles"   },
+  { basemap: "hydro",   id: "usgs-hydro-bg",    source: "usgs-hydro-tiles"    },
   { basemap: "aerial",  id: "aerial-usgs-bg",   source: "aerial-usgs-tiles", maxzoom: AERIAL_SEAM_ZOOM },
   ...AERIAL_GAP_REGIONS.map(r => ({
     basemap: "aerial", id: `aerial-esri-${r.id}-bg`, source: `aerial-esri-${r.id}`,
@@ -193,6 +201,9 @@ function addBasemapSources() {
     { id: "carto-dark-tiles",    tiles: CARTO_DARK_TILE_URLS,    attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>", maxzoom: 19 },
     { id: "carto-voyager-tiles", tiles: CARTO_VOYAGER_TILE_URLS, attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>", maxzoom: 19 },
     { id: "usgs-topo-tiles",     tiles: [USGS_TOPO_TILE_URL],    attribution: "USGS The National Map",                                                                                                          maxzoom: 16 },
+    // maxzoom 16 is the USGS cache's hard ceiling (z17 is a 404), same as topo;
+    // MapLibre overzooms the z16 tile beyond that rather than going blank.
+    { id: "usgs-hydro-tiles",    tiles: [USGS_HYDRO_TILE_URL],   attribution: "USGS The National Map &middot; National Hydrography Dataset",                                                                     maxzoom: 16 },
     { id: "aerial-tiles",        tiles: [AERIAL_TILE_URL],        attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                              maxzoom: 19 },
     // maxzoom 16 is a hard property of the USGS cache (z17+ is a 404), not a
     // preference. It only bites in the fallback case; normally this source is

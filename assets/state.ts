@@ -8,7 +8,8 @@ export {
   DATA,
   OSM_TILE_URL, AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
   CARTO_LIGHT_TILE_URLS, CARTO_DARK_TILE_URLS, CARTO_VOYAGER_TILE_URLS,
-  USGS_TOPO_TILE_URL, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
+  USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
+  RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
   GEOMET_RADAR_TILE_TEMPLATE,
   BLANK_STYLE, EMPTY_FC, SOURCE_ATTRIB,
   DEFAULT_CENTER, DEFAULT_ZOOM,
@@ -18,7 +19,7 @@ export {
 export const state: AppState = {
   map: null,
   mapReady: false,
-  basemap: "street",    // "street" | "light" | "dark" | "voyager" | "topo" | "aerial"
+  basemap: "street",    // "street" | "light" | "dark" | "voyager" | "topo" | "aerial" | "hydro"
   projection: "mercator", // "mercator" | "globe"
   popup: null,
   layerVisibility: {},  // registryId → boolean (initialised from LAYERS[].defaultOn)
