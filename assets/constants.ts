@@ -138,6 +138,11 @@ const ESRI_TOKEN = import.meta.env.VITE_ESRI_API_KEY;
 export const AERIAL_TILE_URL = ESRI_TOKEN
   ? `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${ESRI_TOKEN}`
   : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+// Keyless NAIP fallback for when the Esri key hits its monthly quota. Free, no
+// token, CORS-open — but the tile cache stops at z16 (z17+ returns 404), so its
+// source MUST declare maxzoom 16. See _private/docs/research/self-hosted-aerial-r2-pmtiles.md
+export const USGS_AERIAL_TILE_URL =
+  "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
 export const CARTO_LIGHT_TILE_URLS   = ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
                                   "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
                                   "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",

@@ -4,7 +4,8 @@ import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
 import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, CARTO_LIGHT_TILE_URLS, CARTO_DARK_TILE_URLS,
-         CARTO_VOYAGER_TILE_URLS, USGS_TOPO_TILE_URL, AERIAL_TILE_URL } from './state.js';
+         CARTO_VOYAGER_TILE_URLS, USGS_TOPO_TILE_URL, AERIAL_TILE_URL,
+         USGS_AERIAL_TILE_URL } from './state.js';
 import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
@@ -108,14 +109,31 @@ export function initMap() {
 }
 
 // ─── Dual basemap sources ─────────────────────────────────────────────────────
-const BASEMAP_LAYERS = {
-  street:  { sourceId: "osm-tiles",          layerId: "osm-bg"           },
-  light:   { sourceId: "carto-light-tiles",  layerId: "carto-light-bg"   },
-  dark:    { sourceId: "carto-dark-tiles",   layerId: "carto-dark-bg"    },
-  voyager: { sourceId: "carto-voyager-tiles",layerId: "carto-voyager-bg" },
-  topo:    { sourceId: "usgs-topo-tiles",    layerId: "usgs-topo-bg"     },
-  aerial:  { sourceId: "aerial-tiles",       layerId: "aerial-bg"        },
-};
+// The zoom at which the aerial basemap hands off from free USGS NAIP (below) to
+// the metered Esri key (at and above). Chosen at 12 on evidence, not taste:
+// below ~z12 Esri's imagery *is* NAIP, so the two are visually near-identical
+// and the seam is invisible; by z14+ they diverge sharply (different capture
+// dates, different colour grading), which would make a higher seam obvious.
+// z12 also keeps the whole default CONUS view (z4) off the Esri meter entirely.
+// Analysis: _private/docs/research/self-hosted-aerial-r2-pmtiles.md
+const AERIAL_SEAM_ZOOM = 12;
+
+// One entry per basemap layer. `aerial` owns TWO layers, split at the seam
+// zoom; every other basemap owns one. A layer outside its [minzoom, maxzoom)
+// range is `isHidden()` to MapLibre, which marks its source unused and fetches
+// NO tiles for it — that is what makes the split actually save Esri quota
+// rather than just double-loading.
+const BASEMAP_LAYER_DEFS: {
+  basemap: string; id: string; source: string; minzoom?: number; maxzoom?: number;
+}[] = [
+  { basemap: "street",  id: "osm-bg",           source: "osm-tiles"           },
+  { basemap: "light",   id: "carto-light-bg",   source: "carto-light-tiles"   },
+  { basemap: "dark",    id: "carto-dark-bg",    source: "carto-dark-tiles"    },
+  { basemap: "voyager", id: "carto-voyager-bg", source: "carto-voyager-tiles" },
+  { basemap: "topo",    id: "usgs-topo-bg",     source: "usgs-topo-tiles"     },
+  { basemap: "aerial",  id: "aerial-usgs-bg",   source: "aerial-usgs-tiles", maxzoom: AERIAL_SEAM_ZOOM },
+  { basemap: "aerial",  id: "aerial-bg",        source: "aerial-tiles",      minzoom: AERIAL_SEAM_ZOOM },
+];
 
 function addBasemapSources() {
   if (!state.map) return;
@@ -125,21 +143,93 @@ function addBasemapSources() {
     { id: "carto-dark-tiles",    tiles: CARTO_DARK_TILE_URLS,    attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>", maxzoom: 19 },
     { id: "carto-voyager-tiles", tiles: CARTO_VOYAGER_TILE_URLS, attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>", maxzoom: 19 },
     { id: "usgs-topo-tiles",     tiles: [USGS_TOPO_TILE_URL],    attribution: "USGS The National Map",                                                                                                          maxzoom: 16 },
-    { id: "aerial-tiles",        tiles: [AERIAL_TILE_URL],        attribution: "Esri World Imagery",                                                                                                             maxzoom: 19 },
+    { id: "aerial-tiles",        tiles: [AERIAL_TILE_URL],        attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                              maxzoom: 19 },
+    // maxzoom 16 is a hard property of the USGS cache (z17+ is a 404), not a
+    // preference. It only bites in the fallback case; normally this source is
+    // never asked for anything above AERIAL_SEAM_ZOOM anyway.
+    { id: "aerial-usgs-tiles",   tiles: [USGS_AERIAL_TILE_URL],  attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                               maxzoom: 16 },
   ];
   for (const s of sources) {
     state.map.addSource(s.id, { type: "raster", tiles: s.tiles, tileSize: 256, attribution: s.attribution, maxzoom: s.maxzoom });
   }
-  for (const [type, { sourceId, layerId }] of Object.entries(BASEMAP_LAYERS)) {
-    state.map.addLayer({ id: layerId, type: "raster", source: sourceId, layout: { visibility: type === "street" ? "visible" : "none" } });
+  for (const d of BASEMAP_LAYER_DEFS) {
+    state.map.addLayer({
+      id: d.id, type: "raster", source: d.source,
+      ...(d.minzoom !== undefined ? { minzoom: d.minzoom } : {}),
+      ...(d.maxzoom !== undefined ? { maxzoom: d.maxzoom } : {}),
+      layout: { visibility: d.basemap === "street" ? "visible" : "none" },
+    });
   }
+  initAerialFallback();
+}
+
+// ─── Aerial fallback: Esri → USGS on quota exhaustion ─────────────────────────
+// Normal operation is the seam above: USGS below z12, Esri at z12+. This handles
+// the case where the Esri half dies — the key is capped (2M tiles/month, no card
+// on file) and when it is spent every tile 4xxs, which would otherwise leave the
+// aerial basemap black at exactly the zooms people care about.
+//
+// Fallback = widen USGS past the seam and hide Esri, so USGS covers all zooms.
+// Its source stops at z16, so MapLibre overzooms (stretches z16) beyond that
+// rather than requesting 404s: deep zoom degrades to blurry, never to blank.
+//
+// This is a SESSION LATCH, not a per-tile retry. Once tripped, the Esri layer is
+// hidden, MapLibre marks its source unused, and no further Esri tiles are
+// requested at all — there is no per-tile "try Esri, fail, fall back" tax.
+//
+// Recovery: after AERIAL_RETRY_MS the latch releases and the seam is restored.
+// If the key is still dead the next few tiles re-trip it, so a wrong guess costs
+// a handful of failed tiles per half hour, not a dead layer. The latch is
+// in-memory, so a reload also resets it.
+const AERIAL_FAIL_THRESHOLD = 3;            // ride out transient blips
+const AERIAL_RETRY_MS       = 30 * 60_000;  // re-probe Esri after 30 min
+const AERIAL_MAX_ZOOM       = 24;           // MapLibre's ceiling; "no upper bound"
+let aerialFailures = 0;
+let aerialFellBack = false;
+
+// esri  → seam restored: USGS [0,12), Esri [12,∞)
+// usgs  → Esri hidden:   USGS [0,∞)
+function useAerial(provider: 'esri' | 'usgs') {
+  if (!state.map) return;
+  const esriOn = provider === 'esri';
+  state.map.setLayerZoomRange('aerial-usgs-bg', 0, esriOn ? AERIAL_SEAM_ZOOM : AERIAL_MAX_ZOOM);
+  // Zoom range alone can't hide Esri (a 0-width range is invalid), so drive its
+  // visibility too — and respect the basemap the user is actually on.
+  const aerialVisible = state.basemap === 'aerial';
+  state.map.setLayoutProperty('aerial-bg', 'visibility', esriOn && aerialVisible ? 'visible' : 'none');
+}
+
+function initAerialFallback() {
+  state.map?.on('error', (e) => {
+    // MapLibre tags source-originated errors with the source id, and already
+    // swallows 404s (they mean "no tile here"), so anything arriving for the
+    // Esri source is a real failure: 401/403 (bad key), 429 (quota), 5xx.
+    const sourceId = (e as unknown as { sourceId?: string }).sourceId;
+    if (sourceId !== 'aerial-tiles' || aerialFellBack) return;
+    if (++aerialFailures < AERIAL_FAIL_THRESHOLD) return;
+
+    aerialFellBack = true;
+    console.warn('[TransmissionMap] Esri aerial tiles failing — falling back to USGS NAIP (blurry above z16).');
+    useAerial('usgs');
+
+    window.setTimeout(() => {
+      aerialFellBack = false;
+      aerialFailures = 0;
+      useAerial('esri');
+    }, AERIAL_RETRY_MS);
+  });
 }
 
 export function switchBasemap(type: string) {
   if (!state.mapReady || !state.map) return;
   state.basemap = type;
-  for (const [t, { layerId }] of Object.entries(BASEMAP_LAYERS)) {
-    state.map.setLayoutProperty(layerId, "visibility", t === type ? "visible" : "none");
+  for (const d of BASEMAP_LAYER_DEFS) {
+    // While the fallback latch is tripped, aerial-bg (Esri) stays hidden even
+    // when the user selects aerial — otherwise switching basemaps would silently
+    // re-arm a provider we already know is failing.
+    const suppressed = d.id === 'aerial-bg' && aerialFellBack;
+    const visible = d.basemap === type && !suppressed;
+    state.map.setLayoutProperty(d.id, "visibility", visible ? "visible" : "none");
   }
 }
 
