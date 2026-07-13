@@ -1,7 +1,7 @@
 // ─── Draw color constants and color-picker UI helpers ─────────────────────────
-// Extracted from user-data-draw.ts to break the user-data-draw ↔ user-data
-// circular import (user-data imported drawnFeatureColor/colorPickerInner from
-// user-data-draw, which imported renderMyDataTab from user-data).
+// Holds the draw color helpers separately from user-data-draw.ts: user-data.ts
+// needs drawnFeatureColor/colorPickerInner, and user-data-draw.ts needs
+// renderMyDataTab from user-data.ts — importing them directly would cycle.
 
 import { escapeHtml } from '../utils/utils.js';
 

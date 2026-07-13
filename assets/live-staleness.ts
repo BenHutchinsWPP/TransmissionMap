@@ -1,5 +1,5 @@
 // ─── Live-layer staleness safety (shared factory) ─────────────────────────────
-// Role: generalized version of the original wildfire-only safety module.
+// Role: shared factory for live-feed safety behavior.
 //       Auto-refreshes a shared live GeoJSON source on an interval (and on
 //       return-to-page, since mobile browsers freeze timers in background
 //       tabs) and, when the data's pull age exceeds a hard cutoff, auto-

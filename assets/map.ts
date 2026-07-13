@@ -245,10 +245,10 @@ export function switchProjection(type: string) {
 // universal diagnostic (the get.webgl.org test) everyone sees, plus a
 // browser-specific fix block chosen from the user agent.
 
-// UA sniffing is normally a smell, but here it only picks help text — a wrong
-// guess degrades to generic advice, it never breaks anything. Order matters:
-// Edge and Chrome UAs both contain "Chrome"; Safari's contains "Safari" but so
-// does Chrome's — so test the most specific token first.
+// UA sniffing only picks help text here: a wrong guess degrades to generic
+// advice, it never breaks anything. Order matters: Edge and Chrome UAs both
+// contain "Chrome"; Safari's contains "Safari" but so does Chrome's — test the
+// most specific token first.
 function detectBrowser(ua: string): 'firefox' | 'edge' | 'chromium' | 'safari' | 'other' {
   if (/firefox|fxios/i.test(ua))                       return 'firefox';
   if (/edg/i.test(ua))                                 return 'edge';

@@ -6,7 +6,7 @@
 //       a stale feed self-prunes instead of showing dead warnings. Features
 //       with no parseable end time are KEPT (fail open — the feed-level
 //       staleness gate covers them).
-//       Also drives nws-zone-join.ts's (task 3b) joined zone/county
+//       Also drives nws-zone-join.ts's joined zone/county
 //       feature-state, since that module only knows the polygon layer's
 //       cadence indirectly (via its own tm:layerdata refetch, see its
 //       header): every polygon prune tick here also calls

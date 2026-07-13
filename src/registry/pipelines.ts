@@ -33,9 +33,9 @@ export const pipelineLayers: LayerDef[] = [
       csv: "data/releases/hifld-natgas-points.zip",
     },
   },
-  // Hidden 2026-07: crude/refined-oil delivery has no grid-planning value
-  // (oil peakers are truck-fed; crude feeds refineries, not generators).
-  // Map builders still add these layers (hidden); uncomment to restore.
+  // Hidden: crude/refined-oil delivery has no grid-planning value (oil peakers
+  // are truck-fed; crude feeds refineries, not generators). Map builders still
+  // add these layers (hidden); uncomment to restore.
   /*
   {
     // Petroleum facilities (POL terminals + SPR) — shares the HIFLD points source,
@@ -95,8 +95,8 @@ export const pipelineLayers: LayerDef[] = [
       shp: "data/releases/osm-pipelines-lines-shp.zip",
     },
   },
-  // Restored 2026-07: complements HIFLD Gas Facilities (inline equipment —
-  // valves, pig launchers, pressure stations — absent from HIFLD taxonomy).
+  // Complements HIFLD Gas Facilities: inline equipment (valves, pig launchers,
+  // pressure stations) is absent from the HIFLD taxonomy.
   {
     id:            "osm-pipelines-points",
     urlCode:       "PLP",

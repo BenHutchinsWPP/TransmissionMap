@@ -8,8 +8,8 @@
 //       tiles, so we keep the parsed snapshot in module scope and RE-APPLY it on
 //       the source's `sourcedata` event, so panning/zooming into new tiles paints.
 //       Refreshes every 15 min while the layer is visible; a snapshot older than
-//       6 h is not painted (console warning only — deliberately no modal, unlike
-//       wildfire-staleness.ts, which this must NOT touch/generalize).
+//       6 h is not painted (console warning only — no modal, unlike
+//       wildfire-staleness.ts).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, DATA, layerVisibility). Legend age chip = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
@@ -287,6 +287,6 @@ export function initOdinOutages() {
 
   // Poll only while something is on screen — no point refetching for a hidden layer.
   setInterval(() => { if (isVisible()) void refetch(); }, REFRESH_MS);
-  // Keep the displayed age honest while the page sits open.
+  // Keep the displayed age accurate while the page sits open.
   setInterval(renderOdinAge, 60_000);
 }
