@@ -2,7 +2,7 @@
 // One point per active WECC path; the path Number is the on-map label. Ratings /
 // directionality / line list live in feature properties (rendered by popup-format.ts).
 // Clicking a path marker highlights the OSM/HIFLD transmission lines matched to that
-// path (separate "wecc-path-lines" source — see internal/spikes/wecc-paths/match/).
+// path (separate "wecc-path-lines" source — maintained by hand).
 //
 // Additional digitized corridor LineStrings sit in the same "wecc-paths" source,
 // flagged by isCorridor=true. They render as thick semi-transparent bands showing
@@ -10,7 +10,7 @@
 // WECC_Path_Markup.geojson (37 paths as of Jul 2026); maintained by hand.
 //
 // Source data: data/layers/wecc_paths.geojson.gz + wecc_path_lines.geojson.gz
-//   (built by internal/spikes/wecc-paths/parse_paths.py + match/match_lines.py).
+//   (maintained by hand).
 // Imported by: add-all-layers.ts. Lazy-loaded via layer-init.ts LAZY_GEOJSON.
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
