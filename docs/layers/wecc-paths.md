@@ -20,7 +20,7 @@ and maintained by hand (see [Caveats](#caveats)).
 | License | Public Version, published by WECC for public use |
 | Attribution | WECC Path Rating Catalog |
 | Served | `data/layers/wecc_paths.geojson.gz` (markers) · `wecc_path_lines.geojson.gz` (matched lines) |
-| Built by | `_private/wecc-paths/parse_paths.py` (data) · `match/match_lines.py` (line match) — private, see Caveats |
+| Built by | `internal/spikes/wecc-paths/parse_paths.py` (data) · `match/match_lines.py` (line match) — internal, see Caveats |
 | Raw input | `2026 Path Rating Catalog Public_V3.pdf` + `Interface.csv` (both private) |
 
 The catalog PDF is **authoritative** for path name, revision date, rating type,
@@ -113,8 +113,8 @@ kv, wecc_line, score:3.0}` — no rebuild needed.
   after.
   `parse_paths.py` refuses to run without `--force` for this reason; use it only
   to regenerate raw catalog points from the PDF, then re-merge the manual edits.
-- **Source files are private.** The catalog PDF and `Interface.csv` live in the
-  gitignored `_private/wecc-paths/` folder, not in repo history.
+- **Source files are internal.** The catalog PDF and `Interface.csv` live in an
+  internal gitignored folder, not in repo history.
 - **Catalog vs CSV ratings drift.** Where the PDF and CSV disagree, the PDF wins
   (e.g. EOR catalog 10,650 MW vs CSV 10,100; COI 4,800 vs 5,100). The CSV is an
   older operational snapshot. All mismatches are itemized in the private
