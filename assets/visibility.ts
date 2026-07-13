@@ -8,6 +8,7 @@ import { LAYERS, layerById } from '../src/registry/index.js';
 import { writeUrlState } from './url-state.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { ensureLayerData } from './layers/layer-init.js';
+import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 
 export function setLayerVisibility(registryId: string, visible: boolean) {
   const entry = layerById(registryId);
@@ -27,10 +28,7 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
   if (entry.heatLayerId || entry.modes) applyGenMode(registryId);
   writeUrlState();
 
-  if ((registryId === "tribal-lands" || registryId === "bia-tribal-lands") && visible && !localStorage.getItem("tm_tribal_acknowledged")) {
-    const tribalDlg = document.getElementById("tribalDisclaimerDialog") as HTMLDialogElement | null;
-    if (tribalDlg && !tribalDlg.open) tribalDlg.showModal();
-  }
+  if (visible && TRIBAL_LAYER_IDS.includes(registryId)) showTribalDisclaimer();
 }
 
 export function applyGenMode(registryId: string) {

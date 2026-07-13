@@ -1,5 +1,7 @@
 # Personal IDE / workspace config
 Workspace.code-workspace
+_private/
+HANDOFF.md
 
 # Intermediate tile-building files (large, regenerable)
 *.geojsonl

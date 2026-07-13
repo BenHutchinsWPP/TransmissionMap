@@ -33,6 +33,7 @@ import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
 import { initNwsZoneJoin } from '../nws-zone-join.js';
+import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
 
 function resetLayerState() {
   for (const entry of LAYERS) {
@@ -62,6 +63,7 @@ export function init() {
   buildLayersPanel();
   buildLegends();
   wireUI();
+  if (TRIBAL_LAYER_IDS.some(id => state.layerVisibility[id])) showTribalDisclaimer();
   initWildfireStaleness();
   initNwsStaleness();
   initOdinOutages();
@@ -349,14 +351,10 @@ function wireDisclaimerDialog() {
       dialog.close();
     });
   }
-
   const tribalDialog = document.getElementById("tribalDisclaimerDialog") as HTMLDialogElement | null;
   const tribalAcceptBtn = document.getElementById("tribalDisclaimerAccept");
   if (tribalAcceptBtn && tribalDialog) {
-    tribalAcceptBtn.addEventListener("click", () => {
-      localStorage.setItem("tm_tribal_acknowledged", "1");
-      tribalDialog.close();
-    });
+    tribalAcceptBtn.addEventListener("click", () => tribalDialog.close());
   }
 }
 
