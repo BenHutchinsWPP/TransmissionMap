@@ -107,6 +107,25 @@ HMS_BASE_URL = (
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
+def load_previous_features(filepath: str, feature_type: str, country: str | None = None) -> list[dict]:
+    if not os.path.exists(filepath):
+        return []
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        res = []
+        for feat in data.get("features", []):
+            p = feat.get("properties", {})
+            if p.get("_type") == feature_type:
+                if country and p.get("country") != country:
+                    continue
+                res.append(feat)
+        return res
+    except Exception as e:
+        print(f"  Failed reading previous {filepath}: {e}", file=sys.stderr)
+        return []
+
+
 def _epoch_ms_to_iso(ms: int | None) -> str | None:
     if ms is None:
         return None
@@ -461,11 +480,12 @@ def main():
                 # empty result here means the ArcGIS feed hiccuped, not that
                 # fires stopped existing. Flag it instead of reporting "ok".
                 feed_status["perimeters_us"] = "degraded"
-                print("  WARNING: perimeters_us returned 0 features", file=sys.stderr)
+                print("  WARNING: perimeters_us returned 0 features; keeping previous", file=sys.stderr)
+                perimeters = load_previous_features(args.output, "perimeter", country="US")
         except Exception as e:
-            perimeters = []
             feed_status["perimeters_us"] = "failed"
-            print(f"  WARNING: perimeters unavailable: {e}", file=sys.stderr)
+            print(f"  WARNING: perimeters unavailable: {e}; keeping previous", file=sys.stderr)
+            perimeters = load_previous_features(args.output, "perimeter", country="US")
 
         try:
             ca_perimeters = [normalize_cwfis_perimeter(f)
@@ -474,24 +494,30 @@ def main():
             print(f"  {len(ca_perimeters)} CA perimeter estimates", file=sys.stderr)
             if not ca_perimeters:
                 feed_status["perimeters_ca"] = "degraded"
-                print("  WARNING: perimeters_ca returned 0 features", file=sys.stderr)
+                print("  WARNING: perimeters_ca returned 0 features; keeping previous", file=sys.stderr)
+                perimeters += load_previous_features(args.output, "perimeter", country="CA")
         except Exception as e:
             feed_status["perimeters_ca"] = "failed"
-            print(f"  WARNING: CWFIS perimeters unavailable: {e}", file=sys.stderr)
+            print(f"  WARNING: CWFIS perimeters unavailable: {e}; keeping previous", file=sys.stderr)
+            perimeters += load_previous_features(args.output, "perimeter", country="CA")
 
         try:
             incidents = [normalize_incident(f) for f in f_incidents.result() if f.get("geometry")]
             print(f"  {len(incidents)} incidents", file=sys.stderr)
             if not incidents:
                 feed_status["incidents"] = "degraded"
-                print("  WARNING: incidents returned 0 features", file=sys.stderr)
+                print("  WARNING: incidents returned 0 features; keeping previous", file=sys.stderr)
+                incidents = load_previous_features(args.output, "incident")
         except Exception as e:
-            incidents = []
             feed_status["incidents"] = "failed"
-            print(f"  WARNING: incidents unavailable: {e}", file=sys.stderr)
+            print(f"  WARNING: incidents unavailable: {e}; keeping previous", file=sys.stderr)
+            incidents = load_previous_features(args.output, "incident")
 
         # fetch_hms_smoke handles its own errors and returns ([], "failed").
         smoke, feed_status["smoke"] = f_smoke.result()
+        if not smoke and feed_status["smoke"] == "failed":
+            print("  WARNING: smoke failed; keeping previous", file=sys.stderr)
+            smoke = load_previous_features(args.output, "smoke")
 
     all_features = hotspots + perimeters + incidents + smoke
     for feat in all_features:
