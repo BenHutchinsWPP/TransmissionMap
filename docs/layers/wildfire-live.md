@@ -76,9 +76,10 @@ Hotspots never appear in it: a VIIRS failure fails the whole run instead (see Ca
     growing age the legend chips show and the 6-hour kill-switch modal
     (`assets/wildfire-staleness.ts`) enforces.
   - **Perimeters / incidents / smoke (secondary):** each degrades independently to
-    empty (HMS smoke first falls back up to 2 days) so one flaky source doesn't block
-    the rest. The pull still publishes with a fresh `generated_utc`, so the gap is
-    flagged via `feed_status` (above) as an amber legend chip instead.
+    its last known state from the previous run (HMS smoke natively falls back up to 2 days
+    before resorting to the previous run) so one flaky source doesn't block
+    the rest. The pull still publishes with a fresh `generated_utc`, so the degradation is
+    flagged via `feed_status` (above) as an amber legend chip instead, while keeping the old features on the map.
 - **Production method varies by feed — not all are machine-generated:**
   - `hotspot` (VIIRS/FIRMS): fully automated satellite pixel detection, no human step.
   - `smoke` (NOAA HMS): **manually analyzed** — NOAA satellite analysts hand-draw the
