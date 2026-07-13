@@ -2,7 +2,7 @@
 // Deps: state.js, user-data-geom.js, user-data.js (also calls restoreDrawnFeatures()
 // after attaching MapboxDraw, to replay shapes loaded from storage before this
 // lazy chunk was ready), user-data-colors.js, tool-mode.js (deactivate measure
-// tool without importing measure.js → breaks the old circular dep).
+// tool without importing measure.js → avoids a circular dep).
 
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { IControl, GeoJSONSource } from "maplibre-gl";

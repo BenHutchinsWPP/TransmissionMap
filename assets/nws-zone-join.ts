@@ -19,10 +19,10 @@
 //           zone pair, source-layer COUNTY_SRC_LAYER).
 //       Several alerts can hit one zone/county; precedence = severity rank
 //       (Extreme>Severe>Moderate>Minor>unknown), tie-break earliest `ends`.
-//       The popup lookup index (task 3b) is keyed by exact (type,ugc), same
+//       The popup lookup index is keyed by exact (type,ugc), same
 //       as the feature-state join, so a click on one polygon lists only the
 //       alerts that actually named that zone type.
-//       Legend-chip gating (task 3b): property filters can't see feature-state,
+//       Legend-chip gating: property filters can't see feature-state,
 //       so the nwsGroup legend chips (assets/filters.ts applyNwsGroupFilter)
 //       call setZoneGroupFilter() here, which sets fill-/line-opacity paint
 //       expressions on all four joined layers directly (not setFilter).
@@ -37,13 +37,12 @@
 //       DATA.nws_alerts to read the top-level `zone_alerts` sidecar (that
 //       field is stripped off before the polygon features are cached into
 //       state.sourcesData, so it isn't available from that path). This is a
-//       small redundant fetch on the same ~5 min cadence, traded for zero
-//       changes to the shared live-staleness.ts/layer-init.ts fetch paths.
-// Staleness wiring (task 3c, in nws-staleness.ts): the kill-switch watches
+//       small redundant fetch on the same ~5 min cadence; the shared
+//       live-staleness.ts/layer-init.ts fetch paths are left untouched.
+// Staleness wiring (in nws-staleness.ts): the kill-switch watches
 //       #nwsStaleDialog's `open` attribute via MutationObserver and calls
 //       clearZoneAlerts() the moment the modal opens (no callback hook exists
-//       on live-staleness.ts's factory, and this module is out of scope for
-//       modification). Expiry pruning reuses the polygon prune tick: this
+//       on live-staleness.ts's factory). Expiry pruning reuses the polygon prune tick: this
 //       module exports pruneExpiredZoneAlerts(), called from nws-staleness.ts's
 //       pruneExpiredAlerts() (which the shared factory invokes on every prune
 //       point — post-refetch, initial tm:layerdata load, and the 60s tick),
@@ -106,7 +105,7 @@ const ZONE_GROUP_COLOR: ExpressionSpecification = [
   OTHER_COLOR,
 ] as unknown as ExpressionSpecification;
 
-// ── Indexes for the popup (task 3b) ─────────────────────────────────────────
+// ── Indexes for the popup ───────────────────────────────────────────────────
 // Exact (type,ugc) -> entries that explicitly named that zone.
 let zoneIndex = new Map<string, ZoneAlertEntry[]>();
 // fips -> entries.
@@ -177,7 +176,7 @@ function ensureZoneLayers() {
       paint: {
         "fill-color": ZONE_GROUP_COLOR,
         // Lower than the storm-polygon layer's 0.25 — these are approximate
-        // zone-area fills, not storm-drawn polygons (locked design decision).
+        // zone-area fills, not storm-drawn polygons.
         "fill-opacity": DEFAULT_FILL_OPACITY,
       },
     } as LayerSpecification, before);
@@ -237,7 +236,7 @@ function syncZoneVisibility() {
   }
 }
 
-// ── Legend-chip gating (task 3b) ────────────────────────────────────────────
+// ── Legend-chip gating ──────────────────────────────────────────────────────
 // null = all groups on (default null-guard expressions). A list = only those
 // groups visible, regardless of joined feature-state.
 let activeGroupFilter: string[] | null = null;
@@ -316,7 +315,7 @@ export function clearZoneAlerts() {
   keyGroups = new Map();
 }
 
-// ── Expiry pruning (task 3c) ────────────────────────────────────────────────
+// ── Expiry pruning ──────────────────────────────────────────────────────────
 // Mirrors nws-staleness.ts's polygon pruneExpiredAlerts EXACTLY, including
 // key order — `ends` (fallback `expires`) — so a zone never outlives its
 // storm polygon; entries with no parseable time are kept (fail open, same

@@ -1,6 +1,6 @@
 // ─── Measure tool ─────────────────────────────────────────────────────────────
 // Deps: state.js, user-data-geom.js (geom/info), tool-mode.js (exit edit mode
-// without importing user-data-draw → breaks the old circular dep).
+// without importing user-data-draw → avoids a circular dep).
 
 import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { state } from './state.js';

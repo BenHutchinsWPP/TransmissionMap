@@ -75,8 +75,8 @@ describe('buildKvFilterExpr', () => {
 // ui.ts). If a new applyXFilter() is added here without adding it to the
 // 'filter:all' handler, Reset (and the initial load) silently stop covering
 // it — exactly the bug this test guards against. Source-text comparison is
-// deliberately simple/permanent: it survives refactors of the functions'
-// internals as long as the handler still calls each export by name.
+// stays valid through refactors of the functions' internals as long as the
+// handler still calls each export by name.
 describe('filter:all drift guard', () => {
   const src = readFileSync(fileURLToPath(new URL('./filters.ts', import.meta.url)), 'utf8');
 

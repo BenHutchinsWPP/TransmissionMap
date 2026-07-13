@@ -73,7 +73,7 @@ export const OSM_GEN_COLOR: ExpressionSpecification = [
   "#d1d5db"
 ] as unknown as ExpressionSpecification;
 
-// PIPELINE_LINE_COLOR moved to buckets.ts (derived from SUBSTANCE_BUCKETS).
+// PIPELINE_LINE_COLOR lives in buckets.ts (derived from SUBSTANCE_BUCKETS).
 
 // ─── Legend entries ────────────────────────────────────────────────────────────
 export const VOLTAGE_LEGEND = [
