@@ -109,20 +109,18 @@ export function initMap() {
 }
 
 // ─── Dual basemap sources ─────────────────────────────────────────────────────
-// The zoom at which the aerial basemap hands off from free USGS NAIP (below) to
-// the metered Esri key (at and above). Chosen at 12 on evidence, not taste:
-// below ~z12 Esri's imagery *is* NAIP, so the two are visually near-identical
-// and the seam is invisible; by z14+ they diverge sharply (different capture
-// dates, different colour grading), which would make a higher seam obvious.
-// z12 also keeps the whole default CONUS view (z4) off the Esri meter entirely.
-// Analysis: _private/docs/research/self-hosted-aerial-r2-pmtiles.md
-const AERIAL_SEAM_ZOOM = 12;
+// Aerial hands off from free USGS NAIP (below) to the metered Esri key (at and
+// above), so Esri only bills for close-in zooms. Cannot exceed 16: the USGS
+// cache 404s above z16. Below ~z12 the two are the same imagery (Esri sources
+// NAIP there); higher up they differ in capture date and grading, so the seam is
+// visible. Trade-off is documented in
+// _private/docs/research/self-hosted-aerial-r2-pmtiles.md
+const AERIAL_SEAM_ZOOM = 15;
 
-// One entry per basemap layer. `aerial` owns TWO layers, split at the seam
-// zoom; every other basemap owns one. A layer outside its [minzoom, maxzoom)
-// range is `isHidden()` to MapLibre, which marks its source unused and fetches
-// NO tiles for it — that is what makes the split actually save Esri quota
-// rather than just double-loading.
+// One entry per basemap layer; `aerial` owns two, split at the seam zoom.
+// A layer outside its [minzoom, maxzoom) is isHidden() to MapLibre, which marks
+// its source unused and fetches no tiles for it — that is what makes the split
+// save quota instead of double-loading.
 const BASEMAP_LAYER_DEFS: {
   basemap: string; id: string; source: string; minzoom?: number; maxzoom?: number;
 }[] = [
@@ -164,46 +162,33 @@ function addBasemapSources() {
 }
 
 // ─── Aerial fallback: Esri → USGS on quota exhaustion ─────────────────────────
-// Normal operation is the seam above: USGS below z12, Esri at z12+. This handles
-// the case where the Esri half dies — the key is capped (2M tiles/month, no card
-// on file) and when it is spent every tile 4xxs, which would otherwise leave the
-// aerial basemap black at exactly the zooms people care about.
+// When the Esri key is spent (2M tiles/month) every tile 4xxs, blanking aerial
+// above the seam. Fallback widens USGS to all zooms and hides Esri; USGS stops
+// at z16, so MapLibre overzooms beyond that — blurry, never blank.
 //
-// Fallback = widen USGS past the seam and hide Esri, so USGS covers all zooms.
-// Its source stops at z16, so MapLibre overzooms (stretches z16) beyond that
-// rather than requesting 404s: deep zoom degrades to blurry, never to blank.
-//
-// This is a SESSION LATCH, not a per-tile retry. Once tripped, the Esri layer is
-// hidden, MapLibre marks its source unused, and no further Esri tiles are
-// requested at all — there is no per-tile "try Esri, fail, fall back" tax.
-//
-// Recovery: after AERIAL_RETRY_MS the latch releases and the seam is restored.
-// If the key is still dead the next few tiles re-trip it, so a wrong guess costs
-// a handful of failed tiles per half hour, not a dead layer. The latch is
-// in-memory, so a reload also resets it.
+// Session latch, not a per-tile retry: once tripped the Esri layer is hidden, its
+// source goes unused, and no further Esri tiles are requested. Releases after
+// AERIAL_RETRY_MS; a still-dead key re-trips it. In-memory, so reload resets it.
 const AERIAL_FAIL_THRESHOLD = 3;            // ride out transient blips
 const AERIAL_RETRY_MS       = 30 * 60_000;  // re-probe Esri after 30 min
 const AERIAL_MAX_ZOOM       = 24;           // MapLibre's ceiling; "no upper bound"
 let aerialFailures = 0;
 let aerialFellBack = false;
 
-// esri  → seam restored: USGS [0,12), Esri [12,∞)
-// usgs  → Esri hidden:   USGS [0,∞)
+// esri → seam restored: USGS [0,SEAM), Esri [SEAM,∞).  usgs → Esri hidden, USGS [0,∞).
 function useAerial(provider: 'esri' | 'usgs') {
   if (!state.map) return;
   const esriOn = provider === 'esri';
   state.map.setLayerZoomRange('aerial-usgs-bg', 0, esriOn ? AERIAL_SEAM_ZOOM : AERIAL_MAX_ZOOM);
-  // Zoom range alone can't hide Esri (a 0-width range is invalid), so drive its
-  // visibility too — and respect the basemap the user is actually on.
-  const aerialVisible = state.basemap === 'aerial';
-  state.map.setLayoutProperty('aerial-bg', 'visibility', esriOn && aerialVisible ? 'visible' : 'none');
+  // A zero-width zoom range is invalid, so Esri is hidden via visibility instead.
+  state.map.setLayoutProperty('aerial-bg', 'visibility',
+    esriOn && state.basemap === 'aerial' ? 'visible' : 'none');
 }
 
 function initAerialFallback() {
   state.map?.on('error', (e) => {
-    // MapLibre tags source-originated errors with the source id, and already
-    // swallows 404s (they mean "no tile here"), so anything arriving for the
-    // Esri source is a real failure: 401/403 (bad key), 429 (quota), 5xx.
+    // MapLibre tags source errors with the source id and already swallows 404s,
+    // so anything arriving here is real: 401/403 (bad key), 429 (quota), 5xx.
     const sourceId = (e as unknown as { sourceId?: string }).sourceId;
     if (sourceId !== 'aerial-tiles' || aerialFellBack) return;
     if (++aerialFailures < AERIAL_FAIL_THRESHOLD) return;
@@ -224,9 +209,8 @@ export function switchBasemap(type: string) {
   if (!state.mapReady || !state.map) return;
   state.basemap = type;
   for (const d of BASEMAP_LAYER_DEFS) {
-    // While the fallback latch is tripped, aerial-bg (Esri) stays hidden even
-    // when the user selects aerial — otherwise switching basemaps would silently
-    // re-arm a provider we already know is failing.
+    // Esri stays hidden while the latch is tripped; otherwise re-selecting aerial
+    // would re-arm a provider known to be failing.
     const suppressed = d.id === 'aerial-bg' && aerialFellBack;
     const visible = d.basemap === type && !suppressed;
     state.map.setLayoutProperty(d.id, "visibility", visible ? "visible" : "none");
