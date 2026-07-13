@@ -162,6 +162,8 @@ header h1 {
 .webgl-error-card p { margin-bottom: 12px; }
 .webgl-error-card ol { margin: 0 0 4px 20px; }
 .webgl-error-card li { margin-bottom: 8px; }
+.webgl-error-card a { color: var(--accent); }
+.webgl-error-card a:hover { color: var(--accent-hover); }
 .webgl-error-card code {
   font-family: var(--mono);
   font-size: 12px;
