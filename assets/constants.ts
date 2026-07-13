@@ -134,7 +134,10 @@ export const SOURCE_ATTRIB: Record<string, string> = {
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────
 export const OSM_TILE_URL    = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-export const AERIAL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const ESRI_TOKEN = import.meta.env.VITE_ESRI_API_KEY;
+export const AERIAL_TILE_URL = ESRI_TOKEN
+  ? `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${ESRI_TOKEN}`
+  : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 export const CARTO_LIGHT_TILE_URLS   = ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
                                   "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
                                   "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
