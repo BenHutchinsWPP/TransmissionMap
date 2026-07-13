@@ -151,40 +151,98 @@ export function switchProjection(type: string) {
 }
 
 // ─── WebGL-unavailable banner ─────────────────────────────────────────────────
-// Shown when the Map constructor throws (no WebGL2 context). Adds Firefox-specific
-// remediation steps, since Firefox is the common case of WebGL2 being switched off.
+// Shown when the Map constructor throws (no WebGL2 context). Structure: a
+// universal diagnostic (the get.webgl.org test) everyone sees, plus a
+// browser-specific fix block chosen from the user agent.
+
+// UA sniffing is normally a smell, but here it only picks help text — a wrong
+// guess degrades to generic advice, it never breaks anything. Order matters:
+// Edge and Chrome UAs both contain "Chrome"; Safari's contains "Safari" but so
+// does Chrome's — so test the most specific token first.
+function detectBrowser(ua: string): 'firefox' | 'edge' | 'chromium' | 'safari' | 'other' {
+  if (/firefox|fxios/i.test(ua))                       return 'firefox';
+  if (/edg/i.test(ua))                                 return 'edge';
+  if (/chrome|chromium|crios/i.test(ua))               return 'chromium';
+  if (/safari/i.test(ua))                              return 'safari';
+  return 'other';
+}
+
+function browserHelp(kind: ReturnType<typeof detectBrowser>): string {
+  // Chrome and Edge share steps; only the internal-page scheme differs.
+  const chromiumHelp = (scheme: 'chrome' | 'edge') => `
+    <p><strong>It looks like you're using ${scheme === 'edge' ? 'Edge' : 'Chrome'}.</strong>
+    WebGL2 is usually off because hardware acceleration is disabled or your GPU is
+    on the blocklist. To fix it:</p>
+    <ol>
+      <li><strong>Settings → System</strong> — turn on
+        <strong>"Use hardware acceleration when available"</strong>, then relaunch.</li>
+      <li>Open <code>${scheme}://gpu</code> and check the <strong>WebGL2</strong> line.
+        If it says <em>Software only</em> or <em>Disabled</em>, the reasons are listed
+        below it (usually a blocklisted GPU).</li>
+      <li>To override the blocklist for a quick test, open
+        <code>${scheme}://flags/#ignore-gpu-blocklist</code>, set it to
+        <strong>Enabled</strong>, and relaunch. The real fix is updating your
+        graphics driver.</li>
+    </ol>`;
+
+  switch (kind) {
+    case 'firefox':
+      return `
+        <p><strong>It looks like you're using Firefox.</strong> WebGL2 is usually
+        blocked by a graphics-driver blocklist or a disabled performance setting.
+        To fix it:</p>
+        <ol>
+          <li><strong>Settings → General → Performance</strong> — uncheck
+            "Use recommended performance settings," then check
+            "Use hardware acceleration when available." Restart Firefox.</li>
+          <li>If that doesn't help, open <code>about:config</code> and set
+            <code>gfx.webrender.all</code> = <code>true</code>,
+            <code>webgl.force-enabled</code> = <code>true</code>, and
+            <code>layers.acceleration.disabled</code> = <code>false</code>;
+            confirm <code>webgl.disabled</code> = <code>false</code>. Restart Firefox.</li>
+          <li>Open <code>about:support</code> → <strong>Graphics</strong> → check
+            <strong>"WebGL 2 Driver Renderer."</strong> If it's blank or says
+            <em>Blocklisted</em>, update your graphics driver.</li>
+        </ol>`;
+    case 'edge':     return chromiumHelp('edge');
+    case 'chromium': return chromiumHelp('chrome');
+    case 'safari':
+      return `
+        <p><strong>It looks like you're using Safari.</strong> WebGL2 is on by
+        default, so a blank map usually means an old macOS/GPU or a stale setting:</p>
+        <ol>
+          <li>Check <strong>Develop → Developer settings → WebGL</strong> is enabled.
+            No Develop menu? Turn it on under
+            <strong>Settings → Advanced → "Show features for web developers."</strong></li>
+          <li>If WebGL is already on, update macOS and Safari to the latest version.</li>
+        </ol>`;
+    default:
+      return `
+        <p>Try enabling hardware acceleration in your browser's settings, updating
+        your graphics driver, or opening the map in a recent version of Chrome,
+        Edge, Firefox, or Safari.</p>`;
+  }
+}
+
 function showWebglError() {
   hideLoading();
-  const firefox = /firefox/i.test(navigator.userAgent);
-
-  const firefoxHelp = `
-    <p><strong>It looks like you're using Firefox.</strong> WebGL2 is usually
-    blocked by a graphics-driver blocklist or a disabled performance setting.
-    To fix it:</p>
-    <ol>
-      <li><strong>Settings → General → Performance</strong> — uncheck
-        "Use recommended performance settings," then check
-        "Use hardware acceleration when available." Restart Firefox.</li>
-      <li>If that doesn't help, open <code>about:config</code> and set
-        <code>gfx.webrender.all</code> = <code>true</code>,
-        <code>webgl.force-enabled</code> = <code>true</code>, and
-        <code>layers.acceleration.disabled</code> = <code>false</code>;
-        confirm <code>webgl.disabled</code> = <code>false</code>. Restart Firefox.</li>
-      <li>Open <code>about:support</code> → <strong>Graphics</strong> → check
-        <strong>"WebGL 2 Driver Renderer."</strong> If it's blank or says
-        <em>Blocklisted</em>, update your graphics driver.</li>
-    </ol>`;
 
   const el = document.createElement('div');
   el.className = 'webgl-error';
+  el.setAttribute('role', 'alert');
   el.innerHTML = `
     <div class="webgl-error-card">
       <h2>This map can't be displayed</h2>
       <p>Your browser or graphics hardware couldn't start WebGL2, which this map
-      requires to render. Try enabling hardware acceleration in your browser
-      settings, updating your graphics driver, or opening the map in a recent
-      version of Chrome, Edge, Firefox, or Safari.</p>
-      ${firefox ? firefoxHelp : ''}
+      requires to render.</p>
+      <p>First, confirm it's WebGL2 and not the map: open
+      <a href="https://get.webgl.org/webgl2/" target="_blank" rel="noopener noreferrer">get.webgl.org/webgl2</a>.
+      A spinning cube means WebGL2 works and the problem is elsewhere — otherwise
+      the steps below should get it running.</p>
+      ${browserHelp(detectBrowser(navigator.userAgent))}
+      <div style="margin-top: 20px; text-align: right;">
+        <button onclick="location.reload()" class="layers-toggle-btn" style="position: static; box-shadow: none;">Reload Page</button>
+      </div>
     </div>`;
   (document.getElementById('map') ?? document.body).appendChild(el);
 }
