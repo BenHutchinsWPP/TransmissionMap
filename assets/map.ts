@@ -117,10 +117,37 @@ export function initMap() {
 // _private/docs/research/self-hosted-aerial-r2-pmtiles.md
 const AERIAL_SEAM_ZOOM = 15;
 
-// One entry per basemap layer; `aerial` owns two, split at the seam zoom.
-// A layer outside its [minzoom, maxzoom) is isHidden() to MapLibre, which marks
-// its source unused and fetches no tiles for it — that is what makes the split
-// save quota instead of double-loading.
+// USGS serves global Landsat/Blue Marble below z9, but its NAIP coverage is
+// CONUS-only: from z9 up, tiles outside the lower 48 come back HTTP 200 with a
+// BLANK image (~2.4 KB) rather than a 404, so MapLibre treats them as real data
+// and cannot overzoom the parent — the map just goes empty. Verified at Toronto,
+// Vancouver, Montreal, Mexico City and Alaska.
+const AERIAL_GAP_ZOOM = 9;
+
+// A raster source's `bounds` gates which tiles are REQUESTED (TileBounds.contains
+// → hasTile), so a bounded Esri source costs zero quota inside CONUS. That is what
+// lets the seam stay at z15 over the lower 48 while a chosen region still gets
+// imagery from z9.
+//
+// Esri fills exactly one region outside the lower 48: BC/Alberta, which are
+// interconnected members. Everywhere else outside CONUS (Alaska, Mexico, eastern
+// Canada) stays USGS-only and therefore has no imagery above z9 — accepted, since
+// nothing there is on the grid this map covers.
+//
+// The box hugs the 49th parallel, which IS the BC/AB–US border, so it leaks no
+// tiles into the lower 48. Its south edge cuts off Vancouver Island below 49N
+// (Victoria); extending it would put a strip of northern WA/ID/MT on the meter.
+const AERIAL_GAP_REGIONS: { id: string; bounds: [number, number, number, number] }[] = [
+  { id: "bc-ab", bounds: [-139, 49, -110, 60] },   // BC + Alberta
+];
+
+// One entry per basemap layer. `aerial` owns three tiers: USGS below the seam,
+// bounded Esri patches over the non-CONUS gap from z9, and global Esri above the
+// seam. A layer outside its [minzoom, maxzoom) is isHidden() to MapLibre, which
+// marks its source unused and fetches no tiles for it — that, plus source bounds,
+// is what makes the split save quota instead of double-loading.
+// Order matters: the gap patches are listed after aerial-usgs-bg so they paint
+// OVER USGS's blank non-CONUS tiles.
 const BASEMAP_LAYER_DEFS: {
   basemap: string; id: string; source: string; minzoom?: number; maxzoom?: number;
 }[] = [
@@ -130,8 +157,15 @@ const BASEMAP_LAYER_DEFS: {
   { basemap: "voyager", id: "carto-voyager-bg", source: "carto-voyager-tiles" },
   { basemap: "topo",    id: "usgs-topo-bg",     source: "usgs-topo-tiles"     },
   { basemap: "aerial",  id: "aerial-usgs-bg",   source: "aerial-usgs-tiles", maxzoom: AERIAL_SEAM_ZOOM },
+  ...AERIAL_GAP_REGIONS.map(r => ({
+    basemap: "aerial", id: `aerial-esri-${r.id}-bg`, source: `aerial-esri-${r.id}`,
+    minzoom: AERIAL_GAP_ZOOM, maxzoom: AERIAL_SEAM_ZOOM,
+  })),
   { basemap: "aerial",  id: "aerial-bg",        source: "aerial-tiles",      minzoom: AERIAL_SEAM_ZOOM },
 ];
+
+// Every Esri-backed layer, hidden together when the fallback latch trips.
+const ESRI_LAYER_IDS = ["aerial-bg", ...AERIAL_GAP_REGIONS.map(r => `aerial-esri-${r.id}-bg`)];
 
 function addBasemapSources() {
   if (!state.map) return;
@@ -149,6 +183,15 @@ function addBasemapSources() {
   ];
   for (const s of sources) {
     state.map.addSource(s.id, { type: "raster", tiles: s.tiles, tileSize: 256, attribution: s.attribution, maxzoom: s.maxzoom });
+  }
+  // Bounded Esri sources, one per gap region. Same tile URL as aerial-tiles, but
+  // `bounds` stops MapLibre requesting anything outside the box.
+  for (const r of AERIAL_GAP_REGIONS) {
+    state.map.addSource(`aerial-esri-${r.id}`, {
+      type: "raster", tiles: [AERIAL_TILE_URL], tileSize: 256, maxzoom: 19,
+      bounds: r.bounds,
+      attribution: "USGS The National Map · NAIP · Esri World Imagery",
+    });
   }
   for (const d of BASEMAP_LAYER_DEFS) {
     state.map.addLayer({
@@ -175,22 +218,26 @@ const AERIAL_MAX_ZOOM       = 24;           // MapLibre's ceiling; "no upper bou
 let aerialFailures = 0;
 let aerialFellBack = false;
 
-// esri → seam restored: USGS [0,SEAM), Esri [SEAM,∞).  usgs → Esri hidden, USGS [0,∞).
+// esri → normal: USGS [0,SEAM), Esri gap patches [GAP,SEAM), global Esri [SEAM,∞).
+// usgs → every Esri layer hidden, USGS widened to [0,∞). Non-CONUS has no imagery
+//        at all in this state (USGS is blank there above z9), which beats a dead
+//        aerial layer over the lower 48 — the whole point of the fallback.
 function useAerial(provider: 'esri' | 'usgs') {
   if (!state.map) return;
   const esriOn = provider === 'esri';
   state.map.setLayerZoomRange('aerial-usgs-bg', 0, esriOn ? AERIAL_SEAM_ZOOM : AERIAL_MAX_ZOOM);
   // A zero-width zoom range is invalid, so Esri is hidden via visibility instead.
-  state.map.setLayoutProperty('aerial-bg', 'visibility',
-    esriOn && state.basemap === 'aerial' ? 'visible' : 'none');
+  const visible = esriOn && state.basemap === 'aerial' ? 'visible' : 'none';
+  for (const id of ESRI_LAYER_IDS) state.map.setLayoutProperty(id, 'visibility', visible);
 }
 
 function initAerialFallback() {
   state.map?.on('error', (e) => {
     // MapLibre tags source errors with the source id and already swallows 404s,
     // so anything arriving here is real: 401/403 (bad key), 429 (quota), 5xx.
-    const sourceId = (e as unknown as { sourceId?: string }).sourceId;
-    if (sourceId !== 'aerial-tiles' || aerialFellBack) return;
+    const sourceId = (e as unknown as { sourceId?: string }).sourceId ?? '';
+    const isEsri = sourceId === 'aerial-tiles' || sourceId.startsWith('aerial-esri-');
+    if (!isEsri || aerialFellBack) return;
     if (++aerialFailures < AERIAL_FAIL_THRESHOLD) return;
 
     aerialFellBack = true;
@@ -211,7 +258,7 @@ export function switchBasemap(type: string) {
   for (const d of BASEMAP_LAYER_DEFS) {
     // Esri stays hidden while the latch is tripped; otherwise re-selecting aerial
     // would re-arm a provider known to be failing.
-    const suppressed = d.id === 'aerial-bg' && aerialFellBack;
+    const suppressed = aerialFellBack && ESRI_LAYER_IDS.includes(d.id);
     const visible = d.basemap === type && !suppressed;
     state.map.setLayoutProperty(d.id, "visibility", visible ? "visible" : "none");
   }
