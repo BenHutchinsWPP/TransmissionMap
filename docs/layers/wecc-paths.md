@@ -20,8 +20,8 @@ and maintained by hand (see [Caveats](#caveats)).
 | License | Public Version, published by WECC for public use |
 | Attribution | WECC Path Rating Catalog |
 | Served | `data/layers/wecc_paths.geojson.gz` (markers) · `wecc_path_lines.geojson.gz` (matched lines) |
-| Built by | `internal/spikes/wecc-paths/parse_paths.py` (data) · `match/match_lines.py` (line match) — internal, see Caveats |
-| Raw input | `2026 Path Rating Catalog Public_V3.pdf` + `Interface.csv` (both private) |
+| Built by | Maintained by hand |
+| Raw input | `2026 Path Rating Catalog Public_V3.pdf` |
 
 The catalog PDF is **authoritative** for path name, revision date, rating type,
 direction labels, transfer-limit MW, and the path's line list. The companion
@@ -80,22 +80,22 @@ Clicking a path marker highlights the actual OSM/HIFLD transmission-line feature
 that make up that path (a separate `wecc-path-lines` GeoJSON source, filtered to
 the clicked path number; highlight clears when the popup is dismissed).
 
-The matches are produced offline by `match/match_lines.py` via a **substation-
+The matches are maintained by hand via a **substation-
 anchored geometric match**: each WECC line definition (`"SubA–SubB kV"`) is
 resolved to two substation coordinates (using the OSM + HIFLD substation layers,
 nearest the path's lat/long), then the OSM/HIFLD line whose geometry passes near
 both substations at the matching voltage is kept. It picks whichever layer
 (OSM or HIFLD) matches better per line. Coverage is ~182 lines across the
 located paths; the rest are left for manual fill-in. Hard cases (long DC
-interties, odd voltages, point-defined paths like PDCI at NOB) are handled by
-`LINE_OVERRIDES` / `COORD_OVERRIDES` — this is a manually-maintained layer.
+interties, odd voltages, point-defined paths like PDCI at NOB) are handled
+manually — this is a manually-maintained layer.
 
 Some highlights are **hand-added by OSM way id**, appended straight to
-`wecc_path_lines.geojson.gz` (not produced by the matcher): the way
+`wecc_path_lines.geojson.gz`: the way
 geometry is pulled from Overpass and stored as a `source: "osm"` feature with
 `key` = the OSM way id (`score: 3.0` flags these manual entries). Paths added
 this way include 27 (Adelanto–Intermountain HVDC), 32, 38, 40, 71, 75, and 90
-(Gateway South). Paths 27 and 75 had no matcher output and are covered only by
+(Gateway South). Paths 27 and 75 are covered only by
 these manual lines. To add another: fetch `way(id:<id>);out geom;` from
 Overpass, build a LineString, and append `{path, source:"osm", key:"<id>",
 kv, wecc_line, score:3.0}` — no rebuild needed.
@@ -111,22 +111,16 @@ kv, wecc_line, score:3.0}` — no rebuild needed.
   copies live on the orphan `data-static` branch; if your local `data/layers/`
   lacks them, recover from there before editing, and re-run `make publish-data`
   after.
-  `parse_paths.py` refuses to run without `--force` for this reason; use it only
-  to regenerate raw catalog points from the PDF, then re-merge the manual edits.
-- **Source files are internal.** The catalog PDF and `Interface.csv` live in an
-  internal gitignored folder, not in repo history.
 - **Catalog vs CSV ratings drift.** Where the PDF and CSV disagree, the PDF wins
   (e.g. EOR catalog 10,650 MW vs CSV 10,100; COI 4,800 vs 5,100). The CSV is an
-  older operational snapshot. All mismatches are itemized in the private
-  `validation_report.md`.
+  older operational snapshot.
 - **Seasonal ratings are hand-transcribed.** `mw_fwd`/`mw_rev` hold the headline
   figure per direction. The three paths with season-/month-windowed limits
   (14 Idaho-to-Northwest, 25 PacifiCorp/PG&E, 45 SDG&E–CFE) set `seasonal: true`
   and carry a cleaned string in `rating_detail` (the popup's "Seasonal limits"
-  row). These are transcribed by hand in `SEASONAL_OVERRIDES` in `parse_paths.py`,
+  row). These are transcribed by hand,
   verified against the catalog page images — the table layout can't be parsed
-  reliably. If a future catalog adds a seasonal path, the parser prints a warning
-  to add it.
+  reliably.
 - **Directions are abbreviated** (`E-W`, `W-E`, `N-S`, `S-N`, `NE-SW`, `SW-NE`).
 - **Deleted paths excluded.** Catalog entries marked `[Deleted]` and pointer
   entries (`(See Path …)`) are not rendered.
