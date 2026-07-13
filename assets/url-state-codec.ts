@@ -37,8 +37,8 @@ function _setsEqual(a: Set<unknown>, b: Set<unknown>) {
   return true;
 }
 
-const BM_CODE_TO_TYPE: Record<string, string> = { l: "light", d: "dark", v: "voyager", t: "topo", a: "aerial" };
-const BM_TYPE_TO_CODE: Record<string, string> = { light: "l", dark: "d", voyager: "v", topo: "t", aerial: "a" };
+const BM_CODE_TO_TYPE: Record<string, string> = { l: "light", d: "dark", v: "voyager", t: "topo", a: "aerial", h: "hydro" };
+const BM_TYPE_TO_CODE: Record<string, string> = { light: "l", dark: "d", voyager: "v", topo: "t", aerial: "a", hydro: "h" };
 const GM_CHAR_TO_MODE: Record<string, string> = { i: "icons", h: "heat", b: "both", c: "clusters" };
 const GM_MODE_TO_CHAR: Record<string, string> = { icons: "i", heat: "h", both: "b", clusters: "c" };
 const OC_CHAR_TO_MODE: Record<string, string> = { s: "status", w: "scenario", a: "planauth" };
