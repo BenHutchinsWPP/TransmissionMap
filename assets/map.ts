@@ -249,6 +249,17 @@ const OFM_LIGHT_TEXT_REMAP: Record<string, string> = {
   "#666": "#9aa0a6",  // road names + airport codes
 };
 
+// Positron ships state/country boundaries at hsl(0,0%,70%) — barely visible
+// against the pale background even before the app's own overlays sit on top.
+// Darken them (light style only), reusing the same slate-gray palette as the
+// label remap above so the basemap reads as one coherent set of grays.
+// boundary_3 (state/province) also ships with minzoom:8 — invisible at this
+// app's DEFAULT_ZOOM (4, a national view), so drop the floor to 0 as well.
+const OFM_LIGHT_BOUNDARY_REMAP: Record<string, { color: string; minzoom?: number }> = {
+  boundary_2: { color: "#8a929c" },              // country
+  boundary_3: { color: "#9aa0a6", minzoom: 0 },  // state/province
+};
+
 // `hydro` borrows the light style as the ground under its water overlay.
 function ofmStyleForBasemap(basemap: string): OfmKey | null {
   if (basemap === "light" || basemap === "hydro") return "light";
@@ -262,7 +273,7 @@ const OFM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>Ope
 // force visibility without modeling the whole LayerSpecification union.
 type OfmStyleJson = {
   sources: Record<string, object>;
-  layers: { id: string; type: string; source?: string;
+  layers: { id: string; type: string; source?: string; minzoom?: number;
             layout?: Record<string, unknown>; paint?: Record<string, unknown> }[];
   sprite?: string;
 };
@@ -313,6 +324,10 @@ async function addOfmBasemaps() {
         if (key === "light" && typeof color === "string" && OFM_LIGHT_TEXT_REMAP[color]) {
           spec.paint = { ...spec.paint, "text-color": OFM_LIGHT_TEXT_REMAP[color] };
         }
+      } else if (key === "light" && OFM_LIGHT_BOUNDARY_REMAP[layer.id]) {
+        const { color, minzoom } = OFM_LIGHT_BOUNDARY_REMAP[layer.id];
+        spec.paint = { ...spec.paint, "line-color": color };
+        if (minzoom !== undefined) spec.minzoom = minzoom;
       }
       map.addLayer(spec as maplibregl.LayerSpecification, anchor);
       ofmLayerIds[key].push(spec.id);

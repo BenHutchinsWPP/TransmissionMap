@@ -24,6 +24,8 @@
 //       particle animation; never a static import, or the chunk split breaks.
 // Wired from ui/ui.ts init() via initWeatherLive(); setWeatherVar() is called
 // from ui-filters.ts when the dropdown in the layer row changes.
+// syncWeatherLiveVisibility() is also called directly from ui.ts's
+// resetLayersToDefaults() (Reset Layers button) — see its own comment.
 
 import type { ImageSource } from 'maplibre-gl';
 import type { ImageCorners } from './state.js';
@@ -478,6 +480,20 @@ function down(): string[] {
     .map(([varId]) => `${WEATHER_VARIABLES.find(w => w.id === varId)?.label ?? varId} down`);
 }
 
+// Applies state.layerVisibility["weather-live"] to particles/timebar/companion
+// probe: pulls a fresh image when shown, or stops particles + hides the slider
+// + clears the companion probe's bubble line when hidden (visibility.ts only
+// clears the main probe's). Called on a real checkbox change (below), and
+// directly by ui.ts's resetLayersToDefaults() — Reset flips
+// state.layerVisibility and the map's layout visibility straight through,
+// without dispatching a change event, so this is the only hook that runs.
+export function syncWeatherLiveVisibility(): void {
+  if (isVisible()) { void refetch(); return; }
+  void syncWindParticles();
+  renderTimebar();
+  updateRasterArrow(WIND_PROBE_ID, null);
+}
+
 export function initWeatherLive() {
   if (!state.map) return;
 
@@ -487,10 +503,7 @@ export function initWeatherLive() {
     const cb = (e.target as Element | null)?.closest<HTMLInputElement>(
       `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
     if (!cb) return;
-    if (cb.checked) void refetch();
-    // Hiding stops particles, hides the slider, and clears the companion
-    // probe's bubble line (visibility.ts only clears the main probe's).
-    else { void syncWindParticles(); renderTimebar(); updateRasterArrow(WIND_PROBE_ID, null); }
+    syncWeatherLiveVisibility();
   });
 
   document.getElementById("weatherTimebar")

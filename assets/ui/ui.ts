@@ -32,9 +32,10 @@ import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
-import { initWeatherLive } from '../weather-live.js';
-import { initNwsZoneJoin } from '../nws-zone-join.js';
+import { initWeatherLive, syncWeatherLiveVisibility } from '../weather-live.js';
+import { initNwsZoneJoin, syncZoneVisibility } from '../nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
+import { RASTER_PROBES, updateRasterArrow } from '../raster-probes.js';
 
 function resetLayerState() {
   for (const entry of LAYERS) {
@@ -135,7 +136,17 @@ function resetLayersToDefaults() {
     for (const mlId of entry.mapLayerIds) {
       if (state.map?.getLayer(mlId)) state.map.setLayoutProperty(mlId, "visibility", vis);
     }
+    // setLayerVisibility() clears a hidden layer's hover-probe bubble line;
+    // this loop bypasses that, so do it by hand or a parked cursor keeps
+    // showing a stale reading for a probe that's now off.
+    if (vis === "none" && RASTER_PROBES[entry.id]) updateRasterArrow(entry.id, null);
   }
+  // This loop flips map visibility directly rather than through
+  // setLayerVisibility(), so weather-live.ts's and nws-zone-join.ts's
+  // checkbox-change listeners never fire — sync their own hidden state by
+  // hand or a Reset leaves wind particles animating / alert zones painted.
+  syncWeatherLiveVisibility();
+  syncZoneVisibility();
 
   emit('filter:all');
 

@@ -43,6 +43,8 @@
 //       state.sourcesData, so it isn't available from that path). This is a
 //       small redundant fetch on the same ~5 min cadence; the shared
 //       live-staleness.ts/layer-init.ts fetch paths are left untouched.
+//       syncZoneVisibility() is also called directly from ui.ts's
+//       resetLayersToDefaults() (Reset Layers button) — see its own comment.
 // Staleness wiring (in nws-staleness.ts): the kill-switch watches
 //       #nwsStaleDialog's `open` attribute via MutationObserver and calls
 //       clearZoneAlerts() the moment the modal opens (no callback hook exists
@@ -200,7 +202,11 @@ function ensureZoneLayers() {
   }
 }
 
-function syncZoneVisibility() {
+// Exported for ui.ts's resetLayersToDefaults() (Reset Layers button), which
+// flips state.layerVisibility and the nws-alerts registry layers' MapLibre
+// visibility directly, without dispatching a change event — so the checkbox
+// listener below never fires and this needs a direct call instead.
+export function syncZoneVisibility() {
   if (!state.map) return;
   const vis = initialVisibility("nws-alerts");
   for (const id of [...ZONE_FILL_LAYERS, ...ZONE_LINE_LAYERS]) {
