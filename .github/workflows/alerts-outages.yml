@@ -1,0 +1,60 @@
+name: Update NWS alerts + ODIN outages
+# Fetches both fast-cadence live feeds in one run: curated polygon-bearing NWS
+# alerts (nws_alerts.geojson) and the ORNL ODIN county power-outage rollup
+# (odin_outages.json). Merged from the former nws-alerts.yml + odin-outages.yml:
+# both were dispatched every ~10 min by cron-job.org, and two workflows in the
+# shared data-branch concurrency group meant near-simultaneous dispatches
+# could silently skip a run (GitHub queues only ONE pending run per group).
+# One workflow = one dispatch, one queue slot, one force-push.
+#
+# Body lives in data-feed.yml (shared with wildfire-data.yml and
+# weather-data.yml): writes to the orphan `data` branch via a single amended
+# commit; frontend fetches from raw.githubusercontent.com; main is never
+# touched. The two fetch scripts run in parallel with per-attempt timeouts and
+# are failure-isolated: if one fails or hangs, the other's output still lands
+# before the job reports the failure.
+#
+# Primary trigger is workflow_dispatch — a single cron-job.org job fires this
+# every ~10 min. The `schedule:` cron is DISASTER INSURANCE only, so the feeds
+# can't go silently stale forever if cron-job.org dies. Every 2 h — the
+# tighter of the two feeds' constraints wins: the NWS stale kill-switch
+# (nws-staleness.ts) force-disables that layer with a blocking modal at 3 h;
+# ODIN's no-paint gate is a laxer 6 h (assets/odin-outages.ts). The worst-case
+# gap between successful runs must stay under 3 h. Change one, change the
+# other.
+#
+# Both output files already exist on the orphan `data` branch (bootstrapped by
+# the original per-feed workflows); no setup needed.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "2 */2 * * *"
+
+# Don't let a slow run race the next cycle's force-push; queue instead of
+# overlap. Shared with wildfire-data.yml and weather-data.yml: every workflow
+# that force-pushes the orphan `data` branch must sit in ONE group. Two groups
+# = two runs can check out the same tip, and the second `--force-with-lease`
+# push is (correctly) rejected, failing that run.
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    uses: ./.github/workflows/data-feed.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      scripts: >-
+        scripts/fetch_nws_alerts.py
+        scripts/fetch_odin_outages.py
+      outputs: >-
+        data/layers/nws_alerts.geojson
+        data/layers/odin_outages.json
+      endpoints: >-
+        https://api.weather.gov
+        https://ornl.opendatasoft.com
+      # shapely: needed to simplify ECCC (Canada) alert polygons before
+      # merging them into the feed (see fetch_nws_alerts.py eccc_to_feature).
+      pip-packages: shapely

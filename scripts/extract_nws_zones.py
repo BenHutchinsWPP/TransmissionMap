@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""
+extract_nws_zones.py — NWS public forecast zones + fire weather zones → GeoJSON
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NWS ZONE SHAPEFILES (WSOM)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Source:   National Weather Service / NOAA — www.weather.gov/gis
+License:  Public domain (U.S. federal government work)
+Geometry: Polygon/MultiPolygon (EPSG:4269 → reprojected to WGS84 on read by
+          geopandas)
+
+Three zone sets, listed on:
+  Public forecast zones — https://www.weather.gov/gis/PublicZones
+  Fire weather zones    — https://www.weather.gov/gis/FireZones
+  Marine zones          — https://www.weather.gov/gis/MarineZones
+    (coastal mz*.zip + offshore oz*.zip, both zone_type "marine")
+Each page links a dated shapefile ZIP under
+  https://www.weather.gov/source/gis/Shapefiles/WSOM/  (newest listed first;
+  public = z_*.zip, fire = fz*.zip, marine coastal = mz*.zip, marine
+  offshore = oz*.zip). This script scrapes the page for the FIRST matching
+  href and downloads it if not already present.
+
+Not a standalone map layer: this is shared join infra (same pattern as
+county_boundaries — see scripts/tile_manifest.yaml). Zone alerts (phase 2 of
+the NWS weather-alerts layer, see HANDOFF.md "Stage 1") join onto this
+tileset by (type, ugc) feature-state; nothing renders it directly.
+
+Raw inputs (downloaded to data/raw/nws_zones/):
+  pub/z_*.zip un-zipped              — public forecast zones (~4157 rows)
+  fire/fz*.zip un-zipped             — fire weather zones (~3683 rows)
+  marine_coastal/mz*.zip un-zipped   — marine coastal zones
+  marine_offshore/oz*.zip un-zipped  — marine offshore zones
+    (marine sets combined ~690 rows)
+  Fields: forecast/fire use STATE (2-char) + ZONE (3-digit string) + NAME;
+  marine shapefiles have no STATE/ZONE, instead carry ID (the UGC directly,
+  e.g. "AMZ130") + NAME.
+
+Output (data/build/):
+  nws_zones.geojson — fields: ugc (STATE + "Z" + ZONE for forecast/fire, or
+  ID verbatim for marine), type ("forecast"|"fire"|"marine"), name, key
+  ("z"+ugc for type=forecast, "f"+ugc for type=fire, "m"+ugc for
+  type=marine — the (type,ugc) join key used as pmtiles promoteId, since
+  bare ugc collides across zone sets; see assets/nws-zone-join.ts).
+  Duplicate ugc rows (multipart zones) are dissolved by (ugc, type) —
+  ~8370 output features.
+The tile_manifest builds this into data/layers/nws_zones.pmtiles (PMTiles).
+Also writes scripts/nws_zone_keys.txt (committed) — the sorted key list
+fetch_nws_alerts.py uses to detect zone-vintage drift (R7).
+
+Usage:
+  venv/bin/python scripts/extract_nws_zones.py
+"""
+
+import re
+import sys
+import zipfile
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+try:
+    import geopandas as gpd
+except ImportError:
+    sys.stderr.write("ERROR: geopandas missing. Run: source venv/bin/activate\n")
+    sys.exit(1)
+
+RAW = Path("data/raw/nws_zones")
+BUILD = Path("data/build")
+USER_AGENT = "TransmissionMap (https://github.com/BenHutchinsWPP/TransmissionMap)"
+
+# (listing page, href regex, raw subdir, zone type)
+SOURCES = [
+    (
+        "https://www.weather.gov/gis/PublicZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(z_[^\"'>]+\.zip)"),
+        RAW / "pub",
+        "forecast",
+    ),
+    (
+        "https://www.weather.gov/gis/FireZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(fz[^\"'>]+\.zip)"),
+        RAW / "fire",
+        "fire",
+    ),
+    (
+        "https://www.weather.gov/gis/MarineZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(mz[^\"'>]+\.zip)"),
+        RAW / "marine_coastal",
+        "marine",
+    ),
+    (
+        "https://www.weather.gov/gis/MarineZones",
+        re.compile(r"/source/gis/Shapefiles/WSOM/(oz[^\"'>]+\.zip)"),
+        RAW / "marine_offshore",
+        "marine",
+    ),
+]
+
+
+def _fetch(url: str) -> bytes:
+    req = Request(url, headers={"User-Agent": USER_AGENT})
+    with urlopen(req, timeout=60) as r:
+        return r.read()
+
+
+def ensure_shapefile(listing_url: str, href_re: re.Pattern, subdir: Path, label: str) -> Path:
+    """Return path to a .shp in `subdir`, downloading + unzipping if absent."""
+    existing = next(subdir.glob("*.shp"), None)
+    if existing:
+        print(f"  ✓ {label}: using existing {existing}")
+        return existing
+
+    print(f"  ↓ {label}: scraping {listing_url}")
+    html = _fetch(listing_url).decode("utf-8", errors="ignore")
+    m = href_re.search(html)
+    if not m:
+        sys.exit(f"no matching shapefile href found on {listing_url}")
+    zip_name = m.group(1)
+    zip_url = f"https://www.weather.gov/source/gis/Shapefiles/WSOM/{zip_name}"
+
+    subdir.mkdir(parents=True, exist_ok=True)
+    zpath = subdir / zip_name
+    print(f"  ↓ {label}: {zip_url}")
+    data = _fetch(zip_url)
+    zpath.write_bytes(data)
+
+    with zipfile.ZipFile(zpath) as z:
+        z.extractall(subdir)
+
+    shp = next(subdir.glob("*.shp"), None)
+    if not shp:
+        sys.exit(f"no .shp found after unzipping {zpath}")
+    return shp
+
+
+def load_zones(shp: Path, zone_type: str) -> "gpd.GeoDataFrame":
+    gdf = gpd.read_file(shp)
+    if "ID" in gdf.columns:
+        # Marine shapefiles carry the UGC directly in ID (e.g. "AMZ130");
+        # no STATE/ZONE columns to concatenate.
+        gdf["ugc"] = gdf["ID"].astype(str)
+    else:
+        gdf["ugc"] = gdf["STATE"].astype(str) + "Z" + gdf["ZONE"].astype(str)
+    gdf["type"] = zone_type
+    gdf["name"] = gdf["NAME"]
+    prefix = {"forecast": "z", "fire": "f", "marine": "m"}[zone_type]
+    gdf["key"] = prefix + gdf["ugc"]
+    gdf = gdf[["ugc", "type", "name", "key", "geometry"]]
+    if gdf.crs is not None and str(gdf.crs) != "EPSG:4326":
+        gdf = gdf.to_crs(4326)
+    return gdf
+
+
+def main():
+    RAW.mkdir(parents=True, exist_ok=True)
+    frames = []
+    for listing_url, href_re, subdir, zone_type in SOURCES:
+        shp = ensure_shapefile(listing_url, href_re, subdir, zone_type)
+        gdf = load_zones(shp, zone_type)
+        print(f"  {zone_type}: {len(gdf)} rows read")
+        frames.append(gdf)
+
+    merged = gpd.pd.concat(frames, ignore_index=True)
+    merged = gpd.GeoDataFrame(merged, crs="EPSG:4326")
+
+    # Dissolve multipart duplicate (ugc, type) rows into single features.
+    dissolved = merged.dissolve(by=["ugc", "type"], aggfunc="first", as_index=False)
+    dissolved = dissolved[["ugc", "type", "name", "key", "geometry"]]
+
+    BUILD.mkdir(parents=True, exist_ok=True)
+    out = BUILD / "nws_zones.geojson"
+    out.unlink(missing_ok=True)
+    dissolved.to_file(out, driver="GeoJSON")
+
+    print(f"  ✓ {out} ({len(dissolved)} features)")
+
+    # Committed key list (R7): fetch_nws_alerts.py validates alert zone keys
+    # against this to detect zone-shapefile vintage drift (NWS revises zones
+    # ~annually; an alert naming a newer UGC would otherwise silently
+    # no-paint). Lives in scripts/ so data-feed.yml can copy it next to the
+    # fetch script. Commit the refreshed copy whenever the tileset is rebuilt.
+    keys_out = Path("scripts/nws_zone_keys.txt")
+    keys_out.write_text("\n".join(sorted(dissolved["key"])) + "\n")
+    print(f"  ✓ {keys_out} ({len(dissolved)} keys)")
+
+
+if __name__ == "__main__":
+    main()

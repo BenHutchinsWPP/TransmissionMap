@@ -1,0 +1,6 @@
+{
+  // Make GitHub Copilot in the IDE read AGENTS.md, the same file Codex,
+  // Antigravity, and the Copilot coding agent already read natively.
+  // Claude Code is bridged separately, via CLAUDE.md -> @AGENTS.md.
+  "chat.useAgentsMdFile": true
+}

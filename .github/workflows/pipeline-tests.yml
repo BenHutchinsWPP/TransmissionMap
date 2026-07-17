@@ -1,0 +1,29 @@
+# Pipeline smoke tests — pure-function tests over scripts/ (fetch parsers,
+# normalizers, geo_common helpers). Stdlib unittest only: no pip installs,
+# no network, no data/ inputs. Gates the parser bug classes (malformed SAME
+# codes, DBF truncation, junk CSV rows) that previously only surfaced in
+# manual review.
+name: Pipeline tests
+
+on:
+  push:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/pipeline-tests.yml"
+  pull_request:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/pipeline-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m unittest discover -s scripts -p "test_*.py" -v

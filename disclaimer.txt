@@ -1,0 +1,22 @@
+DISCLAIMER — TransmissionMap Data Downloads
+===========================================
+
+This unofficial, community-built map of the North American energy infrastructure 
+comprises data aggregated from public sources and may be incomplete, outdated, 
+or inaccurate. It is provided for educational and informational purposes only.
+
+Do not use for engineering, operational, safety, or regulatory decisions.
+
+THIS MAP AND ALL ASSOCIATED DATA ARE PROVIDED "AS IS" AND "AS AVAILABLE." 
+NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, IS PROVIDED. IN NO EVENT SHALL 
+THE PROVIDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING 
+FROM USE OF OR RELIANCE ON THIS MAP OR ITS DATA.
+
+See the README on GitHub for data sources, limitations, and licensing.
+https://github.com/BenHutchinsWPP/TransmissionMap
+
+PROCESSING
+----------
+Data in this pack may have been filtered, reprojected, renamed, or enriched
+relative to the original upstream source. The included layer documentation
+file describes what processing was applied and what was changed.

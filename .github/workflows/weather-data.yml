@@ -1,0 +1,51 @@
+name: Update live weather mosaic
+# Rebuilds the live weather rasters (temperature, wind, humidity, dew point,
+# cloud cover, pressure) — NOAA/NCEP GFS 0.25° operational
+# forecast, fetched from AWS S3 bucket noaa-gfs-bdp-pds via HTTP range-requests —
+# into data/layers/weather_live/ (baked-color WEBP + Int16 hover LUT + meta JSON).
+# Body lives in data-feed.yml (shared with wildfire-data.yml and
+# alerts-outages.yml): writes to the orphan `data` branch via a single amended
+# commit; the frontend fetches from raw.githubusercontent.com; main is never touched.
+#
+# Bootstrap (once, by hand — the `data` branch already exists):
+#   git checkout data
+#   mkdir -p data/layers/weather_live
+#   printf '{}' > data/layers/weather_live/meta.json
+#   git add data/layers/weather_live
+#   git commit -m "init: live weather data"
+#   git push origin data
+#   git checkout main
+
+# GFS publishes a new run every 6 h (00/06/12/18z) with hourly steps. Primary
+# trigger is workflow_dispatch, fired 8x/day by an external cron-job.org job.
+# The `schedule:` cron below is DISASTER INSURANCE only — sparse, so that if
+# cron-job.org dies the feed still refreshes well inside the frontend's staleness
+# window instead of going silently stale forever. That 6 h interval is the worst-case
+# gap between successful runs, and MAX_AGE_MS in assets/weather-live.ts (12 h)
+# must stay larger than it. Change one, change the other.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "48 */6 * * *"
+
+# Every workflow that force-pushes the orphan `data` branch must sit in ONE
+# concurrency group, or two runs check out the same tip and the second
+# --force-with-lease is correctly rejected. Not optional.
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    uses: ./.github/workflows/data-feed.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      scripts: scripts/fetch_weather_live.py
+      # A directory: this feed emits per-variable files plus meta.json (see
+      # the script's docstring); data-feed.yml passes it to -o and `git add`s
+      # the whole directory.
+      outputs: data/layers/weather_live
+      endpoints: https://noaa-gfs-bdp-pds.s3.amazonaws.com/
+      pip-packages: eccodes numpy pillow scipy

@@ -1,0 +1,229 @@
+// assets/constants.ts — Static, non-mutable app-wide constants.
+
+// ─── User-layer palette + threshold ──────────────────────────────────────────
+export const USER_LAYER_COLORS = [
+  '#e74c3c', '#3498db', '#2ecc71', '#f39c12',
+  '#9b59b6', '#1abc9c', '#e67e22', '#16a085',
+];
+export const USER_FEATURE_THRESHOLD = 20;
+
+export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
+
+// ─── Data URLs ────────────────────────────────────────────────────────────────
+// GeoJSON layers are hosted pre-gzipped (.geojson.gz) and decompressed in the
+// browser via DecompressionStream (see ensureLayerData). PMTiles handle their
+// own compression and range-loading.
+// >>> ADD-LAYER: data-urls — see docs/adding-a-layer.md §4
+//
+// Prod data host: built layers + release ZIPs live on the orphan `data-static`
+// branch (raw GitHub — CORS ok on public repos), NOT on Pages (dist ships no
+// data/). Dev serves them from the local working tree at the Vite root. Wildfire
+// keeps its own URL on the churning `data` branch (force-pushed hourly), so it
+// must NOT share this branch — see `wildfire_live` below and `make publish-data`.
+export const DATA_ORIGIN = import.meta.env.PROD
+  ? "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data-static/"
+  : "";
+export const DATA = {
+  osm_transmission_lines:   DATA_ORIGIN + "data/layers/osm_transmission_lines.pmtiles",
+  hifld_transmission_lines: DATA_ORIGIN + "data/layers/hifld_transmission_lines.pmtiles",
+  ogf_planned_transmission: DATA_ORIGIN + "data/layers/ogf_planned_transmission.geojson.gz",
+  osm_substations_points:   DATA_ORIGIN + "data/layers/osm_substations_points.geojson.gz",
+  hifld_substations:        DATA_ORIGIN + "data/layers/hifld_substations.geojson.gz",
+  osm_substations_polygons: DATA_ORIGIN + "data/layers/osm_substations_polygons.geojson.gz",
+  osm_plants_points:   DATA_ORIGIN + "data/layers/osm_plants_points.geojson.gz",   // power=plant — always loaded
+  osm_plants_polygons: DATA_ORIGIN + "data/layers/osm_plants_polygons.geojson.gz", // plant polygon hulls
+  osm_generators:      DATA_ORIGIN + "data/layers/osm_generators.pmtiles",         // power=generator — tiles at z7+
+  eia_generators:      DATA_ORIGIN + "data/layers/eia_generators.geojson.gz",
+  osm_pipelines_lines:  DATA_ORIGIN + "data/layers/osm_pipelines_lines.pmtiles",
+  osm_pipelines_points: DATA_ORIGIN + "data/layers/osm_pipelines_points.geojson.gz",
+  hifld_natgas_lines:   DATA_ORIGIN + "data/layers/hifld_natgas_lines.pmtiles",
+  hifld_natgas_points:  DATA_ORIGIN + "data/layers/hifld_natgas_points.geojson.gz",
+  eia_crude_pipelines:   DATA_ORIGIN + "data/layers/eia_crude_pipelines.geojson.gz",   // EIA crude-oil pipelines
+  eia_product_pipelines: DATA_ORIGIN + "data/layers/eia_product_pipelines.geojson.gz", // EIA petroleum-product pipelines
+  railroads:            DATA_ORIGIN + "data/layers/railroads.pmtiles",  // BTS NARN rail network lines
+  padus:          DATA_ORIGIN + "data/layers/padus.pmtiles",          // USGS PAD-US: GAP 1-3 conservation + GAP 4 federal (DoD/DOE/USACE)
+  tribal_lands:   DATA_ORIGIN + "data/layers/tribal_lands.geojson.gz", // Census TIGER Tribal (AIANNH) — lazy GeoJSON (copyable features)
+  bia_tribal_lands: DATA_ORIGIN + "data/layers/bia_tribal_lands.geojson.gz", // BIA AIAN-LAR Tribal Lands — lazy GeoJSON (copyable features)
+  crithab:        DATA_ORIGIN + "data/layers/crithab.pmtiles",         // USFWS Critical Habitat (T&E species)
+  mines:          DATA_ORIGIN + "data/layers/mines.geojson.gz",        // MSHA large mines (filtered) — lazy GeoJSON
+  wecc_paths:         DATA_ORIGIN + "data/layers/wecc_paths.geojson.gz",   // WECC Path Rating Catalog 2026 (points + ratings + line lists)
+  wecc_path_lines:    DATA_ORIGIN + "data/layers/wecc_path_lines.geojson.gz", // OSM/HIFLD lines matched to each WECC path (click-highlight)
+  nerc_regions:       DATA_ORIGIN + "data/layers/nerc_regions.geojson.gz",
+  control_areas:      DATA_ORIGIN + "data/layers/control_areas.geojson.gz",
+  retail_territories: DATA_ORIGIN + "data/layers/retail_territories.pmtiles",
+  nlr_wind_100m:          DATA_ORIGIN + "data/layers/nlr_wind_100m.pmtiles",          // NREL/NLR WIND Toolkit raster (baked color)
+  nlr_wind_100m_lut:      DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.i16",          // Int16 m/s*100 grid for hover readout
+  nlr_wind_100m_lut_meta: DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.json",         // grid dims + bbox + scale
+  gsa_solar_pvout:          DATA_ORIGIN + "data/layers/gsa_solar_pvout.pmtiles",      // Global Solar Atlas PVOUT raster (baked color)
+  gsa_solar_pvout_lut:      DATA_ORIGIN + "data/layers/gsa_solar_pvout_lut.i16",      // Int16 kWh/kWp/day*100 grid for hover readout
+  gsa_solar_pvout_lut_meta: DATA_ORIGIN + "data/layers/gsa_solar_pvout_lut.json",     // grid dims + bbox + scale
+  ihfc_geo_heatflow:          DATA_ORIGIN + "data/layers/ihfc_geo_heatflow.pmtiles",  // IHFC heat flow raster (baked color)
+  ihfc_geo_heatflow_lut:      DATA_ORIGIN + "data/layers/ihfc_geo_heatflow_lut.i16",  // Int16 mW/m²*10 grid for hover readout
+  ihfc_geo_heatflow_lut_meta: DATA_ORIGIN + "data/layers/ihfc_geo_heatflow_lut.json", // grid dims + bbox + scale
+  nrel_hydrothermal_points:  DATA_ORIGIN + "data/layers/nrel_hydrothermal_points.geojson.gz", // NREL/DOE low-temp hydrothermal systems
+  osm_datacenters:        DATA_ORIGIN + "data/layers/osm_datacenters.geojson.gz",            // telecom=data_center — lazy-loaded GeoJSON
+  worldpop_pop_density:          DATA_ORIGIN + "data/layers/worldpop_pop_density.pmtiles",   // WorldPop 2020 population density (baked log-color)
+  worldpop_pop_density_lut:      DATA_ORIGIN + "data/layers/worldpop_pop_density_lut.i16",   // Int16 ppl/km² grid for hover readout
+  worldpop_pop_density_lut_meta: DATA_ORIGIN + "data/layers/worldpop_pop_density_lut.json",  // grid dims + bbox + scale
+  usfs_wildfire_potential: DATA_ORIGIN + "data/layers/usfs_wildfire_potential.pmtiles",  // USFS Wildfire Hazard Potential 2023 (classified, baked discrete color)
+  usgs_seismic_pga:          DATA_ORIGIN + "data/layers/usgs_seismic_pga.pmtiles",  // USGS NSHM PGA 2% in 50yr raster (baked color)
+  usgs_seismic_pga_lut:      DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.i16",  // Int16 PGA(g)*1000 grid for hover readout
+  usgs_seismic_pga_lut_meta: DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.json", // grid dims + bbox + scale
+  boem_wind_leases:          DATA_ORIGIN + "data/layers/boem_wind_leases.geojson.gz",
+  westtec_10yr:              DATA_ORIGIN + "data/layers/westtec_10yr.geojson.gz",
+  // Dev: local file (run `make wildfire-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok, ~5min CDN lag).
+  // Contains: hotspots (_type=hotspot), perimeters, named incidents, and smoke polygons.
+  wildfire_live: import.meta.env.DEV
+    ? DATA_ORIGIN + "data/layers/wildfire_live.geojson"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson",
+  // Dev: local file (run `make nws-alerts-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok).
+  nws_alerts: import.meta.env.DEV
+    ? DATA_ORIGIN + "data/layers/nws_alerts.geojson"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/nws_alerts.geojson",
+  county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
+  admin_lines: DATA_ORIGIN + "data/layers/admin_lines.geojson.gz", // Natural Earth country/state border lines — white highlights over the weather wash, no standalone layer/legend
+  nws_zones: DATA_ORIGIN + "data/layers/nws_zones.pmtiles", // NWS public forecast + fire weather zone polygons — shared join infra, no standalone layer/legend
+  // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
+  // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]
+  // snapshot joined onto county_boundaries via MapLibre feature-state (see odin-outages.ts).
+  odin_outages: import.meta.env.DEV
+    ? DATA_ORIGIN + "data/layers/odin_outages.json"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/odin_outages.json",
+};
+
+// Live GFS weather mosaic (temperature, wind, humidity, dew point, cloud,
+// pressure), rebuilt every ~3h by scripts/fetch_weather_live.py. Dev: run that
+// script first. Prod: `data` branch. Per variable: a baked-color WEBP
+// (EPSG:3857 image source) and an Int16 hover LUT (EPSG:4326 grid); one
+// shared meta.json carries run_utc/valid_utc/generated_utc/feed_status plus
+// per-variable {width, height, bbox, scale, nodata, units}.
+// `file` is e.g. "temp.webp", "temp.i16", or "meta.json".
+export function weatherLiveUrl(file: string): string {
+  return import.meta.env.DEV
+    ? DATA_ORIGIN + `data/layers/weather_live/${file}`
+    : `https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/weather_live/${file}`;
+}
+
+// Corner coordinates of the weather image (must match WEST/EAST/SOUTH/NORTH in
+// scripts/fetch_weather_live.py). Only the initial placement — every refresh re-sets
+// them from the meta JSON's bbox, so a grid change in the script self-heals.
+// MapLibre's image-source `coordinates` is a 4-tuple: NW, NE, SE, SW.
+export type ImageCorners = [[number, number], [number, number], [number, number], [number, number]];
+export const WEATHER_IMAGE_COORDS: ImageCorners = [
+  [-141, 72], [-52, 72], [-52, 22], [-141, 22],
+];
+// Shared by the weather A/B layer pair (map-layers-conditions.ts) and the
+// crossfade in weather-live.ts — the fade's target must equal the wash opacity.
+export const WEATHER_WASH_OPACITY = 0.65;
+export const WEATHER_FADE_MS = 300;
+// 1×1 transparent PNG. The image source is created with this so a visitor who
+// never enables the layer never downloads the real (~130 KB) mosaic; weather-live.ts
+// swaps in the real image on first enable.
+export const TRANSPARENT_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+// ─── Per-source attribution shorthand ─────────────────────────────────────────
+// Short credit strings shown in the MapLibre attribution control. Keyed by the
+// runtime sourceId passed to map.addSource (NOT the registry source key).
+// MapLibre sorts attributions by length and drops any that are a SUBSTRING of a
+// longer one. So OSM-derived layers MUST use a string identical to (a substring
+// of) the basemap's OSM attribution — see OSM_ATTRIB below — or "OpenStreetMap"
+// would appear twice whenever an OSM-derived basemap is active. Sources with
+// bespoke attribution set inline (wind/solar/geo/worldpop/hazards rasters +
+// basemaps) are intentionally omitted here. `&copy;` = ©.
+// MUST stay byte-identical to the osm-tiles basemap attribution in map.ts so
+// MapLibre's substring-dedup collapses them into one credit.
+const OSM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
+export const SOURCE_ATTRIB: Record<string, string> = {
+  "hifld-transmission-lines": '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "hifld-substations":        '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "nerc-regions":             '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "control-areas":            '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "retail-territories":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "hifld-natgas-lines":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>',
+  "hifld-natgas-points":      '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>',
+  "eia-crude-pipelines":      '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>',
+  "eia-product-pipelines":    '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>',
+  "eia-generators":           '<a href="https://www.eia.gov/electricity/data/eia860/">EIA-860</a>',
+  "ogf-planned-transmission": '<a href="https://ourgridfuture.org">Our Grid Future</a>',
+  "padus":                    '<a href="https://www.usgs.gov/programs/gap-analysis-project">USGS PAD-US</a>',
+  "tribal-lands":             '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html">Census TIGER</a>',
+  "crithab":                  '<a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html">USFWS</a>',
+  "railroads":                '<a href="https://www.bts.gov/ntad">U.S. DOT BTS</a>',
+  "nrel-hydrothermal-points": '<a href="https://gdr.openei.org/submissions/842">NREL/DOE</a>',
+  "osm-transmission-lines":   OSM_ATTRIB,
+  "osm-substations-points":   OSM_ATTRIB,
+  "osm-substations-polygons": OSM_ATTRIB,
+  "osm-plants-points":        OSM_ATTRIB,
+  "osm-plants-polygons":      OSM_ATTRIB,
+  "osm-generators":           OSM_ATTRIB,
+  "osm-pipelines-lines":      OSM_ATTRIB,
+  "osm-pipelines-points":     OSM_ATTRIB,
+  // OSM_ATTRIB prefix stays byte-identical so MapLibre substring-dedup still
+  // collapses it with the basemap credit; IM3 rides behind it.
+  "osm-datacenters":          OSM_ATTRIB + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>",
+  "wecc-paths":               '<a href="https://www.wecc.org/">WECC</a>',
+  "bia-tribal-lands":         '<a href="https://biamaps.geoplatform.gov/biatracts/">Bureau of Indian Affairs</a>',
+  "mines":                    '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>',
+};
+
+// ─── Basemap tile sources ─────────────────────────────────────────────────────
+export const OSM_TILE_URL    = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+export const ESRI_TOKEN = import.meta.env.VITE_ESRI_API_KEY;  // basemap tiles + geocoder (ui-geocoder.ts)
+export const AERIAL_TILE_URL = ESRI_TOKEN
+  ? `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${ESRI_TOKEN}`
+  : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+// Keyless NAIP imagery. Serves aerial below AERIAL_SEAM_ZOOM, and all zooms if
+// the Esri key fails. Cache stops at z16 (z17+ 404s), so its source must declare
+// maxzoom 16.
+export const USGS_AERIAL_TILE_URL =
+  "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
+// OpenFreeMap vector basemaps (keyless, unlimited, commercial-OK). The style
+// JSONs are fetched at runtime and their sources/layers merged under the app's
+// overlay layers — see addOfmBasemaps() in map.ts. "light" (Positron) doubles
+// as the ground under the hydro overlay.
+export const OFM_STYLE_URLS = {
+  light: "https://tiles.openfreemap.org/styles/positron",
+  dark:  "https://tiles.openfreemap.org/styles/dark",
+} as const;
+export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+// National Hydrography Dataset, cached as a TRANSPARENT overlay — streams, lakes,
+// dams, no land or labels. It is not a standalone basemap: the "hydro" basemap
+// stacks it over the OFM light basemap in map.ts. Cache tops out at tile z16
+// (z17 is a 404), same ceiling as USGSTopo.
+export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
+
+// ─── Live layer tile sources ──────────────────────────────────────────────────
+// IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
+// {layer} is an IEM layer name: "ridge::USCOMP-N0Q-0" is the latest-frame alias,
+// but IEM resolves it per tile so adjacent tiles can mix scans during rollover;
+// RADAR_TMS_JSON_URL names the current frame (ridge::USCOMP-N0Q-YYYYMMDDHHMM),
+// which is consistent across all tiles.
+export const RADAR_TILE_TEMPLATE = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/{layer}/{z}/{x}/{y}.png";
+export const RADAR_TILE_URL      = RADAR_TILE_TEMPLATE.replace("{layer}", "ridge::USCOMP-N0Q-0");
+export const RADAR_TMS_JSON_URL  = "https://mesonet.agron.iastate.edu/json/tms.json";
+// ECCC GeoMet WMS radar (Canada) — drawn under the IEM layer in the same
+// nexrad-radar row. GeoMet rejects multi-layer GetMap, so rain (RADAR_1KM_RRAI)
+// and snow (RADAR_1KM_RSNO) are separate sources. Omitting TIME returns the
+// latest frame; {bust} is an ignored extra param swapped on each IEM frame
+// change so MapLibre refetches the Canadian tiles on the same cadence.
+export const GEOMET_RADAR_TILE_TEMPLATE =
+  "https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS={layer}&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=true&_={bust}";
+
+// OpenFreeMap glyphs (same host as the basemap styles). Serves Noto Sans
+// Regular/Bold/Italic ONLY, as single-font stacks — comma-joined stacks and
+// other families 404, so every text-font in the app must be a one-element
+// Noto Sans array.
+const GLYPHS_URL      = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+
+// MapLibre requires a style object even when we control all sources ourselves.
+export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [] };
+
+// Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
+// and the search-highlight sources (highlights.ts).
+export const EMPTY_FC = { type: "FeatureCollection" as const, features: [] as GeoJSON.Feature[] };
+
+// ─── Default map viewport ─────────────────────────────────────────────────────
+// Contiguous US overview
+export const DEFAULT_CENTER: [number, number] = [-95.7, 37.1];
+export const DEFAULT_ZOOM   = 4;

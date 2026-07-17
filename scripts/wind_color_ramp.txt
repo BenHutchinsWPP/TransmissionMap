@@ -1,0 +1,12 @@
+# gdaldem color-relief ramp for NREL/NLR mean wind speed @ 100 m (m/s).
+# Columns: value  R  G  B  A   — alpha baked in so the hosted tiles need no
+# MapLibre raster-color paint (plain `raster` + opacity renders correctly).
+# Ramp: transparent -> light teal -> teal -> blue -> dark navy over 0-12 m/s.
+# Values above 12 clamp to the darkest stop. MUST stay in sync with the JS
+# legend in assets/layers.js (WIND_RAMP_STOPS).
+nv    0    0    0    0
+0   224  243  248    0
+3   161  218  215  130
+6    65  182  196  190
+9    34  110  160  225
+12   12   44  110  250

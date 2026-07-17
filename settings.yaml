@@ -1,0 +1,80 @@
+# =============================================================================
+# OSM-to-SHP Conversion Settings
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Features to extract via extract_osm_lines.py
+# Substations and generators are handled by their own dedicated scripts
+# (extract_osm_substations.py, extract_osm_generators.py) and are not listed here.
+# ---------------------------------------------------------------------------
+features:
+  - pipeline                 # man_made=pipeline (line routes)
+  - pipeline_feature         # pipeline=valve | pipeline=substation | ...
+  - power_line               # power=line | power=cable (transmission lines)
+  # power=plant handled by extract_osm_plants.py (don't enable here — duplicates)
+
+# ---------------------------------------------------------------------------
+# Bounding box (WGS84) — only features inside this box are exported.
+# Leave empty or comment out to process the entire file.
+# ---------------------------------------------------------------------------
+# bounding_box:
+#   # WECC transmission network
+#   max_lat: 60
+#   min_lon: -141
+#   min_lat: 30
+#   max_lon: -101
+
+  # ERCOT (Texas)
+  # min_lon: -106
+  # min_lat: 25.5
+  # max_lon: -93
+  # max_lat: 33.5
+
+  # Eastern Interconnection
+  # min_lon: -95
+  # min_lat: 24
+  # max_lon: -65
+  # max_lat: 50
+
+# ---------------------------------------------------------------------------
+# Performance tuning
+# ---------------------------------------------------------------------------
+
+# FAST MODE uses osmium-tool + ogr2ogr (C++, 20-50x faster on large files).
+# Auto-detected when both tools are available.  Install: sudo apt install osmium-tool gdal-bin
+
+# Python mode fallback settings:
+batch_size: 10000    # records buffered per layer before flushing to disk
+
+# ---------------------------------------------------------------------------
+# Directories
+# ---------------------------------------------------------------------------
+input_dir: data/raw/osm        # OSM PBF input directory (place .osm.pbf files here)
+output_dir: data/build         # intermediate + final SHP/CSV output
+
+# ---------------------------------------------------------------------------
+# Per-feature tag map: maps the label above to actual OSM tag(s).
+# ---------------------------------------------------------------------------
+tag_map:
+  pipeline:                { man_made: pipeline }
+  pipeline_feature:        { pipeline: null }        # any pipeline=*
+  power_line:              { power: [line, cable] }
+  # Disabled features (uncomment to enable):
+  # mast:                  { man_made: mast }
+  # petroleum_site:        { man_made: petroleum_well }
+  # power_compensator:     { power: compensator }
+  # power_switch:          { power: switch }
+  # power_tower:           { power: [tower, pole] }
+  # power_transformer:     { power: transformer }
+  # pumping_station:       { man_made: pumping_station }
+  # telecom_building:      { telecom: exchange }
+  # telecom_cable:         { telecom: cable }
+  # wastewater_plant:      { man_made: wastewater_plant }
+  # water_reservoir:       { man_made: reservoir }
+  # water_tower:           { man_made: water_tower }
+  # water_treatment_plant: { man_made: water_treatment_plant }
+  # water_well:            { man_made: water_well }
+  # power_catenary:        { power: catenary }
+  # power_insulator:       { power: insulator }
+  # power_terminal:        { power: terminal }
+  # power_converter:       { power: converter }

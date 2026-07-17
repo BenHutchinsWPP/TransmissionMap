@@ -1,0 +1,13 @@
+# gdaldem color-relief ramp for Global Solar Atlas PVOUT (kWh/kWp/day).
+# Columns: value  R  G  B  A   — alpha baked in so the hosted tiles need no
+# MapLibre raster-color paint (plain `raster` + opacity renders correctly).
+# Ramp: transparent -> pale yellow -> orange -> red over 0-7 kWh/kWp/day
+# (PVOUT yearly avg daily total; NA range ~2.5-6.7). Values above 7 clamp to the
+# darkest stop. MUST stay in sync with the JS legend in assets/layers.js
+# (SOLAR_RAMP_STOPS).
+nv    0    0    0    0
+0   255  247  188    0
+2.5 254  227  145  120
+4   254  178   76  190
+5.5 253  141   60  225
+7   189    0   38  250

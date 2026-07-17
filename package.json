@@ -1,0 +1,36 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "npm run typecheck && npm run lint",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ assets/",
+    "lint:fix": "eslint --fix src/ assets/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/mapbox__mapbox-gl-draw": "^1.4.9",
+    "@types/node": "^25.9.3",
+    "@vitest/browser": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@maplibre/maplibre-gl-style-spec": "^24.10.0",
+    "@mapbox/mapbox-gl-draw": "^1.5.1",
+    "@tmcw/togeojson": "^7.1.2",
+    "jszip": "^3.10.1",
+    "maplibre-gl": "^5.24.0",
+    "pmtiles": "^4.4.1"
+  }
+}

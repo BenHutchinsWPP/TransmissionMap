@@ -1,0 +1,52 @@
+name: Update wildfire data
+# Fetches NASA FIRMS VIIRS hotspots + NIFC WFIGS perimeters + incidents + NOAA HMS smoke hourly.
+# All four datasets are merged into a single wildfire_live.geojson.
+# Body lives in data-feed.yml (shared with alerts-outages.yml and weather-data.yml):
+# writes to the orphan `data` branch via a single amended commit (no history
+# growth); frontend fetches from raw.githubusercontent.com; main is never touched.
+#
+# Bootstrap: create the orphan branch once before this workflow runs:
+#   git checkout --orphan data
+#   git rm -rf .
+#   mkdir -p data/layers
+#   echo '{"type":"FeatureCollection","features":[]}' > data/layers/wildfire_live.geojson
+#   git add data/layers/wildfire_live.geojson
+#   git commit -m "init: wildfire data branch"
+#   git push origin data
+#   git checkout main
+
+# Primary trigger: cron-job.org fires workflow_dispatch hourly. The sparse
+# GitHub cron below is disaster insurance only: if cron-job.org (or its PAT)
+# silently dies, no runs happen at all — and the map would drift stale with
+# nobody notified. Every 6h keeps the data under the frontend's 6h kill-switch
+# while adding negligible FIRMS load (hourly+ cadence risked rate-limiting;
+# observed Errno 101 runner-IP bans 2026-07-03 under burst load).
+on:
+  schedule:
+    - cron: '32 */6 * * *'
+  workflow_dispatch:
+
+# Don't let a slow run race the next hour's force-push; queue instead of overlap.
+# Shared with alerts-outages.yml and weather-data.yml: every workflow that
+# force-pushes the orphan `data` branch must sit in ONE group. Two groups =
+# two runs can check out the same tip, and the second `--force-with-lease`
+# push is (correctly) rejected, failing that run.
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    uses: ./.github/workflows/data-feed.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      scripts: scripts/fetch_wildfire_live.py
+      outputs: data/layers/wildfire_live.geojson
+      timeout-minutes: 20
+      endpoints: >-
+        https://firms.modaps.eosdis.nasa.gov
+        https://services3.arcgis.com
+        https://cwfis.cfs.nrcan.gc.ca
+        https://satepsanone.nesdis.noaa.gov

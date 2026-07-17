@@ -1,0 +1,258 @@
+# TransmissionMap — tile build manifest. Drives scripts/build_tiles.py.
+#
+# One block per layer, built top-to-bottom (order = z-order / slowest-last).
+# Adding a layer = add a block here; no code edits. >>> ADD-LAYER: tile-build-calls
+#
+# Fields:
+#   id          output basename + tippecanoe layer name (data/layers/<id>.{geojson.gz,pmtiles})
+#   src         input path (repo-relative). `.csv` → treated as lon/lat points automatically.
+#   format      geojson  (served raw, gzipped) | pmtiles (vector tiles via tippecanoe)
+#   select      optional column allow-list (omit = keep all)
+#   where       optional ogr2ogr -where filter
+#   precision   optional COORDINATE_PRECISION (decimal places)
+#   --- pmtiles only ---
+#   min_zoom / max_zoom   required
+#   simplification        optional
+#   max_tile_bytes        optional (default 500000)
+#   flags                 optional list of literal tippecanoe flags
+#
+# Missing src → [skip] (not an error); `make validate` flags missing outputs.
+
+layers:
+  - id: eia_generators
+    src: data/build/generator_eia.csv
+    format: geojson
+    select: [plant_code, plant_name, technology, energy_source, nameplate_mw, nerc_region, ba_code, state, op_year, status, gen_status, retirement_year, utility_name, sector_name, pipelines, prime_mover]
+
+  - id: osm_plants_polygons
+    src: data/build/plant_polygons.gpkg
+    format: geojson
+    precision: 6
+    select: [osm_id, name, source, output_mw, operator, start_date]
+
+  - id: osm_plants_points
+    src: data/build/plant_osm.csv
+    format: geojson
+    select: [osm_id, name, source, output_mw, operator, start_date]
+
+  - id: hifld_substations
+    src: data/build/substation_hifld.csv
+    format: geojson
+    select: [hifld_id, name, max_kv, min_kv, kv_range]
+
+  - id: osm_substations_points
+    src: data/build/substation_osm.csv
+    format: geojson
+    select: [osm_id, name, nominal_kv, operator, sub_type]
+
+  - id: osm_substations_polygons
+    src: data/build/substation_polygons.gpkg
+    format: geojson
+    precision: 6
+    select: [osm_id, name, nominal_kv, operator, sub_type]
+
+  - id: osm_generators
+    src: data/build/generator_osm.csv
+    format: pmtiles
+    select: [osm_id, name, source, gen_method, gen_type, output_mw, operator]
+    min_zoom: 7
+    max_zoom: 14
+    max_tile_bytes: 2000000
+    flags: [--drop-densest-as-needed, --extend-zooms-if-still-dropping]
+
+  - id: osm_datacenters
+    src: data/build/datacenter_osm.csv
+    format: geojson
+    select: [osm_id, osm_type, name, operator, website, addr_city, addr_state, start_date, im3_sqft, im3_ref]
+
+  - id: railroads
+    src: data/raw/railroads/narn_rail_lines.geojson
+    format: pmtiles
+    select: [RROWNER1, NET, PASSNGR, TRACKS, DIVISION, SUBDIV, BRANCH, STATEAB]
+    precision: 6
+    min_zoom: 4
+    max_zoom: 13
+    simplification: 4
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  - id: osm_pipelines_points
+    src: data/build/pipeline_points.csv
+    format: geojson
+    where: "pipeline != 'valve'"
+
+  - id: osm_pipelines_lines
+    src: data/build/pipeline_routes.gpkg
+    format: pmtiles
+    select: [name, substance, operator]
+    precision: 6
+    min_zoom: 2
+    max_zoom: 12
+    simplification: 4
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  - id: hifld_natgas_points
+    src: data/build/hifld_natgas_points.csv
+    format: geojson
+    select: [fac_type, name, operator, state, status, detail]
+
+  - id: eia_crude_pipelines
+    src: data/build/eia_crude_pipelines.geojson
+    format: geojson
+    precision: 6
+    select: [name, operator]
+
+  - id: eia_product_pipelines
+    src: data/build/eia_product_pipelines.geojson
+    format: geojson
+    precision: 6
+    select: [name, operator]
+
+  - id: hifld_natgas_lines
+    src: data/build/hifld_natgas_lines.gpkg
+    format: pmtiles
+    select: [pipe_type, operator, name]
+    precision: 6
+    min_zoom: 2
+    max_zoom: 12
+    simplification: 4
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  # 16 features — too small to justify tiling; served as simplified GeoJSON so
+  # whole-polygon copy works (vector tiles clip geometry at tile borders).
+  - id: nerc_regions
+    src: data/build/nerc_regions.gpkg
+    format: geojson
+    select: [code, sub_nm, region, state, website]
+    precision: 5
+    simplify: 0.005
+
+  # 71 features — same rationale as nerc_regions.
+  - id: control_areas
+    src: data/build/control_areas.gpkg
+    format: geojson
+    select: [name, state, color_idx, tot_cap, peak_ld, min_ld, avail_cap, year, website]
+    precision: 5
+    simplify: 0.005
+
+  - id: retail_territories
+    src: data/build/retail_territories.gpkg
+    format: pmtiles
+    select: [name, type, state, customers, retail_mwh, sumr_peak, wntr_peak, hold_co, ctrl_area, year]
+    precision: 5
+    min_zoom: 2
+    max_zoom: 10
+    simplification: 6
+    flags: [--detect-shared-borders, --drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  - id: tribal_lands
+    src: data/build/tribal_lands.gpkg
+    format: geojson
+    precision: 5
+
+  - id: bia_tribal_lands
+    src: data/build/bia_tribal_lands.geojson
+    format: geojson
+    precision: 5
+    select: [LARNAME, AGENCY]
+
+  - id: padus
+    src: data/build/padus.gpkg
+    format: pmtiles
+    precision: 5
+    min_zoom: 3
+    max_zoom: 10
+    simplification: 10
+    max_tile_bytes: 400000
+    flags: [--detect-shared-borders, --drop-densest-as-needed, --coalesce-densest-as-needed]
+
+
+  # Originally zoom 4-13 (matching the hand-built crithab.pmtiles), lowered to
+  # min_zoom 3 so crithab appears at the same zoom as tribal_lands. Simplification
+  # 4, no precision/border flags.
+  - id: crithab
+    src: data/build/crithab.gpkg
+    format: pmtiles
+    min_zoom: 3
+    max_zoom: 13
+    simplification: 4
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  - id: hifld_transmission_lines
+    src: data/build/transmission_hifld.gpkg
+    format: pmtiles
+    select: [ID, VOLTAGE, VOLT_CLASS, OWNER, TYPE, STATUS, SUB_1, SUB_2]
+    precision: 6
+    min_zoom: 2
+    max_zoom: 11
+    simplification: 4
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+
+  - id: osm_transmission_lines
+    src: data/build/transmission_lines.gpkg
+    format: pmtiles
+    select: [osm_id, nominal_kv, cables, circuits, operator, name, is_undergrnd, is_dc]
+    precision: 6
+    min_zoom: 2
+    max_zoom: 11
+    simplification: 5
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+
+  # Shared county-boundary infra (Census TIGER cartographic, cb_2024_us_county_500k).
+  # Also built standalone by scripts/build_boundaries.sh (`make boundaries`), which
+  # produces this same data/build/county_boundaries.geojson intermediate — this
+  # manifest block is the ONLY place its tiling params live (build_boundaries.sh
+  # shells out to build_tiles.py --only county_boundaries). Draws nothing on its
+  # own: future county-keyed layers join onto it via feature-state. Source layer
+  # name `county_boundaries` (= this id) and string `GEOID` are a load-bearing
+  # contract — see docs/layers/boundaries.md.
+  - id: county_boundaries
+    src: data/build/county_boundaries.geojson
+    format: pmtiles
+    select: [GEOID, NAME, STUSPS, STATE_NAME]
+    min_zoom: 2
+    max_zoom: 8
+    simplification: 8
+    flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+
+  # Shared NWS zone infra (public forecast + fire weather zone shapefiles,
+  # dissolved by (ugc, type) in scripts/extract_nws_zones.py). Same
+  # join-target pattern as county_boundaries directly above: draws nothing on
+  # its own — the NWS weather-alerts layer's phase-2 zone join (see
+  # HANDOFF.md "Stage 1"/"Stage 3") attaches feature-state onto it via
+  # (type, ugc). Source layer name `nws_zones` (= this id) and strings
+  # `ugc`+`type`+`key` are a load-bearing contract: `key` ("z"/"f" prefix +
+  # ugc, computed in extract_nws_zones.py) is the pmtiles promoteId target
+  # assets/nws-zone-join.ts joins feature-state onto, since bare ugc collides
+  # across the forecast/fire zone sets.
+  - id: nws_zones
+    src: data/build/nws_zones.geojson
+    format: pmtiles
+    select: [ugc, type, name, key]
+    min_zoom: 2
+    max_zoom: 8
+    simplification: 8
+    flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+
+  # Served raw (lazy-loaded), not tiled. Loaded as-is from the OGF export.
+  - id: ogf_planned_transmission
+    src: data/build/ogf_planned_transmission.gpkg
+    format: geojson
+
+  - id: boem_wind_leases
+    src: data/build/boem_wind_leases.geojson
+    format: geojson
+    precision: 5
+
+  # Natural Earth country/state border lines — white highlights above the
+  # Weather (Live) wash. Shared infra, no standalone layer/legend.
+  - id: admin_lines
+    src: data/build/admin_lines.geojson
+    format: geojson
+    precision: 4
+
+  # Served raw (lazy-loaded), not tiled. 108 features -- too small to justify tiling.
+  - id: westtec_10yr
+    src: data/build/westtec_10yr.gpkg
+    format: geojson
+    precision: 6
+
