@@ -9,10 +9,15 @@ The map serializes its whole view into the URL hash so a link reproduces it
 exactly. Format:
 
 ```
-#<zoom>/<lat>/<lng>?<param>=<val>&<param>=<val>…
+#<zoom>/<lat>/<lng>[/<bearing>/<pitch>]?<param>=<val>&<param>=<val>…
 ```
 
+`bearing`/`pitch` (rotation/tilt) are appended only when the view isn't flat
+and north-up — a 3-segment hash means bearing=0, pitch=0. This keeps the
+common link short while still round-tripping a rotated or tilted 3D view.
+
 e.g. `#5.20/39.8283/-98.5795?l=-SUB.WND&v=550+&bm=d`
+e.g. rotated/tilted: `#12.40/39.8283/-98.5795/34.5/52.0?3d=t`
 
 Everything after `?` is a compact param string. State that equals the default
 is **omitted** — a default view has a bare `#zoom/lat/lng` and no query.
@@ -49,7 +54,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `gm` | generator display mode (icons/heat/both) | codec, via `genModeCode` |
 | `oc` | OGF planned-lines color-by (`s`=status, `w`=scenario, `a`=planauth) | codec, `OC_*` maps |
 | `wc` | WestTEC 10 Yr color-by (`s`=scenario, `d`=dataset) | codec, `WC_*` maps |
-| `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
+| `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `ws`=Windstream, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
 | `bm` | basemap | codec, `BM_*_CODE` maps |
 | `pj` | projection (`g` = globe) | codec |
 | `3d` | 3D terrain/buildings (`t`=terrain, `b`=buildings, `tb`=both) | codec |

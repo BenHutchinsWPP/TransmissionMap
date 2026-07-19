@@ -152,7 +152,9 @@ export function refreshWeatherRampBlock() {
   const el = document.getElementById("weather-legend-ramp");
   if (!el) return;
   const v = WEATHER_VARIABLES.find(w => w.id === state.weatherVar) ?? WEATHER_VARIABLES[0];
-  el.innerHTML = rampLegendHtml({ id: "weather-live", ramp: v.ramp });
+  // noWash variables (Windstream) paint no color raster, so a color scale
+  // would be misleading — rampLegendHtml() already renders "" for no ramp.
+  el.innerHTML = rampLegendHtml({ id: "weather-live", ramp: v.noWash ? undefined : v.ramp });
 }
 
 export function syncLegendMaster(cfg: LegendFilter) {

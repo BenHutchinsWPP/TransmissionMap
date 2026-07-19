@@ -63,7 +63,13 @@ export function writeUrlState() {
   const stateStr = parts.length ? '?' + parts.join('&') : '';
   const { lat, lng } = state.map.getCenter();
   const zoom = state.map.getZoom().toFixed(2);
-  history.replaceState(null, '', location.pathname + '#' + zoom + '/' + lat.toFixed(4) + '/' + lng.toFixed(4) + stateStr);
+  let posStr = zoom + '/' + lat.toFixed(4) + '/' + lng.toFixed(4);
+  // Rotation/tilt are appended only when non-zero, so the common flat/north-up
+  // view keeps today's short "#zoom/lat/lng" link.
+  const bearing = state.map.getBearing().toFixed(1);
+  const pitch = state.map.getPitch().toFixed(1);
+  if (Number(bearing) !== 0 || Number(pitch) !== 0) posStr += '/' + bearing + '/' + pitch;
+  history.replaceState(null, '', location.pathname + '#' + posStr + stateStr);
 }
 
 // ─── Bus subscription ─────────────────────────────────────────────────────────

@@ -35,6 +35,8 @@ export function initMap() {
       style: BLANK_STYLE,
       center:  hashView?.center ?? DEFAULT_CENTER,
       zoom:    hashView?.zoom   ?? DEFAULT_ZOOM,
+      bearing: hashView?.bearing ?? 0,
+      pitch:   hashView?.pitch   ?? 0,
       maxZoom: 18,
       attributionControl: false,
     });
@@ -106,7 +108,7 @@ export function initMap() {
 
     window.addEventListener("hashchange", () => {
       const loc = parseLocationHash();
-      if (loc) state.map!.jumpTo({ center: loc.center, zoom: loc.zoom });
+      if (loc) state.map!.jumpTo({ center: loc.center, zoom: loc.zoom, bearing: loc.bearing, pitch: loc.pitch });
     });
   });
 }
@@ -523,12 +525,17 @@ function showWebglError() {
 }
 
 // ─── URL hash parsing ─────────────────────────────────────────────────────────
+// Position segment is "zoom/lat/lng" or, when the view is rotated/tilted,
+// "zoom/lat/lng/bearing/pitch" (same field order as MapLibre's own `hash: true`
+// control). bearing/pitch are omitted by writeUrlState() when both are zero, so
+// a 3-segment hash means "flat, north-up" — callers must treat missing
+// bearing/pitch as 0, not "leave whatever the map currently has".
 function parseLocationHash() {
   try {
     const raw   = window.location.hash.slice(1);
     const posStr = raw.includes('?') ? raw.slice(0, raw.indexOf('?')) : raw;
     const parts = posStr.split("/");
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3 && parts.length !== 5) return null;
     const zoom = parseFloat(parts[0]);
     const lat  = parseFloat(parts[1]);
     const lon  = parseFloat(parts[2]);
@@ -536,7 +543,15 @@ function parseLocationHash() {
     if (zoom < 0 || zoom > 22)         return null;
     if (lat < -90  || lat > 90)        return null;
     if (lon < -180 || lon > 180)       return null;
-    return { zoom, center: [lon, lat] as [number, number] };
+    let bearing = 0;
+    let pitch = 0;
+    if (parts.length === 5) {
+      bearing = parseFloat(parts[3]);
+      pitch   = parseFloat(parts[4]);
+      if ([bearing, pitch].some(isNaN)) return null;
+      if (pitch < 0 || pitch > 85)       return null;
+    }
+    return { zoom, center: [lon, lat] as [number, number], bearing, pitch };
   } catch {
     console.warn("Malformed URL hash; using default map view.");
     return null;

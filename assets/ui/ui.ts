@@ -11,6 +11,7 @@ import { setLayerVisibility, applyAllGenModes } from '../visibility.js';
 import { ensureLayerData } from '../layers/layer-init.js';
 import { initMap, switchBasemap, switchProjection, setBasemapLabels } from '../map.js';
 import { setTerrain3d, setBuildings3d } from '../terrain.js';
+import { maybeShowRotateHint } from '../terrain-hint.js';
 import {
   LEGEND_FILTERS, legendAllIds,
   buildLegends, updateLegends,
@@ -299,9 +300,9 @@ function wireBasemap() {
     const dataToggle = el?.closest<HTMLInputElement>("input[id=dataCounterToggle]");
     if (dataToggle) { updateLegends(); return; }
     const terrain = el?.closest<HTMLInputElement>("input[id=terrain3dToggle]");
-    if (terrain) { setTerrain3d(terrain.checked); emit('url:write'); return; }
+    if (terrain) { setTerrain3d(terrain.checked); if (terrain.checked) maybeShowRotateHint(); emit('url:write'); return; }
     const buildings = el?.closest<HTMLInputElement>("input[id=buildings3dToggle]");
-    if (buildings) { setBuildings3d(buildings.checked); emit('url:write'); return; }
+    if (buildings) { setBuildings3d(buildings.checked); if (buildings.checked) maybeShowRotateHint(); emit('url:write'); return; }
   });
 }
 

@@ -108,6 +108,10 @@ label.
 Temperature) with the wind particle animation drawn on top; no extra baked
 files. The cursor bubble reports both values (Temperature + Wind lines).
 
+**Windstream** — flow-only view: the wind particle animation and hover cursor
+(both borrowed from Wind's baked files) with no color wash — the map shows
+only the moving flow lines over the basemap. No extra baked files.
+
 ## Caveats
 
 - **Forecast model, not observations.** GFS is a forecast model. Values are

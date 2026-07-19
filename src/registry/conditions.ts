@@ -54,14 +54,18 @@ const fmtMb = (v: number) => `${Math.round(v)} mb`;
 // display-unit string out. Consumed by ui-layer-rows.ts (dropdown + legend
 // ramp), raster-probes.ts (hover readout), url-state-codec.ts (wv param).
 // `file` points a combined view at another entry's baked raster/LUT files
-// (no extra pipeline output); absent means the entry bakes its own.
+// (no extra pipeline output); absent means the entry bakes its own. `noWash`
+// suppresses the color raster image itself (weather-live.ts crossfades a
+// transparent placeholder instead) while keeping particles + hover cursor —
+// used by "Windstream" for a flow-only view over the basemap.
 export const WEATHER_VARIABLES: {
   id: string; label: string; urlCode: string; ramp: RampDef; format: (v: number) => string;
-  file?: string;
+  file?: string; noWash?: boolean;
 }[] = [
   { id: "tempwind", label: "Temp & Wind",  urlCode: "tw", ramp: TEMP_RAMP,    format: fmtTempF, file: "temp" },
   { id: "temp",     label: "Temperature",  urlCode: "t", ramp: TEMP_RAMP,     format: fmtTempF },
   { id: "wind",     label: "Wind",         urlCode: "w", ramp: WIND_RAMP,     format: fmtFtS },
+  { id: "windstream", label: "Windstream", urlCode: "ws", ramp: WIND_RAMP,    format: fmtFtS, file: "wind", noWash: true },
   { id: "gust",     label: "Wind Gust",    urlCode: "g", ramp: WIND_RAMP,     format: fmtFtS },
   { id: "rh",       label: "Humidity",     urlCode: "h", ramp: RH_RAMP,       format: fmtPct },
   { id: "dewpoint", label: "Dew Point",    urlCode: "d", ramp: TEMP_RAMP,     format: fmtTempF },

@@ -12,10 +12,12 @@ function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
 }
 
-function mockMap(): MaplibreMap {
+function mockMap(overrides?: { bearing?: number; pitch?: number }): MaplibreMap {
   return {
-    getCenter: () => ({ lat: 39.5, lng: -98.35 }),
-    getZoom:   () => 5,
+    getCenter:  () => ({ lat: 39.5, lng: -98.35 }),
+    getZoom:    () => 5,
+    getBearing: () => overrides?.bearing ?? 0,
+    getPitch:   () => overrides?.pitch ?? 0,
   } as unknown as MaplibreMap;
 }
 
@@ -260,6 +262,40 @@ describe('round-trip serialization', () => {
     readUrlState();
     expect(state.terrain3d).toBe(true);
     expect(state.buildings3d).toBe(true);
+  });
+});
+
+describe('writeUrlState – bearing/pitch (rotation/tilt)', () => {
+  beforeEach(() => {
+    state.mapReady = true;
+  });
+
+  it('keeps the plain zoom/lat/lng hash when bearing and pitch are both 0', () => {
+    state.map = mockMap();
+    writeUrlState();
+    const posStr = location.hash.slice(1).split('?')[0];
+    expect(posStr.split('/')).toHaveLength(3);
+  });
+
+  it('appends /bearing/pitch when the view is rotated', () => {
+    state.map = mockMap({ bearing: 34.5, pitch: 52 });
+    writeUrlState();
+    const posStr = location.hash.slice(1).split('?')[0];
+    expect(posStr.split('/')).toEqual(['5.00', '39.5000', '-98.3500', '34.5', '52.0']);
+  });
+
+  it('appends /bearing/pitch when only pitch is non-zero', () => {
+    state.map = mockMap({ pitch: 45 });
+    writeUrlState();
+    const posStr = location.hash.slice(1).split('?')[0];
+    expect(posStr.split('/')).toEqual(['5.00', '39.5000', '-98.3500', '0.0', '45.0']);
+  });
+
+  it('treats a bearing that rounds to 0.0 as flat (no suffix)', () => {
+    state.map = mockMap({ bearing: 0.04 });
+    writeUrlState();
+    const posStr = location.hash.slice(1).split('?')[0];
+    expect(posStr.split('/')).toHaveLength(3);
   });
 });
 

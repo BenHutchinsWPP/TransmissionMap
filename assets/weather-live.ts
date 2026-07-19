@@ -34,9 +34,15 @@ import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 
-// Variables that animate wind particles: Wind itself and the Temp & Wind
-// combined view (temp wash + particles on top).
-const PARTICLE_VARS = new Set(["wind", "tempwind"]);
+// Variables that animate wind particles: Wind itself, the Temp & Wind
+// combined view (temp wash + particles on top), and Windstream (particles
+// only, no color wash).
+const PARTICLE_VARS = new Set(["wind", "tempwind", "windstream"]);
+// 1×1 transparent GIF — crossfaded in place of a real webp for `noWash`
+// variables, so paintImage()'s existing A/B crossfade (which assumes the
+// front layer starts near full opacity) never flashes a stale texture: the
+// "flash" is transparent by construction.
+const BLANK_PIXEL = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 // The Temp & Wind companion hover probe (see raster-probes.ts) — its wind LUT
 // shares the main probe's invalidate/ensure lifecycle in refetch().
 const WIND_PROBE_ID = "weather-live-wind";
@@ -46,6 +52,12 @@ const WIND_PROBE_ID = "weather-live-wind";
 function fileVar(): string {
   const v = WEATHER_VARIABLES.find(w => w.id === state.weatherVar);
   return v?.file ?? state.weatherVar;
+}
+
+// True for a variable that shows particles/hover cursor but no color wash
+// (Windstream) — see BLANK_PIXEL above.
+function noWash(): boolean {
+  return !!WEATHER_VARIABLES.find(w => w.id === state.weatherVar)?.noWash;
 }
 
 // Lazily loaded on first need; keeps the particle canvas code out of the
@@ -204,7 +216,9 @@ function preloadStep(i: number) {
     img.crossOrigin = "anonymous";
     img.src = u;
   };
-  warm(`${weatherLiveUrl(`${fileVar()}${s.suffix}.webp`)}?_=${encodeURIComponent(generatedUtc ?? "")}`);
+  if (!noWash()) {
+    warm(`${weatherLiveUrl(`${fileVar()}${s.suffix}.webp`)}?_=${encodeURIComponent(generatedUtc ?? "")}`);
+  }
   if (PARTICLE_VARS.has(state.weatherVar)) {
     warm(`${weatherLiveUrl(`wind_uv${s.suffix}.png`)}?_=${encodeURIComponent(generatedUtc ?? "")}`);
   }
@@ -278,8 +292,12 @@ function paintCurrent(): void {
   const coords: ImageCorners | undefined = b
     ? [[b[0], b[3]], [b[2], b[3]], [b[2], b[1]], [b[0], b[1]]]
     : undefined;
+  // Windstream (and any future noWash variable) crossfades a transparent
+  // placeholder instead of real imagery — same code path, no color wash.
   void paintImage(
-    `${weatherLiveUrl(`${fileVar()}${suffix}.webp`)}?_=${encodeURIComponent(generatedUtc ?? "")}`,
+    noWash()
+      ? BLANK_PIXEL
+      : `${weatherLiveUrl(`${fileVar()}${suffix}.webp`)}?_=${encodeURIComponent(generatedUtc ?? "")}`,
     coords,
   );
   // Warm the next step (wrapping, matching playback order) for smooth stepping.

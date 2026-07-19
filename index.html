@@ -89,6 +89,13 @@
         </div>
       </div>
 
+      <!-- 3D rotate/tilt hint — bottom left; shown once by assets/terrain-hint.ts
+           the first time either 3D toggle is enabled -->
+      <div class="rotate-hint-toast" id="rotateHintToast" role="status" aria-live="polite" hidden>
+        <span>Right-click and drag (or Ctrl + drag) to rotate and tilt the map. On touch, use two fingers. Click the compass icon to reset north.</span>
+        <button type="button" id="rotateHintDismiss" aria-label="Dismiss">×</button>
+      </div>
+
       <!-- Address / place geocoder — top left -->
       <div class="geocoder" id="geocoder">
         <div class="geocoder-wrap">
@@ -639,6 +646,11 @@
         <li data-source-credit="eia-atlas"><a href="https://atlas.eia.gov/" target="_blank" rel="noopener">EIA U.S. Energy Atlas</a> — crude-oil &amp; petroleum-product pipelines (public domain). Vintage Jan 2020.</li>
         <li data-source-credit="boem"><a href="https://www.boem.gov/renewable-energy/mapping-and-data" target="_blank" rel="noopener">Bureau of Ocean Energy Management (BOEM)</a> — Offshore Wind Leases — public domain.</li>
         <li data-source-credit="wecc-paths"><a href="https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf" target="_blank" rel="noopener">WECC Path Rating Catalog</a> — 2026 Public Version (V3, March 2026) — path definitions, ratings &amp; directionality. 🚧 Under construction — layer is a work in progress.</li>
+        <!-- Required wording per tilezen/joerd/docs/attribution.md — do not reword.
+             The map's own attribution control shows a short "USGS terrain" credit
+             instead (see TERRAIN_ATTRIB_SHORT in assets/constants.ts) to avoid
+             overlapping other floating UI; this entry carries the full text. -->
+        <li data-source-credit="usgs-terrain">United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey — <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">AWS Terrain Tiles</a> (Terrarium encoding) — CC BY 4.0. 3D Terrain toggle only.</li>
         <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/" target="_blank" rel="noopener">Esri Geocoding</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
       </ul>
       <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>

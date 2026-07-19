@@ -199,12 +199,14 @@ export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/r
 // 3DEP/GMTED2010/ETOPO1) — elevations don't change, so no refresh is needed.
 // Tile pyramid tops out at z15; MapLibre overzooms above that.
 export const TERRAIN_TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png";
-// Required wording per tilezen/joerd/docs/attribution.md — do not reword.
-// Checked against SOURCE_ATTRIB above for MapLibre's substring-dedup rule:
-// distinct from every existing USGS credit ("USGS ..." short forms) in both
-// directions, so it always appears as its own credit while terrain is on.
-export const TERRAIN_ATTRIB =
-  "United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey";
+// Short on-map credit for the MapLibre attribution control — the required
+// tilezen/joerd wording ("United States 3DEP ... U.S. Geological Survey") is
+// long enough to overlap other floating UI as the only active source with
+// bespoke (non-deduped) attribution while terrain is on. The full wording
+// lives instead in the Data Credits dialog (index.html,
+// data-source-credit="usgs-terrain" — do not reword that entry), matching
+// every other dataset's short-in-map/full-in-dialog split (SOURCE_ATTRIB above).
+export const TERRAIN_ATTRIB_SHORT = "USGS terrain";
 export const TERRAIN_EXAGGERATION = 1.3;
 
 // ─── Live layer tile sources ──────────────────────────────────────────────────

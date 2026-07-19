@@ -910,6 +910,37 @@ header h1 {
   & input[type=checkbox] { width: 11px; height: 11px; margin: 0; flex-shrink: 0; cursor: pointer; }
 }
 
+/* ── Rotate/tilt hint toast — bottom left ─────────────────────────────────── */
+.rotate-hint-toast {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 20;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--panel-shadow);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.rotate-hint-toast button {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.rotate-hint-toast button:hover { color: var(--text); }
+
 /* ── Geocoder (address / place search) — top left ────────────────────────── */
 .geocoder {
   position: absolute;

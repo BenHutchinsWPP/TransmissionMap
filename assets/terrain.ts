@@ -6,7 +6,8 @@
 // map.ts (apply3dFromState at load-end, ensureBuildingsLayer after the OFM
 // style graft resolves).
 
-import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB, TERRAIN_EXAGGERATION } from './state.js';
+import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './state.js';
+import { maybeShowRotateHint } from './terrain-hint.js';
 
 const TERRAIN_SOURCE_ID = 'terrain-dem';
 const BUILDINGS_LAYER_ID = 'buildings-3d';
@@ -39,7 +40,7 @@ export function setTerrain3d(on: boolean) {
         tileSize: 256,
         encoding: 'terrarium',
         maxzoom: 15,
-        attribution: TERRAIN_ATTRIB,
+        attribution: TERRAIN_ATTRIB_SHORT,
       });
     }
     state.map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
@@ -97,4 +98,5 @@ export function setBuildings3d(on: boolean) {
 export function apply3dFromState() {
   if (state.terrain3d) setTerrain3d(true);
   if (state.buildings3d) setBuildings3d(true);
+  if (state.terrain3d || state.buildings3d) maybeShowRotateHint();
 }
