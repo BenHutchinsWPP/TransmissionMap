@@ -6,7 +6,7 @@ import { readUrlState, writeUrlState } from './url-state.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', '3d']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -29,6 +29,9 @@ beforeEach(() => {
   state.weatherVar      = 'tempwind';
   state.mwFilter        = { min: 0, max: MW_SLIDER_MAX };
   state.basemap         = 'light';
+  state.projection      = 'mercator';
+  state.terrain3d       = false;
+  state.buildings3d     = false;
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
   state.mapReady        = false;
   state.map             = null;
@@ -220,6 +223,43 @@ describe('round-trip serialization', () => {
     state.weatherVar = 'tempwind';
     readUrlState();
     expect(state.weatherVar).toBe('temp');
+  });
+
+  it('omits 3d when both terrain3d and buildings3d are off (the default)', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('3d=');
+  });
+
+  it('round-trips 3d=t into terrain3d only', () => {
+    state.terrain3d = true;
+    writeUrlState();
+    expect(location.hash).toContain('3d=t');
+    state.terrain3d = false;
+    readUrlState();
+    expect(state.terrain3d).toBe(true);
+    expect(state.buildings3d).toBe(false);
+  });
+
+  it('round-trips 3d=b into buildings3d only', () => {
+    state.buildings3d = true;
+    writeUrlState();
+    expect(location.hash).toContain('3d=b');
+    state.buildings3d = false;
+    readUrlState();
+    expect(state.buildings3d).toBe(true);
+    expect(state.terrain3d).toBe(false);
+  });
+
+  it('round-trips 3d=tb into both terrain3d and buildings3d', () => {
+    state.terrain3d = true;
+    state.buildings3d = true;
+    writeUrlState();
+    expect(location.hash).toContain('3d=tb');
+    state.terrain3d = false;
+    state.buildings3d = false;
+    readUrlState();
+    expect(state.terrain3d).toBe(true);
+    expect(state.buildings3d).toBe(true);
   });
 });
 

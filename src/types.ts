@@ -111,6 +111,8 @@ export interface AppState {
   basemap: string;
   basemapLabels: boolean;
   projection: string;
+  terrain3d: boolean;
+  buildings3d: boolean;
   popup: Popup | null;
   layerVisibility: Record<string, boolean>;
   layerFilters: Record<string, Set<string>>;

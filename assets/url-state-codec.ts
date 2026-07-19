@@ -64,6 +64,8 @@ export interface UrlStateData {
   weatherVar: string;
   basemap: string;
   projection: string;
+  terrain3d: boolean;
+  buildings3d: boolean;
 }
 
 export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
@@ -147,6 +149,13 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
   // Projection (default mercator; only 'g' = globe persisted)
   if (params.get('pj') === 'g') data.projection = 'globe';
 
+  // 3D terrain / buildings ('t' = terrain, 'b' = buildings, either/both)
+  const td = params.get('3d');
+  if (td) {
+    if (td.includes('t')) data.terrain3d = true;
+    if (td.includes('b')) data.buildings3d = true;
+  }
+
   return data;
 }
 
@@ -227,6 +236,10 @@ export function formatUrlState(data: UrlStateData): string[] {
 
   // Projection
   if (data.projection === 'globe') parts.push('pj=g');
+
+  // 3D terrain / buildings (both off by default, omitted)
+  const td = (data.terrain3d ? 't' : '') + (data.buildings3d ? 'b' : '');
+  if (td) parts.push('3d=' + td);
 
   return parts;
 }

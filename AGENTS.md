@@ -62,6 +62,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `raster-probes.ts` — `RASTER_PROBES`, `ensureRasterLut`, `updateRasterArrow`
     - `popup.ts` click popups; `popup-format.ts` HTML builder
     - `highlights.ts` search highlights; `measure.ts` distance tool
+    - `terrain.ts` — 3D Terrain (raster-dem) + 3D Buildings (OFM fill-extrusion) toggles
     - `url-state-codec.ts` — URL parse/format (no side effects)
     - `icons.ts` SVG icon loading; `tool-mode.ts` draw/measure mutex
     - `constants.ts` tile URLs, DATA paths, palette constants

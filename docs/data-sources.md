@@ -63,4 +63,6 @@ security allowlist review), see [network-allowlist.md](network-allowlist.md).
 | Generator icons | [Google Material Symbols](https://fonts.google.com/icons) — `assets/icons.ts` | Apache 2.0 |
 | Street basemap | [OpenStreetMap raster tiles](https://www.openstreetmap.org/) | ODbL — © OSM contributors |
 | Aerial basemap | [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) | Esri terms of use |
+| 3D Terrain toggle | [AWS Open Data Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) — Terrarium-encoded raster-dem, mosaic of USGS 3DEP/NED, GMTED2010, SRTM, ETOPO1 (static snapshot, ~2017) | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — attribution **required**: "United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey" |
+| 3D Buildings toggle | Building footprints + heights, from the OpenFreeMap vector basemap (OpenStreetMap-derived) | ODbL — © OSM contributors |
 | Place search | [ArcGIS World Geocoding Service](https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/) | Esri ToS — API-keyed, temporary results only (no `forStorage`); 20k free geocodes/month |

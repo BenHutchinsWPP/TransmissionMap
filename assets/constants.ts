@@ -193,6 +193,20 @@ export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/r
 // (z17 is a 404), same ceiling as USGSTopo.
 export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
 
+// ─── 3D terrain (optional) ────────────────────────────────────────────────────
+// AWS Open Data "Terrain Tiles" (Terrarium-encoded raster-dem), CC-BY 4.0,
+// keyless, not requester-pays. Mosaic is a static snapshot (~2017; SRTM/USGS
+// 3DEP/GMTED2010/ETOPO1) — elevations don't change, so no refresh is needed.
+// Tile pyramid tops out at z15; MapLibre overzooms above that.
+export const TERRAIN_TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png";
+// Required wording per tilezen/joerd/docs/attribution.md — do not reword.
+// Checked against SOURCE_ATTRIB above for MapLibre's substring-dedup rule:
+// distinct from every existing USGS credit ("USGS ..." short forms) in both
+// directions, so it always appears as its own credit while terrain is on.
+export const TERRAIN_ATTRIB =
+  "United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey";
+export const TERRAIN_EXAGGERATION = 1.3;
+
 // ─── Live layer tile sources ──────────────────────────────────────────────────
 // IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
 // {layer} is an IEM layer name: "ridge::USCOMP-N0Q-0" is the latest-frame alias,

@@ -9,6 +9,7 @@ export {
   OSM_TILE_URL, AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
   OFM_STYLE_URLS,
   USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
+  TERRAIN_TILE_URL, TERRAIN_ATTRIB, TERRAIN_EXAGGERATION,
   RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
   GEOMET_RADAR_TILE_TEMPLATE,
   WEATHER_IMAGE_COORDS, WEATHER_WASH_OPACITY, WEATHER_FADE_MS,
@@ -25,6 +26,8 @@ export const state: AppState = {
   basemap: "light",     // "street" | "light" | "dark" | "topo" | "aerial" | "hydro"
   basemapLabels: true,  // show OFM basemap text/symbol layers (light/dark/hydro only)
   projection: "mercator", // "mercator" | "globe"
+  terrain3d: false,     // raised ground plane (raster-dem elevation)
+  buildings3d: false,   // extruded OFM building footprints (z14+)
   popup: null,
   layerVisibility: {},  // registryId → boolean (initialised from LAYERS[].defaultOn)
   layerFilters: {},     // registryId → Set<bucketId> (non-generator layers only)

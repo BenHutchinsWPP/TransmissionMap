@@ -17,6 +17,7 @@ import { writeUrlState } from './url-state.js';
 import { emit } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
+import { apply3dFromState, ensureBuildingsLayer } from './terrain.js';
 
 export function initMap() {
   // Register pmtiles protocol BEFORE constructing the Map
@@ -63,7 +64,7 @@ export function initMap() {
     if (a) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
   }, true);
 
-  state.map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+  state.map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
 
   state.map.addControl(new maplibregl.GeolocateControl({
     positionOptions:    { enableHighAccuracy: true },
@@ -91,6 +92,7 @@ export function initMap() {
       applyOGFColorBy();
       applyWestTECColorBy();
     }
+    apply3dFromState(); // restores terrain/buildings toggles (e.g. from the URL)
     initPolygonHover();
     initLineHighlight();
     initRasterProbes();
@@ -335,6 +337,9 @@ async function addOfmBasemaps() {
   }
   // Apply visibility for whatever basemap is already selected.
   switchBasemap(state.basemap);
+  // Covers the race where 3D Buildings was already enabled (e.g. restored
+  // from the URL) before this fetch resolved — a no-op otherwise.
+  ensureBuildingsLayer();
 }
 
 // "Map Labels" checkbox: hides the OFM text/shield layers. Raster basemaps

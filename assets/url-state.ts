@@ -36,6 +36,8 @@ export function readUrlState() {
   if (data.weatherVar) state.weatherVar = data.weatherVar;
   if (data.basemap) state.basemap = data.basemap;
   if (data.projection) state.projection = data.projection;
+  if (data.terrain3d) state.terrain3d = true;
+  if (data.buildings3d) state.buildings3d = true;
 }
 
 export function writeUrlState() {
@@ -53,6 +55,8 @@ export function writeUrlState() {
     weatherVar: state.weatherVar,
     basemap: state.basemap,
     projection: state.projection,
+    terrain3d: state.terrain3d,
+    buildings3d: state.buildings3d,
   };
 
   const parts = formatUrlState(data);

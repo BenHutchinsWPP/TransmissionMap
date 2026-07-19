@@ -36,6 +36,7 @@ without these, those features just won't load.
 | `basemap.nationalmap.gov` | Topo / Hydro basemaps + Aerial below z15.5 |
 | `mesonet.agron.iastate.edu` | US radar overlay |
 | `geo.weather.gc.ca` | Canadian radar overlay |
+| `elevation-tiles-prod.s3.amazonaws.com` | 3D Terrain toggle (elevation tiles) |
 
 ## Click-through links (app works without them)
 

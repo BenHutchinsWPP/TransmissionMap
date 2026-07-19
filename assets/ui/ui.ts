@@ -10,6 +10,7 @@ import { MW_SLIDER_MAX, mwToPos } from '../filters.js';
 import { setLayerVisibility, applyAllGenModes } from '../visibility.js';
 import { ensureLayerData } from '../layers/layer-init.js';
 import { initMap, switchBasemap, switchProjection, setBasemapLabels } from '../map.js';
+import { setTerrain3d, setBuildings3d } from '../terrain.js';
 import {
   LEGEND_FILTERS, legendAllIds,
   buildLegends, updateLegends,
@@ -158,6 +159,13 @@ function resetLayersToDefaults() {
   const flatRadio = document.querySelector<HTMLInputElement>('input[type=radio][name=projection][value="mercator"]');
   if (flatRadio) flatRadio.checked = true;
 
+  if (state.terrain3d) setTerrain3d(false);
+  if (state.buildings3d) setBuildings3d(false);
+  const terrainToggle = document.getElementById("terrain3dToggle") as HTMLInputElement | null;
+  if (terrainToggle) terrainToggle.checked = false;
+  const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
+  if (buildingsToggle) buildingsToggle.checked = false;
+
   buildLayersPanel();
   buildLegends();
   applyAllGenModes();
@@ -272,6 +280,13 @@ function wireBasemap() {
   if (active) active.checked = true;
   const activeProj = document.querySelector<HTMLInputElement>(`input[type=radio][name=projection][value="${state.projection}"]`);
   if (activeProj) activeProj.checked = true;
+  // URL restore (readUrlState) runs before this wiring, so the checkboxes need
+  // an explicit initial sync — unlike the radios above, there's no shared
+  // `name` to select an "active" one from.
+  const terrainToggle = document.getElementById("terrain3dToggle") as HTMLInputElement | null;
+  if (terrainToggle) terrainToggle.checked = state.terrain3d;
+  const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
+  if (buildingsToggle) buildingsToggle.checked = state.buildings3d;
 
   document.addEventListener("change", (e) => {
     const el = e.target as Element;
@@ -282,7 +297,11 @@ function wireBasemap() {
     const labelsToggle = el?.closest<HTMLInputElement>("input[id=basemapLabelsToggle]");
     if (labelsToggle) { setBasemapLabels(labelsToggle.checked); return; }
     const dataToggle = el?.closest<HTMLInputElement>("input[id=dataCounterToggle]");
-    if (dataToggle) { updateLegends(); }
+    if (dataToggle) { updateLegends(); return; }
+    const terrain = el?.closest<HTMLInputElement>("input[id=terrain3dToggle]");
+    if (terrain) { setTerrain3d(terrain.checked); emit('url:write'); return; }
+    const buildings = el?.closest<HTMLInputElement>("input[id=buildings3dToggle]");
+    if (buildings) { setBuildings3d(buildings.checked); emit('url:write'); return; }
   });
 }
 
