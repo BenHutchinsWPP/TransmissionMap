@@ -165,9 +165,9 @@ def _fetch_viirs_csv(url: str) -> str:
     # under load. Exhausted retries raise — hotspots are the core payload, so
     # the run must fail (and keep the last good file) rather than publish
     # a hotspot-free update.
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            with urllib.request.urlopen(url, timeout=60) as r:
+            with urllib.request.urlopen(url, timeout=20) as r:
                 text = r.read().decode("utf-8")
             # FIRMS reports errors (bad key, over quota) as HTTP-200 text;
             # a truncated/HTML body must fail loudly, not parse as 0 rows.
@@ -175,7 +175,7 @@ def _fetch_viirs_csv(url: str) -> str:
                 raise ValueError(f"unexpected response: {text[:80]!r}")
             return text
         except Exception as e:
-            if attempt == 2:
+            if attempt == 1:
                 raise
             print(f"  retrying {url} after {e}", file=sys.stderr)
     raise AssertionError("unreachable")

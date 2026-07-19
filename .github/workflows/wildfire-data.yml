@@ -44,7 +44,7 @@ jobs:
     with:
       scripts: scripts/fetch_wildfire_live.py
       outputs: data/layers/wildfire_live.geojson
-      timeout-minutes: 20
+      timeout-minutes: 10
       endpoints: >-
         https://firms.modaps.eosdis.nasa.gov
         https://services3.arcgis.com
