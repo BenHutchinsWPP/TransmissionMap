@@ -149,6 +149,11 @@ function onMapClick(e: MapMouseEvent | MapTouchEvent) {
 
   // Edit mode: click any feature (including user loaded layers) to get a Copy button.
   if (state.editMode === 'edit') {
+    // While MapboxDraw is sketching a new shape or editing an existing one's
+    // vertices, a click is placing/dragging a vertex, not picking a feature to
+    // copy — the copy popup would otherwise pop up on top of the in-progress shape.
+    const drawMode = state.draw?.getMode();
+    if (drawMode && drawMode !== 'simple_select' && drawMode !== 'static') return;
     const cands = state.map.queryRenderedFeatures(box, { layers: activeLayers }).filter(hitLit);
     // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
     // borders, so copies would be truncated — only allow GeoJSON-backed features.

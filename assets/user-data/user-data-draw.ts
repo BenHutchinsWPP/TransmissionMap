@@ -137,6 +137,7 @@ export function setMode(mode: string) {
 
 export function startDraw(drawMode: string) {
   if (state.editMode !== 'edit') return;
+  state.popup?.remove();
   if (state.draw) state.draw.changeMode(drawMode);
 }
 
