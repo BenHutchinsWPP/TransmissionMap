@@ -1,6 +1,8 @@
 // ─── MapLibre initialisation ──────────────────────────────────────────────────
 // Surfaces map/basemap load failures to diag-log.ts (recordDiagEvent) for the
 // diagnostics panel, alongside the existing console logging.
+// addOfmBasemaps() clones a roads/places/boundaries overlay for Aerial via
+// basemap-overlay.ts's pure aerialOverlayLayer() selector/restyler.
 
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
@@ -21,6 +23,7 @@ import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
+import { aerialOverlayLayer, type OfmLayer } from './basemap-overlay.js';
 
 export function initMap() {
   // Register pmtiles protocol BEFORE constructing the Map
@@ -197,6 +200,12 @@ const BASEMAP_LAYER_DEFS: {
 // Every Esri-backed layer, hidden together when the fallback latch trips.
 const ESRI_LAYER_IDS = ["aerial-bg", ...AERIAL_GAP_REGIONS.map(r => `aerial-esri-${r.id}-bg`)];
 
+// Anchor the aerial roads/places/boundaries overlay above every raster basemap
+// layer (inserted below this, by beforeId) and below every app layer (added
+// after this, in insertion order) — stable regardless of whether the OFM style
+// fetch in addOfmBasemaps() resolves before or after addAllLayers() runs.
+const BASEMAP_OVERLAY_ANCHOR = 'basemap-overlay-top';
+
 function addBasemapSources() {
   if (!state.map) return;
   const sources = [
@@ -233,19 +242,27 @@ function addBasemapSources() {
       layout: { visibility: "none" },
     });
   }
+  state.map.addLayer({ id: BASEMAP_OVERLAY_ANCHOR, type: 'background', paint: { 'background-opacity': 0 } });
   initAerialFallback();
   void addOfmBasemaps();
 }
 
-// ─── OpenFreeMap vector basemaps (light/dark) ─────────────────────────────────
+// ─── OpenFreeMap vector basemaps (light/dark/aerial overlay) ──────────────────
 // The light (Positron) and dark styles are full MapLibre style JSONs fetched at
 // runtime. Their sources and layers are grafted into the app's style — hidden,
 // at the very bottom of the paint order — and toggled as a group by
 // switchBasemap(). Both styles share the same two sources (openmaptiles vector
 // + natural-earth shaded-relief raster), added once under an `ofm-` prefix.
+//
+// A third group is cloned from the light style's roads/places/boundaries and
+// grafted at BASEMAP_OVERLAY_ANCHOR instead — above the aerial imagery rather
+// than below it — so Aerial gets a readable reference overlay.
 
-type OfmKey = keyof typeof OFM_STYLE_URLS;  // 'light' | 'dark'
-const ofmLayerIds: Record<OfmKey, string[]> = { light: [], dark: [] };
+type OfmKey = keyof typeof OFM_STYLE_URLS;  // 'light' | 'dark' — indexes OFM_STYLE_URLS for the style fetch
+// Paint-order groups toggled by switchBasemap(); 'aerial' has no style URL of
+// its own — it's cloned from the fetched 'light' style (see addOfmBasemaps()).
+type OfmGroup = OfmKey | 'aerial';
+const ofmLayerIds: Record<OfmGroup, string[]> = { light: [], dark: [], aerial: [] };
 // Symbol (text/shield) layers across both styles — the "Map Labels" toggle set.
 const ofmLabelIds = new Set<string>();
 
@@ -270,9 +287,10 @@ const OFM_LIGHT_BOUNDARY_REMAP: Record<string, { color: string; minzoom?: number
 };
 
 // `hydro` borrows the light style as the ground under its water overlay.
-function ofmStyleForBasemap(basemap: string): OfmKey | null {
+function ofmStyleForBasemap(basemap: string): OfmGroup | null {
   if (basemap === "light" || basemap === "hydro") return "light";
   if (basemap === "dark") return "dark";
+  if (basemap === "aerial") return "aerial";
   return null;
 }
 
@@ -280,10 +298,11 @@ const OFM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>Ope
 
 // Minimal structural view of an OFM style layer — enough to remap id/source and
 // force visibility without modeling the whole LayerSpecification union.
+// OfmLayer (imported) is the same shape plus 'source-layer', which
+// aerialOverlayLayer() needs to pick roads/places/boundaries out of the style.
 type OfmStyleJson = {
   sources: Record<string, object>;
-  layers: { id: string; type: string; source?: string; minzoom?: number;
-            layout?: Record<string, unknown>; paint?: Record<string, unknown> }[];
+  layers: OfmLayer[];
   sprite?: string;
 };
 
@@ -341,6 +360,17 @@ async function addOfmBasemaps() {
       }
       map.addLayer(spec as maplibregl.LayerSpecification, anchor);
       ofmLayerIds[key].push(spec.id);
+
+      // Aerial roads/places/boundaries overlay, cloned from the raw (pre-remap)
+      // layer so the light-basemap softening above doesn't fight the
+      // over-photography restyle aerialOverlayLayer() applies.
+      if (key === 'light') {
+        const aerial = aerialOverlayLayer(layer);
+        if (aerial) {
+          map.addLayer(aerial as maplibregl.LayerSpecification, BASEMAP_OVERLAY_ANCHOR);
+          ofmLayerIds.aerial.push(aerial.id);
+        }
+      }
     }
   }
   // Apply visibility for whatever basemap is already selected.
@@ -350,8 +380,10 @@ async function addOfmBasemaps() {
   ensureBuildingsLayer();
 }
 
-// "Map Labels" checkbox: hides the OFM text/shield layers. Raster basemaps
-// (Street/Topo/Aerial) have labels baked into their tiles — out of scope.
+// "Map Labels" checkbox. On Light/Dark/Hydro it hides the OFM text/shield
+// layers; on Aerial it hides the whole cloned overlay (roads and boundaries
+// included), handing back the untouched photograph. Street and Topo have
+// labels baked into their tiles — out of scope.
 export function setBasemapLabels(on: boolean) {
   state.basemapLabels = on;
   switchBasemap(state.basemap);
@@ -417,10 +449,15 @@ export function switchBasemap(type: string) {
   }
   // OFM vector groups (empty arrays until addOfmBasemaps() resolves).
   const ofmActive = ofmStyleForBasemap(type);
-  for (const key of Object.keys(ofmLayerIds) as OfmKey[]) {
+  for (const key of Object.keys(ofmLayerIds) as OfmGroup[]) {
     const groupOn = key === ofmActive;
     for (const id of ofmLayerIds[key]) {
-      const vis = groupOn && (state.basemapLabels || !ofmLabelIds.has(id)) ? "visible" : "none";
+      // Aerial gates as a whole with Map Labels (roads and boundaries hide too,
+      // not just text) so the checkbox can hand back the untouched photograph;
+      // Light/Dark/Hydro keep their label-only behavior.
+      const vis = key === "aerial"
+        ? (groupOn && state.basemapLabels ? "visible" : "none")
+        : (groupOn && (state.basemapLabels || !ofmLabelIds.has(id)) ? "visible" : "none");
       state.map.setLayoutProperty(id, "visibility", vis);
     }
   }

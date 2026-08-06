@@ -24,7 +24,7 @@ export const state: AppState = {
   map: null,
   mapReady: false,
   basemap: "light",     // "street" | "light" | "dark" | "topo" | "aerial" | "hydro"
-  basemapLabels: true,  // show OFM basemap text/symbol layers (light/dark/hydro only)
+  basemapLabels: true,  // OFM text/symbol layers on light/dark/hydro; the whole roads/places overlay on aerial
   projection: "mercator", // "mercator" | "globe"
   terrain3d: false,     // raised ground plane (raster-dem elevation)
   buildings3d: false,   // extruded OFM building footprints (z14+)

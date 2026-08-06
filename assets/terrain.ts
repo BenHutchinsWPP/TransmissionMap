@@ -51,10 +51,14 @@ export function setTerrain3d(on: boolean) {
 }
 
 // Inserted right above the topmost basemap layer ("aerial-bg") and below
-// whatever overlay/infra layer currently follows it — works whether this runs
-// before addAllLayers() (nothing follows yet; plain append lands in the same
-// spot) or after (the OFM style fetch resolved late), since overlays must
-// always render above extruded buildings, not be occluded by them.
+// whatever currently follows it — works whether this runs before addAllLayers()
+// (nothing follows yet; plain append lands in the same spot) or after (the OFM
+// style fetch resolved late), since overlays must always render above extruded
+// buildings, not be occluded by them.
+//
+// On Aerial what follows "aerial-bg" is now the first cloned road layer of the
+// map.ts overlay group, so that overlay's roads and labels paint above the
+// extrusions — same rule, and the same way the Light basemap already behaves.
 function buildingsBeforeId(): string | undefined {
   const layers = state.map?.getStyle()?.layers ?? [];
   const i = layers.findIndex(l => l.id === 'aerial-bg');
