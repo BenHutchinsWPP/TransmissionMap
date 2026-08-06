@@ -3,6 +3,8 @@
 //              visibility.ts (ensureLayerData),
 //              map-layers-*.ts (addTransmissionLines, addPolygonLayer,
 //              addSubstationPoints, pmtilesUrl, initialVisibility, registerBaseFilter)
+// Deps: diag-log.ts (recordDiagEvent — records ensureLayerData failures for the
+//       diagnostics panel).
 // >>> ADD-LAYER: lazy-geojson — see docs/adding-a-layer.md §7
 
 import type { ExpressionSpecification, GeoJSONSource, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
@@ -14,6 +16,7 @@ import {
   PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS,
 } from '../../src/colors/buckets.js';
 import { registerBaseFilter } from '../filters.js';
+import { recordDiagEvent } from '../diag-log.js';
 
 // Re-export so map-layers-*.ts can import from one place
 export { registerBaseFilter };
@@ -87,6 +90,7 @@ export function ensureLayerData(registryId: string): Promise<void> {
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId } }));
     } catch (err) {
       console.warn('[TransmissionMap] ensureLayerData failed for', registryId, err);
+      recordDiagEvent('layer', `${registryId}: ${err}`);
     } finally {
       delete _inflight[registryId];
     }

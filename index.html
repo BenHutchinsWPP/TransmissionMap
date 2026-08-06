@@ -28,7 +28,13 @@
             <button class="menu-item" data-action="save-geojson" type="button">Save as GeoJSON…</button>
             <button class="menu-item" data-action="save-kml" type="button">Save as KML…</button>
             <button class="menu-item" data-action="toggle-legends" type="button">Hide legends</button>
+            <button class="menu-item" data-action="open-diagnostics" type="button">Diagnostics…</button>
           </div>
+          <!-- After the dropdown, not between it and the button: ui-menubar.ts
+               pairs the two by nextElementSibling/previousElementSibling.
+               Positioned against .menu-wrap, so placement here looks identical. -->
+          <span class="menu-badge" id="fileMenuBadge" hidden role="img"
+                aria-label="Something failed to load this session — see File ▸ Diagnostics…"></span>
         </div>
         <div class="mode-toggle" role="group" aria-label="Map mode">
           <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button">View</button>
@@ -654,6 +660,21 @@
         <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/" target="_blank" rel="noopener">Esri Geocoding</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
       </ul>
       <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>
+    </div>
+  </dialog>
+
+  <!-- Diagnostics dialog ("things aren't loading") — content built by ui-diagnostics.ts -->
+  <dialog class="credits-dialog" id="diagnosticsDialog">
+    <div class="credits-content">
+      <div class="credits-header">
+        <h2>Diagnostics</h2>
+        <button id="closeDiagnostics" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="diagBody"></div>
+      <div class="disclaimer-footer diag-footer">
+        <a class="disclaimer-dismiss" href="https://github.com/BenHutchinsWPP/TransmissionMap/blob/main/docs/network-allowlist.md" target="_blank" rel="noopener">Network allowlist docs</a>
+        <button class="disclaimer-accept" id="diagCopyReport" type="button">Copy report</button>
+      </div>
     </div>
   </dialog>
 

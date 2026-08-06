@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fmtAge, fmtAgeShort, initLiveStaleness } from './live-staleness.js';
+import { fmtAge, fmtAgeShort, downFor, feedIssue, initLiveStaleness } from './live-staleness.js';
 import { state } from './state.js';
 
 vi.mock('./visibility.js', () => ({
@@ -115,6 +115,41 @@ describe('fmtAgeShort', () => {
   });
   it('rounds to days past 24h', () => {
     expect(fmtAgeShort(25 * 60 * 60_000)).toBe('1d');
+  });
+});
+
+describe('downFor', () => {
+  it('renders the elapsed time since a valid lastOk timestamp', () => {
+    const lastOk = new Date(Date.now() - 3 * 60 * 60_000).toISOString();
+    expect(downFor(lastOk)).toBe(' 3h');
+  });
+  it('renders empty string for a null lastOk', () => {
+    expect(downFor(null)).toBe('');
+  });
+  it('renders empty string for an undefined lastOk', () => {
+    expect(downFor(undefined)).toBe('');
+  });
+  it('renders empty string for an unparseable lastOk', () => {
+    expect(downFor('not-a-date')).toBe('');
+  });
+});
+
+describe('feedIssue', () => {
+  it('returns null for a fresh (ok) feed', () => {
+    expect(feedIssue('smoke', 'ok', new Date().toISOString())).toBeNull();
+  });
+  it('reports a stale-fallback feed by age in days, ignoring lastOk', () => {
+    expect(feedIssue('perimeters_us', 'fallback-3d', null)).toBe('US perim 3d old');
+  });
+  it('reports an explicitly-down feed with its downFor suffix', () => {
+    const lastOk = new Date(Date.now() - 3 * 60 * 60_000).toISOString();
+    expect(feedIssue('perimeters_ca', 'failed', lastOk)).toBe('CA perim down 3h');
+  });
+  it('reports a down feed with no known lastOk with an empty age suffix', () => {
+    expect(feedIssue('incidents', 'failed')).toBe('incidents down');
+  });
+  it('falls back to the raw feed key when the name map has no entry', () => {
+    expect(feedIssue('mystery_feed', 'failed')).toBe('mystery_feed down');
   });
 });
 

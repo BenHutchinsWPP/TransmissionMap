@@ -11,7 +11,9 @@
 //       6 h is not painted (console warning only — no modal, unlike
 //       wildfire-staleness.ts).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
-// Deps: state (map, DATA, layerVisibility). Legend age chip = #odinAge in index.html.
+// Deps: state (map, DATA, layerVisibility), diag-log.ts (recordDiagEvent —
+//       records refetch failures for the diagnostics panel). Legend age chip
+//       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from odinSnapshot().
 //       Also owns the popup's incident-report ‹ › pager: the per-outage records
@@ -25,6 +27,7 @@
 import { state, DATA } from './state.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
 import { escapeHtml } from './utils/utils.js';
+import { recordDiagEvent } from './diag-log.js';
 
 const REGISTRY_ID = "odin-outages";
 
@@ -57,6 +60,15 @@ let inflight = false;
 // fallback; the primary path merges feature-state in popup.ts.
 export function odinSnapshot(): Record<string, [number, number, OdinUtil[]?]> {
   return snapshot;
+}
+
+// Age of the painted snapshot and the cutoff it is judged against, for the
+// diagnostics panel (diagnostics.ts). Reads the same generatedUtc and
+// MAX_AGE_MS the unpaint guard above uses, so the two cannot disagree.
+// ageMs is null before the first successful pull.
+export function odinFreshness(): { ageMs: number | null; maxAgeMs: number } {
+  const t = generatedUtc ? Date.parse(generatedUtc) : NaN;
+  return { ageMs: Number.isNaN(t) ? null : Date.now() - t, maxAgeMs: MAX_AGE_MS };
 }
 
 // Apply the whole in-memory snapshot as feature-state. Idempotent + cheap
@@ -125,6 +137,7 @@ async function refetch(): Promise<void> {
     renderOdinAge();
   } catch (err) {
     console.warn("[TransmissionMap] ODIN refresh failed", err);
+    recordDiagEvent('live', `odin-outages: ${err}`);
     // Re-evaluate staleness of last-known data; if older than MAX_AGE_MS, unpaint.
     const then = generatedUtc ? Date.parse(generatedUtc) : NaN;
     if (!Number.isNaN(then) && Date.now() - then > MAX_AGE_MS) {

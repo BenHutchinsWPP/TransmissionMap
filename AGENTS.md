@@ -76,6 +76,11 @@ turns public datasets into PMTiles consumed by the frontend.
     - `odin-outages.ts` — ODIN county outage feature-state join (hand-rolled live feed)
     - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)
+    - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
+      is called from the existing catch blocks in `map.ts`, `layers/layer-init.ts`,
+      `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
+    - `diagnostics.ts` — check catalogue behind the Diagnostics panel (browser
+      capabilities, host probes, live-feed freshness, report builder); no DOM
   - **`assets/ui/`** — UI wiring and panels
     - `ui.ts` bootstrap + `init()`; wires all UI subsystems
     - `ui-filters.ts` — layer/legend/MW/year filter event wiring (emits bus events)
@@ -85,6 +90,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `ui-mydata.ts` — My Data tab wiring
     - `ui-search.ts` — feature search; `ui-geocoder.ts` — place search
     - `ui-openwith.ts` — "open with" link builder
+    - `ui-diagnostics.ts` — Diagnostics dialog; lazy chunk, opened from the File menu
   - **`assets/layers/`** — MapLibre layer builders
     - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
@@ -142,6 +148,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/wildfire-staleness.ts` |
 | Data source facts (URL, license, columns) | `docs/data-sources.md`, `docs/layers/<layer>.md` |
 | IT/security asks what URLs to whitelist | `docs/network-allowlist.md` |
+| "Things aren't loading" reports / add a diagnostics check | `assets/diagnostics.ts` (`DIAG_CHECKS`), `assets/ui/ui-diagnostics.ts` (silent footgun: host probes duplicate `docs/network-allowlist.md` — update both) |
 | Pipeline / tile build | `docs/pipeline.md`, then named script |
 
 ## Commands

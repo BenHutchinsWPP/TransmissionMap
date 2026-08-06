@@ -4,7 +4,8 @@
 // handler dispatching to the right action.
 // Deps: state.js, user-data-colors.js (static — lightweight, needed at wire time).
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
-// Consumed by ui.ts (wireUI).
+// ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
+// first File > Diagnostics… click). Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
 import { colorPickerInner } from '../user-data/user-data-colors.js';
@@ -54,6 +55,13 @@ async function onMenubarClick(e: MouseEvent) {
       const lc = document.getElementById('legendContainer');
       const off = lc?.classList.toggle('legends-off') ?? false;
       menuItem.textContent = off ? 'Show legends' : 'Hide legends';
+      return;
+    }
+    // Same reasoning as toggle-legends above: Diagnostics is its own lazy
+    // chunk (ui-diagnostics.js) and must not drag in the draw chunk either.
+    if (menuItem.dataset.action === 'open-diagnostics') {
+      const m = await import('./ui-diagnostics.js');
+      m.openDiagnostics();
       return;
     }
     const d = await draw();

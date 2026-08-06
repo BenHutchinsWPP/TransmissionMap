@@ -38,6 +38,11 @@ import { initWeatherLive, syncWeatherLiveVisibility } from '../weather-live.js';
 import { initNwsZoneJoin, syncZoneVisibility } from '../nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
 import { RASTER_PROBES, updateRasterArrow } from '../raster-probes.js';
+// Static import is deliberate: diag-log.js is a zero-import leaf module (just
+// an array), so reading it here costs nothing. ui-diagnostics.js and
+// diagnostics.js are NOT imported here — pulling either in statically would
+// defeat their lazy-chunk split (see ui-menubar.ts).
+import { getDiagLog, DIAG_EVENT } from '../diag-log.js';
 
 function resetLayerState() {
   for (const entry of LAYERS) {
@@ -224,6 +229,8 @@ function wireUI() {
   wireDownloadMenus();
   wirePanelToggle();
   wireCreditsDialog();
+  wireDiagnosticsDialog();
+  wireFileMenuBadge();
   wireDisclaimerDialog();
   wireCollapseToggles();
   wireMwFilter();
@@ -374,6 +381,28 @@ function wireCreditsDialog() {
     });
     creditsDialog.addEventListener("close", clearCreditHighlight);
   }
+}
+
+// Diagnostics dialog close/backdrop — the open trigger (File > Diagnostics…)
+// lives in ui-menubar.ts's lazy import so this module never pulls in the
+// probe catalogue itself.
+function wireDiagnosticsDialog() {
+  const dialog = document.getElementById("diagnosticsDialog") as HTMLDialogElement | null;
+  if (!dialog) return;
+  document.getElementById("closeDiagnostics")?.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+}
+
+// A quiet dot on the File menu button once a real runtime error has been
+// recorded this session. getDiagLog is a plain in-memory read, and DIAG_EVENT
+// fires from diag-log.ts on each record, so the badge costs no network traffic
+// and no timer.
+function wireFileMenuBadge() {
+  const badge = document.getElementById("fileMenuBadge");
+  if (!badge) return;
+  const update = () => { badge.hidden = getDiagLog().length === 0; };
+  update();
+  window.addEventListener(DIAG_EVENT, update);
 }
 
 function wireDisclaimerDialog() {

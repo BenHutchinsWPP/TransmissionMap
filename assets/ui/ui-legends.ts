@@ -1,4 +1,7 @@
 // ─── Legends + legend-filter registry ────────────────────────────────────────
+// Live-feed age/degraded-feed status text (downFor, feedIssue, fmtAgeShort)
+// comes from ../live-staleness.js, which owns those helpers so they can be
+// shared with other live-feed displays.
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -20,7 +23,7 @@ import {
 } from '../filters.js';
 import { MINES_COMMODITY_BUCKETS, MINES_STATUS_BUCKETS } from '../../src/colors/minerals.js';
 import { escapeHtml } from '../utils/utils.js';
-import { fmtAgeShort } from '../live-staleness.js';
+import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
 import { ICON_SVG } from '../icons.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 
@@ -213,21 +216,6 @@ const CHIP_FEEDS: Record<string, string[]> = {
   incidentAge: ["incidents"],
   smokeAge:    ["smoke"],
 };
-
-// " 3h" since the subfeed's last successful pull, "" when unknown.
-function downFor(lastOk: string | null | undefined): string {
-  const t = lastOk ? Date.parse(lastOk) : NaN;
-  return Number.isNaN(t) ? "" : ` ${fmtAgeShort(Date.now() - t)}`;
-}
-
-// Compact text for a degraded feed ("CA perim down 3h"), or null when ok.
-function feedIssue(feed: string, status: string, lastOk?: string | null): string | null {
-  if (status === "ok") return null;
-  const name = { perimeters_us: "US perim", perimeters_ca: "CA perim",
-                 incidents: "incidents", smoke: "smoke" }[feed] ?? feed;
-  const m = status.match(/^fallback-(\d+)d$/);
-  return m ? `${name} ${m[1]}d old` : `${name} down${downFor(lastOk)}`;
-}
 
 function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: string; level: string; abs: string } {
   const then = Date.parse(tsIso);

@@ -119,8 +119,10 @@ export const WEATHER_FADE_MS = 300;
 // 1×1 transparent PNG. The image source is created with this so a visitor who
 // never enables the layer never downloads the real (~130 KB) mosaic; weather-live.ts
 // swaps in the real image on first enable.
+// Carries a full 5-byte scanline (filter byte + RGBA), which is what the
+// 1×1 RGBA header declares — strict image decoders reject a short one.
 export const TRANSPARENT_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=";
 
 // ─── Per-source attribution shorthand ─────────────────────────────────────────
 // Short credit strings shown in the MapLibre attribution control. Keyed by the
@@ -230,7 +232,7 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 // Regular/Bold/Italic ONLY, as single-font stacks — comma-joined stacks and
 // other families 404, so every text-font in the app must be a one-element
 // Noto Sans array.
-const GLYPHS_URL      = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
 // MapLibre requires a style object even when we control all sources ourselves.
 export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [] };

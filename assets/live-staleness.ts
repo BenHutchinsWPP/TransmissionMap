@@ -1,5 +1,6 @@
 // ─── Live-layer staleness safety (shared factory) ─────────────────────────────
-// Role: shared factory for live-feed safety behavior.
+// Role: shared factory for live-feed safety behavior, plus the shared age/
+//       status-text helpers every live-feed display uses.
 //       Auto-refreshes a shared live GeoJSON source on an interval (and on
 //       return-to-page, since mobile browsers freeze timers in background
 //       tabs) and, when the data's pull age exceeds a hard cutoff, auto-
@@ -11,15 +12,22 @@
 //       feature of state.sourcesData[cfg.sourceKey], falling back to the
 //       FeatureCollection-level `generated_utc` stashed in
 //       state.liveFcMeta[cfg.sourceKey] (needed when `features` is empty).
+// Exports fmtAge/fmtAgeShort/downFor/feedIssue — pure age/degraded-feed text
+//       formatters with no DOM or state deps, consumed by ui/ui-legends.ts
+//       (legend age chips) and any other per-feed status display — plus
+//       liveGeneratedUtc/liveAgeMs, the single reader for a live source's pull
+//       age, used by the gate below and by diagnostics.ts.
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
 //       visibility.ts (setLayerVisibility — which itself writes URL state),
-//       ui/ui-legends.ts (updateLegends). Modal DOM ids come from cfg.
+//       ui/ui-legends.ts (updateLegends), diag-log.ts (recordDiagEvent — records
+//       refetch failures for the diagnostics panel). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from './state.js';
 import { setLayerVisibility } from './visibility.js';
 import { updateLegends } from './ui/ui-legends.js';
+import { recordDiagEvent } from './diag-log.js';
 
 // Age → short human string ("42m", "3h 5m", "2d 1h"). Shared by the stale
 // modal below and the hand-rolled age chips (weather-live.ts).
@@ -38,6 +46,43 @@ export function fmtAgeShort(ms: number): string {
   if (min < 60) return `${min}m`;
   const h = Math.round(min / 60);
   return h < 24 ? `${h}h` : `${Math.round(h / 24)}d`;
+}
+
+// " 3h" since a subfeed's last successful pull, "" when unknown. Shared by
+// the legend age chips (ui-legends.ts) and any other per-feed status display.
+export function downFor(lastOk: string | null | undefined): string {
+  const t = lastOk ? Date.parse(lastOk) : NaN;
+  return Number.isNaN(t) ? "" : ` ${fmtAgeShort(Date.now() - t)}`;
+}
+
+// Compact text for a degraded feed ("CA perim down 3h"), or null when ok.
+// `feed` is one of the wildfire subfeed keys (perimeters_us, perimeters_ca,
+// incidents, smoke); unrecognized keys fall back to the raw feed name.
+export function feedIssue(feed: string, status: string, lastOk?: string | null): string | null {
+  if (status === "ok") return null;
+  const name = { perimeters_us: "US perim", perimeters_ca: "CA perim",
+                 incidents: "incidents", smoke: "smoke" }[feed] ?? feed;
+  const m = status.match(/^fallback-(\d+)d$/);
+  return m ? `${name} ${m[1]}d old` : `${name} down${downFor(lastOk)}`;
+}
+
+// Pull timestamp of a live source: the first feature's `generated_utc`, falling
+// back to the FeatureCollection-level value stashed in state.liveFcMeta (needed
+// when `features` is empty).
+export function liveGeneratedUtc(sourceKey: string): string | undefined {
+  const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
+  return (f?.properties?.generated_utc as string | undefined)
+    ?? state.liveFcMeta[sourceKey]?.generated_utc;
+}
+
+// Pull age in ms (now − generated_utc), or null if unknown/unparseable. The
+// staleness gate below and the diagnostics panel both read age through this, so
+// the two can never disagree about how old a feed is.
+export function liveAgeMs(sourceKey: string): number | null {
+  const ts = liveGeneratedUtc(sourceKey);
+  if (!ts) return null;
+  const then = Date.parse(ts);
+  return Number.isNaN(then) ? null : Date.now() - then;
 }
 
 export interface LiveStalenessConfig {
@@ -68,20 +113,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   // Which layers we auto-disabled, so "re-enable" restores exactly those.
   let disabledForStale: string[] = [];
 
-  function generatedUtc(): string | undefined {
-    const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
-    return (f?.properties?.generated_utc as string | undefined)
-      ?? state.liveFcMeta[sourceKey]?.generated_utc;
-  }
-
-  // Pull age in ms (now − generated_utc), or null if unknown/unparseable.
-  function ageMs(): number | null {
-    const ts = generatedUtc();
-    if (!ts) return null;
-    const then = Date.parse(ts);
-    if (Number.isNaN(then)) return null;
-    return Date.now() - then;
-  }
+  const generatedUtc = () => liveGeneratedUtc(sourceKey);
+  const ageMs = () => liveAgeMs(sourceKey);
 
   function visibleLayers(): string[] {
     return layerIds.filter(id => state.layerVisibility[id]);
@@ -162,6 +195,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId: sourceKey } }));
     } catch (err) {
       console.warn(`[TransmissionMap] ${sourceKey} auto-refresh failed`, err);
+      recordDiagEvent('live', `${sourceKey}: ${err}`);
     } finally {
       inflight = false;
     }

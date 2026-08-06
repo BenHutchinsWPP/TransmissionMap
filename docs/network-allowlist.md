@@ -46,10 +46,19 @@ citations (various `.gov`/`.org` sites, listed in
 [data-sources.md](data-sources.md)). If blocked, only that click fails —
 nothing in the app breaks.
 
+## Checking it from a browser
+
+The app can test these hosts itself: **File ▸ Diagnostics…** probes every
+host in both tables above and reports what the browser observed. Note that a
+browser cannot distinguish a blocked request from a host being down from a
+CORS rejection, so the panel reports observations, not causes.
+
 <!-- Maintainers: after adding a basemap, live feed, or layer with a new
 source, re-derive the runtime host list and update the tables + date below:
     rg -o 'https?://[a-zA-Z0-9._-]+' assets/ src/ index.html | sort -u
 Most hits are citation links; a host belongs here only if the app fetches
-from it at runtime. -->
+from it at runtime.
+The same hosts are enumerated a second time in DIAG_CHECKS
+(assets/diagnostics.ts) as probe targets — update both together. -->
 
 *Last verified: 2026-07-17*

@@ -1,4 +1,6 @@
 // ─── MapLibre initialisation ──────────────────────────────────────────────────
+// Surfaces map/basemap load failures to diag-log.ts (recordDiagEvent) for the
+// diagnostics panel, alongside the existing console logging.
 
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
@@ -18,6 +20,7 @@ import { emit } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer } from './terrain.js';
+import { recordDiagEvent } from './diag-log.js';
 
 export function initMap() {
   // Register pmtiles protocol BEFORE constructing the Map
@@ -50,6 +53,8 @@ export function initMap() {
   // unless something listens. Log them so a blank map is diagnosable.
   state.map.on('error', (e: maplibregl.ErrorEvent) => {
     console.error('[TransmissionMap] Map error:', e.error?.message ?? e);
+    const sourceId = (e as unknown as { sourceId?: string }).sourceId;
+    recordDiagEvent('map', sourceId ? `${sourceId}: ${e.error?.message ?? e}` : (e.error ?? e));
   });
 
   // No customAttribution: every layer carries its own per-source attribution
@@ -297,6 +302,7 @@ async function addOfmBasemaps() {
     );
   } catch (err) {
     console.error("[TransmissionMap] OpenFreeMap styles failed to load — light/dark basemaps unavailable:", err);
+    recordDiagEvent('basemap', err);
     return;
   }
 

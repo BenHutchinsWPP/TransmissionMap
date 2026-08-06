@@ -18,7 +18,9 @@
 //       weather field is cosmetic, not a safety call like a fire perimeter.
 // Deps: state (map, weatherLiveUrl, layerVisibility, rasterLut), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
-//       feed-down label), live-staleness (fmtAgeShort, for the age chip).
+//       feed-down label), live-staleness (fmtAgeShort, for the age chip),
+//       diag-log.ts (recordDiagEvent — records refetch failures for the
+//       diagnostics panel).
 //       Dynamically import()s weather-particles.ts (the
 //       lazy chunk boundary — see that file's header) to start/stop the wind
 //       particle animation; never a static import, or the chunk split breaks.
@@ -33,6 +35,7 @@ import { state, weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS } from './
 import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
+import { recordDiagEvent } from './diag-log.js';
 
 // Variables that animate wind particles: Wind itself, the Temp & Wind
 // combined view (temp wash + particles on top), and Windstream (particles
@@ -114,6 +117,15 @@ const MAX_AGE_MS = 12 * 60 * 60_000;
 let runUtc: string | undefined;
 let step: number | undefined;
 let generatedUtc: string | undefined;
+
+// Age of the loaded bake and the cutoff it is judged against, for the
+// diagnostics panel (diagnostics.ts). Same generatedUtc and MAX_AGE_MS the
+// stale guard uses, so the two cannot disagree. ageMs is null before the
+// first successful load.
+export function weatherFreshness(): { ageMs: number | null; maxAgeMs: number } {
+  const t = generatedUtc ? Date.parse(generatedUtc) : NaN;
+  return { ageMs: Number.isNaN(t) ? null : Date.now() - t, maxAgeMs: MAX_AGE_MS };
+}
 let feedStatus: Record<string, string> | undefined;
 let varsMeta: Record<string, WeatherMetaVar> | undefined;
 // `${generated_utc}:${weatherVar}:${stepIdx}` of what's currently painted —
@@ -262,6 +274,7 @@ async function refetch(): Promise<void> {
     paintCurrent();
   } catch (err) {
     console.warn("[TransmissionMap] weather refresh failed", err);
+    recordDiagEvent('live', `weather-live: ${err}`);
     renderWeatherAge();
   } finally {
     inflight = false;
