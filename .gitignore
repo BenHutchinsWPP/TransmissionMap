@@ -2,6 +2,8 @@
 Workspace.code-workspace
 _private/
 HANDOFF.md
+.agents/
+.claude/
 
 # Intermediate tile-building files (large, regenerable)
 *.geojsonl
