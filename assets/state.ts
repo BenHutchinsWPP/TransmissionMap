@@ -28,6 +28,7 @@ export const state: AppState = {
   projection: "mercator", // "mercator" | "globe"
   terrain3d: false,     // raised ground plane (raster-dem elevation)
   buildings3d: false,   // extruded OFM building footprints (z14+)
+  smokeOpacity: 1,      // relative opacity for smoke fill and outline layers
   popup: null,
   layerVisibility: {},  // registryId → boolean (initialised from LAYERS[].defaultOn)
   layerFilters: {},     // registryId → Set<bucketId> (non-generator layers only)

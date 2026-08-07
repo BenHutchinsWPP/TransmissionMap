@@ -1,11 +1,13 @@
-// ─── Layer + legend filter wiring, MW range filter ───────────────────────────
-
+// ─── Layer + legend filter wiring, MW/year/smoke controls ──────────────────────
+// Smoke paint comes from
+// map-layers-conditions.js.
 import { state } from '../state.js';
 import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster } from './ui-legends.js';
 import { emit } from '../state-bus.js';
 import { MW_SLIDER_MAX, mwPosToMw, mwToPos } from '../filters.js';
 import { setWeatherVar } from '../weather-live.js';
 import { refreshWeatherRampBlock } from './ui-legends.js';
+import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
 
 export function wireLayerFilterPanels() {
   document.addEventListener("change", (e) => {
@@ -80,6 +82,28 @@ export function wireMwFilter() {
     mwMinInput.addEventListener("change", onMwTextChange);
     mwMaxInput.addEventListener("change", onMwTextChange);
   }
+}
+
+export function wireSmokeOpacity() {
+  const slider = document.getElementById("smokeOpacitySlider") as HTMLInputElement | null;
+  if (!slider) return;
+  updateSmokeOpacityUI();
+  slider.addEventListener("input", () => {
+    state.smokeOpacity = parseInt(slider.value, 10) / 100;
+    updateSmokeOpacityUI();
+    applySmokeOpacity();
+    emit('url:write');
+  });
+}
+
+export function updateSmokeOpacityUI() {
+  const slider = document.getElementById("smokeOpacitySlider") as HTMLInputElement | null;
+  const readout = document.getElementById("smokeOpacityReadout");
+  if (!slider) return;
+  const percent = Math.round(state.smokeOpacity * 100);
+  slider.value = String(percent);
+  slider.setAttribute("aria-valuetext", `${percent}% of standard smoke opacity`);
+  if (readout) readout.textContent = `${percent}%`;
 }
 
 const MW_POS_GAP = 1; // min separation between handles, in slider position units

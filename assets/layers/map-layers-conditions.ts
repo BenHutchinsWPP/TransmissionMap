@@ -38,6 +38,26 @@ import {
 } from '../state.js';
 import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
 
+function smokeFillOpacity(factor: number): ExpressionSpecification {
+  return [
+    "match", ["get", "density"],
+    "Light",  0.18 * factor,
+    "Medium", 0.28 * factor,
+    "Heavy",  0.38 * factor,
+    0.2 * factor,
+  ];
+}
+
+export function applySmokeOpacity() {
+  if (!state.map) return;
+  if (state.map.getLayer("wildfire-smoke-fill")) {
+    state.map.setPaintProperty("wildfire-smoke-fill", "fill-opacity", smokeFillOpacity(state.smokeOpacity));
+  }
+  if (state.map.getLayer("wildfire-smoke-line")) {
+    state.map.setPaintProperty("wildfire-smoke-line", "line-opacity", 0.5 * state.smokeOpacity);
+  }
+}
+
 // Split into two builders so add-all-layers.ts can slot the polygon half
 // (smoke + perimeters) below infra vectors and the point half (hotspots +
 // incidents) above them — all area fills under all lines/points.
@@ -67,13 +87,7 @@ export function addWildfireLiveAreas() {
         "Heavy",  "#8b4513",
         "#aaaaaa",
       ],
-      "fill-opacity": [
-        "match", ["get", "density"],
-        "Light",  0.18,
-        "Medium", 0.28,
-        "Heavy",  0.38,
-        0.2,
-      ],
+      "fill-opacity": smokeFillOpacity(state.smokeOpacity),
     },
   } as LayerSpecification);
 
@@ -92,7 +106,7 @@ export function addWildfireLiveAreas() {
         "#888888",
       ],
       "line-width": 1,
-      "line-opacity": 0.5,
+      "line-opacity": 0.5 * state.smokeOpacity,
     },
   } as LayerSpecification);
 

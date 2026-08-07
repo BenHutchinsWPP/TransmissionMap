@@ -6,7 +6,7 @@ import { readUrlState, writeUrlState } from './url-state.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', '3d']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -29,6 +29,7 @@ beforeEach(() => {
   state.ogfColorBy      = 'status';
   state.westtecColorBy  = 'scenario';
   state.weatherVar      = 'tempwind';
+  state.smokeOpacity    = 1;
   state.mwFilter        = { min: 0, max: MW_SLIDER_MAX };
   state.basemap         = 'light';
   state.projection      = 'mercator';
@@ -59,6 +60,16 @@ describe('readUrlState – basic params', () => {
     expect(state.yearFilter.enabled).toBe(true);
     expect(state.yearFilter.year).toBe(2020);
   });
+
+  it.each(['-1', '101', '50.5', '50px', '', 'NaN', 'Infinity'])(
+    'ignores invalid smoke opacity so=%s',
+    value => {
+      state.smokeOpacity = 0.4;
+      setHash('so=' + value);
+      readUrlState();
+      expect(state.smokeOpacity).toBe(0.4);
+    }
+  );
 });
 
 describe('readUrlState – layer visibility', () => {
@@ -225,6 +236,35 @@ describe('round-trip serialization', () => {
     state.weatherVar = 'tempwind';
     readUrlState();
     expect(state.weatherVar).toBe('temp');
+  });
+
+  it('round-trips smoke opacity as an integer percent', () => {
+    state.smokeOpacity = 0.425;
+    writeUrlState();
+    expect(location.hash).toContain('so=43');
+    state.smokeOpacity = 1;
+    readUrlState();
+    expect(state.smokeOpacity).toBe(0.43);
+    writeUrlState();
+    expect(location.hash).toContain('so=43');
+  });
+
+  it('restores zero smoke opacity', () => {
+    setHash('so=0');
+    readUrlState();
+    expect(state.smokeOpacity).toBe(0);
+  });
+
+  it('omits default 100% smoke opacity', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('so=');
+  });
+
+  it('parses explicit 100% smoke opacity', () => {
+    state.smokeOpacity = 0.4;
+    setHash('so=100');
+    readUrlState();
+    expect(state.smokeOpacity).toBe(1);
   });
 
   it('omits 3d when both terrain3d and buildings3d are off (the default)', () => {

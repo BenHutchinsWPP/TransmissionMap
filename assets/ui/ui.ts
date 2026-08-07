@@ -1,7 +1,7 @@
 // ─── UI bootstrap + event wiring ──────────────────────────────────────────────
 // Top-level init() + the delegated event wiring (wireUI). Layer-row HTML lives
 // in ui-layer-rows.js; menubar wiring in ui-menubar.js; My Data tab handlers in
-// ui-mydata.js.
+// ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js.
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
@@ -17,9 +17,9 @@ import {
   buildLegends, updateLegends,
 } from './ui-legends.js';
 import {
-  wireLayerFilterPanels, wireLegendFilters, wireMwFilter,
+  wireLayerFilterPanels, wireLegendFilters, wireMwFilter, wireSmokeOpacity,
   wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireYearFilter,
-  updateMwSliderUI, updateYearSliderUI, updateYearPlayBtn,
+  updateMwSliderUI, updateSmokeOpacityUI, updateYearSliderUI, updateYearPlayBtn,
   stopYearPlayback,
 } from './ui-filters.js';
 import { wireFeatureSearch } from './ui-search.js';
@@ -43,6 +43,7 @@ import { RASTER_PROBES, updateRasterArrow } from '../raster-probes.js';
 // diagnostics.js are NOT imported here — pulling either in statically would
 // defeat their lazy-chunk split (see ui-menubar.ts).
 import { getDiagLog, DIAG_EVENT } from '../diag-log.js';
+import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
 
 function resetLayerState() {
   for (const entry of LAYERS) {
@@ -133,6 +134,8 @@ export function init() {
 function resetLayersToDefaults() {
   resetLayerState();
   state.mwFilter = { min: 0, max: MW_SLIDER_MAX };
+  state.smokeOpacity = 1;
+  applySmokeOpacity();
   stopYearPlayback();
   state.yearFilter.enabled = false;
   state.yearFilter.year = YEAR_FILTER_DEFAULT;
@@ -181,6 +184,7 @@ function resetLayersToDefaults() {
   if (mwMin) mwMin.value = String(mwToPos(state.mwFilter.min));
   if (mwMax) mwMax.value = String(mwToPos(state.mwFilter.max));
   updateMwSliderUI();
+  updateSmokeOpacityUI();
   updateYearSliderUI();
   updateYearPlayBtn();
 
@@ -234,6 +238,7 @@ function wireUI() {
   wireDisclaimerDialog();
   wireCollapseToggles();
   wireMwFilter();
+  wireSmokeOpacity();
   wireGenModeToggle();
   wireOgfColorByToggle();
   wireWestTECColorByToggle();

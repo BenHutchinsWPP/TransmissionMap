@@ -555,6 +555,7 @@ header h1 {
   background: #e2e8f0;
   outline: none;
 }
+.year-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .year-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -866,6 +867,19 @@ header h1 {
   font-size: 12px;
   color: var(--text-mid);
 }
+
+.smoke-opacity-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  margin: 3px 0;
+  font-size: 11px;
+  color: var(--text-mid);
+}
+.smoke-opacity-control input,
+.smoke-opacity-control > span { grid-column: 1 / -1; }
+.smoke-opacity-control output { font-weight: 600; }
+.smoke-opacity-control > span { font-size: 9px; color: var(--text-light); }
 
 .legend-swatch {
   width: 20px; height: 5px;

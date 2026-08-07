@@ -62,6 +62,7 @@ export interface UrlStateData {
   ogfColorBy: string;
   westtecColorBy: string;
   weatherVar: string;
+  smokeOpacity: number;
   basemap: string;
   projection: string;
   terrain3d: boolean;
@@ -141,6 +142,10 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
   // Weather Forecast variable
   const wv = params.get('wv');
   if (wv && WV_CODE_TO_ID[wv]) data.weatherVar = WV_CODE_TO_ID[wv];
+
+  // Smoke opacity (integer percent, converted to a 0–1 factor)
+  const so = params.get('so');
+  if (so !== null && /^(?:100|[0-9]{1,2})$/.test(so)) data.smokeOpacity = Number(so) / 100;
 
   // Basemap
   const bm = params.get('bm');
@@ -227,6 +232,10 @@ export function formatUrlState(data: UrlStateData): string[] {
   if (data.weatherVar && data.weatherVar !== 'tempwind' && WV_ID_TO_CODE[data.weatherVar]) {
     parts.push('wv=' + WV_ID_TO_CODE[data.weatherVar]);
   }
+
+  // Smoke opacity (default 100% omitted)
+  const smokePercent = Math.round(data.smokeOpacity * 100);
+  if (smokePercent !== 100) parts.push('so=' + smokePercent);
 
   // Basemap ('light' is the app default; must match state.ts)
   if (data.basemap !== 'light') {

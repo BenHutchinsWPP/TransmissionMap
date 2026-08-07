@@ -121,6 +121,13 @@ export function initMap() {
     writeUrlState();
 
     window.addEventListener("hashchange", () => {
+      // A hash carrying state params (layers, basemap, 3D, filters) arrived from
+      // outside this session — pasted into the address bar, or a back/forward
+      // step. Only the full init path applies those, via readUrlState(), so
+      // reload to restore them instead of jumping the camera and writing the
+      // current session's state back over the link. Our own writeUrlState()
+      // uses history.replaceState, which does not fire hashchange.
+      if (location.hash.includes('?')) { location.reload(); return; }
       const loc = parseLocationHash();
       if (loc) state.map!.jumpTo({ center: loc.center, zoom: loc.zoom, bearing: loc.bearing, pitch: loc.pitch });
     });

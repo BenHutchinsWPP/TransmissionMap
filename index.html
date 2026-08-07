@@ -394,12 +394,18 @@
           <div class="legend-items collapsible-content" id="nwsGroupLegendItems"></div>
         </div>
         <!-- HMS smoke detection live legend -->
-        <div class="legend collapsed" id="smokeLiveLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Smoke (HMS)</span><span class="legend-age" id="smokeAge"></span></div>
+        <div class="legend" id="smokeLiveLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" aria-expanded="true">▾</button><span class="legend-title-label">Fire: Smoke (HMS)</span><span class="legend-age" id="smokeAge"></span></div>
           <div class="legend-items collapsible-content">
             <div class="legend-item"><span class="legend-swatch" style="background:#ffd700;opacity:0.7"></span><span>Light smoke</span></div>
             <div class="legend-item"><span class="legend-swatch" style="background:#ff8c00;opacity:0.8"></span><span>Medium smoke</span></div>
             <div class="legend-item"><span class="legend-swatch" style="background:#8b4513;opacity:0.9"></span><span>Heavy smoke</span></div>
+            <div class="smoke-opacity-control">
+              <label for="smokeOpacitySlider">Smoke opacity</label>
+              <output id="smokeOpacityReadout" for="smokeOpacitySlider">100%</output>
+              <input class="year-slider" id="smokeOpacitySlider" type="range" min="0" max="100" step="1" value="100" aria-describedby="smokeOpacityHint">
+              <span id="smokeOpacityHint">100% = standard smoke appearance</span>
+            </div>
             <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="smokeDataTimestamp">Smoke data loading…</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">NOAA HMS, analyst-drawn a few times daily — may lag several hours.</div>
           </div>
