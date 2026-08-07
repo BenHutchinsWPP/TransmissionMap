@@ -40,7 +40,8 @@ const SEARCH_SOURCES = [
   { sourceId: "tribal-lands",   sourceLayer: null,             label: "Tribal (Census)",      fields: ["name"] },
   { sourceId: "bia-tribal-lands", sourceLayer: null,             label: "Tribal (BIA)",       fields: ["LARNAME"] },
   { sourceId: "crithab",        sourceLayer: "crithab",        label: "Critical Habitat",   fields: ["comname", "sciname", "unitname"] },
-  { sourceId: "wildfire-live",  sourceLayer: null,             label: "Active Fire",         fields: ["name", "fire_id", "state"] },
+  { sourceId: "wildfire-live",  sourceLayer: null,             label: "Active Fire",         fields: ["name", "state"],            layerId: "wildfire-live",      featureType: "perimeter" },
+  { sourceId: "wildfire-live",  sourceLayer: null,             label: "Fire Incident",       fields: ["name", "fire_id", "state"], layerId: "wildfire-incidents", featureType: "incident" },
   { sourceId: "nws-alerts",     sourceLayer: null,             label: "Weather Alert",       fields: ["event", "areaDesc", "headline"] },
   { sourceId: "wecc-paths",     sourceLayer: null,             label: "WECC Path",           fields: ["name", "number"] },
   { sourceId: "boem-wind-leases", sourceLayer: null,           label: "Offshore Wind Lease", fields: ["project", "company", "lease", "state"] },
@@ -75,6 +76,7 @@ function _sourceFeatures(src: (typeof SEARCH_SOURCES)[number]): GeoJSON.Feature[
 
 function _matchResult(f: GeoJSON.Feature, src: (typeof SEARCH_SOURCES)[number], query: string) {
   const p = f.properties || {};
+  if ("featureType" in src && p._type !== src.featureType) return null;
   const matched = src.fields.some(field => {
     const val = p[field];
     return val && String(val).toLowerCase().includes(query);

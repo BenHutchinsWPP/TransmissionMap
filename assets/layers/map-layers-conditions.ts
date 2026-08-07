@@ -211,31 +211,39 @@ export function addWildfireLivePoints() {
   // ── Named incident points — human-reported; always visible, above hotspots ─
   state.map.addLayer({
     id: "wildfire-incidents-circle",
-    type: "circle",
+    type: "symbol",
     source: "wildfire-live",
     filter: ["==", ["get", "_type"], "incident"],
-    layout: { visibility: incidentVis },
-    paint: {
-      "circle-color": [
-        "interpolate", ["linear"], ["to-number", ["get", "pct_contained"], 0],
-        0,   "#cc0000",
-        90,  "#f1c40f",
-        100, "#2ecc71",
+    layout: {
+      visibility: incidentVis,
+      "icon-image": [
+        "step", ["to-number", ["get", "pct_contained"], 0],
+        "fire-incident-low",
+        90,  "fire-incident-high",
+        100, "fire-incident-full",
       ],
-      "circle-radius": [
+      "icon-size": [
         "step", ["to-number", ["get", "acres"], 0],
-        6,
-        100,   8,
-        1000,  11,
-        10000, 14,
+        0.7,
+        100,   0.85,
+        1000,  1.1,
+        10000, 1.3,
       ],
-      "circle-stroke-color": [
-        "match", ["get", "type_cat"],
-        "RX", "#3498db",
-        "#ffffff",
-      ],
-      "circle-stroke-width": 2,
-      "circle-opacity": 0.9,
+      "icon-allow-overlap": true,
+      "text-field": ["step", ["zoom"], "", 6, ["coalesce", ["get", "name"], ""]],
+      "text-font": ["Noto Sans Regular"],
+      "text-variable-anchor": ["top", "bottom"],
+      "text-radial-offset": 0.9,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 13, 16, 15],
+      "text-max-width": 8,
+      "text-optional": true,
+    },
+    paint: {
+      "icon-opacity": 0.9,
+      "text-color": "#1a1a2e",
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.5,
+      "text-halo-blur": 0.5,
     },
   } as LayerSpecification);
 }

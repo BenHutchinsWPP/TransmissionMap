@@ -10,7 +10,7 @@ import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, OFM_STYLE_URLS,
          USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
          AERIAL_TILE_URL, USGS_AERIAL_TILE_URL } from './state.js';
-import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons } from './icons.js';
+import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons, loadFireIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initRasterProbes } from './raster-probes.js';
@@ -91,7 +91,7 @@ export function initMap() {
     switchProjection(state.projection);
     // Icon loads must never block layer creation — a failed rasterize would
     // otherwise skip addAllLayers() and blank every layer. Degrade to no-icon.
-    await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons()]
+    await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons(), loadFireIcons()]
       .map(p => p.catch(err => console.warn('[TransmissionMap] icon load failed', err))));
     try { addAllLayers(); } finally {
       // Applies every registered filter (voltage/generators/pipeline/land/

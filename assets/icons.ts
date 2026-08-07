@@ -1,4 +1,4 @@
-// ─── Generator / pipeline / natgas icons — SVG rendered to canvas ────────────
+// ─── Generator / pipeline / natgas / wildfire icons — SVG rendered to canvas ─────
 // Each icon is an SVG body string (viewBox 0 0 24 24 applied by renderer).
 // Colors are embedded in each SVG string; single-color, no gradients.
 // Icon names match the fuel→icon expressions in layers.js.
@@ -20,6 +20,12 @@ const GEN_ICON_DEFS = [
   ["gen-biomass", `<path d="M12 2C6 2 2 7 2 12C2 17 6 22 12 22C18 22 22 17 22 12C22 7 18 2 12 2Z" fill="#15803d"/><path d="M12 22C8 18 6 15 6 12C6 9 8 6 12 2C16 6 18 9 18 12C18 15 16 18 12 22Z" fill="#16a34a"/><line x1="12" y1="2" x2="12" y2="22" stroke="#86efac" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="10" x2="7" y2="15" stroke="#86efac" stroke-width="1" stroke-linecap="round"/><line x1="12" y1="14" x2="17" y2="9" stroke="#86efac" stroke-width="1" stroke-linecap="round"/>`],
   ["gen-diesel", `<rect x="4" y="5" width="10" height="14" rx="2" stroke="#d97706" stroke-width="2" fill="none"/><path d="M14 9h2a2 2 0 0 1 2 2v4a1 1 0 0 0 2 0V9l-2-3" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="7" y="8" width="4" height="4" rx="1" fill="#d97706"/>`],
   ["gen-other", `<path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="#eab308"/>`],
+];
+
+const FIRE_ICON_DEFS = [
+  ["fire-incident-low",  `<path d="M12 2C9 6 5 9 5 15a7 7 0 0 0 14 0c0-4-2-7-5-10 0 3-1 5-3 6 1-3 1-6 1-9z" fill="#cc0000" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>`],
+  ["fire-incident-high", `<path d="M12 2C9 6 5 9 5 15a7 7 0 0 0 14 0c0-4-2-7-5-10 0 3-1 5-3 6 1-3 1-6 1-9z" fill="#f1c40f" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>`],
+  ["fire-incident-full", `<path d="M12 2C9 6 5 9 5 15a7 7 0 0 0 14 0c0-4-2-7-5-10 0 3-1 5-3 6 1-3 1-6 1-9z" fill="#2ecc71" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>`],
 ];
 
 const PIPELINE_ICON_DEFS = [
@@ -107,6 +113,7 @@ export function loadGenIcons()      { return _loadIcons(GEN_ICON_DEFS);      }
 export function loadPipelineIcons() { return _loadIcons(PIPELINE_ICON_DEFS); }
 export function loadNatgasPtIcons() { return _loadIcons(NATGAS_PT_ICON_DEFS); }
 export function loadMineIcons()     { return _loadIcons(MINE_ICON_DEFS);      }
+export function loadFireIcons()     { return _loadIcons(FIRE_ICON_DEFS);      }
 
 // Flat name → svgBody lookup used by legend renderer.
-export const ICON_SVG = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS, ...MINE_ICON_DEFS]);
+export const ICON_SVG = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS, ...MINE_ICON_DEFS, ...FIRE_ICON_DEFS]);
