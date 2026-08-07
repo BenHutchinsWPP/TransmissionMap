@@ -31,12 +31,14 @@ function syncPitch() {
   }
 }
 
-// MapLibre 5.24.0: Terrain.pointCoordinate() answers "what ground coordinate is
-// under this screen pixel" with a blocking gl.readPixels on the terrain coords
-// framebuffer — one GPU stall, ~13-15ms once the GPU is busy. Every unproject
-// routes through it while terrain is on, and queryRenderedFeatures re-asks it
-// for the SAME handful of points once per source (SourceCache.tilesIn projects
-// the query box itself), so one click across ~40 sources paid for ~400 stalls.
+// The v5 baseline measured Terrain.pointCoordinate() answering "what ground
+// coordinate is under this screen pixel" with a blocking gl.readPixels on the
+// terrain coords framebuffer — one GPU stall, ~13-15ms once the GPU is busy.
+// v6.2 still performs that pointCoordinate readPixels; its DEM lookup/transform
+// cache does not replace this exact-screen-point memo. Every unproject routes
+// through it while terrain is on, and queryRenderedFeatures re-asks it for the
+// SAME handful of points once per source (SourceCache.tilesIn projects the
+// query box itself), so one click across ~40 sources paid for ~400 stalls.
 //
 // The framebuffer only changes when the camera matrix changes or tiles reload,
 // which MapLibre itself relies on (Painter.maybeDrawDepth's dirty check), so

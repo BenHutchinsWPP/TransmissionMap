@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aerialOverlayLayer, type OfmLayer } from './basemap-overlay.js';
+import { aerialOverlayLayer, normalizeOfmFilter, type OfmLayer } from './basemap-overlay.js';
 
 // Fixtures below are lifted verbatim (structure-relevant fields only) from the
 // real OpenFreeMap Positron style JSON, not invented shapes.
@@ -69,7 +69,7 @@ const highwayMajorInner = {
     'line-color': '#fff',
     'line-width': ['interpolate', ['exponential', 1.3], ['zoom'], 10, 2, 20, 20],
   },
-} satisfies OfmLayer & { filter: unknown[] };
+} satisfies OfmLayer;
 
 const highwayMinor: OfmLayer = {
   id: 'highway_minor',
@@ -313,5 +313,30 @@ describe('aerialOverlayLayer — purity', () => {
     const original = JSON.parse(JSON.stringify(labelCity));
     aerialOverlayLayer(labelCity);
     expect(labelCity).toEqual(original);
+  });
+});
+
+describe('normalizeOfmFilter', () => {
+  it('makes missing shield lengths and boundary levels fail without evaluator warnings', () => {
+    const shield = normalizeOfmFilter({
+      ...roadShieldUs,
+      filter: ['all', ['<=', ['get', 'ref_length'], 6], ['has', 'ref']],
+    });
+    const boundary = normalizeOfmFilter({
+      ...boundary3,
+      filter: ['all', ['>=', ['get', 'admin_level'], 3], ['<=', ['get', 'admin_level'], 6]],
+    });
+
+    expect(shield.filter).toEqual(
+      ['all', ['<=', ['coalesce', ['get', 'ref_length'], 7], 6], ['has', 'ref']],
+    );
+    expect(boundary.filter).toEqual(
+      ['all', ['>=', ['coalesce', ['get', 'admin_level'], 0], 3],
+        ['<=', ['coalesce', ['get', 'admin_level'], 0], 6]],
+    );
+  });
+
+  it('leaves unrelated filters untouched', () => {
+    expect(normalizeOfmFilter(highwayMajorInner)).toBe(highwayMajorInner);
   });
 });

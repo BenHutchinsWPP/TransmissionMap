@@ -5,12 +5,35 @@
 // tool without importing measure.js → avoids a circular dep).
 
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import type { IControl, GeoJSONSource } from "maplibre-gl";
+import type { IControl, GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
 import { showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { renderMyDataTab, clearUserHighlight, saveUserData, restoreDrawnFeatures } from './user-data.js';
 import { deactivateMeasureTool, registerEditExit } from '../tool-mode.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
+
+type DrawFeature = GeoJSON.Feature & { id: string };
+type DrawFeatureEvent<Type extends string> = {
+  target: MapLibreMap;
+  type: Type;
+  features: DrawFeature[];
+};
+
+declare module 'maplibre-gl' {
+  interface Map {
+    on<T extends keyof DrawEventType>(
+      type: T,
+      listener: (event: DrawEventType[T]) => void,
+    ): { unsubscribe(): void };
+  }
+}
+
+type DrawEventType = {
+  'draw.create': DrawFeatureEvent<'draw.create'>;
+  'draw.update': DrawFeatureEvent<'draw.update'> & { action: string };
+  'draw.delete': DrawFeatureEvent<'draw.delete'>;
+  'draw.selectionchange': DrawFeatureEvent<'draw.selectionchange'> & { points: GeoJSON.Feature<GeoJSON.Point>[] };
+};
 
 function drawStyles() {
   const ORANGE = '#f97316';
@@ -169,4 +192,3 @@ function setDrawnFeatureColor(id: string, hex: string) {
   state.draw.setFeatureProperty(id, 'color', hex);
   state.draw.set(state.draw.getAll());
 }
-

@@ -1,10 +1,12 @@
 // ─── MapLibre initialisation ──────────────────────────────────────────────────
-// Surfaces map/basemap load failures to diag-log.ts (recordDiagEvent) for the
-// diagnostics panel, alongside the existing console logging.
+// Explicitly configures MapLibre's bundled worker and surfaces map/basemap load
+// failures to diag-log.ts (recordDiagEvent) for the diagnostics panel,
+// alongside the existing console logging.
 // addOfmBasemaps() clones a roads/places/boundaries overlay for Aerial via
 // basemap-overlay.ts's pure aerialOverlayLayer() selector/restyler.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as pmtiles from 'pmtiles';
 import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, OFM_STYLE_URLS,
@@ -23,7 +25,9 @@ import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
-import { aerialOverlayLayer, type OfmLayer } from './basemap-overlay.js';
+import { aerialOverlayLayer, normalizeOfmFilter, type OfmLayer } from './basemap-overlay.js';
+
+maplibregl.setWorkerUrl(workerUrl);
 
 export function initMap() {
   // Register pmtiles protocol BEFORE constructing the Map
@@ -32,7 +36,7 @@ export function initMap() {
 
   const hashView = parseLocationHash();
 
-  // MapLibre v5 requires WebGL2. If the browser/GPU can't provide a context
+  // MapLibre requires WebGL2. If the browser/GPU can't provide a context
   // (hardware acceleration off, driver blocklisted, webgl disabled), the Map
   // constructor throws — show a help banner instead of a silent black screen.
   try {
@@ -43,7 +47,9 @@ export function initMap() {
       zoom:    hashView?.zoom   ?? DEFAULT_ZOOM,
       bearing: hashView?.bearing ?? 0,
       pitch:   hashView?.pitch   ?? 0,
+      maxPitch: 75,
       maxZoom: 18,
+      zoomLevelsToOverscale: undefined,
       attributionControl: false,
     });
   } catch (err) {
@@ -55,7 +61,7 @@ export function initMap() {
   // Surface map errors — MapLibre silently swallows tile/source/style errors
   // unless something listens. Log them so a blank map is diagnosable.
   state.map.on('error', (e: maplibregl.ErrorEvent) => {
-    console.error('[TransmissionMap] Map error:', e.error?.message ?? e);
+    console.error('[TransmissionMap] Map error:', e.error ?? e);
     const sourceId = (e as unknown as { sourceId?: string }).sourceId;
     recordDiagEvent('map', sourceId ? `${sourceId}: ${e.error?.message ?? e}` : (e.error ?? e));
   });
@@ -343,7 +349,8 @@ async function addOfmBasemaps() {
   // A constant anchor preserves each style's internal layer order.
   const anchor = "osm-bg";
   for (const [key, style] of entries) {
-    for (const layer of style.layers) {
+    for (const rawLayer of style.layers) {
+      const layer = normalizeOfmFilter(rawLayer);
       const spec = { ...layer, id: `ofm-${key}-${layer.id}` };
       if (spec.source) spec.source = `ofm-${spec.source}`;
       spec.layout = { ...spec.layout, visibility: "none" };

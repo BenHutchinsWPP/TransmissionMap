@@ -18,9 +18,29 @@ export type OfmLayer = {
   source?: string;
   'source-layer'?: string;
   minzoom?: number;
+  filter?: unknown[];
   layout?: Record<string, unknown>;
   paint?: Record<string, unknown>;
 };
+
+const NULLABLE_NUMERIC_FILTERS: Record<string, [property: string, fallback: number]> = {
+  boundary_3: ['admin_level', 0],
+  'highway-shield-non-us': ['ref_length', 7],
+  'highway-shield-us-interstate': ['ref_length', 7],
+  road_shield_us: ['ref_length', 7],
+};
+
+function coalesceFilterGet(value: unknown, property: string, fallback: number): unknown {
+  if (!Array.isArray(value)) return value;
+  if (value[0] === 'get' && value[1] === property) return ['coalesce', value, fallback];
+  return value.map(part => coalesceFilterGet(part, property, fallback));
+}
+
+export function normalizeOfmFilter(layer: OfmLayer): OfmLayer {
+  const nullable = NULLABLE_NUMERIC_FILTERS[layer.id];
+  if (!nullable || !layer.filter) return layer;
+  return { ...layer, filter: coalesceFilterGet(layer.filter, ...nullable) as unknown[] };
+}
 
 // Only these source-layers carry roads, place names, and boundaries — the
 // rest (water, landcover, landuse, building, aeroway, park, ...) stay off

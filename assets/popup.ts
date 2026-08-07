@@ -1,6 +1,7 @@
 // ─── Popup system ─────────────────────────────────────────────────────────────
 
-import maplibregl, { type MapMouseEvent, type MapTouchEvent, type MapGeoJSONFeature } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import { type MapMouseEvent, type MapTouchEvent, type MapGeoJSONFeature } from 'maplibre-gl';
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
 import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
@@ -231,9 +232,15 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
     clearFeatureInfo();
   } else {
     clearLineHighlight();
-    // f is a MapGeoJSONFeature class instance; setData serializes to the worker,
-    // which rejects non-plain objects ("unregistered class") — hand it plain GeoJSON.
-    highlightUserFeature(f.toJSON(), { info: !clipped });
+    // queryRenderedFeatures includes MapLibre-only class instances; keep only
+    // JSON-safe GeoJSON fields before setData sends it to the worker.
+    const plainFeature = JSON.parse(JSON.stringify({
+      type: 'Feature',
+      ...(f.id == null ? {} : { id: f.id }),
+      properties: f.properties || {},
+      geometry: f.geometry,
+    })) as GeoJSON.Feature;
+    highlightUserFeature(plainFeature, { info: !clipped });
   }
 
   // Feature-state-joined layers (ODIN outages) carry their data in f.state, not
@@ -250,20 +257,21 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
 
 // Resolve a feature's rendered color by evaluating its layer's color paint
 // expression against the feature. Returns a CSS color string, or null.
-const COLOR_PROP: Record<string, string> = {
+type ColorPaintProperty = 'circle-color' | 'line-color' | 'fill-color' | 'fill-extrusion-color';
+const COLOR_PROP: Record<string, ColorPaintProperty> = {
   circle: 'circle-color', line: 'line-color',
   fill: 'fill-color', 'fill-extrusion': 'fill-extrusion-color',
 };
 // createExpression's TS sig wants a full property spec; only `type` matters at runtime.
 const COLOR_SPEC = { type: 'color', 'property-type': 'data-driven',
-  transition: false, overridable: false } as unknown as Parameters<typeof createExpression>[1];
+  transition: false, overridable: false } as unknown as Parameters<typeof createExpression>[2];
 function featureColor(f: MapGeoJSONFeature): string | null {
   const lt = state.map!.getLayer(f.layer.id)?.type;
   const prop = lt && COLOR_PROP[lt];
   if (!prop) return null;
   const raw = state.map!.getPaintProperty(f.layer.id, prop);
   if (raw == null) return null;
-  const c = createExpression(raw, COLOR_SPEC);
+  const c = createExpression(raw, prop, COLOR_SPEC);
   if (c.result !== 'success') return null;
   // ponytail: color comes from our own style, not user input — safe to inline.
   return String(c.value.evaluate({ zoom: state.map!.getZoom() }, f as never));
@@ -278,7 +286,7 @@ function featureIcon(f: MapGeoJSONFeature): string | null {
   let name: string;
   if (typeof raw === 'string') name = raw;
   else {
-    const c = createExpression(raw);
+    const c = createExpression(raw, 'icon-image');
     if (c.result !== 'success') return null;
     name = String(c.value.evaluate({ zoom: state.map!.getZoom() }, f as never));
   }

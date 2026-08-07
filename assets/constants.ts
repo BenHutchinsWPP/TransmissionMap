@@ -235,7 +235,7 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
 // MapLibre requires a style object even when we control all sources ourselves.
-export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [] };
+export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [], sky: {} };
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
 // and the search-highlight sources (highlights.ts).
