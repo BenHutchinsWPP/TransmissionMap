@@ -234,8 +234,18 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 // Noto Sans array.
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
+// Fog over 3D terrain, as a fraction of the distance from map center (0) to
+// horizon (1) — fog begins at this point, so higher keeps more of the near and
+// middle ground clear. MapLibre's default is 0.5, which starts the wash halfway
+// into the view; the extra reach here suits a basemap that is already pale.
+// Only takes effect while 3D Terrain is on (see terrain.ts).
+export const SKY_FOG_GROUND_BLEND = 0.8;
+
 // MapLibre requires a style object even when we control all sources ourselves.
-export const BLANK_STYLE = { version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [], sky: {} };
+export const BLANK_STYLE = {
+  version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [],
+  sky: { "fog-ground-blend": SKY_FOG_GROUND_BLEND },
+};
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
 // and the search-highlight sources (highlights.ts).
