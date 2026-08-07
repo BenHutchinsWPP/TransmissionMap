@@ -260,25 +260,39 @@ function frame(now: number) {
   // All segments accumulate into one path, stroked twice below.
   const path = new Path2D();
 
-  for (const p of particles) {
-    const prevScreen = map.project([p.lon, p.lat]);
-    const offViewport = prevScreen.x < 0 || prevScreen.x > w || prevScreen.y < 0 || prevScreen.y > h;
-    const uv = offViewport ? null : sampleUV(p.lon, p.lat);
-    if (!uv || p.age > MAX_AGE) {
-      Object.assign(p, seedParticle());
-      continue;
+  // Ground-plane projection. map.project() consults map.terrain while 3D
+  // Terrain is on, and every call re-runs coveringTiles() — a full frustum
+  // pass over each candidate tile — to pick a DEM zoom that depends only on
+  // the camera, not on the point being projected. Trails are a flat
+  // screen-space overlay, so the ground-plane position is the one to draw:
+  // detaching terrain for the loop keeps each of the two projections per
+  // particle at a single matrix multiply. The loop is synchronous, so no
+  // render or event observes the gap.
+  const terrain = map.terrain;
+  if (terrain) (map as { terrain?: typeof terrain }).terrain = undefined;
+  try {
+    for (const p of particles) {
+      const prevScreen = map.project([p.lon, p.lat]);
+      const offViewport = prevScreen.x < 0 || prevScreen.x > w || prevScreen.y < 0 || prevScreen.y > h;
+      const uv = offViewport ? null : sampleUV(p.lon, p.lat);
+      if (!uv || p.age > MAX_AGE) {
+        Object.assign(p, seedParticle());
+        continue;
+      }
+
+      // Vector advection: dlat from v, dlon from u corrected for meridian
+      // convergence (1/cos(lat)) — not meteorological "blowing from" direction.
+      const [u, v] = uv;
+      p.lat += v * k;
+      p.lon += (u * k) / Math.cos((p.lat * Math.PI) / 180);
+      p.age += dt;
+
+      const newScreen = map.project([p.lon, p.lat]);
+      path.moveTo(prevScreen.x, prevScreen.y);
+      path.lineTo(newScreen.x, newScreen.y);
     }
-
-    // Vector advection: dlat from v, dlon from u corrected for meridian
-    // convergence (1/cos(lat)) — not meteorological "blowing from" direction.
-    const [u, v] = uv;
-    p.lat += v * k;
-    p.lon += (u * k) / Math.cos((p.lat * Math.PI) / 180);
-    p.age += dt;
-
-    const newScreen = map.project([p.lon, p.lat]);
-    path.moveTo(prevScreen.x, prevScreen.y);
-    path.lineTo(newScreen.x, newScreen.y);
+  } finally {
+    if (terrain) map.terrain = terrain;
   }
 
   // Two-pass halo: a dark underlay keeps streaks visible over the near-white
