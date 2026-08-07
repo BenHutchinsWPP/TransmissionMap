@@ -2,7 +2,10 @@
 Workspace.code-workspace
 _private/
 HANDOFF.md
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/orchestrate/
 .claude/
 
 # Intermediate tile-building files (large, regenerable)
