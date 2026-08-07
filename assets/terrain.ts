@@ -2,6 +2,8 @@
 // Raster-dem ground-plane elevation (AWS Terrain Tiles) and OFM building
 // fill-extrusion, each toggled independently. Both only become visible once
 // the camera is pitched, so enabling either auto-tilts the map.
+// Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
+// every unproject and every hit-test under raised ground goes through.
 // Deps: state.js (state + TERRAIN_* constants). Called from ui/ui.ts (toggles),
 // map.ts (apply3dFromState at load-end, ensureBuildingsLayer after the OFM
 // style graft resolves).
@@ -29,6 +31,46 @@ function syncPitch() {
   }
 }
 
+// MapLibre 5.24.0: Terrain.pointCoordinate() answers "what ground coordinate is
+// under this screen pixel" with a blocking gl.readPixels on the terrain coords
+// framebuffer — one GPU stall, ~13-15ms once the GPU is busy. Every unproject
+// routes through it while terrain is on, and queryRenderedFeatures re-asks it
+// for the SAME handful of points once per source (SourceCache.tilesIn projects
+// the query box itself), so one click across ~40 sources paid for ~400 stalls.
+//
+// The framebuffer only changes when the camera matrix changes or tiles reload,
+// which MapLibre itself relies on (Painter.maybeDrawDepth's dirty check), so
+// one answer per point per frame is enough. Keys are the exact screen
+// coordinates, not rounded: the redundancy being collapsed is literally the
+// same numbers repeated per source, so exact keys hit just as often without
+// merging two genuinely different pixels.
+const coordCache = new Map<string, unknown>();
+let coordCacheBound = false;
+const wrapped = new WeakSet<object>();
+
+function memoizePointCoordinate() {
+  const map = state.map, terrain = map?.terrain;
+  // setTerrain() builds a fresh Terrain each time it is switched on, so the
+  // wrap has to be re-applied per instance; the cache and its listeners are
+  // module-level and bound once.
+  if (!map || !terrain || wrapped.has(terrain)) return;
+  wrapped.add(terrain);
+  coordCache.clear();
+  const raw = terrain.pointCoordinate.bind(terrain);
+  terrain.pointCoordinate = (p) => {
+    const key = p.x + ',' + p.y;
+    // has(), not a falsy check: the real function returns null for a pixel
+    // showing sky rather than ground, and that answer is worth caching too.
+    if (!coordCache.has(key)) coordCache.set(key, raw(p));
+    return coordCache.get(key) as ReturnType<typeof raw>;
+  };
+  if (!coordCacheBound) {
+    coordCacheBound = true;
+    map.on('render', () => coordCache.clear());
+    map.on('move', () => coordCache.clear());
+  }
+}
+
 export function setTerrain3d(on: boolean) {
   state.terrain3d = on;
   if (!state.map) return;
@@ -44,6 +86,7 @@ export function setTerrain3d(on: boolean) {
       });
     }
     state.map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
+    memoizePointCoordinate();
   } else {
     state.map.setTerrain(null);
   }
