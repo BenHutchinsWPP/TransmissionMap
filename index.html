@@ -189,6 +189,10 @@
                    title="Extrude building footprints when zoomed in close (z14+). Heights come from OpenStreetMap; buildings without a height tag use an estimate.">
               <input type="checkbox" id="buildings3dToggle"> 3D Buildings
             </label>
+            <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
+                   title="Shaded relief drawn over the basemap so terrain reads without tilting the map. Most useful on the Light, Dark and Hydro basemaps — Topo and Aerial already carry their own relief.">
+              <input type="checkbox" id="hillshadeToggle"> Hillshade
+            </label>
             </div>
             </div>
           </div>
@@ -662,7 +666,7 @@
              The map's own attribution control shows a short "USGS terrain" credit
              instead (see TERRAIN_ATTRIB_SHORT in assets/constants.ts) to avoid
              overlapping other floating UI; this entry carries the full text. -->
-        <li data-source-credit="usgs-terrain">United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey — <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">AWS Terrain Tiles</a> (Terrarium encoding) — CC BY 4.0. 3D Terrain toggle only.</li>
+        <li data-source-credit="usgs-terrain">United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey — <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">AWS Terrain Tiles</a> (Terrarium encoding) — CC BY 4.0. 3D Terrain and Hillshade toggles.</li>
         <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/" target="_blank" rel="noopener">Esri Geocoding</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
       </ul>
       <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>

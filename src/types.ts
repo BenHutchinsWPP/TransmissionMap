@@ -113,6 +113,7 @@ export interface AppState {
   projection: string;
   terrain3d: boolean;
   buildings3d: boolean;
+  hillshade: boolean;
   smokeOpacity: number;
   popup: Popup | null;
   layerVisibility: Record<string, boolean>;

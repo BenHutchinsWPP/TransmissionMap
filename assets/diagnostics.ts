@@ -397,7 +397,7 @@ export const DIAG_CHECKS: DiagCheck[] = [
     return mk(r.ok ? 'ok' : 'warn', r.detail);
   }),
 
-  check('terrain-tiles', '3D terrain tiles (optional)', 'optional', async () => {
+  check('terrain-tiles', '3D terrain and hillshade tiles (optional)', 'optional', async () => {
     const r = await imgProbe(tileUrl(TERRAIN_TILE_URL));
     return mk(r.ok ? 'ok' : 'warn', r.detail);
   }),

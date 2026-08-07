@@ -23,7 +23,7 @@ import { writeUrlState } from './url-state.js';
 import { emit } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
-import { apply3dFromState, ensureBuildingsLayer } from './terrain.js';
+import { apply3dFromState, ensureBuildingsLayer, repositionHillshade } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
 import { aerialOverlayLayer, normalizeOfmFilter, type OfmLayer } from './basemap-overlay.js';
 
@@ -475,6 +475,7 @@ export function switchBasemap(type: string) {
       state.map.setLayoutProperty(id, "visibility", vis);
     }
   }
+  repositionHillshade();
 }
 
 export function switchProjection(type: string) {

@@ -67,6 +67,7 @@ export interface UrlStateData {
   projection: string;
   terrain3d: boolean;
   buildings3d: boolean;
+  hillshade: boolean;
 }
 
 export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
@@ -161,6 +162,9 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
     if (td.includes('b')) data.buildings3d = true;
   }
 
+  // Hillshade (2D shaded relief; off by default, only '1' persisted)
+  if (params.get('hs') === '1') data.hillshade = true;
+
   return data;
 }
 
@@ -249,6 +253,9 @@ export function formatUrlState(data: UrlStateData): string[] {
   // 3D terrain / buildings (both off by default, omitted)
   const td = (data.terrain3d ? 't' : '') + (data.buildings3d ? 'b' : '');
   if (td) parts.push('3d=' + td);
+
+  // Hillshade (off by default, omitted)
+  if (data.hillshade) parts.push('hs=1');
 
   return parts;
 }

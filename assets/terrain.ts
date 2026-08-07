@@ -1,12 +1,14 @@
-// ─── 3D terrain + 3D buildings (optional) ─────────────────────────────────────
-// Raster-dem ground-plane elevation (AWS Terrain Tiles) and OFM building
-// fill-extrusion, each toggled independently. Both only become visible once
-// the camera is pitched, so enabling either auto-tilts the map.
+// ─── 3D terrain + 3D buildings + hillshade (optional) ─────────────────────────
+// Three basemap-relief toggles, each independent: raster-dem ground-plane
+// elevation (AWS Terrain Tiles) via setTerrain(), OFM building fill-extrusion,
+// and a 2D hillshade layer. Terrain and buildings only become visible once the
+// camera is pitched, so enabling either auto-tilts the map; hillshade renders
+// flat at pitch 0 and never touches the camera.
 // Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
 // every unproject and every hit-test under raised ground goes through.
 // Deps: state.js (state + TERRAIN_* constants). Called from ui/ui.ts (toggles),
 // map.ts (apply3dFromState at load-end, ensureBuildingsLayer after the OFM
-// style graft resolves).
+// style graft resolves, repositionHillshade from switchBasemap).
 
 import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './state.js';
 import { maybeShowRotateHint } from './terrain-hint.js';
@@ -14,6 +16,20 @@ import { maybeShowRotateHint } from './terrain-hint.js';
 const TERRAIN_SOURCE_ID = 'terrain-dem';
 const BUILDINGS_LAYER_ID = 'buildings-3d';
 const AUTO_TILT_PITCH = 45;
+
+// A second raster-dem source over the same tile URL as terrain-dem, kept
+// separate because setTerrain() re-tunes the source it binds: that source's
+// tile manager switches to a 512px covering size with roundZoom off, which is
+// the resolution a hillshade layer reading it would get. MapLibre 6.2
+// warnOnce's on the shared case for exactly that reason.
+//
+// Two consequences worth knowing. A hillshade layer at visibility 'none' asks
+// for no tiles, so this source costs nothing while the toggle is off. And
+// because the two sources resolve different DEM zooms for the same camera
+// (512/roundZoom-off vs 256/roundZoom-on), running 3D Terrain and Hillshade
+// together fetches two sets of elevation tiles rather than sharing one.
+const HILLSHADE_SOURCE_ID = 'hillshade-dem';
+const HILLSHADE_LAYER_ID = 'terrain-hillshade';
 
 function easePitch(target: number) {
   if (!state.map || state.map.getPitch() === target) return;
@@ -73,20 +89,23 @@ function memoizePointCoordinate() {
   }
 }
 
+function ensureDemSource(id: string) {
+  if (!state.map || state.map.getSource(id)) return;
+  state.map.addSource(id, {
+    type: 'raster-dem',
+    tiles: [TERRAIN_TILE_URL],
+    tileSize: 256,
+    encoding: 'terrarium',
+    maxzoom: 15,
+    attribution: TERRAIN_ATTRIB_SHORT,
+  });
+}
+
 export function setTerrain3d(on: boolean) {
   state.terrain3d = on;
   if (!state.map) return;
   if (on) {
-    if (!state.map.getSource(TERRAIN_SOURCE_ID)) {
-      state.map.addSource(TERRAIN_SOURCE_ID, {
-        type: 'raster-dem',
-        tiles: [TERRAIN_TILE_URL],
-        tileSize: 256,
-        encoding: 'terrarium',
-        maxzoom: 15,
-        attribution: TERRAIN_ATTRIB_SHORT,
-      });
-    }
+    ensureDemSource(TERRAIN_SOURCE_ID);
     state.map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
     memoizePointCoordinate();
   } else {
@@ -104,10 +123,17 @@ export function setTerrain3d(on: boolean) {
 // On Aerial what follows "aerial-bg" is now the first cloned road layer of the
 // map.ts overlay group, so that overlay's roads and labels paint above the
 // extrusions — same rule, and the same way the Light basemap already behaves.
+//
+// Hillshade is skipped when it is the layer sitting there: it shades the
+// ground plane the extrusions rise from, so buildings belong above it. The
+// skip and the hillshade fallback in hillshadeBeforeId() are the two halves of
+// that ordering, so it holds whichever toggle is switched on first.
 function buildingsBeforeId(): string | undefined {
   const layers = state.map?.getStyle()?.layers ?? [];
   const i = layers.findIndex(l => l.id === 'aerial-bg');
-  return i >= 0 ? layers[i + 1]?.id : undefined;
+  if (i < 0) return undefined;
+  const next = layers[i + 1];
+  return (next?.id === HILLSHADE_LAYER_ID ? layers[i + 2] : next)?.id;
 }
 
 export function ensureBuildingsLayer() {
@@ -142,10 +168,64 @@ export function setBuildings3d(on: boolean) {
   syncPitch();
 }
 
-// Restores both toggles from state (e.g. read from the URL) once the map and
-// its base layers are ready. Called once at load, after addAllLayers().
+// Sit under the active basemap's own linework and labels so type stays
+// legible. The OFM vector styles graft in below the raster basemaps and the
+// Aerial roads/places overlay clones graft in above them, so the anchor is the
+// first `ofm-` line/symbol layer currently visible — on Light and Dark that
+// lands just under `waterway`, i.e. above the landcover and water fills and
+// below every road, boundary and label.
+//
+// Raster basemaps (Street, Topo) carry their labels inside the tile image and
+// fall back to the overlay anchor, which is above the raster. That fallback
+// prefers the buildings layer when it exists, so hillshade stays under the
+// extrusions there the same way it does on the vector basemaps.
+function hillshadeBeforeId(): string | undefined {
+  const layers = state.map?.getStyle()?.layers ?? [];
+  const hit = layers.find(l =>
+    l.id.startsWith('ofm-') &&
+    (l.type === 'line' || l.type === 'symbol') &&
+    l.layout?.visibility !== 'none');
+  if (hit) return hit.id;
+  return state.map?.getLayer(BUILDINGS_LAYER_ID) ? BUILDINGS_LAYER_ID : 'basemap-overlay-top';
+}
+
+export function setHillshade(on: boolean) {
+  state.hillshade = on;
+  if (!state.map) return;
+  if (on && !state.map.getLayer(HILLSHADE_LAYER_ID)) {
+    ensureDemSource(HILLSHADE_SOURCE_ID);
+    state.map.addLayer({
+      id: HILLSHADE_LAYER_ID,
+      type: 'hillshade',
+      source: HILLSHADE_SOURCE_ID,
+      paint: {
+        'hillshade-exaggeration': 0.45,
+        'hillshade-shadow-color': '#4a4a4a',
+        'hillshade-highlight-color': 'rgba(255,255,255,0)',
+        'hillshade-accent-color': 'rgba(0,0,0,0)',
+        // Pin the light to north so relief doesn't re-light as the map rotates
+        // (the spec default is `viewport`).
+        'hillshade-illumination-anchor': 'map',
+      },
+    }, hillshadeBeforeId());
+  }
+  if (state.map.getLayer(HILLSHADE_LAYER_ID)) {
+    state.map.setLayoutProperty(HILLSHADE_LAYER_ID, 'visibility', on ? 'visible' : 'none');
+  }
+}
+
+// Called when the basemap changes so the anchor tracks the newly visible
+// basemap group, and so a late-resolving OFM graft self-corrects.
+export function repositionHillshade() {
+  if (!state.map?.getLayer(HILLSHADE_LAYER_ID)) return;
+  state.map.moveLayer(HILLSHADE_LAYER_ID, hillshadeBeforeId());
+}
+
+// Restores all three toggles from state (e.g. read from the URL) once the map
+// and its base layers are ready. Called once at load, after addAllLayers().
 export function apply3dFromState() {
   if (state.terrain3d) setTerrain3d(true);
   if (state.buildings3d) setBuildings3d(true);
+  if (state.hillshade) setHillshade(true);
   if (state.terrain3d || state.buildings3d) maybeShowRotateHint();
 }

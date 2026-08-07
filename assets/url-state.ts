@@ -39,6 +39,7 @@ export function readUrlState() {
   if (data.projection) state.projection = data.projection;
   if (data.terrain3d) state.terrain3d = true;
   if (data.buildings3d) state.buildings3d = true;
+  if (data.hillshade) state.hillshade = true;
 }
 
 export function writeUrlState() {
@@ -59,6 +60,7 @@ export function writeUrlState() {
     projection: state.projection,
     terrain3d: state.terrain3d,
     buildings3d: state.buildings3d,
+    hillshade: state.hillshade,
   };
 
   const parts = formatUrlState(data);

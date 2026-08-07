@@ -10,7 +10,7 @@ import { MW_SLIDER_MAX, mwToPos } from '../filters.js';
 import { setLayerVisibility, applyAllGenModes } from '../visibility.js';
 import { ensureLayerData } from '../layers/layer-init.js';
 import { initMap, switchBasemap, switchProjection, setBasemapLabels } from '../map.js';
-import { setTerrain3d, setBuildings3d } from '../terrain.js';
+import { setTerrain3d, setBuildings3d, setHillshade } from '../terrain.js';
 import { maybeShowRotateHint } from '../terrain-hint.js';
 import {
   LEGEND_FILTERS, legendAllIds,
@@ -170,10 +170,13 @@ function resetLayersToDefaults() {
 
   if (state.terrain3d) setTerrain3d(false);
   if (state.buildings3d) setBuildings3d(false);
+  if (state.hillshade) setHillshade(false);
   const terrainToggle = document.getElementById("terrain3dToggle") as HTMLInputElement | null;
   if (terrainToggle) terrainToggle.checked = false;
   const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
   if (buildingsToggle) buildingsToggle.checked = false;
+  const hillshadeToggle = document.getElementById("hillshadeToggle") as HTMLInputElement | null;
+  if (hillshadeToggle) hillshadeToggle.checked = false;
 
   buildLayersPanel();
   buildLegends();
@@ -300,6 +303,8 @@ function wireBasemap() {
   if (terrainToggle) terrainToggle.checked = state.terrain3d;
   const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
   if (buildingsToggle) buildingsToggle.checked = state.buildings3d;
+  const hillshadeToggle = document.getElementById("hillshadeToggle") as HTMLInputElement | null;
+  if (hillshadeToggle) hillshadeToggle.checked = state.hillshade;
 
   document.addEventListener("change", (e) => {
     const el = e.target as Element;
@@ -315,6 +320,8 @@ function wireBasemap() {
     if (terrain) { setTerrain3d(terrain.checked); if (terrain.checked) maybeShowRotateHint(); emit('url:write'); return; }
     const buildings = el?.closest<HTMLInputElement>("input[id=buildings3dToggle]");
     if (buildings) { setBuildings3d(buildings.checked); if (buildings.checked) maybeShowRotateHint(); emit('url:write'); return; }
+    const hillshade = el?.closest<HTMLInputElement>("input[id=hillshadeToggle]");
+    if (hillshade) { setHillshade(hillshade.checked); emit('url:write'); return; }
   });
 }
 

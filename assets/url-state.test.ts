@@ -6,7 +6,7 @@ import { readUrlState, writeUrlState } from './url-state.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -35,6 +35,7 @@ beforeEach(() => {
   state.projection      = 'mercator';
   state.terrain3d       = false;
   state.buildings3d     = false;
+  state.hillshade       = false;
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
   state.mapReady        = false;
   state.map             = null;
@@ -302,6 +303,33 @@ describe('round-trip serialization', () => {
     readUrlState();
     expect(state.terrain3d).toBe(true);
     expect(state.buildings3d).toBe(true);
+  });
+
+  it('omits hs when state.hillshade is off (the default)', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('hs=');
+  });
+
+  it('round-trips hs=1 into state.hillshade', () => {
+    state.hillshade = true;
+    writeUrlState();
+    expect(location.hash).toContain('hs=1');
+    state.hillshade = false;
+    readUrlState();
+    expect(state.hillshade).toBe(true);
+  });
+
+  it('hs and 3d coexist: both formatted and parsed together', () => {
+    state.hillshade = true;
+    state.terrain3d = true;
+    writeUrlState();
+    expect(location.hash).toContain('3d=t');
+    expect(location.hash).toContain('hs=1');
+    state.hillshade = false;
+    state.terrain3d = false;
+    readUrlState();
+    expect(state.terrain3d).toBe(true);
+    expect(state.hillshade).toBe(true);
   });
 });
 

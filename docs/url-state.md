@@ -59,6 +59,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `bm` | basemap | codec, `BM_*_CODE` maps |
 | `pj` | projection (`g` = globe) | codec |
 | `3d` | 3D terrain/buildings (`t`=terrain, `b`=buildings, `tb`=both) | codec |
+| `hs` | hillshade (2D shaded relief) | codec |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
 | `v f p h j t n r c e g u w a k d i o q x z` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
 
@@ -99,6 +100,7 @@ top-level param keys must be globally unique.
 | Weather variable | `wv` | `tempwind` |
 | Fire smoke opacity | `so` | `100` |
 | 3D terrain/buildings | `3d` | both off |
+| Hillshade | `hs` | off |
 
 The "omit the default" rule is what keeps links short. It also means **both
 sides must agree on the default** — `formatUrlState` skips a value when it
