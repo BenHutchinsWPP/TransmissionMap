@@ -79,12 +79,8 @@ function addUserLayerToMap(layer: UserLayer) {
     paint: { 'text-color': color, 'text-halo-color': 'rgba(255,255,255,0.85)', 'text-halo-width': 2, 'text-halo-blur': 0.5 },
   } as LayerSpecification);
 
-  for (const suffix of ['-fill', '-line', '-circle']) {
-    map.on('mouseenter', id + suffix, () => {
-      if (state.editMode !== 'edit') map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', id + suffix, () => { map.getCanvas().style.cursor = ''; });
-  }
+  // Pointer cursor comes from popup.ts's shared hit-test, which already folds
+  // in every user layer's -fill/-line/-circle via activeClickableLayers().
 }
 
 export function removeUserLayer(id: string) {

@@ -1,5 +1,6 @@
 // ─── Polygon hover highlight + vector line click-highlight ───────────────────
-// Imported by: map.ts (init calls), popup.ts (highlightLine/clearLineHighlight)
+// Imported by: map.ts (init calls), popup.ts (highlightLine/clearLineHighlight,
+// hoverFillIds for its shared cursor hit-test)
 
 import { state } from './state.js';
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleLayer } from 'maplibre-gl';
@@ -9,6 +10,20 @@ import { LAYERS } from '../src/registry/index.js';
 // Config is driven by LayerDef.hoverField; fill/source/source-layer are derived
 // from the existing map style at init time so no duplication with layer builders.
 
+// The hover-highlight fills, which are also the extra layers popup.ts folds
+// into its shared cursor hit-test (they are not all in CLICKABLE_LAYERS).
+// Visibility-gated for the same reason as activeClickableLayers() in popup.ts:
+// every id handed to queryRenderedFeatures pulls its whole source into the
+// query, and under 3D terrain each source costs a GPU readback sweep.
+export function hoverFillIds(): string[] {
+  if (!state.map) return [];
+  return LAYERS
+    .filter(l => l.hoverField)
+    .flatMap(l => l.mapLayerIds.filter(id => id.endsWith('-fill')))
+    .filter(id => state.map!.getLayer(id)
+      && state.map!.getLayoutProperty(id, 'visibility') !== 'none');
+}
+
 export function initPolygonHover() {
   if (!state.map) return;
   let activeHl: string | null  = null;
@@ -17,11 +32,7 @@ export function initPolygonHover() {
   state.map.on("click", function onPolygonClearClick(e) {
     if (state.editMode === 'edit' || state.measure.active) return;
     if (!activeHl) return;
-    const fillIds = LAYERS
-      .filter(l => l.hoverField)
-      .flatMap(l => l.mapLayerIds.filter(id => id.endsWith('-fill')))
-      .filter(id => state.map!.getLayer(id));
-    const hits = state.map!.queryRenderedFeatures(e.point, { layers: fillIds });
+    const hits = state.map!.queryRenderedFeatures(e.point, { layers: hoverFillIds() });
     if (!hits.length) {
       state.map!.setLayoutProperty(activeHl, "visibility", "none");
       activeHl = activeVal = null;
@@ -51,14 +62,6 @@ export function initPolygonHover() {
     };
     if (sl) (def as Record<string, unknown>)["source-layer"] = sl;
     state.map.addLayer(def);
-
-    state.map.on("mousemove", fill, () => {
-      if (state.map!.getLayoutProperty(fill, "visibility") !== "none")
-        state.map!.getCanvas().style.cursor = "pointer";
-    });
-    state.map.on("mouseleave", fill, () => {
-      state.map!.getCanvas().style.cursor = "";
-    });
 
     state.map.on("click", fill, function onPolygonFillClick(e) {
       if (state.editMode === 'edit' || state.measure.active) return;

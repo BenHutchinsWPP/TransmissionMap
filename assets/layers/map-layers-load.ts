@@ -123,8 +123,7 @@ export function addOsmDataCenters() {
     const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id);
     state.map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
   });
-  state.map.on("mouseenter", "osm-dc-clusters", () => { if (state.map) state.map.getCanvas().style.cursor = "pointer"; });
-  state.map.on("mouseleave", "osm-dc-clusters", () => { if (state.map) state.map.getCanvas().style.cursor = ""; });
+  // Pointer cursor comes from popup.ts's shared hit-test (CURSOR_ONLY_LAYERS).
 
   // Heatmap sibling for the Icons/Heatmap/Both toggle (visibility driven by
   // applyGenMode). Weight ∝ facility sqft; unsized rows count as a small site.

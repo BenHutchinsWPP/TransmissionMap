@@ -3,7 +3,7 @@
 import maplibregl, { type MapMouseEvent, type MapTouchEvent, type MapGeoJSONFeature } from 'maplibre-gl';
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
-import { highlightLine, clearLineHighlight } from './hover.js';
+import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
 import { highlightUserFeature, clearUserHighlight, copyFeatureToMyData } from './user-data/user-data.js';
 import { clearFeatureInfo } from './user-data/user-data-geom.js';
 import { buildPopupHtml } from './popup-format.js';
@@ -91,11 +91,23 @@ const CLICKABLE_LAYERS = [
   "boem-wind-leases-fill",
 ];
 
+// Layers that earn a pointer cursor but are not popup targets — their click
+// does something else (the datacenter cluster zooms in). They ride along in the
+// shared hit-test below rather than registering their own mouse delegates.
+const CURSOR_ONLY_LAYERS = ["osm-dc-clusters"];
+
+// Switched-off layers are dropped here, not after the query. Style
+// .queryRenderedFeatures marks a source as included for every layer id handed
+// to it regardless of visibility, and each included source projects the query
+// box separately — under 3D terrain each of those projections is a synchronous
+// GPU readback, so an all-layers list makes one click cost a readback sweep per
+// source. A hidden layer has nothing clickable in it either way.
 function activeClickableLayers() {
   if (!state.map) return [];
   const userLayerIds = state.userLayers.flatMap(l =>
     [l.id + "-circle", l.id + "-line", l.id + "-fill"]);
-  return [...userLayerIds, ...CLICKABLE_LAYERS].filter(id => state.map!.getLayer(id));
+  return [...userLayerIds, ...CLICKABLE_LAYERS].filter(id =>
+    state.map!.getLayer(id) && state.map!.getLayoutProperty(id, "visibility") !== "none");
 }
 
 // Feature-state-joined choropleths (ODIN outages, NWS zone/county) draw EVERY
@@ -331,26 +343,50 @@ export function initPopups() {
     if (moved < 10 && dt < 500) onMapClick(e);
   });
 
-  for (const layerId of CLICKABLE_LAYERS) {
-    // Feature-state-joined layers hit-test their transparent (unlit) features
-    // too, and with e.g. ODIN on an unlit county covers the whole map —
-    // mouseenter would show a pointer everywhere. Decide per mousemove instead,
-    // querying all clickable layers so a lit feature under an unlit polygon
-    // still gets the pointer.
-    if (HIT_LIT[layerId]) {
-      state.map.on("mousemove", layerId, e => {
-        if (state.measure.active) return;
-        const lit = e.features?.some(hitLit) ||
-          state.map!.queryRenderedFeatures(e.point, { layers: activeClickableLayers() }).some(hitLit);
-        state.map!.getCanvas().style.cursor = lit ? "pointer" : "";
-      });
-    } else {
-      state.map.on("mouseenter", layerId, () => {
-        if (!state.measure.active) state.map!.getCanvas().style.cursor = "pointer";
-      });
-    }
-    state.map.on("mouseleave", layerId, () => {
-      if (!state.measure.active) state.map!.getCanvas().style.cursor = "";
-    });
-  }
+  // Cursor feedback: one hit-test per animation frame across every clickable
+  // layer at once, rather than a per-layer mouseenter/mouseleave pair.
+  // MapLibre's layer-scoped delegates each run their own queryRenderedFeatures
+  // on every mousemove — 50-odd of them here — and under 3D terrain a query
+  // projects its box through the terrain coords framebuffer, costing a
+  // synchronous GPU readback per corner per source. One shared query holds
+  // that at one readback per frame however many layers are clickable.
+  //
+  // Querying everything together (rather than trusting the layer the delegate
+  // fired for) is also what makes feature-state-joined layers behave: they
+  // hit-test their transparent unlit features too, so with e.g. ODIN on, an
+  // unlit county covers the whole map. hitLit() decides, and a lit feature
+  // underneath an unlit polygon still gets the pointer.
+  //
+  // The hit-test is also skipped while the camera is in motion. A query costs
+  // one of those readbacks per box corner per source, which is affordable once
+  // the view is settled but not while every frame is already rendering the
+  // terrain surface — and a pointer shape during a drag has nothing to report
+  // anyway. moveend runs the deferred one so the cursor lands correct.
+  let hoverPoint: [number, number] | null = null;
+  let hoverFrame = 0;
+  const updateCursor = () => {
+    hoverFrame = 0;
+    if (!state.map || !hoverPoint || state.map.isMoving()) return;
+    // activeClickableLayers() and hoverFillIds() are already visibility-gated;
+    // the cursor-only ids need the same treatment before joining them.
+    const layers = [...new Set([...activeClickableLayers(), ...hoverFillIds(),
+      ...CURSOR_ONLY_LAYERS.filter(id => state.map!.getLayer(id)
+        && state.map!.getLayoutProperty(id, "visibility") !== "none")])];
+    const lit = layers.length > 0 &&
+      state.map.queryRenderedFeatures(hoverPoint, { layers }).some(hitLit);
+    state.map.getCanvas().style.cursor = lit ? "pointer" : "";
+  };
+  const scheduleCursor = () => {
+    if (!hoverFrame) hoverFrame = requestAnimationFrame(updateCursor);
+  };
+  state.map.on("mousemove", e => {
+    if (state.measure.active) return;
+    hoverPoint = [e.point.x, e.point.y];
+    scheduleCursor();
+  });
+  state.map.on("moveend", scheduleCursor);
+  state.map.on("mouseout", () => {
+    hoverPoint = null;
+    if (!state.measure.active) state.map!.getCanvas().style.cursor = "";
+  });
 }
