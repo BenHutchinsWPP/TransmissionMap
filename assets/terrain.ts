@@ -201,10 +201,19 @@ export function setHillshade(on: boolean) {
       paint: {
         'hillshade-exaggeration': 0.45,
         'hillshade-shadow-color': '#4a4a4a',
-        'hillshade-highlight-color': 'rgba(255,255,255,0)',
-        'hillshade-accent-color': 'rgba(0,0,0,0)',
+        // Highlight and accent carry the other two thirds of the relief: the
+        // highlight picks out sun-facing slopes, the accent creases ridges and
+        // valleys by slope magnitude. Both sit well under full strength so the
+        // shading stays legible over raster basemaps (Street, Topo), whose
+        // labels are baked into the tile image.
+        'hillshade-highlight-color': 'rgba(255,255,255,0.55)',
+        'hillshade-accent-color': 'rgba(0,0,0,0.4)',
         // Pin the light to north so relief doesn't re-light as the map rotates
-        // (the spec default is `viewport`).
+        // (the spec default is `viewport`). Under 3D Terrain this is also the
+        // anchor that stays consistent tile to tile: hillshade is draped through
+        // the render-to-texture cache, which re-renders on tile changes rather
+        // than on bearing changes, so a viewport-anchored light would refresh
+        // only for the tiles that happened to reload.
         'hillshade-illumination-anchor': 'map',
       },
     }, hillshadeBeforeId());

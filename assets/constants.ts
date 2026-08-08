@@ -235,11 +235,18 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
 // Fog over 3D terrain, as a fraction of the distance from map center (0) to
-// horizon (1) — fog begins at this point, so higher keeps more of the near and
-// middle ground clear. MapLibre's default is 0.5, which starts the wash halfway
-// into the view; the extra reach here suits a basemap that is already pale.
+// horizon (1): the wash begins at this point, so the value doubles as its own
+// off switch. At 1 — the spec maximum, and what MapLibre itself uses for a
+// style that declares no sky — distant ridgelines stay as crisp as the near
+// ground at every pitch.
+//
+// Worth knowing before lowering it: MapLibre applies this fog once per
+// render-to-texture drape stack, and the stack count follows which
+// symbol/circle/fill-extrusion layers are visible, so any value below 1 ties
+// fog density to the layer panel. The sky block itself stays — it carries the
+// horizon gradient and atmosphere, which draw once per frame in their own pass.
 // Only takes effect while 3D Terrain is on (see terrain.ts).
-export const SKY_FOG_GROUND_BLEND = 0.8;
+export const SKY_FOG_GROUND_BLEND = 1;
 
 // MapLibre requires a style object even when we control all sources ourselves.
 export const BLANK_STYLE = {
