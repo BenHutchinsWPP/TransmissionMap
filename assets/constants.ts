@@ -209,7 +209,11 @@ export const TERRAIN_TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/t
 // data-source-credit="usgs-terrain" — do not reword that entry), matching
 // every other dataset's short-in-map/full-in-dialog split (SOURCE_ATTRIB above).
 export const TERRAIN_ATTRIB_SHORT = "USGS terrain";
-export const TERRAIN_EXAGGERATION = 1.3;
+// True to scale: a ridge stands as tall against its valley on screen as it does
+// on the ground, so heights read as measurements rather than as an effect.
+// Relief contrast is the hillshade's job instead (terrain.ts), which sharpens
+// slopes without moving any elevation.
+export const TERRAIN_EXAGGERATION = 1;
 
 // ─── Live layer tile sources ──────────────────────────────────────────────────
 // IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
@@ -240,19 +244,40 @@ export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{rang
 // style that declares no sky — distant ridgelines stay as crisp as the near
 // ground at every pitch.
 //
-// Worth knowing before lowering it: MapLibre applies this fog once per
+// Where the horizon haze begins, as a fraction of the distance from map centre
+// (0) to horizon (1). 0.95 keeps it to a strip at the skyline, leaving the near
+// and middle ground — where the map is read — clear. 1 switches fog off
+// entirely, and the spec allows nothing higher.
+//
+// The colour stays the opaque default. A translucent fog colour reads as the
+// gentler setting and behaves as the opposite: the shader squares the blend
+// factor, so a translucent wash lands under a 2% luminance shift across most of
+// the band, while the same alpha runs through `linearToGamma` on the spurious
+// per-stack pass and comes back amplified. Opacity buys visible haze per unit
+// of side effect.
+//
+// The side effect worth knowing: MapLibre applies this fog once per
 // render-to-texture drape stack, and the stack count follows which
-// symbol/circle/fill-extrusion layers are visible, so any value below 1 ties
-// fog density to the layer panel. The sky block itself stays — it carries the
-// horizon gradient and atmosphere, which draw once per frame in their own pass.
-// Only takes effect while 3D Terrain is on (see terrain.ts).
-export const SKY_FOG_GROUND_BLEND = 1;
+// symbol/circle/fill-extrusion layers are visible, so the strip does thicken as
+// layers are switched on. A narrow band keeps that to the skyline.
+// Fog only takes effect while 3D Terrain is on, above pitch 60 (see terrain.ts).
+export const SKY_FOG_GROUND_BLEND = 0.95;
 
 // MapLibre requires a style object even when we control all sources ourselves.
 export const BLANK_STYLE = {
   version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [],
-  sky: { "fog-ground-blend": SKY_FOG_GROUND_BLEND },
-};
+  sky: { "fog-ground-blend": SKY_FOG_GROUND_BLEND, "atmosphere-blend": 0 },
+} as const;
+
+// Globe's halo. Under the vertical-perspective projection MapLibre fades the
+// flat sky layer out entirely, so this atmosphere shader IS the sky there —
+// there is no sky-color/horizon-color fallback behind it. Its wash deepens with
+// the distance a view ray travels through the shell, which for a tilted camera
+// is the whole viewport rather than a rim, so map.ts fades it out with pitch
+// (see syncAtmosphere) and starts it at 0 above. Mercator never pays for it.
+export const ATMOSPHERE_BLEND = 0.8;
+// Pitch at which the halo has faded out completely.
+export const ATMOSPHERE_FADE_PITCH = 55;
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
 // and the search-highlight sources (highlights.ts).

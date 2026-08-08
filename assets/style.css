@@ -136,6 +136,14 @@ header h1 {
   background: #e8eaed;
 }
 
+/* Globe draws only the sphere — every pixel off it stays transparent canvas, so
+   the container colour IS the space around the planet. Navy gives the limb
+   something to read against, most visibly when a tilted camera zooms out and
+   the globe covers little of the view. */
+#map.projection-globe {
+  background: var(--navy);
+}
+
 /* Shown only when WebGL2 is unavailable and the map can't initialise. */
 .webgl-error {
   position: absolute;

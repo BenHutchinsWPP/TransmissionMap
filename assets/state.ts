@@ -15,6 +15,7 @@ export {
   WEATHER_IMAGE_COORDS, WEATHER_WASH_OPACITY, WEATHER_FADE_MS,
   TRANSPARENT_PNG, weatherLiveUrl,
   BLANK_STYLE, EMPTY_FC, SOURCE_ATTRIB,
+  ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH,
   DEFAULT_CENTER, DEFAULT_ZOOM,
 } from './constants.js';
 export type { ImageCorners } from './constants.js';

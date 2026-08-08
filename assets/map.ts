@@ -11,7 +11,8 @@ import * as pmtiles from 'pmtiles';
 import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, OFM_STYLE_URLS,
          USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
-         AERIAL_TILE_URL, USGS_AERIAL_TILE_URL } from './state.js';
+         AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
+         ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH } from './state.js';
 import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons, loadFireIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
@@ -20,7 +21,7 @@ import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibi
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
 import { writeUrlState } from './url-state.js';
-import { emit } from './state-bus.js';
+import { emit, on } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer, repositionHillshade } from './terrain.js';
@@ -117,6 +118,7 @@ export function initMap() {
     loadUserData();
     hideLoading();
 
+    state.map!.on("pitch", syncAtmosphere);
     state.map!.on("moveend", writeUrlState);
     writeUrlState();
 
@@ -209,6 +211,25 @@ const BASEMAP_LAYER_DEFS: {
   })),
   { basemap: "aerial",  id: "aerial-bg",        source: "aerial-tiles",      minzoom: AERIAL_SEAM_ZOOM },
 ];
+
+// Aerial imagery arrives with the sun already in it — real shadows on the real
+// slopes. Draped over raised ground and tilted, those shadows land on faces the
+// camera is already viewing at a grazing angle, and the shadowed side of every
+// ridge closes up. Lifting the black point while terrain is on reopens it.
+// Flat Aerial keeps the imagery exactly as delivered.
+const AERIAL_LAYER_IDS = BASEMAP_LAYER_DEFS.filter(l => l.basemap === "aerial").map(l => l.id);
+const AERIAL_TERRAIN_BRIGHTNESS_MIN = 0.1;
+const AERIAL_TERRAIN_CONTRAST = -0.05;
+
+export function syncAerialForTerrain() {
+  if (!state.map) return;
+  for (const id of AERIAL_LAYER_IDS) {
+    if (!state.map.getLayer(id)) continue;
+    state.map.setPaintProperty(id, "raster-brightness-min", state.terrain3d ? AERIAL_TERRAIN_BRIGHTNESS_MIN : 0);
+    state.map.setPaintProperty(id, "raster-contrast",       state.terrain3d ? AERIAL_TERRAIN_CONTRAST : 0);
+  }
+}
+on('terrain:3d', syncAerialForTerrain);
 
 // Every Esri-backed layer, hidden together when the fallback latch trips.
 const ESRI_LAYER_IDS = ["aerial-bg", ...AERIAL_GAP_REGIONS.map(r => `aerial-esri-${r.id}-bg`)];
@@ -478,11 +499,32 @@ export function switchBasemap(type: string) {
   repositionHillshade();
 }
 
+// The halo reads as atmosphere while the camera looks down at the planet, and
+// spreads into a full-viewport wash as the camera tilts — a ray that grazes the
+// limb crosses far more of the shell than one aimed at the ground. Fading it out
+// by pitch keeps the effect where it works. Quantised so a pitch drag issues a
+// handful of setSky calls rather than one per frame.
+const ATMOSPHERE_STEP = 0.05;
+let atmosphereBlend = -1;
+
+export function syncAtmosphere() {
+  if (!state.map) return;
+  const fade = 1 - state.map.getPitch() / ATMOSPHERE_FADE_PITCH;
+  const wanted = state.projection === 'globe'
+    ? Math.round(Math.max(0, fade) * ATMOSPHERE_BLEND / ATMOSPHERE_STEP) * ATMOSPHERE_STEP
+    : 0;
+  if (wanted === atmosphereBlend) return;
+  atmosphereBlend = wanted;
+  state.map.setSky({ ...BLANK_STYLE.sky, 'atmosphere-blend': wanted });
+}
+
 export function switchProjection(type: string) {
   if (!state.map) return;
   state.projection = type;
   // ponytail: only mercator | globe exist in MapLibre; no enum needed
   state.map.setProjection({ type: type as 'mercator' | 'globe' });
+  state.map.getContainer().classList.toggle('projection-globe', type === 'globe');
+  syncAtmosphere();
 }
 
 // ─── WebGL-unavailable banner ─────────────────────────────────────────────────

@@ -11,6 +11,7 @@
 // style graft resolves, repositionHillshade from switchBasemap).
 
 import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './state.js';
+import { emit } from './state-bus.js';
 import { maybeShowRotateHint } from './terrain-hint.js';
 
 const TERRAIN_SOURCE_ID = 'terrain-dem';
@@ -101,6 +102,11 @@ function ensureDemSource(id: string) {
   });
 }
 
+// Terrain runs under both projections. MapLibre warns that it is not fully
+// supported on the globe's vertical perspective — elevation sits out of
+// `recalculateZoomAndCenter`, and `calculateFogMatrix` returns identity there —
+// but the fog that would consume that matrix is itself skipped under globe, so
+// the drape renders.
 export function setTerrain3d(on: boolean) {
   state.terrain3d = on;
   if (!state.map) return;
@@ -111,6 +117,7 @@ export function setTerrain3d(on: boolean) {
   } else {
     state.map.setTerrain(null);
   }
+  emit('terrain:3d');
   syncPitch();
 }
 
@@ -199,7 +206,10 @@ export function setHillshade(on: boolean) {
       type: 'hillshade',
       source: HILLSHADE_SOURCE_ID,
       paint: {
-        'hillshade-exaggeration': 0.45,
+        // Past 0.5 the shader's slope curve keeps expanding contrast even though
+        // its overall multiplier has already saturated, so this is the lever for
+        // relief that reads without touching a single elevation value.
+        'hillshade-exaggeration': 0.6,
         // Warm brown shadows read as earth under sunlight where a neutral gray
         // reads as overcast, and they sit better against the green and tan of
         // the raster basemaps.
@@ -209,8 +219,8 @@ export function setHillshade(on: boolean) {
         // valleys by slope magnitude. Both stay under full strength so the
         // shading holds up over raster basemaps (Street, Topo), whose labels are
         // baked into the tile image.
-        'hillshade-highlight-color': 'rgba(255,255,255,0.75)',
-        'hillshade-accent-color': 'rgba(0,0,0,0.55)',
+        'hillshade-highlight-color': 'rgba(255,255,255,0.9)',
+        'hillshade-accent-color': 'rgba(0,0,0,0.9)',
         // Pin the light to north so relief doesn't re-light as the map rotates
         // (the spec default is `viewport`). Under 3D Terrain this is also the
         // anchor that stays consistent tile to tile: hillshade is draped through
