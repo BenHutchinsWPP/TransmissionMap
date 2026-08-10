@@ -2,9 +2,9 @@ import { defineConfig } from 'vite';
 import { copyFileSync, statSync, createReadStream } from 'fs';
 import path from 'path';
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   root: '.',
-  base: command === 'build' ? '/TransmissionMap/' : '/',
+  base: '/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -64,4 +64,4 @@ export default defineConfig(({ command }) => ({
       },
     },
   ],
-}));
+});

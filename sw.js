@@ -24,9 +24,9 @@ const DATA_CACHE   = `tm-data-${DATA_VERSION}`;
 // other static assets are cached on first fetch by handleStatic() below.
 // To pre-cache the full bundle, integrate vite-plugin-pwa which can inject
 // the correct hashed filenames at build time.
-// './' resolves against the SW scope, so it works both at the domain root
-// (local dev) and under the /TransmissionMap/ GitHub Pages base — an absolute
-// '/' 404s on the project site and kills install (addAll rejects on any 404).
+// './' resolves against the SW scope, so it works wherever the site is served
+// from — the domain root in dev and production, or a subpath if the base ever
+// moves (addAll rejects the whole install on any 404).
 const PRECACHE_URLS = ['./'];
 
 // ── Install: pre-cache static shell ───────────────────────────────────────────
