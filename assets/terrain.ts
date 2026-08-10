@@ -11,7 +11,6 @@
 // style graft resolves, repositionHillshade from switchBasemap).
 
 import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './state.js';
-import { emit } from './state-bus.js';
 import { maybeShowRotateHint } from './terrain-hint.js';
 
 const TERRAIN_SOURCE_ID = 'terrain-dem';
@@ -117,7 +116,6 @@ export function setTerrain3d(on: boolean) {
   } else {
     state.map.setTerrain(null);
   }
-  emit('terrain:3d');
   syncPitch();
 }
 

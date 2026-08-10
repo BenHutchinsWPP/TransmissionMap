@@ -21,7 +21,7 @@ import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibi
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
 import { writeUrlState } from './url-state.js';
-import { emit, on } from './state-bus.js';
+import { emit } from './state-bus.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer, repositionHillshade } from './terrain.js';
@@ -211,25 +211,6 @@ const BASEMAP_LAYER_DEFS: {
   })),
   { basemap: "aerial",  id: "aerial-bg",        source: "aerial-tiles",      minzoom: AERIAL_SEAM_ZOOM },
 ];
-
-// Aerial imagery arrives with the sun already in it — real shadows on the real
-// slopes. Draped over raised ground and tilted, those shadows land on faces the
-// camera is already viewing at a grazing angle, and the shadowed side of every
-// ridge closes up. Lifting the black point while terrain is on reopens it.
-// Flat Aerial keeps the imagery exactly as delivered.
-const AERIAL_LAYER_IDS = BASEMAP_LAYER_DEFS.filter(l => l.basemap === "aerial").map(l => l.id);
-const AERIAL_TERRAIN_BRIGHTNESS_MIN = 0.1;
-const AERIAL_TERRAIN_CONTRAST = -0.05;
-
-export function syncAerialForTerrain() {
-  if (!state.map) return;
-  for (const id of AERIAL_LAYER_IDS) {
-    if (!state.map.getLayer(id)) continue;
-    state.map.setPaintProperty(id, "raster-brightness-min", state.terrain3d ? AERIAL_TERRAIN_BRIGHTNESS_MIN : 0);
-    state.map.setPaintProperty(id, "raster-contrast",       state.terrain3d ? AERIAL_TERRAIN_CONTRAST : 0);
-  }
-}
-on('terrain:3d', syncAerialForTerrain);
 
 // Every Esri-backed layer, hidden together when the fallback latch trips.
 const ESRI_LAYER_IDS = ["aerial-bg", ...AERIAL_GAP_REGIONS.map(r => `aerial-esri-${r.id}-bg`)];

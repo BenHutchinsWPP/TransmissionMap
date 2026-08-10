@@ -9,7 +9,6 @@ type Events = {
   'gen:mode':    { id: string };  // generator display mode changed
   'ogf:colorby':          void;   // OGF planned-lines color-by mode changed
   'westtec:colorby':      void;   // WestTEC 10-Yr color-by mode changed
-  'terrain:3d':           void;   // 3D Terrain toggled (terrain.ts → map.ts)
   'url:write':            void;   // persist current state to URL / localStorage
 };
 
