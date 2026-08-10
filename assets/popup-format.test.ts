@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   row, websiteRow, title,
   renderEiaGen, renderOgfPlanned, renderHifldNatgasPts, renderGeoHydroPts,
   renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml,
 } from './popup-format.js';
+import { setUnits, DEFAULT_UNITS } from '../src/units.js';
+
+beforeEach(() => setUnits(DEFAULT_UNITS));
 
 // ─── row() ───────────────────────────────────────────────────────────────────
 
@@ -190,6 +193,15 @@ describe('westtec-lines renderer', () => {
     expect(out).toContain('62.3 mi');
   });
 
+  it('renders length in the preferred distance unit', () => {
+    setUnits({ distance: 'km' });
+    expect(buildPopupHtml('westtec-lines', planned)).toContain('100.3 km');
+  });
+
+  it('renders length when the source value arrives as a string', () => {
+    expect(buildPopupHtml('westtec-lines', { ...planned, length_mi: '62.3' })).toContain('62.3 mi');
+  });
+
   it('omits line type row when null (identified rows)', () => {
     expect(buildPopupHtml('westtec-lines', identified)).not.toContain('Line type');
   });
@@ -219,17 +231,29 @@ describe('renderGeoHydroPts', () => {
   it('shows name and temperature', () => {
     const out = renderGeoHydroPts({ name: 'Hot Spring', temp_c: 180, state: 'NV', county: 'Nye', min_depth_m: null, max_depth_m: null, heat_mwt: null, reference: null });
     expect(out).toContain('Hot Spring');
-    expect(out).toContain('180 °C');
+    expect(out).toContain('356°F');
+  });
+
+  it('shows temperature in the source unit when preference is Celsius', () => {
+    setUnits({ temp: 'C' });
+    const out = renderGeoHydroPts({ name: 'Hot Spring', temp_c: 180, state: 'NV', county: 'Nye', min_depth_m: null, max_depth_m: null, heat_mwt: null, reference: null });
+    expect(out).toContain('180°C');
   });
 
   it('renders depth range when both bounds present', () => {
+    const out = renderGeoHydroPts({ name: null, min_depth_m: 200, max_depth_m: 800, temp_c: null, state: null, county: null, heat_mwt: null, reference: null });
+    expect(out).toContain('656–2625 ft');
+  });
+
+  it('renders depth range in metres when preference is metric', () => {
+    setUnits({ elevation: 'm' });
     const out = renderGeoHydroPts({ name: null, min_depth_m: 200, max_depth_m: 800, temp_c: null, state: null, county: null, heat_mwt: null, reference: null });
     expect(out).toContain('200–800 m');
   });
 
   it('renders single depth when only min present', () => {
     const out = renderGeoHydroPts({ name: null, min_depth_m: 300, max_depth_m: null, temp_c: null, state: null, county: null, heat_mwt: null, reference: null });
-    expect(out).toContain('300 m');
+    expect(out).toContain('984 ft');
   });
 
   it('formats heat_mwt to 2 decimals', () => {

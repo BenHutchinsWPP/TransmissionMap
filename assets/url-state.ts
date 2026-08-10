@@ -1,4 +1,4 @@
-// ─── URL + localStorage state persistence ─────────────────────────────────────
+// ─── URL hash state persistence ─────────────────────────────────────────────
 // Side-effectful functions that link global state to the browser URL.
 
 import { state } from './state.js';

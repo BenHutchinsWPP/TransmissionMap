@@ -1,6 +1,6 @@
 # Weather Forecast
 
-**Live weather fields** over North America — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout in display units (°F for temperature/dew point, ft/s for wind/gust, % for humidity/cloud, mb for pressure). Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 4× finer resolution (0.0625°) as a lossy WebP.
+**Live weather fields** over North America — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout, formatted to the display units chosen in File ▸ Settings… (see [settings.md](../settings.md)); humidity and cloud cover are always %. Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 4× finer resolution (0.0625°) as a lossy WebP.
 
 ## Source
 
@@ -92,17 +92,17 @@ label.
 
 ## Raster values
 
-**Temperature** — pixel value = 2 m air temperature. Displayed in °F (°C in parentheses).
+**Temperature** — pixel value = 2 m air temperature. Displayed in the preferred temperature unit (°F by default).
 
 | Quantity | Typical range | Notes |
 |---|---|---|
-| Temperature | −30 … 45 °C (−22 … 113 °F) | Ramp clips outside this range to end colors. |
-| Wind speed | 0 … 25+ m/s (0 … 82+ ft/s) | 10 m wind; displayed in ft/s. |
-| Wind gust | 0 … 25+ m/s (0 … 82+ ft/s) | 10 m gust wind; displayed in ft/s. |
+| Temperature | −30 … 45 °C | Ramp clips outside this range to end colors. Legend ends follow the unit preference (−22 … 113+ °F by default). |
+| Wind speed | 0 … 30+ m/s | 10 m wind; displayed in the preferred speed unit (mph by default). |
+| Wind gust | 0 … 30+ m/s | 10 m gust wind; displayed in the preferred speed unit (mph by default). |
 | Relative humidity | 0 … 100 % | Derived from temperature and dew point (Magnus). |
-| Dew point | −40 … 30 °C (−40 … 86 °F) | 2 m dew point; displayed in °F (°C in parentheses). |
+| Dew point | −40 … 30 °C | 2 m dew point; shares the temperature ramp and unit preference. |
 | Cloud cover | 0 … 100 % | Total cloud cover (0 = clear, 100 = overcast). |
-| Pressure | 960 … 1050+ mb | Mean sea level pressure; typically 950–1020 mb. |
+| Pressure | 960 … 1050+ mb | Mean sea level pressure; typically 950–1020 mb. Displayed in mb or inHg by preference. |
 
 **Temp & Wind** — combined view: the temperature wash (same raster and ramp as
 Temperature) with the wind particle animation drawn on top; no extra baked

@@ -1,4 +1,7 @@
 // ─── Geometry utilities + top-bar feature info ───────────────────────────────
+// Deps: src/units.js (fmtDistance, fmtArea).
+
+import { fmtDistance, fmtArea } from '../../src/units.js';
 
 export function collectCoords(geom: GeoJSON.Geometry | null | undefined): number[][] {
   if (!geom) return [];
@@ -72,11 +75,11 @@ function featureInfoText(geom: GeoJSON.Geometry | null | undefined) {
   }
   if (t === 'LineString' || t === 'MultiLineString') {
     const m = lineLengthMeters(geom);
-    return `📏 ${(m / 1609.344).toFixed(2)} mi · ${(m / 1000).toFixed(2)} km`;
+    return `📏 ${fmtDistance(m)}`;
   }
   if (t === 'Polygon' || t === 'MultiPolygon') {
     const a = polygonAreaMeters(geom);
-    return `▱ ${(a / 2589988.11).toFixed(2)} mi² · ${(a / 1e6).toFixed(2)} km²`;
+    return `▱ ${fmtArea(a)}`;
   }
   return '';
 }

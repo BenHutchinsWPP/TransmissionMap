@@ -100,7 +100,7 @@ row-major, NoData = 0; ~1.3 MB) + `nlr_wind_100m_lut.json` (dims + bbox + scale)
 (`RASTER_PROBES` / `ensureRasterLut` in `assets/raster-probes.ts`, shared with the solar
 layer). On `mousemove`, `sampleRaster()` does a nearest-cell lookup and `updateRasterArrow()`
 moves a ▼ arrow along the legend gradient to the cursor's wind speed and prints
-`"N.N m/s at cursor"` beneath it. For exact, full-resolution values use the GeoTIFF download.
+`"N.N mph at cursor"` beneath it, in the speed unit chosen in File ▸ Settings… (see [settings.md](../settings.md)). For exact, full-resolution values use the GeoTIFF download.
 
 Ramp (single source of truth: `scripts/wind_color_ramp.txt`, mirrored by `WIND_RAMP_STOPS`
 in `src/colors/ramps.ts`): transparent → light teal → teal → blue → dark navy over **0–12 m/s**;

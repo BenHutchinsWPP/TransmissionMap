@@ -49,12 +49,14 @@ turns public datasets into PMTiles consumed by the frontend.
 - `index.html` — single page; Vite entry via `<script type="module" src="/src/main.ts">`
 - `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts`
 - `src/types.ts` — shared `LayerDef` interface and other types
+- `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
+  as ambient module state; SI-in/display-string-out formatters + raw converters; imports nothing
 - `sw.js` — service worker (tile caching)
 - `assets/` — frontend modules (all TypeScript), split into subfolders:
   - **Root** (`assets/`): cross-cutting modules used by multiple subfolders
     - `map.ts` MapLibre init + basemap switching
     - `state.ts` mutable global singleton (`AppState`); re-exports constants
-    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `url:write`; see `EventMap`); no deps
+    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `url:write`; see `Events`); no deps
     - `visibility.ts` — `setLayerVisibility`, `applyGenMode`, `applyAllGenModes`
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`
     - `url-state.ts` — `readUrlState`, `writeUrlState` + bus subscription
@@ -65,6 +67,9 @@ turns public datasets into PMTiles consumed by the frontend.
     - `terrain.ts` — 3D Terrain (raster-dem) + 3D Buildings (OFM fill-extrusion) + Hillshade toggles
     - `url-state-codec.ts` — URL parse/format (no side effects)
     - `icons.ts` SVG icon loading; `tool-mode.ts` draw/measure mutex
+    - `units-store.ts` — load/save display-unit preferences (`localStorage` key
+      `tm-units`, validated against `UNIT_OPTIONS` — a trust boundary, see
+      `units-store.test.ts`)
     - `constants.ts` tile URLs, DATA paths, palette constants
     - `live-staleness.ts` — **shared factory** for every live GeoJSON feed: auto-refresh
       poll + stale-data kill-switch modal. `wildfire-staleness.ts` / `nws-staleness.ts`
@@ -91,6 +96,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `ui-search.ts` — feature search; `ui-geocoder.ts` — place search
     - `ui-openwith.ts` — "open with" link builder
     - `ui-diagnostics.ts` — Diagnostics dialog; lazy chunk, opened from the File menu
+    - `ui-settings.ts` — Settings dialog (display units); lazy chunk, opened from the File menu
   - **`assets/layers/`** — MapLibre layer builders
     - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
@@ -132,6 +138,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a map layer | `docs/adding-a-layer.md` ONLY, then `rg ">>> ADD-LAYER"` for insertion points |
 | Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (silent footguns: the shared `data-branch` concurrency group, and `maxAgeMs` must exceed the worst-case cron gap) |
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: wire `filter:all` too, and claim a unique URL code — see `docs/url-state.md`) |
+| Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |

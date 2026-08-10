@@ -1,8 +1,14 @@
 // ─── Pure formatting logic for popups ────────────────────────────────────────
+// Deps: utils/utils.js (escapeHtml), src/colors/buckets.js (label maps),
+// nws-zone-join.js (alert lookups), src/units.js (every quantity with a unit
+// goes through a fmt* helper so it follows the File ▸ Settings… preference —
+// see docs/settings.md). Row labels must stay unit-neutral ("Area", not
+// "Acres") because the rendered value changes with that preference.
 
 import { escapeHtml } from './utils/utils.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
+import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt } from '../src/units.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -71,7 +77,7 @@ export function renderOgfPlanned(p: Record<string, unknown>) {
     row("RTO/ISO", p.ISO_RTO) +
     row("Plan Authority", p.PlanAuth) +
     row("Portfolio", p.Portfolio) +
-    row("Length", typeof p.Length_mi === 'number' ? p.Length_mi.toFixed(1) + " mi" : null) +
+    row("Length", typeof p.Length_mi === 'number' ? fmtDistanceMi(p.Length_mi) : null) +
     (link ? `<div class="popup-row"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">Project page</a></div>` : "") +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Our Grid Future — Horizon Energy Systems, 2026</div>`;
 }
@@ -105,11 +111,11 @@ export function renderHifldNatgasPts(p: Record<string, unknown>) {
 }
 
 export function renderGeoHydroPts(p: Record<string, unknown>) {
-  const depthStr = p.min_depth_m != null
-    ? (p.max_depth_m != null ? p.min_depth_m + "–" + p.max_depth_m + " m" : p.min_depth_m + " m")
+  const depthStr = typeof p.min_depth_m === 'number'
+    ? (typeof p.max_depth_m === 'number' ? fmtElevationRange(p.min_depth_m, p.max_depth_m) : fmtElevation(p.min_depth_m))
     : null;
   return title((p.name as string) || "Hydrothermal System") +
-    row("Temperature", p.temp_c != null ? p.temp_c + " °C" : null) +
+    row("Temperature", typeof p.temp_c === 'number' ? fmtTemp(p.temp_c) : null) +
     row("State", p.state) +
     row("County", p.county) +
     row("Depth", depthStr) +
@@ -233,7 +239,7 @@ const _defs = [
     row("Upgrade type", p.upgrade_type) +
     row("Voltage", p.voltage_kv ? `${p.voltage_kv} kV` : null) +
     row("Line type", p.line_type) +
-    row("Length", p.length_mi ? `${p.length_mi} mi` : null)],
+    row("Length", p.length_mi ? fmtDistanceMi(Number(p.length_mi)) : null)],
   [["osm-transmission-lines-hv", "osm-transmission-lines-mv", "osm-transmission-lines-lv", "osm-transmission-lines-unknown", "osm-transmission-lines-dc"], (p: Record<string, unknown>) =>
     title((p.name as string) || "Transmission Line") +
     row("Voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
@@ -305,7 +311,7 @@ const _defs = [
     row("City", p.addr_city) +
     row("State", p.addr_state) +
     row("Since", p.start_date) +
-    row("Size", Number(p.im3_sqft) > 0 ? Number(p.im3_sqft).toLocaleString() + " sq ft (IM3)" : null) +
+    row("Size", Number(p.im3_sqft) > 0 ? fmtAreaSqFt(Number(p.im3_sqft)) + " (IM3)" : null) +
     // osm_type absent in pre-2026-07 builds; skip the link rather than guess the type
     (p.osm_type ? osmLink(p.osm_type as "node" | "way" | "relation", p.osm_id) : "")],
   [["mines-icons"], (p: Record<string, unknown>) =>
@@ -323,7 +329,7 @@ const _defs = [
     row("Manager type", p.mng_type) +
     row("GAP status", p.gap) +
     row("Public access", p.access) +
-    row("Acres", p.acres ? Number(p.acres).toLocaleString() : null) +
+    row("Area", p.acres ? fmtAreaAcres(Number(p.acres)) : null) +
     row("State", p.state) +
     row("Established", p.yr_est) +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Filtered highlight of selected features — not the complete USGS PAD-US database</div>`],
@@ -331,7 +337,7 @@ const _defs = [
     title((p.name as string) || "Tribal (Census)") +
     row("Area type", p.area_type) +
     row("Recognition", p.recognized) +
-    row("Land acres", p.acres_land ? Number(p.acres_land).toLocaleString() : null) +
+    row("Land area", p.acres_land ? fmtAreaAcres(Number(p.acres_land)) : null) +
     `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">Census administrative boundary. Not intended for consultation or determining historical extent.</div>`],
   [["bia-tribal-fill"], (p: Record<string, unknown>) =>
     title((p.LARNAME as string) || "Tribal (BIA)") +
@@ -358,14 +364,12 @@ const _defs = [
       : typeCat === "RX" ? "RX — Prescribed Fire"
       : typeCat === "WFU" ? "WFU — Wildland Fire Use"
       : typeCat || null;
-    const acresStr = p.acres != null
-      ? Number(p.acres).toLocaleString(undefined, { maximumFractionDigits: 0 })
-      : null;
+    const acresStr = p.acres != null ? fmtAreaAcres(Number(p.acres)) : null;
     return title(((p.name as string) || "Unnamed Incident") + " INCIDENT") +
       row("ID", p.fire_id) +
       row("Type", typeLabel) +
       row("State", p.state) +
-      row("Acres Burned", acresStr) +
+      row("Area Burned", acresStr) +
       row("Contained", p.pct_contained != null ? p.pct_contained + "%" : null) +
       row("Discovered", fmtDt(p.discovery_dt)) +
       row("Current as of", fmtDt(p.modified_dt));
@@ -454,7 +458,7 @@ const _defs = [
     row("Cause", p.cause) +
     row("Discovered", p.discovery_date) +
     row("Contained", p.pct_contained != null ? p.pct_contained + "%" : null) +
-    row("Size (acres)", p.gis_acres ? Number(p.gis_acres).toLocaleString(undefined, { maximumFractionDigits: 0 }) : null) +
+    row("Size", p.gis_acres ? fmtAreaAcres(Number(p.gis_acres)) : null) +
     row("Hotspots", p.hotspot_count) +
     row("Updated", p.updated_dt) +
     (p.country === "CA" ? row("Note", "Estimated extent from hotspots") : "")],
@@ -471,7 +475,7 @@ const _defs = [
     row("Lease no.", p.lease) +
     row("Type", p.type) +
     row("State", p.state) +
-    row("Acres", p.acres) +
+    row("Area", p.acres ? fmtAreaAcres(Number(p.acres)) : null) +
     row("Lease date", p.date) +
     row("Term", p.term)],
 ] as [string[], (p: Record<string, unknown>) => string][];

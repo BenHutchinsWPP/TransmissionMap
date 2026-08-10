@@ -679,24 +679,9 @@ header h1 {
   border-radius: 2px;
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
+/* Both ends are unshrinkable, so the gradient between them takes what's left —
+   keep ramp end labels short (see rampLegendHtml in ui/ui-legends.ts). */
 .ramp-min, .ramp-max { flex-shrink: 0; white-space: nowrap; }
-/* Hover arrow pointing to the wind speed at the cursor */
-.ramp-arrow {
-  position: absolute;
-  top: -8px;
-  transform: translateX(-50%);
-  font-size: 8px;
-  line-height: 1;
-  color: #0f172a;
-  pointer-events: none;
-  text-shadow: 0 0 2px #fff, 0 0 2px #fff;
-}
-.ramp-readout {
-  padding: 1px 8px 5px 30px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-mid);
-}
 
 /* Download button */
 .dl-wrap { position: relative; flex-shrink: 0; }
@@ -1415,6 +1400,45 @@ details.popup-row {
   font-size: 13px;
   color: var(--text-mid);
   line-height: 1.5;
+}
+
+/* ── Settings dialog (display units) ─────────────────────────────────────── */
+.settings-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-row-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-select {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text);
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  min-width: 130px;
+  cursor: pointer;
+}
+
+.settings-presets {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 /* ── Diagnostics dialog ──────────────────────────────────────────────────── */

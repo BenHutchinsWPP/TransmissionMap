@@ -10,43 +10,32 @@ import {
   WEATHER_CLOUD_RAMP_STOPS, WEATHER_CLOUD_RAMP_MIN, WEATHER_CLOUD_RAMP_MAX,
   WEATHER_PRESSURE_RAMP_STOPS, WEATHER_PRESSURE_RAMP_MIN, WEATHER_PRESSURE_RAMP_MAX,
 } from '../colors/ramps.js';
+import { fmtTemp, fmtSpeed, fmtPressure } from '../units.js';
 
-// Legend min/max shown in °F (display edge only — ramp stops above stay °C).
-const TEMP_MIN_F = Math.round(TEMP_RAMP_MIN * 9 / 5 + 32);
-const TEMP_MAX_F = Math.round(TEMP_RAMP_MAX * 9 / 5 + 32);
+// The LUT/ramp domain stays SI (°C, m/s, mb); conversion to the user's
+// display-unit preference happens at the legend/hover edge via src/units.ts.
 const TEMP_RAMP: RampDef = {
-  stops: TEMP_RAMP_STOPS, min: TEMP_RAMP_MIN, max: TEMP_RAMP_MAX, unit: "°F",
-  minLabel: `${TEMP_MIN_F}°F`, maxLabel: `${TEMP_MAX_F}+°F`,
+  stops: TEMP_RAMP_STOPS, min: TEMP_RAMP_MIN, max: TEMP_RAMP_MAX, fmt: fmtTemp,
 };
-// °F primary, °C in parens — both rounded. Used by temp and dew point (same
-// °C domain, same formatting).
-const fmtTempF = (v: number) => `${Math.round(v * 9 / 5 + 32)}°F (${Math.round(v)}°C)`;
 
-// m/s -> ft/s at the display edge only; the LUT/ramp domain stays m/s.
-const MS_TO_FTS = 3.28084;
-const WEATHER_WIND_MAX_FTS = Math.round(WEATHER_WIND_RAMP_MAX * MS_TO_FTS);
 const WIND_RAMP: RampDef = {
-  stops: WEATHER_WIND_RAMP_STOPS, min: WEATHER_WIND_RAMP_MIN, max: WEATHER_WIND_RAMP_MAX,
-  unit: "ft/s", minLabel: "0 ft/s", maxLabel: `${WEATHER_WIND_MAX_FTS}+ ft/s`,
+  stops: WEATHER_WIND_RAMP_STOPS, min: WEATHER_WIND_RAMP_MIN, max: WEATHER_WIND_RAMP_MAX, fmt: fmtSpeed,
 };
-// No parenthetical m/s per product spec — ft/s only.
-const fmtFtS = (v: number) => `${Math.round(v * MS_TO_FTS)} ft/s`;
 
 const RH_RAMP: RampDef = {
   stops: WEATHER_RH_RAMP_STOPS, min: WEATHER_RH_RAMP_MIN, max: WEATHER_RH_RAMP_MAX,
-  unit: "%", minLabel: "0%", maxLabel: "100%",
+  minLabel: "0%", maxLabel: "100%",
 };
 const CLOUD_RAMP: RampDef = {
   stops: WEATHER_CLOUD_RAMP_STOPS, min: WEATHER_CLOUD_RAMP_MIN, max: WEATHER_CLOUD_RAMP_MAX,
-  unit: "%", minLabel: "0%", maxLabel: "100%",
+  minLabel: "0%", maxLabel: "100%",
 };
 const fmtPct = (v: number) => `${Math.round(v)}%`;
 
 const PRESSURE_RAMP: RampDef = {
   stops: WEATHER_PRESSURE_RAMP_STOPS, min: WEATHER_PRESSURE_RAMP_MIN, max: WEATHER_PRESSURE_RAMP_MAX,
-  unit: "mb", minLabel: "960 mb", maxLabel: "1050+ mb",
+  fmt: fmtPressure,
 };
-const fmtMb = (v: number) => `${Math.round(v)} mb`;
 
 // Weather Forecast dropdown entries, in dropdown order. Each carries its own
 // color ramp (SI-unit domain, matching the .i16 LUT baked by
@@ -62,15 +51,15 @@ export const WEATHER_VARIABLES: {
   id: string; label: string; urlCode: string; ramp: RampDef; format: (v: number) => string;
   file?: string; noWash?: boolean;
 }[] = [
-  { id: "tempwind", label: "Temp & Wind",  urlCode: "tw", ramp: TEMP_RAMP,    format: fmtTempF, file: "temp" },
-  { id: "temp",     label: "Temperature",  urlCode: "t", ramp: TEMP_RAMP,     format: fmtTempF },
-  { id: "wind",     label: "Wind",         urlCode: "w", ramp: WIND_RAMP,     format: fmtFtS },
-  { id: "windstream", label: "Windstream", urlCode: "ws", ramp: WIND_RAMP,    format: fmtFtS, file: "wind", noWash: true },
-  { id: "gust",     label: "Wind Gust",    urlCode: "g", ramp: WIND_RAMP,     format: fmtFtS },
+  { id: "tempwind", label: "Temp & Wind",  urlCode: "tw", ramp: TEMP_RAMP,    format: fmtTemp, file: "temp" },
+  { id: "temp",     label: "Temperature",  urlCode: "t", ramp: TEMP_RAMP,     format: fmtTemp },
+  { id: "wind",     label: "Wind",         urlCode: "w", ramp: WIND_RAMP,     format: fmtSpeed },
+  { id: "windstream", label: "Windstream", urlCode: "ws", ramp: WIND_RAMP,    format: fmtSpeed, file: "wind", noWash: true },
+  { id: "gust",     label: "Wind Gust",    urlCode: "g", ramp: WIND_RAMP,     format: fmtSpeed },
   { id: "rh",       label: "Humidity",     urlCode: "h", ramp: RH_RAMP,       format: fmtPct },
-  { id: "dewpoint", label: "Dew Point",    urlCode: "d", ramp: TEMP_RAMP,     format: fmtTempF },
+  { id: "dewpoint", label: "Dew Point",    urlCode: "d", ramp: TEMP_RAMP,     format: fmtTemp },
   { id: "cloud",    label: "Cloud Cover",  urlCode: "c", ramp: CLOUD_RAMP,    format: fmtPct },
-  { id: "pressure", label: "Pressure",     urlCode: "p", ramp: PRESSURE_RAMP, format: fmtMb },
+  { id: "pressure", label: "Pressure",     urlCode: "p", ramp: PRESSURE_RAMP, format: fmtPressure },
 ];
 
 export const conditionLayers: LayerDef[] = [

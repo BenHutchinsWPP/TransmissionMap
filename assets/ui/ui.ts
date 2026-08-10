@@ -26,8 +26,11 @@ import { wireFeatureSearch } from './ui-search.js';
 import { wireGeocoder } from './ui-geocoder.js';
 import { wireOpenWith } from './ui-openwith.js';
 import { readUrlState } from '../url-state.js';
-import { emit } from '../state-bus.js';
+import { emit, on } from '../state-bus.js';
+import { loadUnits } from '../units-store.js';
 import { renderMyDataTab } from '../user-data/user-data.js';
+import { clearFeatureInfo } from '../user-data/user-data-geom.js';
+import { updateMeasureReadout } from '../measure.js';
 import { buildLayersPanel } from './ui-layer-rows.js';
 import { wireMenubar } from './ui-menubar.js';
 import { wireMyData } from './ui-mydata.js';
@@ -62,6 +65,7 @@ function resetLayerState() {
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 export function init() {
+  loadUnits();
   resetLayerState();
   state.yearFilter.min  = YEAR_FILTER_MIN;
   state.yearFilter.max  = YEAR_FILTER_MAX;
@@ -235,8 +239,7 @@ function wireUI() {
   wireSourceButtons();
   wireDownloadMenus();
   wirePanelToggle();
-  wireCreditsDialog();
-  wireDiagnosticsDialog();
+  wireDialogs();
   wireFileMenuBadge();
   wireDisclaimerDialog();
   wireCollapseToggles();
@@ -248,6 +251,7 @@ function wireUI() {
   wireWeatherVarSelect();
   wireYearFilter();
   wireResetLayers();
+  wireUnitsChanged();
 
   wireFeatureSearch();
   wireGeocoder();
@@ -373,36 +377,49 @@ function wirePanelToggle() {
   }
 }
 
-function wireCreditsDialog() {
-  const infoBtn       = document.getElementById("infoButton");
-  const creditsDialog = document.getElementById("creditsDialog") as HTMLDialogElement | null;
-  const closeCredits  = document.getElementById("closeCredits");
+// Close button + backdrop click for each modal. Diagnostics and Settings are
+// opened from ui-menubar.ts's lazy imports, so this module wires only their
+// chrome and never pulls in either chunk itself.
+function wireDialogs() {
+  for (const [dialogId, closeId] of [
+    ["creditsDialog", "closeCredits"],
+    ["diagnosticsDialog", "closeDiagnostics"],
+    ["settingsDialog", "closeSettings"],
+  ]) {
+    const dialog = document.getElementById(dialogId) as HTMLDialogElement | null;
+    if (!dialog) continue;
+    document.getElementById(closeId)?.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+  }
 
-  if (infoBtn && creditsDialog) {
-    infoBtn.addEventListener("click", () => {
-      clearCreditHighlight();
-      creditsDialog.showModal();
-    });
-  }
-  if (closeCredits && creditsDialog) {
-    closeCredits.addEventListener("click", () => creditsDialog.close());
-  }
-  if (creditsDialog) {
-    creditsDialog.addEventListener("click", (e) => {
-      if (e.target === creditsDialog) creditsDialog.close();
-    });
-    creditsDialog.addEventListener("close", clearCreditHighlight);
-  }
+  // Credits alone has an open trigger here (the others live in the menubar) and
+  // clears its highlight on the way in and out.
+  const credits = document.getElementById("creditsDialog") as HTMLDialogElement | null;
+  if (!credits) return;
+  document.getElementById("infoButton")?.addEventListener("click", () => {
+    clearCreditHighlight();
+    credits.showModal();
+  });
+  credits.addEventListener("close", clearCreditHighlight);
 }
 
-// Diagnostics dialog close/backdrop — the open trigger (File > Diagnostics…)
-// lives in ui-menubar.ts's lazy import so this module never pulls in the
-// probe catalogue itself.
-function wireDiagnosticsDialog() {
-  const dialog = document.getElementById("diagnosticsDialog") as HTMLDialogElement | null;
-  if (!dialog) return;
-  document.getElementById("closeDiagnostics")?.addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+// A display-unit change re-renders every unit-bearing string that's already
+// on screen. Subscribed once here — not in measure.ts or user-data-geom.ts —
+// because both of those modules write #featureInfo and a second subscriber
+// per module would race to own the same DOM node. Legend ramp end labels
+// (RampDef.fmt) come from buildLegends(); a rendered popup's HTML is a
+// static string baked with the old units and has no stored feature to
+// re-render from, so it's dismissed rather than reformatted.
+function wireUnitsChanged() {
+  on('units:changed', () => {
+    buildLegends();
+    state.popup?.remove();
+    // An active measurement owns #featureInfo and can be recomputed from
+    // state.measure.points, so it repaints; a finished one would otherwise
+    // keep its line on the map with no distance beside it.
+    if (state.measure.active) updateMeasureReadout();
+    else clearFeatureInfo();
+  });
 }
 
 // A quiet dot on the File menu button once a real runtime error has been

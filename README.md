@@ -2,7 +2,7 @@
 
 Interactive map of US electric transmission infrastructure — lines, substations, generators, pipelines, renewable resources, and land constraints. For educational and informational use only; do not rely on for operational, safety, or regulatory decisions.
 
-⚡ Live: **[TransmissionMap](https://benhutchinswpp.github.io/TransmissionMap/)**
+⚡ Live: **[TransmissionMap](https://www.wpptx.org/)**
 
 ---
 
@@ -47,8 +47,9 @@ Read in this order if you're new:
 | 5 | [docs/adding-a-layer.md](docs/adding-a-layer.md) | How to add a new map layer (frontend wiring) |
 | 6 | [docs/adding-a-filter.md](docs/adding-a-filter.md) | How to add a layer filter (legend chips or range) |
 | 7 | [docs/url-state.md](docs/url-state.md) | How shareable map links are encoded; adding a URL param |
-| 8 | [docs/release-artifacts.md](docs/release-artifacts.md) | File inventory for the current build |
-| 9 | [docs/network-allowlist.md](docs/network-allowlist.md) | Hosts to whitelist — for IT/security review |
+| 8 | [docs/settings.md](docs/settings.md) | Display-unit preferences and how formatted values reach the map |
+| 9 | [docs/release-artifacts.md](docs/release-artifacts.md) | File inventory for the current build |
+| 10 | [docs/network-allowlist.md](docs/network-allowlist.md) | Hosts to whitelist — for IT/security review |
 
 ---
 

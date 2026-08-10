@@ -1,11 +1,13 @@
 // ─── Raster LUT hover probes (wind/solar/geo/pop-density) ────────────────────
 // Imported by: layer-init.ts (ensureRasterLut in addAllLayers),
 //              visibility.ts (setLayerVisibility, updateRasterArrow)
+// Depends on: src/units.ts (fmtSpeed, fmtDensity)
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
 import { state, DATA, weatherLiveUrl } from './state.js';
 import type { RasterMeta } from '../src/types.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
+import { fmtSpeed, fmtDensity } from '../src/units.js';
 
 // Currently-selected weather variable's display config (ramp + formatter).
 // Falls back to the first entry if state.weatherVar is ever unset/unknown,
@@ -65,12 +67,12 @@ export const RASTER_PROBES: Record<string, {
   // aren't a registry layer of their own (the Temp & Wind companion probe).
   active?: () => boolean;
   // Skip the name prefix in the multi-line bubble — for readouts whose units
-  // already identify them (the weather °F / ft/s lines).
+  // already identify them (the weather temperature / wind lines).
   noBubbleName?: boolean;
 }> = {
   "nlr-wind-100m": {
     lut: () => DATA.nlr_wind_100m_lut, meta: () => DATA.nlr_wind_100m_lut_meta,
-    label: "Wind 100 m", readout: (v) => `${v.toFixed(1)} m/s`,
+    label: "Wind 100 m", readout: (v) => fmtSpeed(v),
   },
   "gsa-solar-pvout": {
     lut: () => DATA.gsa_solar_pvout_lut, meta: () => DATA.gsa_solar_pvout_lut_meta,
@@ -109,7 +111,7 @@ export const RASTER_PROBES: Record<string, {
   },
   "worldpop-pop-density": {
     lut: () => DATA.worldpop_pop_density_lut, meta: () => DATA.worldpop_pop_density_lut_meta,
-    label: "Pop. density", readout: (v) => `${Math.round(v).toLocaleString()} ppl/km²`,
+    label: "Pop. density", readout: (v) => fmtDensity(v),
   },
 };
 

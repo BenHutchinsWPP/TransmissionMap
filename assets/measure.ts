@@ -1,11 +1,12 @@
 // ─── Measure tool ─────────────────────────────────────────────────────────────
 // Deps: state.js, user-data-geom.js (geom/info), tool-mode.js (exit edit mode
-// without importing user-data-draw → avoids a circular dep).
+// without importing user-data-draw → avoids a circular dep), src/units.js (format distance).
 
 import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { state } from './state.js';
 import { haversineMeters, clearFeatureInfo } from './user-data/user-data-geom.js';
 import { exitEdit, registerMeasureDeactivator } from './tool-mode.js';
+import { fmtDistance } from '../src/units.js';
 
 const MEASURE_EMPTY = { type: 'FeatureCollection' as const, features: [] as GeoJSON.Feature[] };
 
@@ -64,14 +65,14 @@ function renderMeasure(hover?: [number, number]) {
   updateMeasureReadout(hover);
 }
 
-function updateMeasureReadout(hover?: [number, number]) {
+export function updateMeasureReadout(hover?: [number, number]) {
   const el = document.getElementById('featureInfo');
   if (!el) return;
   if (!state.measure.points.length) {
     el.textContent = '📏 Click map to start measuring';
   } else {
     const m = measureTotalMeters(state.measure.finished ? null : hover);
-    el.textContent = `📏 ${(m / 1609.344).toFixed(2)} mi · ${(m / 1000).toFixed(2)} km`;
+    el.textContent = `📏 ${fmtDistance(m)}`;
   }
   el.hidden = false;
 }

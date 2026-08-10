@@ -36,7 +36,7 @@ No GeoJSON/CSV — this is a continuous raster with no feature attributes.
 - **Clip:** `gdalwarp` clips to the North America bounding box (170°W–50°W, 5°N–72°N)
 - **Log transform:** `gdal_calc` computes `log10(1 + ppl/km²)` so the full 5-order-of-magnitude range (sparse rural → dense urban) is visible in color; NoData / 0 values → 0 (transparent)
 - **Color tiles:** `gdaldem color-relief` applies `scripts/pop_density_color_ramp.txt` to the log-transformed raster; baked RGBA → web-mercator reproject → MBTiles → PMTiles
-- **Hover LUT:** 0.1° coarse grid with raw Int16 ppl/km² values (scale=1); sampled on mousemove to drive the legend arrow readout
+- **Hover LUT:** 0.1° coarse grid with raw Int16 ppl/km² values (scale=1); sampled on mousemove to drive the legend readout, converted to ppl/mi² unless the area preference is metric (see [settings.md](../settings.md))
 - **Download artifact:** 0.02° (~2 km) averaged COG with real float ppl/km² values
 
 ## Color Scale

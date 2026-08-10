@@ -28,6 +28,7 @@
             <button class="menu-item" data-action="save-geojson" type="button">Save as GeoJSON…</button>
             <button class="menu-item" data-action="save-kml" type="button">Save as KML…</button>
             <button class="menu-item" data-action="toggle-legends" type="button">Hide legends</button>
+            <button class="menu-item" data-action="open-settings" type="button">Settings…</button>
             <button class="menu-item" data-action="open-diagnostics" type="button">Diagnostics…</button>
           </div>
           <!-- After the dropdown, not between it and the button: ui-menubar.ts
@@ -670,6 +671,17 @@
         <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/" target="_blank" rel="noopener">Esri Geocoding</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
       </ul>
       <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>
+    </div>
+  </dialog>
+
+  <!-- Settings dialog (display units) — content built by ui-settings.ts -->
+  <dialog class="credits-dialog" id="settingsDialog">
+    <div class="credits-content">
+      <div class="credits-header">
+        <h2>Settings</h2>
+        <button id="closeSettings" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="settingsBody"></div>
     </div>
   </dialog>
 

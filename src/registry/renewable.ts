@@ -5,6 +5,7 @@ import {
   GEO_RAMP_STOPS, GEO_RAMP_MAX,
 } from '../colors/ramps.js';
 import type { LayerDef } from '../types.js';
+import { fmtSpeed } from '../units.js';
 
 export const renewableLayers: LayerDef[] = [
   {
@@ -14,7 +15,7 @@ export const renewableLayers: LayerDef[] = [
     group:         "renewable",
     sourceId:      "nlr-wind",
     swatch:        `rgb(${WIND_RAMP_STOPS[2][1]})`,
-    ramp:          { stops: WIND_RAMP_STOPS, max: WIND_RAMP_MAX, unit: "m/s" },
+    ramp:          { stops: WIND_RAMP_STOPS, max: WIND_RAMP_MAX, minLabel: "0.0", fmt: fmtSpeed },
     defaultOn:     false,
     mapLayerIds:   ["nlr-wind-100m"],
     downloads: {

@@ -133,11 +133,13 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `rasterLayer: true` | Marks as a raster (skips vector visibility logic) |
 | `filterType: "kv"\|"fuel_osm"\|"fuel_eia"\|"pipeline_type"` | Enables a filter chip panel |
 | `filterField: "nominal_kv"` | Which feature property the filter reads |
-| `ramp: { stops, max, unit, minLabel?, maxLabel? }` | Inline color-ramp legend in the panel row |
+| `ramp: { stops, max, unit, minLabel?, maxLabel?, fmt? }` | Inline color-ramp legend in the panel row |
 | `hoverField: "name"` | Polygon highlight on click — set to the feature property used to match the active feature |
 | `lineHighlightKeys: ["name"]` | Line click-highlight — set to one or more feature properties that uniquely identify a line |
 
 **Ramp stops** are `[value, "r,g,b"]` pairs matching the gdaldem color ramp — define them as `<X>_RAMP_STOPS` / `<X>_RAMP_MAX` in `src/colors/ramps.ts` and reference them here (see **§3R**). `minLabel`/`maxLabel` override the default "0" / `max+ unit` labels.
+
+If the ramp's unit follows the user's display-unit preference (temperature, speed, distance, area, elevation, pressure), give it `fmt` instead of `unit`/`maxLabel` — a formatter from `src/units.ts`, e.g. `fmt: fmtSpeed`. A ramp in a fixed unit (kWh/kWp, mW/m², g) keeps `unit`. It renders both ends, so they can't disagree, and it re-runs on every legend build so a preference change is picked up. `minLabel` still wins at the bottom end when a bare "0" reads better. See [settings.md](settings.md).
 
 Anchor: `>>> ADD-LAYER: layer-sources`
 Anchor: `>>> ADD-LAYER: layer-registry`

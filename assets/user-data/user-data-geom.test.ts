@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { collectCoords, coordsBounds, haversineMeters } from './user-data-geom.js';
+import { setUnits, DEFAULT_UNITS } from '../../src/units.js';
+
+beforeEach(() => setUnits(DEFAULT_UNITS));
 
 describe('collectCoords', () => {
   it('returns [] for null/empty', () => {

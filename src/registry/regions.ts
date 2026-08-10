@@ -1,6 +1,7 @@
 // Layer registry entries — regions, load context, and test layers.
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
 import type { LayerDef } from '../types.js';
+import { convDensity, densityLabel } from '../units.js';
 
 export const regionLayers: LayerDef[] = [
   // ── Load context ─────────────────────────────────────────────────────────────
@@ -32,8 +33,15 @@ export const regionLayers: LayerDef[] = [
     group:         "load",
     sourceId:      "worldpop",
     swatch:        `rgb(${POP_RAMP_STOPS[2][1]})`,
-    ramp:          { stops: POP_RAMP_STOPS, max: POP_LOG_MAX, unit: "",
-                     minLabel: "0", maxLabel: "10k+ ppl/km²" },
+    ramp:          {
+      stops: POP_RAMP_STOPS, max: POP_LOG_MAX, minLabel: "0",
+      // Stops are log10(1+x) transformed for tiling, so the label leaves log
+      // space before converting. Rounded to the nearest thousand in display
+      // units — POP_LOG_MAX is itself an approximate clamp, so the label
+      // carries no more precision than the ramp does.
+      fmt: (v, mark = "") =>
+        `${(Math.round(convDensity(10 ** v - 1) / 1000) * 1000).toLocaleString()}${mark} ${densityLabel()}`,
+    },
     defaultOn:     false,
     mapLayerIds:   ["worldpop-pop-density"],
     downloads: {

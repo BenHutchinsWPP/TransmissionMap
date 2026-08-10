@@ -2,6 +2,11 @@
 // Live-feed age/degraded-feed status text (downFor, feedIssue, fmtAgeShort)
 // comes from ../live-staleness.js, which owns those helpers so they can be
 // shared with other live-feed displays.
+// rampLegendHtml() renders a ramp's end labels from the RampDef's own `fmt`
+// when it has one (a formatter from src/units.ts), so a ramp in a convertible
+// unit re-renders in the user's preference on each buildLegends() — which
+// ui.ts triggers from the 'units:changed' bus event. Covered by
+// ui-legends.test.ts.
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -106,13 +111,15 @@ export function legendAllIds(cfg: LegendFilter) {
 // Continuous color-ramp legend HTML
 export function rampLegendHtml(entry: { id: string; ramp?: RampDef }) {
   if (!entry.ramp) return "";
-  const { stops, min = 0, max, unit, minLabel, maxLabel } = entry.ramp;
+  const { stops, min = 0, max, unit, minLabel, maxLabel, fmt } = entry.ramp;
   const css = stops
     .map(([v, rgb]: (number | string)[]) =>
       `rgb(${rgb}) ${Math.round((((v as number) - min) / (max - min)) * 100)}%`)
     .join(", ");
-  const minStr = minLabel ?? String(min);
-  const maxStr = maxLabel ?? `${max}+ ${escapeHtml(unit ?? "")}`;
+  // minLabel still wins at the bottom end: a ramp starting at zero reads better
+  // bare than with a unit repeated from the other end.
+  const minStr = minLabel ?? (fmt ? escapeHtml(fmt(min)) : String(min));
+  const maxStr = fmt ? escapeHtml(fmt(max, "+")) : (maxLabel ?? `${max}+ ${escapeHtml(unit ?? "")}`);
   return `
     <div class="ramp-legend">
       <span class="ramp-min">${minStr}</span>

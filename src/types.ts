@@ -17,6 +17,10 @@ export interface RampDef {
   unit?: string;
   minLabel?: string;
   maxLabel?: string;
+  // Formats both legend end labels, so a ramp whose unit follows the user's
+  // preference states that unit once. Called per render, so it picks up a
+  // preference change; the top end gets "+" to mark the clamp.
+  fmt?: (v: number, mark?: string) => string;
 }
 
 export interface BucketDef {

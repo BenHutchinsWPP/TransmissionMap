@@ -5,7 +5,8 @@
 // Deps: state.js, user-data-colors.js (static — lightweight, needed at wire time).
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
 // ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
-// first File > Diagnostics… click). Consumed by ui.ts (wireUI).
+// first File > Diagnostics… click). ui-settings.js (lazy — Settings dialog,
+// loaded on first File > Settings… click). Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
 import { colorPickerInner } from '../user-data/user-data-colors.js';
@@ -62,6 +63,13 @@ async function onMenubarClick(e: MouseEvent) {
     if (menuItem.dataset.action === 'open-diagnostics') {
       const m = await import('./ui-diagnostics.js');
       m.openDiagnostics();
+      return;
+    }
+    // Same reasoning again: Settings is its own lazy chunk (ui-settings.js)
+    // and must not drag in the draw chunk either.
+    if (menuItem.dataset.action === 'open-settings') {
+      const m = await import('./ui-settings.js');
+      m.openSettings();
       return;
     }
     const d = await draw();

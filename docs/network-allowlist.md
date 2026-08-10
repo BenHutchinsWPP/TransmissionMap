@@ -6,7 +6,7 @@ confidential data. Everything shown comes from public sources (see
 of scripts, executables, or installers beyond what the browser loads to
 render the page. Maintained by Ben Hutchins, Western Power Pool.
 
-Live: **https://benhutchinswpp.github.io/TransmissionMap/**
+Live: **https://www.wpptx.org/**
 
 **Traffic profile:** all requests are outbound HTTPS (port 443) GETs. No
 cookies, no authentication, no WebSockets. The only user-entered data that
@@ -19,15 +19,15 @@ The app fails to load or shows no data without these.
 
 | Host | Why | If blocked |
 |---|---|---|
-| `benhutchinswpp.github.io` | The app itself (GitHub Pages) | Page doesn't load at all |
+| `www.wpptx.org` | The app itself (GitHub Pages) | Page doesn't load at all |
 | `raw.githubusercontent.com` | All map data + live feeds (wildfire, NWS alerts, outages, weather) + GeoJSON/CSV download packs, served from the repo's `data-static` and `data` branches | Basemap renders but every data layer is empty; stale-data warnings appear |
 | `tiles.openfreemap.org` | Default basemap: Light/Dark/Hydro vector tiles, map label fonts, icons; also the road/place/boundary overlay drawn over Aerial | Gray/blank background on Light, Dark and Hydro; all map text missing; Aerial shows imagery with no roads or place names |
 | `geocode-api.arcgis.com` | Search box (place/address lookup) | Place search silently returns nothing |
 
 ## Optional
 
-Only needed for specific basemap toggles or overlay layers — the app runs
-without these, those features just won't load.
+Only needed for specific basemap toggles, overlay layers, or older shared
+links — the app runs without these, those features just won't load.
 
 | Host | Feature |
 |---|---|
@@ -37,6 +37,7 @@ without these, those features just won't load.
 | `mesonet.agron.iastate.edu` | US radar overlay |
 | `geo.weather.gc.ca` | Canadian radar overlay |
 | `elevation-tiles-prod.s3.amazonaws.com` | 3D Terrain and Hillshade toggles (elevation tiles) |
+| `benhutchinswpp.github.io` | Opening a link shared before the move to `www.wpptx.org` — GitHub Pages redirects it, keeping the path and map state |
 
 ## Click-through links (app works without them)
 
