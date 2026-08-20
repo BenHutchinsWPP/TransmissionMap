@@ -166,6 +166,10 @@ layers:
     doc: docs/layers/hifld-regions.md
     shp: data/build/control_areas.gpkg
 
+  eia-ba:
+    doc: docs/layers/eia-ba.md
+    shp: data/build/eia_ba.gpkg
+
   retail-territories:
     doc: docs/layers/hifld-regions.md
     shp: data/build/retail_territories.gpkg

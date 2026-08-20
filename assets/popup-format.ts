@@ -8,7 +8,7 @@
 import { escapeHtml } from './utils/utils.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
-import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt } from '../src/units.js';
+import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -357,6 +357,10 @@ const _defs = [
     row("Code", p.code) +
     websiteRow(p.website as string)],
   [["ba-fill"], renderBa],
+  [["eiaba-fill"], (p: Record<string, unknown>) =>
+    title((p.name as string) || "Balancing Authority") +
+    row("Abbreviation", p.abbrev) +
+    row("Area", p.area_sqmi ? fmtArea(Number(p.area_sqmi) * 2589988.11) : null)],
   [["retail-fill"], renderRetail],
   [["wildfire-incidents-circle"], (p: Record<string, unknown>) => {
     const typeCat = p.type_cat as string | null;

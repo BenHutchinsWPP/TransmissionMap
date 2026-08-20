@@ -69,7 +69,7 @@ Layers that show where land-use constraints affect transmission siting.
 
 Administrative and operational boundaries for understanding grid organization.
 
-**HIFLD regions** ([hifld-regions](hifld-regions.md)) covers NERC reliability regions, balancing-authority / control areas, and retail electricity territories — the three boundary sets that define how the US grid is operated and regulated.
+**HIFLD regions** ([hifld-regions](hifld-regions.md)) covers NERC reliability regions, balancing-authority / control areas, and retail electricity territories — the three boundary sets that define how the US grid is operated and regulated. **EIA Balancing Authorities** ([eia-ba](eia-ba.md)) provides an independent dataset of US balancing-authority boundaries with annual net generation — coexists with HIFLD control areas from a different source and vintage, useful for comparing boundary interpretations or as an alternative for workflows that prefer EIA's generalization.
 
 ---
 

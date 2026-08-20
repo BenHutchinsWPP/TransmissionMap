@@ -35,6 +35,7 @@ const SEARCH_SOURCES = [
   { sourceId: "railroads",       sourceLayer: "railroads",      label: "Railroad",           fields: ["RROWNER1", "SUBDIV", "BRANCH"], layerId: "railroads" },
   { sourceId: "nerc-regions",    sourceLayer: null,             label: "NERC Region",        fields: ["region", "sub_nm", "code", "state"] },
   { sourceId: "control-areas",   sourceLayer: null,             label: "Balancing Authority", fields: ["name", "state"] },
+  { sourceId: "eia-ba",          sourceLayer: null,             label: "EIA Balancing Authority", fields: ["name", "abbrev"] },
   { sourceId: "retail-territories", sourceLayer: "retail_territories", label: "Retail Territory", fields: ["name", "state"] },
   { sourceId: "padus",          sourceLayer: "padus",          label: "Protected Land",     fields: ["name", "desig", "mng_agency", "state"] },
   { sourceId: "tribal-lands",   sourceLayer: null,             label: "Tribal (Census)",      fields: ["name"] },

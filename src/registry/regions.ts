@@ -81,6 +81,21 @@ export const regionLayers: LayerDef[] = [
     },
   },
   {
+    id:           "eia-ba",
+    urlCode:      "EBA",
+    label:        "EIA Balancing Authorities",
+    group:        "regions",
+    sourceId:     "eia-ba",
+    swatch:       "#14b8a6",
+    defaultOn:    false,
+    hoverField:   "name",
+    mapLayerIds:  ["eiaba-fill", "eiaba-outline", "eiaba-label"],
+    downloads: {
+      geojson: "data/releases/eia-ba.zip",
+      shp: "data/releases/eia-ba-shp.zip",
+    },
+  },
+  {
     id:           "retail-territories",
     urlCode:      "RTL",
     label:        "HIFLD Retail Territories",

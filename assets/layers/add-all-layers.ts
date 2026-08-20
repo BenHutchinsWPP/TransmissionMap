@@ -17,7 +17,7 @@ import {
   addOGFPlannedTransmission, addRetailTerritories,
 } from './map-layers-hifld.js';
 import { addWindResource, addSolarResource, addGeoResource, addGeoHydroPts, addBoemWindLeases } from './map-layers-renewable.js';
-import { addEiaGenerators } from './map-layers-eia.js';
+import { addEiaGenerators, addEiaBalancingAuthorities } from './map-layers-eia.js';
 import { addPopDensity, addOsmDataCenters } from './map-layers-load.js';
 import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
@@ -40,6 +40,7 @@ export function addAllLayers() {
   addWildfireHazard();  // raster — sits low so vector infra draws on top
 
   addRetailTerritories();
+  addEiaBalancingAuthorities();
   addControlAreas();
   addNercRegions();
 

@@ -50,6 +50,7 @@ export const DATA = {
   wecc_path_lines:    DATA_ORIGIN + "data/layers/wecc_path_lines.geojson.gz", // OSM/HIFLD lines matched to each WECC path (click-highlight)
   nerc_regions:       DATA_ORIGIN + "data/layers/nerc_regions.geojson.gz",
   control_areas:      DATA_ORIGIN + "data/layers/control_areas.geojson.gz",
+  eia_ba:             DATA_ORIGIN + "data/layers/eia_ba.geojson.gz",
   retail_territories: DATA_ORIGIN + "data/layers/retail_territories.pmtiles",
   nlr_wind_100m:          DATA_ORIGIN + "data/layers/nlr_wind_100m.pmtiles",          // NREL/NLR WIND Toolkit raster (baked color)
   nlr_wind_100m_lut:      DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.i16",          // Int16 m/s*100 grid for hover readout
@@ -140,6 +141,7 @@ export const SOURCE_ATTRIB: Record<string, string> = {
   "hifld-transmission-lines": '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
   "hifld-substations":        '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
   "nerc-regions":             '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
+  "eia-ba":                   '<a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33">EIA</a>',
   "control-areas":            '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
   "retail-territories":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
   "hifld-natgas-lines":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>',

@@ -134,6 +134,16 @@ layers:
     precision: 5
     simplify: 0.005
 
+  # 85 features — EIA Balancing Authorities; same rationale as nerc/control_areas.
+  # simplify stays at 0.001: coarser settings collapse a small PJM ring below
+  # four points, and an invalid ring renders as torn fill fragments.
+  - id: eia_ba
+    src: data/build/eia_ba.gpkg
+    format: geojson
+    select: [name, abbrev, area_sqmi, color]
+    precision: 5
+    simplify: 0.001
+
   - id: retail_territories
     src: data/build/retail_territories.gpkg
     format: pmtiles

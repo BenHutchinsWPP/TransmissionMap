@@ -4,7 +4,7 @@ import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { EIA_GEN_ICON, genIconSize } from '../../src/colors/fuel.js';
 import { HEAT_MW_STOPS, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
-import { initialVisibility, registerBaseFilter, genPlantTextLayout, GEN_PLANT_TEXT_PAINT } from './layer-init.js';
+import { initialVisibility, registerBaseFilter, genPlantTextLayout, GEN_PLANT_TEXT_PAINT, addPolygonLayer } from './layer-init.js';
 
 export function addEiaGenerators() {
   if (!state.map || state.map.getSource("eia-generators")) return;
@@ -44,4 +44,40 @@ export function addEiaGenerators() {
     },
   } as unknown as LayerSpecification, "eia-gen-circles");
   registerBaseFilter("eia-gen-heat", null);
+}
+
+export function addEiaBalancingAuthorities() {
+  // Each balancing authority carries its own hex fill from the extract
+  // (golden-ratio hue sequence — see scripts/extract_eia_ba.py).
+  const EIA_BA_COLOR = ["coalesce", ["get", "color"], "#14b8a6"] as unknown as ExpressionSpecification;
+
+  addPolygonLayer({
+    sourceId: "eia-ba", source: { type: "geojson", data: EMPTY_FC },
+    prefix: "eiaba", color: EIA_BA_COLOR,
+    fillMinzoom: 2, fillOpacity: 0.22,
+    outlineMinzoom: 2,
+    outlineWidth: ["interpolate", ["linear"], ["zoom"], 2, 0.8, 5, 1.3, 8, 2.0],
+    outlineOpacity: ["case", ["boolean", ["feature-state", "hover"], false], 0.90, 0.70],
+  });
+
+  if (!state.map || state.map.getLayer("eiaba-label")) return;
+  const vis = initialVisibility("eia-ba");
+  state.map.addLayer({
+    id: "eiaba-label", type: "symbol", source: "eia-ba",
+    minzoom: 4, layout: {
+      visibility: vis,
+      "text-field": ["get", "abbrev"],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 4, 8, 7, 11, 10, 13],
+      "text-max-width": 8,
+      "text-allow-overlap": false,
+    },
+    paint: {
+      "text-color": "#1e293b",
+      "text-halo-color": "rgba(255,255,255,0.85)",
+      "text-halo-width": 1.2,
+      "text-opacity": 0.85,
+    },
+  } as unknown as LayerSpecification);
+  registerBaseFilter("eiaba-label", null);
 }

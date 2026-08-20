@@ -99,6 +99,9 @@ data/raw/boem_wind/
 # manual placement; see extract_westtec.py)
 data/raw/westtec/
 
+# EIA Balancing Authorities source (auto-downloaded by extract_eia_ba.py)
+data/raw/eia-ba/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

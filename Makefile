@@ -142,6 +142,9 @@ pipeline:
 	@echo "=== Region boundaries (HIFLD) ==="
 	@$(PY) $(SCRIPTS)/extract_regions.py || \
 	    echo "  [skip] regions — place parquet at data/raw/hifld/regions/ (see script header)"
+	@echo "=== Balancing Authorities (EIA) ==="
+	@$(PY) $(SCRIPTS)/extract_eia_ba.py || \
+	    echo "  [skip] eia-ba — ArcGIS download failed (see script header)"
 	@echo "=== Planned transmission (Our Grid Future) ==="
 	@$(PY) $(SCRIPTS)/extract_ogf.py || \
 	    echo "  [skip] OGF — place ZIP at data/raw/ogf/OurGridFuture_PlannedTransmissionProjects_Jun2026.zip (see script header)"

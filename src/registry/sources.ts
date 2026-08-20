@@ -36,6 +36,10 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     label: "HIFLD Balancing Authorities",
     tooltip: "Source: HIFLD balancing authority areas",
   },
+  "eia-ba": {
+    label: "EIA Balancing Authorities",
+    tooltip: "Source: U.S. EIA balancing authority areas (ArcGIS Online)",
+  },
   "hifld-retail": {
     label: "HIFLD Retail Territories",
     tooltip: "Source: HIFLD retail service territories",
