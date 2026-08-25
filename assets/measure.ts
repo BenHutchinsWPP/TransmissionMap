@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { haversineMeters, clearFeatureInfo } from './user-data/user-data-geom.js';
 import { exitEdit, registerMeasureDeactivator } from './tool-mode.js';
 import { fmtDistance } from '../src/units.js';
+import { t } from '../src/i18n/index.js';
 
 const MEASURE_EMPTY = { type: 'FeatureCollection' as const, features: [] as GeoJSON.Feature[] };
 
@@ -69,7 +70,7 @@ export function updateMeasureReadout(hover?: [number, number]) {
   const el = document.getElementById('featureInfo');
   if (!el) return;
   if (!state.measure.points.length) {
-    el.textContent = '📏 Click map to start measuring';
+    el.textContent = `📏 ${t('measure.clickToStart')}`;
   } else {
     const m = measureTotalMeters(state.measure.finished ? null : hover);
     el.textContent = `📏 ${fmtDistance(m)}`;

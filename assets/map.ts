@@ -21,7 +21,8 @@ import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibi
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
 import { writeUrlState } from './url-state.js';
-import { emit } from './state-bus.js';
+import { emit, on } from './state-bus.js';
+import { getLocale, type SupportedLocale } from '../src/i18n/index.js';
 import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState, ensureBuildingsLayer, repositionHillshade } from './terrain.js';
@@ -394,7 +395,24 @@ async function addOfmBasemaps() {
   // Covers the race where 3D Buildings was already enabled (e.g. restored
   // from the URL) before this fetch resolved — a no-op otherwise.
   ensureBuildingsLayer();
+  setMapLabelLanguage(map, getLocale());
 }
+
+export function setMapLabelLanguage(map: maplibregl.Map, locale: SupportedLocale): void {
+  const expr = locale === 'en'
+    ? ['coalesce', ['get', 'name:en'], ['get', 'name']]
+    : ['coalesce', ['get', `name:${locale}`], ['get', 'name:en'], ['get', 'name']];
+
+  for (const id of ofmLabelIds) {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'text-field', expr as unknown as maplibregl.DataDrivenPropertyValueSpecification<string>);
+    }
+  }
+}
+
+on('lang:changed', ({ locale }) => {
+  if (state.map) setMapLabelLanguage(state.map, locale);
+});
 
 // "Map Labels" checkbox. On Light/Dark/Hydro it hides the OFM text/shield
 // layers; on Aerial it hides the whole cloned overlay (roads and boundaries

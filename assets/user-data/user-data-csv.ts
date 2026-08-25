@@ -1,17 +1,18 @@
 // ─── CSV import (point data) ─────────────────────────────────────────────────
 // Parses a CSV, auto-detects lat/long columns, and shows a picker dialog so the
 // user can confirm/override before importing. Non-coordinate columns become
-// feature properties. Deps: state, utils-uid, user-data (no url-state).
+// feature properties. Deps: state, utils-uid, user-data, src/i18n (no url-state).
 
 import { ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
 import { addUserLayer } from './user-data.js';
 import { parseCSV, guessColumn, LAT_NAMES, LNG_NAMES, NAME_NAMES } from './csv-parse.js';
 import { escapeHtml } from '../utils/utils.js';
+import { t } from '../../src/i18n/index.js';
 
 export function handleCSV(file: File) {
   file.text().then(text => {
     const rows = parseCSV(text);
-    if (rows.length < 2) { alert('CSV has no data rows.'); return; }
+    if (rows.length < 2) { alert(t('csv.noDataRows')); return; }
     const headers = rows[0];
     const latGuess  = guessColumn(headers, LAT_NAMES);
     const lngGuess  = guessColumn(headers, LNG_NAMES);
@@ -56,23 +57,23 @@ function showPicker(
     .join('');
   dlg.innerHTML = `
     <div class="disclaimer-content">
-      <div class="disclaimer-header"><h2>Import CSV</h2></div>
-      <p class="disclaimer-body">${dataRows.length} data row(s). Pick coordinate columns and optionally name fields.</p>
+      <div class="disclaimer-header"><h2 data-i18n="csv.importTitle">${escapeHtml(t('csv.importTitle'))}</h2></div>
+      <p class="disclaimer-body">${escapeHtml(t('csv.rowsPrompt', { count: dataRows.length }))}</p>
       <div class="disclaimer-body" style="display:grid;grid-template-columns:auto 1fr;gap:.5rem .75rem;align-items:center">
-        <label for="csvLatSel">Latitude</label><select id="csvLatSel">${coordOpts(latGuess)}</select>
-        <label for="csvLngSel">Longitude</label><select id="csvLngSel">${coordOpts(lngGuess)}</select>
-        <label for="csvDelim">Name delimiter</label>
+        <label for="csvLatSel">${escapeHtml(t('csv.latitude'))}</label><select id="csvLatSel">${coordOpts(latGuess)}</select>
+        <label for="csvLngSel">${escapeHtml(t('csv.longitude'))}</label><select id="csvLngSel">${coordOpts(lngGuess)}</select>
+        <label for="csvDelim">${escapeHtml(t('csv.nameDelimiter'))}</label>
         <input id="csvDelim" type="text" value=" — " style="width:5rem;font-family:inherit">
       </div>
       <div class="disclaimer-body">
-        <div style="margin-bottom:.35rem;font-size:.875em;opacity:.8">Name fields <em>(optional — checked fields are joined by the delimiter above)</em></div>
+        <div style="margin-bottom:.35rem;font-size:.875em;opacity:.8">${t('csv.nameFieldsNote')}</div>
         <div style="display:flex;flex-wrap:wrap;gap:.25rem .75rem;max-height:7rem;overflow-y:auto;font-size:.875em">
           ${nameChecks}
         </div>
       </div>
       <div class="disclaimer-footer">
-        <button class="disclaimer-dismiss" id="csvCancel" type="button">Cancel</button>
-        <button class="disclaimer-accept" id="csvImport" type="button">Import</button>
+        <button class="disclaimer-dismiss" id="csvCancel" type="button">${escapeHtml(t('csv.cancel'))}</button>
+        <button class="disclaimer-accept" id="csvImport" type="button">${escapeHtml(t('csv.import'))}</button>
       </div>
     </div>`;
   document.body.appendChild(dlg);
@@ -81,17 +82,17 @@ function showPicker(
   dlg.querySelector('#csvImport')!.addEventListener('click', () => {
     const latCol  = +(dlg.querySelector('#csvLatSel') as HTMLSelectElement).value;
     const lngCol  = +(dlg.querySelector('#csvLngSel') as HTMLSelectElement).value;
-    if (latCol === lngCol) { alert('Latitude and longitude must be different columns.'); return; }
+    if (latCol === lngCol) { alert(t('csv.sameColError')); return; }
     const nameCols = [...dlg.querySelectorAll<HTMLInputElement>('input[name="csvName"]:checked')]
       .map(cb => +cb.value);
     const delimiter = (dlg.querySelector('#csvDelim') as HTMLInputElement).value;
     const { features, skipped } = buildFeatures(headers, dataRows, latCol, lngCol, nameCols, delimiter);
     cleanup();
-    if (!features.length) { alert('No valid coordinates found in the selected columns.'); return; }
+    if (!features.length) { alert(t('csv.noValidCoords')); return; }
     const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
     ensureGeoJsonFeatureUids(fc, filename);
     addUserLayer(filename, fc);
-    if (skipped) alert(`Imported ${features.length} point(s); skipped ${skipped} row(s) with invalid coordinates.`);
+    if (skipped) alert(t('csv.importSuccessSkipped', { count: features.length, skipped }));
   });
   dlg.showModal();
 }

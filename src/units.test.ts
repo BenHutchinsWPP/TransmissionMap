@@ -537,8 +537,12 @@ describe('UNIT_OPTIONS validation', () => {
     for (const key of keys) {
       expect(UNIT_OPTIONS).toHaveProperty(key);
       expect(UNIT_OPTIONS[key]).toHaveProperty('label');
+      expect(UNIT_OPTIONS[key]).toHaveProperty('labelKey');
       expect(UNIT_OPTIONS[key]).toHaveProperty('options');
       expect(Array.isArray(UNIT_OPTIONS[key].options)).toBe(true);
+      for (const opt of UNIT_OPTIONS[key].options) {
+        expect(opt).toHaveProperty('optLabelKey');
+      }
     }
   });
 

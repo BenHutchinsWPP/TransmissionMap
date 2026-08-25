@@ -5,8 +5,9 @@ import { state } from './state.js';
 import { readUrlState, writeUrlState } from './url-state.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
+import { getLocale, setLocale } from '../src/i18n/index.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs', 'lang']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -39,6 +40,7 @@ beforeEach(() => {
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
   state.mapReady        = false;
   state.map             = null;
+  setLocale('en');
   history.replaceState(null, '', '#');
 });
 
@@ -71,6 +73,19 @@ describe('readUrlState – basic params', () => {
       expect(state.smokeOpacity).toBe(0.4);
     }
   );
+
+  it('parses lang=es into active locale', () => {
+    setHash('lang=es');
+    readUrlState();
+    expect(getLocale()).toBe('es');
+  });
+
+  it('ignores invalid lang parameter and preserves current locale', () => {
+    setLocale('en');
+    setHash('lang=invalid_locale');
+    readUrlState();
+    expect(getLocale()).toBe('en');
+  });
 });
 
 describe('readUrlState – layer visibility', () => {
@@ -330,6 +345,39 @@ describe('round-trip serialization', () => {
     readUrlState();
     expect(state.terrain3d).toBe(true);
     expect(state.hillshade).toBe(true);
+  });
+
+  it('omits lang when getLocale() is the default "en"', () => {
+    setLocale('en');
+    writeUrlState();
+    expect(location.hash).not.toContain('lang=');
+  });
+
+  it('round-trips a non-default lang (es) through lang=es', () => {
+    setLocale('es');
+    writeUrlState();
+    expect(location.hash).toContain('lang=es');
+    setLocale('en');
+    readUrlState();
+    expect(getLocale()).toBe('es');
+  });
+
+  it('round-trips lang=zh alongside other state parameters', () => {
+    state.basemap = 'dark';
+    state.terrain3d = true;
+    setLocale('zh');
+    writeUrlState();
+    expect(location.hash).toContain('bm=d');
+    expect(location.hash).toContain('3d=t');
+    expect(location.hash).toContain('lang=zh');
+
+    state.basemap = 'light';
+    state.terrain3d = false;
+    setLocale('en');
+    readUrlState();
+    expect(state.basemap).toBe('dark');
+    expect(state.terrain3d).toBe(true);
+    expect(getLocale()).toBe('zh');
   });
 });
 

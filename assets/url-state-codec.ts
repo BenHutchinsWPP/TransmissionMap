@@ -6,6 +6,7 @@ import { LAYERS } from '../src/registry/index.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
 import { MW_SLIDER_MAX } from './constants.js';
+import { isValidLocale } from '../src/i18n/index.js';
 
 // Build lookup maps once for fast urlCode ↔ id resolution.
 const _URLCODE_TO_ID = Object.fromEntries(
@@ -68,6 +69,7 @@ export interface UrlStateData {
   terrain3d: boolean;
   buildings3d: boolean;
   hillshade: boolean;
+  lang?: string;
 }
 
 export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
@@ -165,6 +167,10 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
   // Hillshade (2D shaded relief; off by default, only '1' persisted)
   if (params.get('hs') === '1') data.hillshade = true;
 
+  // Language
+  const lang = params.get('lang');
+  if (lang && isValidLocale(lang)) data.lang = lang;
+
   return data;
 }
 
@@ -256,6 +262,9 @@ export function formatUrlState(data: UrlStateData): string[] {
 
   // Hillshade (off by default, omitted)
   if (data.hillshade) parts.push('hs=1');
+
+  // Language (default 'en' omitted)
+  if (data.lang && data.lang !== 'en') parts.push(`lang=${encodeURIComponent(data.lang)}`);
 
   return parts;
 }

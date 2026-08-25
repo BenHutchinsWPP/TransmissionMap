@@ -5,16 +5,31 @@ import {
   renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml,
 } from './popup-format.js';
 import { setUnits, DEFAULT_UNITS } from '../src/units.js';
+import { setLocale, loadDictionary } from '../src/i18n/index.js';
 
-beforeEach(() => setUnits(DEFAULT_UNITS));
+beforeEach(() => {
+  setUnits(DEFAULT_UNITS);
+  setLocale('en');
+});
 
 // ─── row() ───────────────────────────────────────────────────────────────────
 
 describe('row', () => {
-  it('renders key-value pair', () => {
+  it('renders key-value pair with raw key fallback', () => {
     const out = row('Fuel', 'Solar');
     expect(out).toContain('Fuel');
     expect(out).toContain('Solar');
+  });
+
+  it('translates i18n key in row()', async () => {
+    setLocale('en');
+    expect(row('popup.fuel', 'Solar')).toContain('Fuel');
+
+    for (const [code, expected] of [['es', 'Combustible'], ['fr', 'Combustible'], ['de', 'Brennstoff']] as const) {
+      await loadDictionary(code);
+      setLocale(code);
+      expect(row('popup.fuel', 'Solar')).toContain(expected);
+    }
   });
 
   it('returns empty string for null', () => expect(row('X', null)).toBe(''));

@@ -51,3 +51,45 @@ describe('rampLegendHtml', () => {
       .toEqual(['-30°C', '45+°C']);
   });
 });
+
+import { buildLegends } from './ui-legends.js';
+import { setLocale, loadDictionary } from '../../src/i18n/index.js';
+import { emit } from '../state-bus.js';
+import { state } from '../state.js';
+
+describe('buildLegends i18n', () => {
+  beforeEach(() => {
+    setLocale('en');
+    document.body.innerHTML = `
+      <div id="voltageLegend">
+        <div class="legend-title"><span class="legend-title-label"></span></div>
+        <div id="voltageLegendItems"></div>
+      </div>
+      <div id="fuelLegend">
+        <div class="legend-title"><span class="legend-title-label"></span></div>
+        <div id="fuelLegendItems"></div>
+      </div>
+    `;
+    state.legendFilters.kv = new Set(['500', '345', '230']);
+    state.legendFilters.fuel = new Set(['solar', 'wind', 'coal']);
+  });
+
+  it('renders translated title in English by default', () => {
+    buildLegends();
+    const kvTitle = document.querySelector('#voltageLegend .legend-title-label');
+    expect(kvTitle?.textContent?.trim()).toBe('Voltage (kV)');
+  });
+
+  it('re-renders translated titles on lang:changed event', async () => {
+    buildLegends();
+    await loadDictionary('es');
+    setLocale('es');
+    emit('lang:changed', { locale: 'es' });
+
+    const kvTitle = document.querySelector('#voltageLegend .legend-title-label');
+    expect(kvTitle?.textContent?.trim()).toBe('Voltaje (kV)');
+
+    const fuelTitle = document.querySelector('#fuelLegend .legend-title-label');
+    expect(fuelTitle?.textContent?.trim()).toBe('Tipo de combustible');
+  });
+});

@@ -46,6 +46,7 @@ export interface LayerDef {
   id: string;
   urlCode: string;
   label: string;
+  titleKey: string;
   group: string;
   sourceId: string;
   swatch: string;

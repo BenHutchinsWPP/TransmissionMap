@@ -1,6 +1,8 @@
 // assets/state-bus.ts — typed pub/sub for coordinating state mutations.
 // Emitters write state then emit; subscribers react (apply filters, write URL).
-// No circular deps: this file imports nothing.
+// No circular deps: this file imports only types.
+
+import type { SupportedLocale } from '../src/i18n/types.js';
 
 type Events = {
   'filter:generators':    void;   // MW / fuel / year / status changed
@@ -10,6 +12,7 @@ type Events = {
   'ogf:colorby':          void;   // OGF planned-lines color-by mode changed
   'westtec:colorby':      void;   // WestTEC 10-Yr color-by mode changed
   'units:changed':        void;   // display-unit preference changed
+  'lang:changed': { locale: SupportedLocale }; // language preference changed
   'url:write':            void;   // persist current state to URL / localStorage
 };
 

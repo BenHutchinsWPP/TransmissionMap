@@ -22,14 +22,14 @@
       <!-- ── Edit menubar ──────────────────────────────────────────────────── -->
       <nav class="menubar" id="menubar">
         <div class="menu-wrap">
-          <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">File ▾</button>
+          <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.file">File</span> ▾</button>
           <div class="dropdown menu-dropdown" hidden role="menu">
-            <button class="menu-item" data-action="file-open" type="button">Open…</button>
-            <button class="menu-item" data-action="save-geojson" type="button">Save as GeoJSON…</button>
-            <button class="menu-item" data-action="save-kml" type="button">Save as KML…</button>
-            <button class="menu-item" data-action="toggle-legends" type="button">Hide legends</button>
-            <button class="menu-item" data-action="open-settings" type="button">Settings…</button>
-            <button class="menu-item" data-action="open-diagnostics" type="button">Diagnostics…</button>
+            <button class="menu-item" data-action="file-open" type="button" data-i18n="menu.fileOpen">Open…</button>
+            <button class="menu-item" data-action="save-geojson" type="button" data-i18n="menu.saveGeoJson">Save as GeoJSON…</button>
+            <button class="menu-item" data-action="save-kml" type="button" data-i18n="menu.saveKml">Save as KML…</button>
+            <button class="menu-item" data-action="toggle-legends" type="button" data-i18n="menu.hideLegends">Hide legends</button>
+            <button class="menu-item" data-action="open-settings" type="button" data-i18n="menu.settings">Settings…</button>
+            <button class="menu-item" data-action="open-diagnostics" type="button" data-i18n="menu.diagnostics">Diagnostics…</button>
           </div>
           <!-- After the dropdown, not between it and the button: ui-menubar.ts
                pairs the two by nextElementSibling/previousElementSibling.
@@ -38,18 +38,18 @@
                 aria-label="Something failed to load this session — see File ▸ Diagnostics…"></span>
         </div>
         <div class="mode-toggle" role="group" aria-label="Map mode">
-          <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button">View</button>
-          <button class="mode-btn" id="modeEditBtn" data-mode="edit" type="button">Edit</button>
+          <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button" data-i18n="menu.view">View</button>
+          <button class="mode-btn" id="modeEditBtn" data-mode="edit" type="button" data-i18n="menu.edit">Edit</button>
         </div>
         <button class="menu-btn measure-btn" id="measureBtn" type="button"
-                aria-pressed="false" title="Measure linear distance">📏 Measure</button>
+                aria-pressed="false" title="Measure linear distance">📏 <span data-i18n="menu.measure">Measure</span></button>
         <!-- Edit-only controls last so toggling edit/view never reflows the buttons above -->
         <div class="menu-wrap">
-          <button class="menu-btn" id="menuAddBtn" type="button" aria-haspopup="true" aria-expanded="false" hidden>Add ▾</button>
+          <button class="menu-btn" id="menuAddBtn" type="button" aria-haspopup="true" aria-expanded="false" hidden><span data-i18n="menu.add">Add</span> ▾</button>
           <div class="dropdown menu-dropdown" hidden role="menu">
-            <button class="menu-item" data-action="add-point"   type="button">Point</button>
-            <button class="menu-item" data-action="add-line"    type="button">Line</button>
-            <button class="menu-item" data-action="add-polygon" type="button">Polygon</button>
+            <button class="menu-item" data-action="add-point"   type="button" data-i18n="menu.addPoint">Point</button>
+            <button class="menu-item" data-action="add-line"    type="button" data-i18n="menu.addLine">Line</button>
+            <button class="menu-item" data-action="add-polygon" type="button" data-i18n="menu.addPolygon">Polygon</button>
           </div>
         </div>
         <span class="color-picker" id="drawColorPicker" data-target="default"
@@ -67,14 +67,14 @@
         <!-- Open With dropdown -->
         <div class="open-with-wrap" id="openWithWrap">
           <button class="open-with-btn" id="openWithBtn" type="button" aria-haspopup="true" aria-expanded="false">
-            Open with ▾
+            <span data-i18n="menu.openWith">Open with</span> ▾
           </button>
           <div class="dropdown open-with-menu" id="openWithMenu" hidden role="menu">
             <!-- links injected by ui.js — hrefs are set fresh each time the menu opens -->
           </div>
         </div>
 
-        <button class="info-button" id="infoButton" type="button" aria-label="Data credits">i</button>
+        <button class="info-button" id="infoButton" type="button" aria-label="Data credits" data-i18n-aria-label="info.dataCredits">i</button>
       </div>
     </header>
 
@@ -99,7 +99,7 @@
       <!-- 3D rotate/tilt hint — bottom left; shown once by assets/terrain-hint.ts
            the first time either 3D toggle is enabled -->
       <div class="rotate-hint-toast" id="rotateHintToast" role="status" aria-live="polite" hidden>
-        <span>Right-click and drag (or Ctrl + drag) to rotate and tilt the map. On touch, use two fingers. Click the compass icon to reset north.</span>
+        <span data-i18n="toast.rotate3d">Right-click and drag (or Ctrl + drag) to rotate and tilt the map. On touch, use two fingers. Click the compass icon to reset north.</span>
         <button type="button" id="rotateHintDismiss" aria-label="Dismiss">×</button>
       </div>
 
@@ -107,7 +107,7 @@
       <div class="geocoder" id="geocoder">
         <div class="geocoder-wrap">
           <input id="geocoderInput" type="search" placeholder="🔍 Search addresses…"
-                 autocomplete="off" spellcheck="false">
+                 autocomplete="off" spellcheck="false" data-i18n-placeholder="geocoder.searchPlaceholder">
           <div class="dropdown geocoder-results" id="geocoderResults" hidden></div>
         </div>
       </div>
@@ -116,8 +116,8 @@
       <div class="layers-panel" id="layersPanel">
         <div class="layers-header">
           <div class="layers-tabs">
-            <button class="layers-tab layers-tab--active" data-tab="map-layers" type="button">Map Layers</button>
-            <button class="layers-tab" data-tab="my-data" type="button">My Data</button>
+            <button class="layers-tab layers-tab--active" data-tab="map-layers" type="button" data-i18n="tabs.mapLayers">Map Layers</button>
+            <button class="layers-tab" data-tab="my-data" type="button" data-i18n="tabs.myData">My Data</button>
           </div>
           <button class="icon-btn close-btn" id="closeLayers" type="button" aria-label="Close layers panel">×</button>
         </div>
@@ -129,7 +129,7 @@
         <div class="panel-search">
           <div class="panel-search-wrap">
             <input id="searchInput" type="search" placeholder="Search features…"
-                   autocomplete="off" spellcheck="false">
+                   autocomplete="off" spellcheck="false" data-i18n-placeholder="panel.searchPlaceholder">
             <div class="dropdown search-results" id="searchResults" hidden></div>
           </div>
         </div>
@@ -137,69 +137,70 @@
         <!-- Reset all layer toggles, filters, modes + basemap to defaults -->
         <div class="panel-toolbar">
           <button type="button" class="reset-layers-btn" id="resetLayersBtn"
-                  title="Restore every layer's visibility, filters, MW/year ranges, display mode and basemap to defaults">
-            ↺ Reset layers
+                  title="Restore every layer's visibility, filters, MW/year ranges, display mode and basemap to defaults"
+                  data-i18n-title="panel.resetLayersTitle">
+            ↺ <span data-i18n="panel.resetLayers">Reset layers</span>
           </button>
         </div>
 
         <!-- Scrollable layer groups -->
         <div class="layers-body">
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> Base Map</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> <span data-i18n="basemap.sectionTitle">Base Map</span></div>
             <div class="collapsible-content basemap-cols">
             <div class="basemap-col">
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="light" checked> Light
+              <input type="radio" name="basemap" value="light" checked> <span data-i18n="basemap.light">Light</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="dark"> Dark
+              <input type="radio" name="basemap" value="dark"> <span data-i18n="basemap.dark">Dark</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="street"> Street
+              <input type="radio" name="basemap" value="street"> <span data-i18n="basemap.street">Street</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="topo"> Topo
+              <input type="radio" name="basemap" value="topo"> <span data-i18n="basemap.topo">Topo</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="hydro" title="USGS National Hydrography Dataset — rivers, lakes, dams — over a light basemap"> Hydro
+              <input type="radio" name="basemap" value="hydro" title="USGS National Hydrography Dataset — rivers, lakes, dams — over a light basemap"> <span data-i18n="basemap.hydro">Hydro</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="basemap" value="aerial"> Aerial
+              <input type="radio" name="basemap" value="aerial"> <span data-i18n="basemap.aerial">Aerial</span>
             </label>
             </div>
             <div class="basemap-col">
             <label class="basemap-radio">
-              <input type="radio" name="projection" value="mercator" checked> Flat
+              <input type="radio" name="projection" value="mercator" checked> <span data-i18n="basemap.flat">Flat</span>
             </label>
             <label class="basemap-radio">
-              <input type="radio" name="projection" value="globe"> Globe
+              <input type="radio" name="projection" value="globe"> <span data-i18n="basemap.globe">Globe</span>
             </label>
             <hr style="border: none; border-top: 1px solid var(--panel-border); margin: 8px 0 6px 0;">
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);">
-              <input type="checkbox" id="dataCounterToggle"> Data Counter
+              <input type="checkbox" id="dataCounterToggle"> <span data-i18n="basemap.dataCounter">Data Counter</span>
             </label>
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
                    title="Show/hide place names and road labels on the Light, Dark and Hydro basemaps, and the roads, route shields, place names and boundaries drawn over Aerial. Street and Topo have labels baked into their tiles.">
-              <input type="checkbox" id="basemapLabelsToggle" checked> Map Labels
+              <input type="checkbox" id="basemapLabelsToggle" checked> <span data-i18n="basemap.mapLabels">Map Labels</span>
             </label>
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
                    title="Raise the ground to real elevation. Tilt the map (right-click-drag, or the compass control) to see relief.">
-              <input type="checkbox" id="terrain3dToggle"> 3D Terrain
+              <input type="checkbox" id="terrain3dToggle"> <span data-i18n="basemap.terrain3d">3D Terrain</span>
             </label>
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
                    title="Extrude building footprints when zoomed in close (z14+). Heights come from OpenStreetMap; buildings without a height tag use an estimate.">
-              <input type="checkbox" id="buildings3dToggle"> 3D Buildings
+              <input type="checkbox" id="buildings3dToggle"> <span data-i18n="basemap.buildings3d">3D Buildings</span>
             </label>
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
                    title="Shaded relief drawn over the basemap so terrain reads without tilting the map. Most useful on the Light, Dark and Hydro basemaps — Topo and Aerial already carry their own relief.">
-              <input type="checkbox" id="hillshadeToggle"> Hillshade
+              <input type="checkbox" id="hillshadeToggle"> <span data-i18n="basemap.hillshade">Hillshade</span>
             </label>
             </div>
             </div>
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 〰 Transmission</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 〰 <span data-i18n="groups.transmission">Transmission</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-transmission"></div>
             <div id="layer-rows-substations"></div>
@@ -208,7 +209,7 @@
 
           <div class="layer-section collapsed" data-collapsible>
             <div class="section-title-row">
-              <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⚡ Generators</div>
+              <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⚡ <span data-i18n="groups.generators">Generators</span></div>
               <div class="section-filter-btns">
                 <button class="section-filter-btn" id="genMwFilterBtn" title="Filter by MW size">▾</button>
               </div>
@@ -246,7 +247,7 @@
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⛽ Fuel Delivery</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⛽ <span data-i18n="groups.pipelines">Fuel Delivery</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-pipelines"></div>
             <div id="layer-rows-rail"></div>
@@ -254,35 +255,35 @@
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🌱 Potential</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🌱 <span data-i18n="groups.renewables">Potential</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-renewable"></div>
             </div>
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏙 Load</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏙 <span data-i18n="groups.load">Load</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-load"></div>
             </div>
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏞 Land</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🏞 <span data-i18n="groups.land">Land</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-land"></div>
             </div>
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🗺 Regions</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🗺 <span data-i18n="groups.jurisdictions">Regions</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-regions"></div>
             </div>
           </div>
 
           <div class="layer-section collapsed" data-collapsible>
-            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🌡 Conditions</div>
+            <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> 🌡 <span data-i18n="groups.hazards">Conditions</span></div>
             <div class="collapsible-content">
             <div id="layer-rows-conditions"></div>
             </div>
@@ -509,19 +510,19 @@
   <dialog class="disclaimer-dialog" id="tribalDisclaimerDialog">
     <div class="disclaimer-content">
       <div class="disclaimer-header">
-        <h2>Tribal Layer Context</h2>
+        <h2 data-i18n="tribal.title">Tribal Layer Context</h2>
       </div>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n="tribal.p1">
         Maps and GIS data often used by transmission planners do not fully or accurately reflect Tribal ancestral lands and sacred sites due to both the need to protect data sovereignty and fundamental differences between Tribal and Western concepts of land boundaries. (The WestTEC 10-year study report, for example, intentionally chose not to depict Tribal ancestral lands and sacred sites boundaries on the WestTEC transmission solution maps for this reason. At the same time, WestTEC expressed the shared understanding that these lands warrant respectful treatment in any siting procedure.)
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="tribal.p2">
         This map shows boundaries (<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line</a> and <a href="https://biamaps.geoplatform.gov/biatracts/" target="_blank" rel="noopener">BIA AIAN-LAR</a>) as administrative representations for statistical and illustrative purposes only. Their depiction does not constitute a determination of jurisdictional authority, rights of ownership, or entitlement, and they are not legal land descriptions. This layer <strong>does not attempt to represent full Tribal ancestral lands or sacred sites</strong>.
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="tribal.p3">
         For consultation purposes or to understand broader ancestral footprints, please refer to authoritative contact databases (like <a href="https://egis.hud.gov/TDAT/" target="_blank" rel="noopener">HUD TDAT</a> or <a href="https://www.bia.gov/service/tribal-leaders-directory" target="_blank" rel="noopener">BIA</a>) or explore resources like <a href="https://native-land.ca/" target="_blank" rel="noopener">Native-Land.ca</a> rather than relying solely on this boundary map. <strong>Engaging in direct Tribal consultation is always the recommended best practice</strong> for any transmission planning or siting.
       </p>
       <div class="disclaimer-footer">
-        <button class="disclaimer-accept" id="tribalDisclaimerAccept" type="button">I understand</button>
+        <button class="disclaimer-accept" id="tribalDisclaimerAccept" type="button" data-i18n="tribal.accept">I understand</button>
       </div>
     </div>
   </dialog>
@@ -530,28 +531,29 @@
   <dialog class="disclaimer-dialog" id="disclaimerDialog">
     <div class="disclaimer-content">
       <div class="disclaimer-header">
-        <h2>TransmissionMap</h2>
+        <h2 data-i18n="disclaimer.title">TransmissionMap</h2>
       </div>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="disclaimer.p1">
         This unofficial, community-built map of the North American energy infrastructure comprises data 
         aggregated from public sources and <strong>may be incomplete, outdated, or inaccurate.</strong>
         It is provided for educational and informational purposes only.
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="disclaimer.p2">
         <strong>Do not use for engineering, operational, safety, or regulatory decisions.</strong>
         No warranty of any kind is provided.
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="disclaimer.p3">
         <strong>THIS MAP AND ALL ASSOCIATED DATA ARE PROVIDED "AS IS" AND "AS AVAILABLE." 
           NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, IS PROVIDED. IN NO EVENT SHALL THE 
           PROVIDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF 
           OR RELIANCE ON THIS MAP OR ITS DATA.</strong>
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="disclaimer.p4">
         See the <a href="https://github.com/BenHutchinsWPP/TransmissionMap#readme" target="_blank" rel="noopener">README on GitHub</a> for data sources, limitations, and licensing.
       </p>
+      <p class="disclaimer-body disclaimer-governing" data-i18n="disclaimer.governing" style="font-size:0.85em;opacity:0.8;font-style:italic"></p>
       <div class="disclaimer-footer">
-        <button class="disclaimer-accept" id="disclaimerAccept" type="button">I understand — Continue</button>
+        <button class="disclaimer-accept" id="disclaimerAccept" type="button" data-i18n="disclaimer.accept">I understand — Continue</button>
       </div>
     </div>
   </dialog>
@@ -560,23 +562,23 @@
   <dialog class="disclaimer-dialog wildfire-stale-dialog" id="wildfireStaleDialog">
     <div class="disclaimer-content">
       <div class="disclaimer-header">
-        <h2>⚠ Live wildfire data is stale</h2>
+        <h2 data-i18n="stale.wildfire.title">⚠ Live wildfire data is stale</h2>
       </div>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="stale.wildfire.body1">
         The live wildfire data is <strong id="wildfireStaleAge">—</strong> old —
         beyond the safe limit. The hourly feed may be broken or delayed, so the
         <strong>active fire, smoke, and incident layers have been turned off</strong>
         to avoid showing dangerously outdated fire positions.
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="stale.wildfire.body2">
         Do not rely on stale fire data for any safety or evacuation decision.
         It will re-enable automatically once a fresh update arrives. Meanwhile,
         <a href="https://experience.arcgis.com/experience/87cda22dccde4a35af250469ae12f40e" target="_blank" rel="noopener">WECC's Wildfire Risk Dashboard</a>
         shows current wildfires near western transmission infrastructure.
       </p>
       <div class="disclaimer-footer wildfire-stale-footer">
-        <button class="disclaimer-dismiss" id="wildfireStaleDismiss" type="button">Keep disabled</button>
-        <button class="disclaimer-accept disclaimer-danger" id="wildfireStaleReenable" type="button">I understand the risk — re-enable</button>
+        <button class="disclaimer-dismiss" id="wildfireStaleDismiss" type="button" data-i18n="stale.dismiss">Keep disabled</button>
+        <button class="disclaimer-accept disclaimer-danger" id="wildfireStaleReenable" type="button" data-i18n="stale.reenable">I understand the risk — re-enable</button>
       </div>
     </div>
   </dialog>
@@ -585,24 +587,24 @@
   <dialog class="disclaimer-dialog wildfire-stale-dialog" id="nwsStaleDialog">
     <div class="disclaimer-content">
       <div class="disclaimer-header">
-        <h2>⚠ Live weather-alert data is stale</h2>
+        <h2 data-i18n="stale.nws.title">⚠ Live weather-alert data is stale</h2>
       </div>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="stale.nws.body1">
         The live weather-alert data is <strong id="nwsStaleAge">—</strong> old —
         beyond the safe limit. The feed may be broken or delayed, so the
         <strong>weather alerts layer has been turned off</strong> to avoid
         showing outdated warnings. Expired alerts are already removed
         automatically; what remains may still be incomplete.
       </p>
-      <p class="disclaimer-body">
+      <p class="disclaimer-body" data-i18n-html="stale.nws.body2">
         Do not rely on stale alert data for any safety decision. It will
         re-enable automatically once a fresh update arrives. Meanwhile,
         <a href="https://www.weather.gov/alerts" target="_blank" rel="noopener">weather.gov/alerts</a>
         shows current official NWS alerts.
       </p>
       <div class="disclaimer-footer wildfire-stale-footer">
-        <button class="disclaimer-dismiss" id="nwsStaleDismiss" type="button">Keep disabled</button>
-        <button class="disclaimer-accept disclaimer-danger" id="nwsStaleReenable" type="button">I understand the risk — re-enable</button>
+        <button class="disclaimer-dismiss" id="nwsStaleDismiss" type="button" data-i18n="stale.dismiss">Keep disabled</button>
+        <button class="disclaimer-accept disclaimer-danger" id="nwsStaleReenable" type="button" data-i18n="stale.reenable">I understand the risk — re-enable</button>
       </div>
     </div>
   </dialog>
@@ -611,7 +613,7 @@
   <dialog class="credits-dialog" id="creditsDialog">
     <div class="credits-content">
       <div class="credits-header">
-        <h2>Data Credits</h2>
+        <h2 data-i18n="info.dataCredits">Data Credits</h2>
         <button id="closeCredits" type="button" aria-label="Close">×</button>
       </div>
       <p class="credits-disclaimer">Educational and informational use only. Data may be incomplete, outdated, or inaccurate. No warranty. Do not use for operational, safety, or regulatory decisions. Full attribution and licensing: <a href="https://github.com/BenHutchinsWPP/TransmissionMap/blob/main/docs/data-sources.md" target="_blank" rel="noopener">data-sources.md</a>.</p>
@@ -684,7 +686,7 @@
   <dialog class="credits-dialog" id="settingsDialog">
     <div class="credits-content">
       <div class="credits-header">
-        <h2>Settings</h2>
+        <h2 data-i18n="settings.title">Settings</h2>
         <button id="closeSettings" type="button" aria-label="Close">×</button>
       </div>
       <div id="settingsBody"></div>

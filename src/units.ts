@@ -18,52 +18,62 @@ export const DEFAULT_UNITS: UnitPrefs = {
 // dimension -> selectable options, consumed by the Settings dialog so it has no
 // hardcoded unit list. Labels are what the user sees in the <select>.
 export const UNIT_OPTIONS: {
-  [K in keyof UnitPrefs]: { label: string; options: { value: UnitPrefs[K]; label: string }[] }
+  [K in keyof UnitPrefs]: {
+    label: string;
+    labelKey: string;
+    options: { value: UnitPrefs[K]; label: string; optLabelKey: string }[];
+  };
 } = {
   temp: {
     label: 'Temperature',
+    labelKey: 'units.temp',
     options: [
-      { value: 'F', label: 'Fahrenheit (°F)' },
-      { value: 'C', label: 'Celsius (°C)' },
+      { value: 'F', label: 'Fahrenheit (°F)', optLabelKey: 'units.opt.fahrenheit' },
+      { value: 'C', label: 'Celsius (°C)', optLabelKey: 'units.opt.celsius' },
     ],
   },
   speed: {
     label: 'Wind speed',
+    labelKey: 'units.speed',
     options: [
-      { value: 'mph', label: 'Miles per hour (mph)' },
-      { value: 'ftps', label: 'Feet per second (ft/s)' },
-      { value: 'kph', label: 'Kilometres per hour (km/h)' },
-      { value: 'ms', label: 'Metres per second (m/s)' },
+      { value: 'mph', label: 'Miles per hour (mph)', optLabelKey: 'units.opt.mph' },
+      { value: 'ftps', label: 'Feet per second (ft/s)', optLabelKey: 'units.opt.ftps' },
+      { value: 'kph', label: 'Kilometres per hour (km/h)', optLabelKey: 'units.opt.kph' },
+      { value: 'ms', label: 'Metres per second (m/s)', optLabelKey: 'units.opt.ms' },
     ],
   },
   distance: {
     label: 'Distance',
+    labelKey: 'units.distance',
     options: [
-      { value: 'mi', label: 'Miles (mi)' },
-      { value: 'km', label: 'Kilometres (km)' },
+      { value: 'mi', label: 'Miles (mi)', optLabelKey: 'units.opt.miles' },
+      { value: 'km', label: 'Kilometres (km)', optLabelKey: 'units.opt.km' },
     ],
   },
   area: {
     label: 'Area',
+    labelKey: 'units.area',
     options: [
-      { value: 'acres', label: 'Acres' },
-      { value: 'ha', label: 'Hectares (ha)' },
-      { value: 'km2', label: 'Square kilometres (km²)' },
-      { value: 'mi2', label: 'Square miles (mi²)' },
+      { value: 'acres', label: 'Acres', optLabelKey: 'units.opt.acres' },
+      { value: 'ha', label: 'Hectares (ha)', optLabelKey: 'units.opt.hectares' },
+      { value: 'km2', label: 'Square kilometres (km²)', optLabelKey: 'units.opt.sqkm' },
+      { value: 'mi2', label: 'Square miles (mi²)', optLabelKey: 'units.opt.sqmi' },
     ],
   },
   elevation: {
     label: 'Elevation / depth',
+    labelKey: 'units.elevation',
     options: [
-      { value: 'ft', label: 'Feet (ft)' },
-      { value: 'm', label: 'Metres (m)' },
+      { value: 'ft', label: 'Feet (ft)', optLabelKey: 'units.opt.feet' },
+      { value: 'm', label: 'Metres (m)', optLabelKey: 'units.opt.meters' },
     ],
   },
   pressure: {
     label: 'Pressure',
+    labelKey: 'units.pressure',
     options: [
-      { value: 'mb', label: 'Millibars (mb)' },
-      { value: 'inHg', label: 'Inches of mercury (inHg)' },
+      { value: 'mb', label: 'Millibars (mb)', optLabelKey: 'units.opt.mb' },
+      { value: 'inHg', label: 'Inches of mercury (inHg)', optLabelKey: 'units.opt.inHg' },
     ],
   },
 };

@@ -8,6 +8,7 @@ export const railLayers: LayerDef[] = [
     id:                "railroads",
     urlCode:           "RRL",
     label:             "BTS Railroads",
+    titleKey:          "layer.railroads",
     group:             "rail",
     sourceId:          "bts-narn",
     swatch:            "#525252",

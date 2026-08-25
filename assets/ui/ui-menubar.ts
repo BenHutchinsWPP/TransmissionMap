@@ -6,10 +6,13 @@
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
 // ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
 // first File > Diagnostics… click). ui-settings.js (lazy — Settings dialog,
-// loaded on first File > Settings… click). Consumed by ui.ts (wireUI).
+// loaded on first File > Settings… click). src/i18n/index.js (t), state-bus.js (on).
+// Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
 import { colorPickerInner } from '../user-data/user-data-colors.js';
+import { t } from '../../src/i18n/index.js';
+import { on } from '../state-bus.js';
 
 // ─── Lazy draw chunk ──────────────────────────────────────────────────────────
 type DrawChunk = typeof import('../user-data/draw-chunk.js');
@@ -25,11 +28,11 @@ async function draw(): Promise<DrawChunk> {
 
 // ─── Event handlers ───────────────────────────────────────────────────────────
 async function onMenubarClick(e: MouseEvent) {
-  const t = e.target as Element;
+  const target = e.target as Element;
   // Only File/Add open dropdowns (aria-haspopup). The Measure button also
   // carries .menu-btn for styling but toggles a tool, not a menu — matching it
   // here would hide its nextElementSibling (the Add menu-wrap) by mistake.
-  const menuBtn = t?.closest<HTMLElement>('.menu-btn[aria-haspopup="true"]');
+  const menuBtn = target?.closest<HTMLElement>('.menu-btn[aria-haspopup="true"]');
   if (menuBtn) {
     e.stopPropagation();
     const dropdown = menuBtn.nextElementSibling as HTMLElement | null;
@@ -45,7 +48,7 @@ async function onMenubarClick(e: MouseEvent) {
     return;
   }
 
-  const menuItem = t?.closest<HTMLElement>('.menu-item[data-action]');
+  const menuItem = target?.closest<HTMLElement>('.menu-item[data-action]');
   if (menuItem) {
     menuItem.closest('.menu-dropdown')?.setAttribute('hidden', '');
     menuItem.closest('.menu-dropdown')?.previousElementSibling?.setAttribute('aria-expanded', 'false');
@@ -55,7 +58,8 @@ async function onMenubarClick(e: MouseEvent) {
     if (menuItem.dataset.action === 'toggle-legends') {
       const lc = document.getElementById('legendContainer');
       const off = lc?.classList.toggle('legends-off') ?? false;
-      menuItem.textContent = off ? 'Show legends' : 'Hide legends';
+      menuItem.textContent = off ? t('menu.showLegends') : t('menu.hideLegends');
+      menuItem.setAttribute('data-i18n', off ? 'menu.showLegends' : 'menu.hideLegends');
       return;
     }
     // Same reasoning as toggle-legends above: Diagnostics is its own lazy
@@ -84,10 +88,10 @@ async function onMenubarClick(e: MouseEvent) {
     return;
   }
 
-  const modeBtn = t?.closest<HTMLElement>('.mode-btn[data-mode]');
+  const modeBtn = target?.closest<HTMLElement>('.mode-btn[data-mode]');
   if (modeBtn) { (await draw()).setMode(modeBtn.dataset.mode!); return; }
 
-  const swatch = t?.closest<HTMLElement>('.color-swatch-btn');
+  const swatch = target?.closest<HTMLElement>('.color-swatch-btn');
   if (swatch) {
     e.stopPropagation();
     const menu = swatch.nextElementSibling as HTMLElement | null;
@@ -99,7 +103,7 @@ async function onMenubarClick(e: MouseEvent) {
     return;
   }
 
-  const colorOpt = t?.closest<HTMLElement>('.color-opt[data-color]');
+  const colorOpt = target?.closest<HTMLElement>('.color-opt[data-color]');
   if (colorOpt) {
     (await draw()).applyColorPick(colorOpt.closest<HTMLElement>('.color-picker')!, colorOpt.dataset.color!);
     const colorMenu = colorOpt.closest<HTMLElement>('.color-menu');
@@ -107,7 +111,7 @@ async function onMenubarClick(e: MouseEvent) {
     return;
   }
 
-  if (t?.closest('.color-custom')) return;
+  if (target?.closest('.color-custom')) return;
 
   document.querySelectorAll<HTMLElement>('.menu-dropdown:not([hidden])').forEach(m => {
     m.hidden = true;
@@ -135,3 +139,13 @@ export function wireMenubar() {
   const drawColor = document.getElementById('drawColorPicker');
   if (drawColor) drawColor.innerHTML = colorPickerInner(state.drawDefaultColor);
 }
+
+on('lang:changed', () => {
+  const menuItem = document.querySelector<HTMLElement>('.menu-item[data-action="toggle-legends"]');
+  if (menuItem) {
+    const lc = document.getElementById('legendContainer');
+    const off = lc?.classList.contains('legends-off') ?? false;
+    menuItem.textContent = off ? t('menu.showLegends') : t('menu.hideLegends');
+    menuItem.setAttribute('data-i18n', off ? 'menu.showLegends' : 'menu.hideLegends');
+  }
+});

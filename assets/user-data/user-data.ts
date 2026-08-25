@@ -13,6 +13,7 @@ import { ensureFeatureUid, ensureGeoJsonFeatureUids } from '../utils/utils-uid.j
 import { escapeHtml } from '../utils/utils.js';
 import { collectCoords, coordsBounds, showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
+import { t } from '../../src/i18n/index.js';
 
 const USER_SUBLAYER_SUFFIXES = ['-fill', '-line', '-circle', '-point-label', '-line-label'];
 
@@ -137,7 +138,7 @@ export function renderMyDataTab() {
   if (state.userLayers.length > 0) {
     const sec = document.createElement('div');
     sec.className = 'my-data-section';
-    sec.innerHTML = '<div class="section-title">Loaded Files</div>';
+    sec.innerHTML = `<div class="section-title">${escapeHtml(t('mydata.loadedFiles'))}</div>`;
     for (const layer of state.userLayers) {
       try {
         sec.appendChild(buildFileRow(layer));
@@ -153,11 +154,11 @@ export function renderMyDataTab() {
 
   const drawSec = document.createElement('div');
   drawSec.className = 'my-data-section';
-  drawSec.innerHTML = '<div class="section-title">My Drawings</div>';
+  drawSec.innerHTML = `<div class="section-title">${escapeHtml(t('mydata.myDrawings'))}</div>`;
   const drawn = state.draw ? state.draw.getAll().features : [];
   if (drawn.length === 0) {
     drawSec.insertAdjacentHTML('beforeend',
-      '<p class="my-data-empty">No drawings yet. Use Add menu to draw.</p>');
+      `<p class="my-data-empty">${escapeHtml(t('mydata.noDrawings'))}</p>`);
   } else {
     for (const f of drawn) {
       drawSec.appendChild(buildDrawnFeatureRow(f));
@@ -187,7 +188,7 @@ function fileRowHeaderHtml(layer: UserLayer, count: number, expandable: boolean,
   const caret = expandable
     ? `<button type="button" class="my-caret-btn"
                data-action="toggle-expand" data-layer-id="${escapeHtml(layer.id)}"
-               title="${expanded ? 'Collapse' : 'Expand'} feature list">
+               title="${escapeHtml(expanded ? t('mydata.collapse') : t('mydata.expand'))}">
          <span class="my-caret${expanded ? ' my-caret--open' : ''}">▸</span>
        </button>`
     : '<span class="my-caret my-caret--empty"></span>';
@@ -196,11 +197,11 @@ function fileRowHeaderHtml(layer: UserLayer, count: number, expandable: boolean,
       ${caret}
       <button class="my-vis-btn${layer.visible ? ' my-vis-btn--on' : ''}"
               data-action="toggle-layer" data-layer-id="${escapeHtml(layer.id)}"
-              title="${layer.visible ? 'Hide' : 'Show'}" type="button">👁</button>
+              title="${escapeHtml(layer.visible ? t('mydata.hide') : t('mydata.show'))}" type="button">👁</button>
       <span class="my-file-name truncate" title="${escapeHtml(layer.filename)}">${escapeHtml(layer.filename)}</span>
-      <span class="my-file-count">${count} feat.</span>
+      <span class="my-file-count">${escapeHtml(t('mydata.featCount', { count }))}</span>
       <button class="my-delete-btn" data-action="delete-layer" data-layer-id="${escapeHtml(layer.id)}"
-              title="Remove" type="button">🗑</button>
+              title="${escapeHtml(t('mydata.remove'))}" type="button">🗑</button>
     </div>`;
 }
 
@@ -228,7 +229,7 @@ function fileFeatureRowHtml(layer: UserLayer, f: GeoJSON.Feature, uid: string) {
                   data-action="delete-feature"
                   data-layer-id="${escapeHtml(layer.id)}"
                   data-feature-uid="${escapeHtml(String(uid))}"
-                  type="button" title="Delete">×</button>
+                  type="button" title="${escapeHtml(t('mydata.delete'))}">×</button>
         </div>`;
 }
 
@@ -246,7 +247,7 @@ function buildDrawnFeatureRow(feature: GeoJSON.Feature) {
     <button class="my-delete-btn my-delete-btn--sm"
             data-action="delete-drawn"
             data-feature-id="${fid}"
-            type="button" title="Delete">×</button>`;
+            type="button" title="${escapeHtml(t('mydata.delete'))}">×</button>`;
   return row;
 }
 

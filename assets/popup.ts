@@ -12,13 +12,14 @@ import { clearWeccHighlight } from './layers/map-layers-wecc.js';
 import { zoneFeatureLit } from './nws-zone-join.js';
 import { ICON_SVG } from './icons.js';
 import { escapeHtml } from './utils/utils.js';
+import { t } from '../src/i18n/index.js';
 
 function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   const name = featureLabel(f);
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="copy-popup">
         <div class="copy-popup-name">${escapeHtml(name)}</div>
-        <button type="button" class="copy-popup-btn">＋ Copy to My Data</button>
+        <button type="button" class="copy-popup-btn">${escapeHtml(t('popup.copyToMyData'))}</button>
       </div>`)
     .addTo(state.map!);
   state.popup!.getElement()
@@ -32,7 +33,7 @@ function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
 function showNotCopyablePopup(lngLat: maplibregl.LngLat) {
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="copy-popup">
-        <div class="copy-popup-note">Tiled layer — can't copy (geometry is clipped at tile borders).</div>
+        <div class="copy-popup-note">${escapeHtml(t('popup.tiledCannotCopy'))}</div>
       </div>`)
     .addTo(state.map!);
 }
@@ -43,7 +44,7 @@ function showEditPicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]
   ).join('');
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="feat-picker">
-        <div class="feat-picker-head">${features.length} features here</div>
+        <div class="feat-picker-head">${escapeHtml(t('popup.featuresHere', { count: features.length }))}</div>
         <div class="feat-picker-list">${rows}</div>
       </div>`)
     .addTo(state.map!);
@@ -315,7 +316,7 @@ function showFeaturePicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeatur
   ).join('');
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="feat-picker">
-        <div class="feat-picker-head">${features.length} features here</div>
+        <div class="feat-picker-head">${escapeHtml(t('popup.featuresHere', { count: features.length }))}</div>
         <div class="feat-picker-list">${rows}</div>
       </div>`)
     .addTo(state.map!);

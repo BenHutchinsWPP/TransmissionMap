@@ -28,6 +28,8 @@ import { wireOpenWith } from './ui-openwith.js';
 import { readUrlState } from '../url-state.js';
 import { emit, on } from '../state-bus.js';
 import { loadUnits } from '../units-store.js';
+import { loadLanguage } from '../i18n-store.js';
+import { updateDomTranslations } from '../../src/i18n/index.js';
 import { renderMyDataTab } from '../user-data/user-data.js';
 import { clearFeatureInfo } from '../user-data/user-data-geom.js';
 import { updateMeasureReadout } from '../measure.js';
@@ -64,7 +66,12 @@ function resetLayerState() {
 }
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
-export function init() {
+export async function init() {
+  const hash = location.hash;
+  const q = hash.indexOf('?');
+  const params = new URLSearchParams(q >= 0 ? hash.slice(q + 1) : '');
+  await loadLanguage(params.get('lang'));
+  updateDomTranslations();
   loadUnits();
   resetLayerState();
   state.yearFilter.min  = YEAR_FILTER_MIN;
@@ -252,6 +259,7 @@ function wireUI() {
   wireYearFilter();
   wireResetLayers();
   wireUnitsChanged();
+  wireLangChanged();
 
   wireFeatureSearch();
   wireGeocoder();
@@ -419,6 +427,15 @@ function wireUnitsChanged() {
     // keep its line on the map with no distance beside it.
     if (state.measure.active) updateMeasureReadout();
     else clearFeatureInfo();
+  });
+}
+
+function wireLangChanged() {
+  on('lang:changed', () => {
+    state.popup?.remove();
+    updateDomTranslations();
+    buildLayersPanel();
+    buildLegends();
   });
 }
 

@@ -48,18 +48,18 @@ const PRESSURE_RAMP: RampDef = {
 // transparent placeholder instead) while keeping particles + hover cursor —
 // used by "Windstream" for a flow-only view over the basemap.
 export const WEATHER_VARIABLES: {
-  id: string; label: string; urlCode: string; ramp: RampDef; format: (v: number) => string;
+  id: string; label: string; labelKey?: string; urlCode: string; ramp: RampDef; format: (v: number) => string;
   file?: string; noWash?: boolean;
 }[] = [
-  { id: "tempwind", label: "Temp & Wind",  urlCode: "tw", ramp: TEMP_RAMP,    format: fmtTemp, file: "temp" },
-  { id: "temp",     label: "Temperature",  urlCode: "t", ramp: TEMP_RAMP,     format: fmtTemp },
-  { id: "wind",     label: "Wind",         urlCode: "w", ramp: WIND_RAMP,     format: fmtSpeed },
-  { id: "windstream", label: "Windstream", urlCode: "ws", ramp: WIND_RAMP,    format: fmtSpeed, file: "wind", noWash: true },
-  { id: "gust",     label: "Wind Gust",    urlCode: "g", ramp: WIND_RAMP,     format: fmtSpeed },
-  { id: "rh",       label: "Humidity",     urlCode: "h", ramp: RH_RAMP,       format: fmtPct },
-  { id: "dewpoint", label: "Dew Point",    urlCode: "d", ramp: TEMP_RAMP,     format: fmtTemp },
-  { id: "cloud",    label: "Cloud Cover",  urlCode: "c", ramp: CLOUD_RAMP,    format: fmtPct },
-  { id: "pressure", label: "Pressure",     urlCode: "p", ramp: PRESSURE_RAMP, format: fmtPressure },
+  { id: "tempwind", label: "Temp & Wind",  labelKey: "weather.tempWind", urlCode: "tw", ramp: TEMP_RAMP,    format: fmtTemp, file: "temp" },
+  { id: "temp",     label: "Temperature",  labelKey: "weather.temperature", urlCode: "t", ramp: TEMP_RAMP,     format: fmtTemp },
+  { id: "wind",     label: "Wind",         labelKey: "weather.wind", urlCode: "w", ramp: WIND_RAMP,     format: fmtSpeed },
+  { id: "windstream", label: "Windstream", labelKey: "weather.windstream", urlCode: "ws", ramp: WIND_RAMP,    format: fmtSpeed, file: "wind", noWash: true },
+  { id: "gust",     label: "Wind Gust",    labelKey: "weather.gust", urlCode: "g", ramp: WIND_RAMP,     format: fmtSpeed },
+  { id: "rh",       label: "Humidity",     labelKey: "weather.rh", urlCode: "h", ramp: RH_RAMP,       format: fmtPct },
+  { id: "dewpoint", label: "Dew Point",    labelKey: "weather.dewpoint", urlCode: "d", ramp: TEMP_RAMP,     format: fmtTemp },
+  { id: "cloud",    label: "Cloud Cover",  labelKey: "weather.cloud", urlCode: "c", ramp: CLOUD_RAMP,    format: fmtPct },
+  { id: "pressure", label: "Pressure",     labelKey: "weather.pressure", urlCode: "p", ramp: PRESSURE_RAMP, format: fmtPressure },
 ];
 
 export const conditionLayers: LayerDef[] = [
@@ -67,6 +67,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "wildfire-live",
     urlCode:     "WFL",
     label:       "Fire: Active (~24h)",
+    titleKey:    "layer.wildfireLive",
     group:       "conditions",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#ff4400",
@@ -79,6 +80,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "wildfire-smoke",
     urlCode:     "SMK",
     label:       "Fire: Smoke (~24h)",
+    titleKey:    "layer.wildfireSmoke",
     group:       "conditions",
     sourceId:    "noaa-hms",
     swatch:      "#ff8c00",
@@ -91,6 +93,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "wildfire-incidents",
     urlCode:     "WFI",
     label:       "Fire: Incidents (~24h)",
+    titleKey:    "layer.wildfireIncidents",
     group:       "conditions",
     sourceId:    "nasa-firms-nifc",
     swatch:      "#cc0000",
@@ -103,6 +106,7 @@ export const conditionLayers: LayerDef[] = [
     id:           "usfs-wildfire-potential",
     urlCode:      "WHP",
     label:        "Fire: Hazard Potential",
+    titleKey:     "layer.usfsWildfirePotential",
     group:        "conditions",
     sourceId:     "usfs-firelab",
     swatch:       "#FF0000",
@@ -114,6 +118,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "nws-alerts",
     urlCode:     "NWS",
     label:       "✂️ Weather Alerts (live, Filtered)",
+    titleKey:    "layer.nwsAlerts",
     group:       "conditions",
     sourceId:    "noaa-nws",
     swatch:      "#a855f7",
@@ -126,6 +131,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "odin-outages",
     urlCode:     "OUT",
     label:       "Power Outages (US, live)",
+    titleKey:    "layer.odinOutages",
     group:       "conditions",
     sourceId:    "ornl-odin",
     swatch:      "#fd8d3c",   // mid-bucket (100–1k) of the YlOrRd outage ramp
@@ -138,6 +144,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "nexrad-radar",
     urlCode:     "RAD",
     label:       "Weather: Radar (live)",
+    titleKey:    "layer.nexradRadar",
     group:       "conditions",
     sourceId:    "iem-nexrad",
     swatch:      "#04e304",
@@ -150,6 +157,7 @@ export const conditionLayers: LayerDef[] = [
     id:          "weather-live",
     urlCode:     "WX",
     label:       "Weather Forecast",
+    titleKey:    "layer.weatherLive",
     group:       "conditions",
     sourceId:    "noaa-gfs",
     swatch:      `rgb(${TEMP_RAMP_STOPS[6][1]})`,   // 30 °C — the warm end of the ramp
@@ -165,6 +173,7 @@ export const conditionLayers: LayerDef[] = [
     id:           "usgs-seismic-pga",
     urlCode:      "PGA",
     label:        "Seismic Hazard (PGA, 2% in 50yr)",
+    titleKey:     "layer.seismicPga",
     group:        "conditions",
     sourceId:     "usgs-nshm",
     swatch:       `rgb(${SEIS_RAMP_STOPS[3][1]})`,

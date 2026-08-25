@@ -1,24 +1,35 @@
-// ─── Settings dialog (display units) ───────────────────────────────────────
-// Role: renders and drives the Settings dialog — one <select> per UNIT_OPTIONS
-//       dimension plus US/Metric presets. Every change writes through
-//       setUnits -> saveUnits -> emit('units:changed') so formatters across
-//       the app (src/units.ts fmt* helpers) pick up the new preference and
-//       anything listening for the event (e.g. live popups) can re-render.
+// ─── Settings dialog (display units & language) ──────────────────────────────
+// Role: renders and drives the Settings dialog — language selector plus one
+//       <select> per UNIT_OPTIONS dimension plus US/Metric presets. Every
+//       change writes through setUnits/setLocale -> saveUnits/saveLanguage ->
+//       emit('units:changed' / 'lang:changed') so formatters and UI across
+//       the app pick up the new preferences and live subscribers can re-render.
 //       Lazy chunk: loaded only on File > Settings… (see ui-menubar.ts), so it
 //       stays out of the initial bundle, matching the ui-diagnostics.ts and
 //       draw-chunk.ts pattern. It owns only #settingsBody; the dialog chrome
 //       (#settingsDialog, #closeSettings, backdrop click) lives in
 //       index.html / ui.ts.
-// Deps: src/units.js (UnitPrefs, UNIT_OPTIONS, getUnits, setUnits),
+// Deps: src/units.js (UnitPrefs, UNIT_OPTIONS, DEFAULT_UNITS, getUnits, setUnits),
 //       units-store.js (saveUnits), state-bus.js (emit), utils/utils.js
-//       (escapeHtml — labels are internal constants today, but any
-//       user-visible string injected as HTML gets escaped on principle,
-//       matching the ui-diagnostics.ts precedent).
+//       (escapeHtml — any user-visible string injected as HTML gets escaped),
+//       src/i18n/index.js (getLocale, setLocale, loadDictionary, SUPPORTED_LOCALES,
+//       updateDomTranslations, t, SupportedLocale),
+//       i18n-store.js (saveLanguage).
 
 import { UNIT_OPTIONS, DEFAULT_UNITS, getUnits, setUnits, type UnitPrefs } from '../../src/units.js';
 import { saveUnits } from '../units-store.js';
 import { emit } from '../state-bus.js';
 import { escapeHtml } from '../utils/utils.js';
+import {
+  getLocale,
+  setLocale,
+  loadDictionary,
+  SUPPORTED_LOCALES,
+  updateDomTranslations,
+  t,
+  type SupportedLocale,
+} from '../../src/i18n/index.js';
+import { saveLanguage } from '../i18n-store.js';
 
 const METRIC_PRESET: UnitPrefs = { temp: 'C', speed: 'kph', distance: 'km', area: 'km2', elevation: 'm', pressure: 'mb' };
 
@@ -38,11 +49,22 @@ function render(dialog: HTMLDialogElement): void {
   // No `selected` on the options — syncControls() below sets every value.
   const dims = Object.keys(UNIT_OPTIONS) as (keyof UnitPrefs)[];
 
+  const languageRow = `
+    <div class="settings-row">
+      <span class="settings-row-label" data-i18n="settings.language">${escapeHtml(t('settings.language'))}</span>
+      <select class="settings-select" id="settingsLanguageSelect">
+        ${SUPPORTED_LOCALES.map(loc => `<option value="${loc.code}">${escapeHtml(loc.nativeName)} (${escapeHtml(loc.name)})</option>`).join('')}
+      </select>
+    </div>
+  `;
+
   const rows = dims.map(dim => {
-    const { label, options } = UNIT_OPTIONS[dim];
-    const opts = options.map(o =>
-      `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`
-    ).join('');
+    const { labelKey, label: defaultLabel, options } = UNIT_OPTIONS[dim];
+    const label = labelKey ? t(labelKey) : defaultLabel;
+    const opts = options.map(o => {
+      const optLabel = o.optLabelKey ? t(o.optLabelKey) : o.label;
+      return `<option value="${escapeHtml(o.value)}">${escapeHtml(optLabel)}</option>`;
+    }).join('');
     return `
       <div class="settings-row">
         <span class="settings-row-label">${escapeHtml(label)}</span>
@@ -51,9 +73,12 @@ function render(dialog: HTMLDialogElement): void {
   }).join('');
 
   body.innerHTML = `
+    <div class="settings-rows">
+      ${languageRow}
+    </div>
     <div class="settings-presets">
-      <button id="settingsPresetUs" type="button">US</button>
-      <button id="settingsPresetMetric" type="button">Metric</button>
+      <button id="settingsPresetUs" type="button">${escapeHtml(t('settings.us'))}</button>
+      <button id="settingsPresetMetric" type="button">${escapeHtml(t('settings.metric'))}</button>
     </div>
     <div class="settings-rows">${rows}</div>
   `;
@@ -64,10 +89,15 @@ function render(dialog: HTMLDialogElement): void {
 // body's innerHTML here would destroy the <select> that is mid-`change`,
 // dropping keyboard focus part-way through an arrow-key selection.
 function syncControls(body: HTMLElement): void {
+  const langSelect = body.querySelector<HTMLSelectElement>('#settingsLanguageSelect');
+  if (langSelect) {
+    langSelect.value = getLocale();
+  }
+
   const units = getUnits();
   const dims = Object.keys(UNIT_OPTIONS) as (keyof UnitPrefs)[];
 
-  body.querySelectorAll<HTMLSelectElement>('.settings-select').forEach(sel => {
+  body.querySelectorAll<HTMLSelectElement>('.settings-select[data-unit-dim]').forEach(sel => {
     const dim = sel.dataset.unitDim as keyof UnitPrefs | undefined;
     if (dim) sel.value = units[dim];
   });
@@ -86,8 +116,18 @@ function wireHandlers(dialog: HTMLDialogElement): void {
   const body = dialog.querySelector<HTMLElement>('#settingsBody');
   if (!body) return;
 
-  body.onchange = (e: Event) => {
+  body.onchange = async (e: Event) => {
     const select = e.target as HTMLSelectElement;
+    if (select.id === 'settingsLanguageSelect') {
+      const newLocale = select.value as SupportedLocale;
+      await loadDictionary(newLocale);
+      setLocale(newLocale);
+      saveLanguage(newLocale);
+      updateDomTranslations();
+      emit('lang:changed', { locale: newLocale });
+      render(dialog);
+      return;
+    }
     const dim = select.dataset.unitDim as keyof UnitPrefs | undefined;
     if (!dim) return;
     applyChange({ [dim]: select.value } as Partial<UnitPrefs>, body);

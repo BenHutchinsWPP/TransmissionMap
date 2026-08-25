@@ -3,8 +3,9 @@
 // its action buttons (filter / year / download / source) and the gen-mode and
 // filter sub-panels. buildLayersPanel() renders every group's rows into the DOM.
 // Deps: state.js, registry/index.js (LAYERS, LAYER_SOURCES), colors/ramps.js
-// (HEAT_RAMP), ui-legends.js (rampLegendHtml), utils.js (escapeHtml).
-// Consumed by ui.ts (init + resetLayersToDefaults).
+// (HEAT_RAMP), ui-legends.js (rampLegendHtml), utils.js (escapeHtml),
+// src/i18n/index.js (t).
+// Consumed by ui.ts (init + resetLayersToDefaults + wireLangChanged).
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
@@ -14,6 +15,7 @@ import { HEAT_RAMP } from '../../src/colors/ramps.js';
 import { DATA_ORIGIN } from '../constants.js';
 import { rampLegendHtml } from './ui-legends.js';
 import { escapeHtml } from '../utils/utils.js';
+import { t } from '../../src/i18n/index.js';
 
 export function buildLayersPanel() {
   const groups = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "conditions"];
@@ -27,12 +29,14 @@ export function buildLayersPanel() {
 
 function layerRowHtml(entry: LayerDef) {
   const checked = state.layerVisibility[entry.id] ? " checked" : "";
+  const label = t(entry.titleKey);
+  const liveTooltip = t('layer.liveTooltip');
   return `
     <div class="layer-row">
       <label class="layer-label">
         <input type="checkbox" data-layer-id="${entry.id}"${checked}>
-        <span class="swatch${entry.live ? " swatch--live" : ""}" style="background:${entry.swatch}${entry.live ? `;color:${entry.swatch}` : ""}" ${entry.live ? 'title="Live data — updates regularly"' : ""}></span>
-        <span class="layer-name truncate" title="${escapeHtml(entry.label)}">${escapeHtml(entry.label)}</span>
+        <span class="swatch${entry.live ? " swatch--live" : ""}" style="background:${entry.swatch}${entry.live ? `;color:${entry.swatch}` : ""}" ${entry.live ? `title="${escapeHtml(liveTooltip)}"` : ""}></span>
+        <span class="layer-name truncate" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       </label>
       <div class="layer-actions">
         ${yearFilterButtonHtml(entry)}${filterButtonHtml(entry)}${downloadMenuHtml(entry)}${sourceButtonHtml(entry)}
@@ -51,6 +55,8 @@ function downloadMenuHtml(entry: LayerDef) {
   // No format pack → no download button. The source link lives on the Data Credits
   // page, reachable via the info button — one fewer link to maintain.
   if (!csv && !geojson && !shp && !tif) return "";
+  const label = t(entry.titleKey);
+  const dlText = t('layer.download');
   const items = [
     csv ? `<a href="${DATA_ORIGIN}${csv}" download>CSV</a>` : "",
     geojson ? `<a href="${DATA_ORIGIN}${geojson}" download>GeoJSON</a>` : "",
@@ -59,37 +65,46 @@ function downloadMenuHtml(entry: LayerDef) {
   ].filter(Boolean).join("");
   return `
     <div class="dl-wrap">
-      <button class="icon-btn dl-btn" title="Download" aria-label="Download ${escapeHtml(entry.label)}">⬇</button>
+      <button class="icon-btn dl-btn" title="${escapeHtml(dlText)}" aria-label="${escapeHtml(dlText)} ${escapeHtml(label)}">⬇</button>
       <div class="dropdown dl-menu" hidden>${items}</div>
     </div>`;
 }
 
 function filterButtonHtml(entry: LayerDef) {
   if (!entry.filterBuckets) return "";
+  const label = t(entry.titleKey);
+  const filterText = t('layer.filter');
   return `
-    <button class="icon-btn filter-btn" data-filter-layer="${entry.id}" title="Filter" aria-label="Filter ${escapeHtml(entry.label)}">▾</button>`;
+    <button class="icon-btn filter-btn" data-filter-layer="${entry.id}" title="${escapeHtml(filterText)}" aria-label="${escapeHtml(filterText)} ${escapeHtml(label)}">▾</button>`;
 }
 
 function yearFilterButtonHtml(entry: LayerDef) {
   if (!entry.yearFilterLayer) return "";
+  const label = t(entry.titleKey);
+  const filterTitle = t('year.filterTitle');
+  const filterAria = t('year.filterAria', { label });
   return `
-    <button class="icon-btn filter-btn" id="genYearFilterBtn" title="Filter by year (with playback)" aria-label="Filter ${escapeHtml(entry.label)} by year">📅</button>`;
+    <button class="icon-btn filter-btn" id="genYearFilterBtn" title="${escapeHtml(filterTitle)}" aria-label="${escapeHtml(filterAria)}">📅</button>`;
 }
 
 function yearFilterBlockHtml(entry: LayerDef) {
   if (!entry.yearFilterLayer) return "";
+  const playTitle = t('year.playTitle');
+  const allYears = t('year.allYears');
+  const allYearsTitle = t('year.allYearsTitle');
+  const note = t('year.note');
   return `
     <div class="section-filter-panel" id="genYearFilterPanel" hidden>
       <div class="year-filter-wrap">
         <div class="year-filter-controls">
-          <button type="button" class="year-btn" id="yearPlayBtn" title="Play through years">▶</button>
-          <span class="year-readout" id="yearReadout">All years</span>
-          <button type="button" class="year-all-btn" id="yearAllBtn" title="Show all generators (clear year filter)">All years</button>
+          <button type="button" class="year-btn" id="yearPlayBtn" title="${escapeHtml(playTitle)}">▶</button>
+          <span class="year-readout" id="yearReadout">${escapeHtml(allYears)}</span>
+          <button type="button" class="year-all-btn" id="yearAllBtn" title="${escapeHtml(allYearsTitle)}">${escapeHtml(allYears)}</button>
         </div>
         <input type="range" class="year-slider year-slider--off" id="yearSlider"
                min="1900" max="2031" step="1" value="2025">
         <div class="year-ticks"><span>1900</span><span>1965</span><span>2031</span></div>
-        <div class="year-note">EIA only — generators alive in the selected year</div>
+        <div class="year-note">${escapeHtml(note)}</div>
       </div>
     </div>`;
 }
@@ -97,10 +112,12 @@ function yearFilterBlockHtml(entry: LayerDef) {
 function sourceButtonHtml(entry: LayerDef) {
   const source = LAYER_SOURCES[entry.sourceId];
   if (!source) return "";
+  const label = t(entry.titleKey);
+  const aria = t('layer.sourceAria', { label, source: source.label });
   return `
     <button class="icon-btn source-btn" type="button" data-source-id="${escapeHtml(entry.sourceId)}"
             title="${escapeHtml(source.tooltip)}"
-            aria-label="Show source for ${escapeHtml(entry.label)}: ${escapeHtml(source.label)}">i</button>`;
+            aria-label="${escapeHtml(aria)}">i</button>`;
 }
 
 function filterPanelHtml(entry: LayerDef) {
@@ -121,54 +138,66 @@ function filterPanelHtml(entry: LayerDef) {
 
 function ogfColorByBlockHtml(entry: LayerDef) {
   if (!entry.ogfStatusLayer) return "";
-  const btn = (m: string, label: string) =>
+  const label = t(entry.titleKey);
+  const btn = (m: string, text: string) =>
     `<button type="button" class="gen-mode-btn${state.ogfColorBy === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-ogf-colorby="${m}">${label}</button>`;
+    ` data-ogf-colorby="${m}">${escapeHtml(text)}</button>`;
   return `
     <div class="gen-mode">
-      <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(entry.label)} by">
-        ${btn("status", "Status")}${btn("scenario", "Scenario")}${btn("planauth", "Authority")}
+      <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(label)} by">
+        ${btn("status", t('colorby.status'))}${btn("scenario", t('colorby.scenario'))}${btn("planauth", t('colorby.planauth'))}
       </div>
     </div>`;
 }
 
 function westtecColorByBlockHtml(entry: LayerDef) {
   if (!entry.westtecColorLayer) return "";
-  const btn = (m: string, label: string) =>
+  const label = t(entry.titleKey);
+  const btn = (m: string, text: string) =>
     `<button type="button" class="gen-mode-btn${state.westtecColorBy === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-westtec-colorby="${m}">${label}</button>`;
+    ` data-westtec-colorby="${m}">${escapeHtml(text)}</button>`;
   return `
     <div class="gen-mode">
-      <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(entry.label)} by">
-        ${btn("scenario", "Scenario")}${btn("dataset", "Type")}
+      <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(label)} by">
+        ${btn("scenario", t('colorby.scenario'))}${btn("dataset", t('colorby.dataset'))}
       </div>
     </div>`;
 }
 
 function weatherVarBlockHtml(entry: LayerDef) {
   if (!entry.weatherVarLayer) return "";
-  const options = WEATHER_VARIABLES.map(v =>
-    `<option value="${v.id}"${state.weatherVar === v.id ? " selected" : ""}>${escapeHtml(v.label)}</option>`
-  ).join("");
+  const label = t(entry.titleKey);
+  const options = WEATHER_VARIABLES.map(v => {
+    const vLabel = v.labelKey ? t(v.labelKey) : v.label;
+    return `<option value="${v.id}"${state.weatherVar === v.id ? " selected" : ""}>${escapeHtml(vLabel)}</option>`;
+  }).join("");
   return `
     <div class="gen-mode">
       <select class="weather-var-select" data-weather-var-select
-              aria-label="Weather variable for ${escapeHtml(entry.label)}">${options}</select>
+              aria-label="Weather variable for ${escapeHtml(label)}">${options}</select>
     </div>`;
 }
 
 function genModeBlockHtml(entry: LayerDef) {
   if (!entry.heatLayerId && !entry.modes) return "";
+  const label = t(entry.titleKey);
   const mode = state.genMode[entry.id] || entry.defaultMode || "icons";
-  const btn = (m: string, label: string) =>
+  const modeLabels: Record<string, string> = {
+    icons: t('mode.icons'),
+    heat: t('mode.heatmap'),
+    both: t('mode.both'),
+    points: t('mode.points'),
+    clusters: t('mode.clusters'),
+  };
+  const btn = (m: string, text: string) =>
     `<button type="button" class="gen-mode-btn${mode === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-gen-mode-layer="${entry.id}" data-gen-mode="${m}">${label}</button>`;
+    ` data-gen-mode-layer="${entry.id}" data-gen-mode="${m}">${escapeHtml(text)}</button>`;
   const buttons = entry.modes
-    ? entry.modes.map(m => btn(m.id, m.label)).join("")
-    : btn("icons", "Icons") + btn("heat", "Heatmap") + btn("both", "Both");
+    ? entry.modes.map(m => btn(m.id, modeLabels[m.id] ?? m.label)).join("")
+    : btn("icons", t('mode.icons')) + btn("heat", t('mode.heatmap')) + btn("both", t('mode.both'));
   return `
     <div class="gen-mode">
-      <div class="gen-mode-toggle" role="group" aria-label="Display mode for ${escapeHtml(entry.label)}">
+      <div class="gen-mode-toggle" role="group" aria-label="Display mode for ${escapeHtml(label)}">
         ${buttons}
       </div>
       <div class="gen-heat-ramp" id="${entry.id}-heat-ramp" hidden>

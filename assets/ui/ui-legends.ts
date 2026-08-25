@@ -31,18 +31,20 @@ import { escapeHtml } from '../utils/utils.js';
 import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
 import { ICON_SVG } from '../icons.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
+import { t } from '../../src/i18n/index.js';
+import { on } from '../state-bus.js';
 
 // >>> ADD-LAYER: legend-filters — see docs/adding-a-layer.md §opt
 export const LEGEND_FILTERS = [
   { key: "kv", groupCode: "v", buckets: VOLTAGE_LEGEND, syncBuckets: KV_BUCKETS,
     masterId: "kvAllCb", legendId: "voltageLegend", itemsId: "voltageLegendItems",
-    title: "Voltage (kV)", swatch: "color", apply: applyVoltageFilter },
+    title: "Voltage (kV)", titleKey: "legend.voltage", swatch: "color", apply: applyVoltageFilter },
   { key: "underground", groupCode: "o", buckets: LINE_PLACEMENT_BUCKETS,
     masterId: "linePlacementAllCb", legendId: "linePlacementLegend", itemsId: "linePlacementLegendItems",
     title: "Line placement", swatch: "line", apply: applyVoltageFilter },
   { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
     masterId: "fuelAllCb", legendId: "fuelLegend", itemsId: "fuelLegendItems",
-    title: "Fuel Type", swatch: "icon", apply: applyGeneratorFilters },
+    title: "Fuel Type", titleKey: "legend.fuel", swatch: "icon", apply: applyGeneratorFilters },
   { key: "sector", groupCode: "i", buckets: SECTOR_BUCKETS,
     masterId: "sectorAllCb", legendId: "sectorLegend", itemsId: "sectorLegendItems",
     title: "EIA Plants — sector", swatch: "none", apply: applyGeneratorFilters },
@@ -76,7 +78,7 @@ export const LEGEND_FILTERS = [
     title: "Utility type", swatch: "color", apply: applyRetailTypeFilter },
   { key: "ogfStatus", groupCode: "g", buckets: OGF_STATUS_BUCKETS,
     masterId: "ogfStatusAllCb", legendId: "ogfStatusLegend", itemsId: "ogfStatusLegendItems",
-    title: "Project status", swatch: "color", apply: applyOGFFilters },
+    title: "Project status", titleKey: "legend.status", swatch: "color", apply: applyOGFFilters },
   { key: "ogfScenario", groupCode: "w", buckets: OGF_SCENARIO_BUCKETS,
     masterId: "ogfScenarioAllCb", legendId: "ogfScenarioLegend", itemsId: "ogfScenarioLegendItems",
     title: "WestTEC scenario", swatch: "color", apply: applyOGFFilters },
@@ -94,7 +96,7 @@ export const LEGEND_FILTERS = [
     title: "Weather Alerts", swatch: "color", apply: applyNwsGroupFilter },
   { key: "westtecScenario", groupCode: "x", buckets: WESTTEC_SCENARIO_BUCKETS,
     masterId: "westtecScenarioAllCb", legendId: "westtecScenarioLegend", itemsId: "westtecScenarioLegendItems",
-    title: "Scenario", swatch: "color", apply: applyWestTECFilters },
+    title: "Scenario", titleKey: "legend.scenario", swatch: "color", apply: applyWestTECFilters },
   { key: "westtecDataset", groupCode: "z", buckets: WESTTEC_DATASET_BUCKETS,
     masterId: "westtecDatasetAllCb", legendId: "westtecDatasetLegend", itemsId: "westtecDatasetLegendItems",
     title: "Project Type", swatch: "color", apply: applyWestTECFilters },
@@ -177,10 +179,13 @@ export function syncLegendMaster(cfg: LegendFilter) {
 }
 
 function buildLegendSection(cfg: LegendFilter) {
+  const titleText = (cfg as { titleKey?: string }).titleKey
+    ? t((cfg as { titleKey?: string }).titleKey!)
+    : cfg.title;
   const title = document.querySelector(`#${cfg.legendId} .legend-title-label`);
   if (title) title.innerHTML =
     `<label style="display:flex;align-items:center;gap:6px;cursor:pointer">` +
-    `<input type="checkbox" class="legend-master-cb" id="${cfg.masterId}" data-legend-key="${cfg.key}"> ${cfg.title}</label>`;
+    `<input type="checkbox" class="legend-master-cb" id="${cfg.masterId}" data-legend-key="${cfg.key}"> ${escapeHtml(titleText)}</label>`;
 
   const items = document.getElementById(cfg.itemsId);
   if (items) items.innerHTML = cfg.buckets.map(b => {
@@ -192,10 +197,13 @@ function buildLegendSection(cfg: LegendFilter) {
       : cfg.swatch === "line"
       ? `<span class="legend-line-swatch${b.id === "underground" ? " legend-line-swatch--dashed" : ""}"></span>`
       : `<span class="legend-swatch" style="background:${b.color}"></span>`;
+    const labelText = (b as { labelKey?: string }).labelKey
+      ? t((b as { labelKey?: string }).labelKey!)
+      : b.label;
     return `<label class="legend-item legend-filter-item">
        <input type="checkbox" class="legend-filter-cb" data-legend-key="${cfg.key}" data-bucket-id="${b.id}"${checked}>
        ${swatch}
-       <span>${escapeHtml(b.label)}</span>
+       <span>${escapeHtml(labelText)}</span>
      </label>`;
   }).join("");
 
@@ -318,6 +326,8 @@ export function buildLegends() {
   for (const cfg of LEGEND_FILTERS) buildLegendSection(cfg);
   updateLegends();
 }
+
+on('lang:changed', () => { buildLegends(); });
 
 const LEGEND_VISIBILITY = [
   { el: "voltageLegend",    show: () => LAYERS.some(l => l.voltageLayer  && state.layerVisibility[l.id]) },

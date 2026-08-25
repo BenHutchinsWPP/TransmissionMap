@@ -3,6 +3,7 @@
 
 import { state } from './state.js';
 import { parseUrlState, formatUrlState, type UrlStateData } from './url-state-codec.js';
+import { getLocale, setLocale, type SupportedLocale } from '../src/i18n/index.js';
 
 function _hashParams() {
   const hash = location.hash.slice(1);
@@ -40,6 +41,7 @@ export function readUrlState() {
   if (data.terrain3d) state.terrain3d = true;
   if (data.buildings3d) state.buildings3d = true;
   if (data.hillshade) state.hillshade = true;
+  if (data.lang) setLocale(data.lang as SupportedLocale);
 }
 
 export function writeUrlState() {
@@ -61,6 +63,7 @@ export function writeUrlState() {
     terrain3d: state.terrain3d,
     buildings3d: state.buildings3d,
     hillshade: state.hillshade,
+    lang: getLocale(),
   };
 
   const parts = formatUrlState(data);
@@ -77,5 +80,6 @@ export function writeUrlState() {
 }
 
 // ─── Bus subscription ─────────────────────────────────────────────────────────
-import { on } from './state-bus.js';
+import { on, emit } from './state-bus.js';
 on('url:write', writeUrlState);
+on('lang:changed', () => emit('url:write'));
