@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { state } from '../state.js';
 import { saveUserData, loadUserData, restoreDrawnFeatures } from './user-data.js';
+
+const initDrawMock = vi.fn();
+vi.mock('./draw-chunk.js', () => ({
+  initDraw: () => initDrawMock(),
+}));
 
 const STORAGE_KEY = 'tm-user-data';
 
@@ -24,10 +29,12 @@ function makeFeature(id: string): GeoJSON.Feature {
 
 beforeEach(() => {
   localStorage.clear();
+  initDrawMock.mockClear();
   document.body.innerHTML = '<div id="myDataBody"></div>';
   state.userLayers = [];
   state.userLayerCounter = 0;
   state.draw = null;
+  state.map = null;
 });
 
 describe('drawn-feature persistence', () => {
@@ -73,5 +80,15 @@ describe('drawn-feature persistence', () => {
     restoreDrawnFeatures();
     expect(added).toHaveLength(1);
     expect((added[0] as GeoJSON.FeatureCollection).features[0].id).toBe('a');
+  });
+
+  it('loadUserData triggers draw-chunk loading if drawn features exist and map is present', async () => {
+    const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [makeFeature('a')] };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ userLayers: [], drawnFeatures: fc }));
+    state.map = {} as unknown as typeof state.map;
+
+    loadUserData();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(initDrawMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -475,6 +475,10 @@ export function loadUserData() {
     if (state.draw) {
       state.draw.add(drawnFeatures);
       renderMyDataTab();
+    } else if (state.map) {
+      import('./draw-chunk.js').then(chunk => {
+        if (!state.draw) chunk.initDraw();
+      }).catch(err => console.warn('[TransmissionMap] lazy draw load failed:', err));
     }
   }
 }

@@ -99,7 +99,13 @@ export function initDraw() {
   });
   state.map.addControl(state.draw as unknown as IControl);
   restoreDrawnFeatures();
-  state.map.once('load', () => { state.draw!.changeMode('static'); });
+  if (state.map.loaded()) {
+    if (state.editMode === 'view') state.draw.changeMode('static');
+  } else {
+    state.map.once('load', () => {
+      if (state.editMode === 'view') state.draw!.changeMode('static');
+    });
+  }
 
   state.map.on('draw.create', e => {
     for (const f of e.features) {
