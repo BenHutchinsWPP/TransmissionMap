@@ -117,6 +117,55 @@ layers:
     simplification: 4
     flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
 
+  # Administrative boundary background context — global → national → local.
+  # Order here is build order only; map draw order lives in
+  # assets/layers/add-all-layers.ts, where these are added after the electrical
+  # region layers so their outlines read on top of the region fills.
+
+  # 218 countries (geoBoundaries CGAZ ADM0) — coarsest, drawn first.
+  # 218 features. Served as simplified GeoJSON, not tiles: whole-polygon copy to
+  # My Data needs unclipped geometry, and nine zoom levels of duplicated
+  # coastline cost more than the single simplified copy does (8.1 MB → 3.9 MB).
+  - id: countries
+    src: data/build/countries.gpkg
+    format: geojson
+    select: [name, iso_a3, color_idx]
+    precision: 5
+    simplify: 0.005
+
+  # 3,224 states/provinces across 218 countries (geoBoundaries CGAZ ADM1).
+  # 3,224 features — same copy rationale as countries above. A coarser tolerance
+  # than countries: admin-1 units are an order of magnitude smaller, so the same
+  # 0.005 would spend 6.5 MB where 0.01 spends 4.1 MB for detail this layer is
+  # never read at.
+  - id: admin1_boundaries
+    src: data/build/admin1_boundaries.gpkg
+    format: geojson
+    select: [name, iso_a3, country, color_idx]
+    precision: 5
+    simplify: 0.01
+
+  # 56 features (50 states + DC + PR + territories) — Census cartographic
+  # boundary. Same small-count rationale as nerc_regions/control_areas below:
+  # simplified GeoJSON, not tiled.
+  - id: us_states
+    src: data/build/us_states.gpkg
+    format: geojson
+    select: [geoid, stusps, name, color_idx]
+    precision: 5
+    simplify: 0.005
+
+  # ~33.8k ZIP Code Tabulation Areas (Census cartographic boundary) — dense,
+  # drawn last among the admin layers. zcta5 keeps leading zeros as a string.
+  - id: us_zcta
+    src: data/build/us_zcta.gpkg
+    format: pmtiles
+    select: [zcta5, color_idx]
+    min_zoom: 4
+    max_zoom: 11
+    simplification: 6
+    flags: [--detect-shared-borders, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping, --drop-densest-as-needed]
+
   # 16 features — too small to justify tiling; served as simplified GeoJSON so
   # whole-polygon copy works (vector tiles clip geometry at tile borders).
   - id: nerc_regions
@@ -211,14 +260,15 @@ layers:
   # Also built standalone by scripts/build_boundaries.sh (`make boundaries`), which
   # produces this same data/build/county_boundaries.geojson intermediate — this
   # manifest block is the ONLY place its tiling params live (build_boundaries.sh
-  # shells out to build_tiles.py --only county_boundaries). Draws nothing on its
-  # own: future county-keyed layers join onto it via feature-state. Source layer
-  # name `county_boundaries` (= this id) and string `GEOID` are a load-bearing
+  # shells out to build_tiles.py --only county_boundaries). Paints the "US
+  # Counties" Regions layer, and county-keyed layers (ODIN outages, NWS county
+  # alerts) join onto the same tiles via feature-state. Source layer name
+  # `county_boundaries` (= this id) and string `GEOID` are a load-bearing
   # contract — see docs/layers/boundaries.md.
   - id: county_boundaries
     src: data/build/county_boundaries.geojson
     format: pmtiles
-    select: [GEOID, NAME, STUSPS, STATE_NAME]
+    select: [GEOID, NAME, STUSPS, STATE_NAME, color_idx]
     min_zoom: 2
     max_zoom: 8
     simplification: 8

@@ -362,6 +362,27 @@ const _defs = [
     row("Abbreviation", p.abbrev) +
     row("Area", p.area_sqmi ? fmtArea(Number(p.area_sqmi) * 2589988.11) : null)],
   [["retail-fill"], renderRetail],
+  [["countries-fill"], (p: Record<string, unknown>) =>
+    title((p.name as string) || "Country") +
+    row("ISO Code", p.iso_a3)],
+  [["admin1-fill"], (p: Record<string, unknown>) =>
+    // `country` is absent from some builds — row() drops it cleanly rather
+    // than rendering a blank/"undefined" line.
+    title((p.name as string) || "State / Province") +
+    row("Country", p.country) +
+    row("ISO Code", p.iso_a3)],
+  [["us-states-fill"], (p: Record<string, unknown>) =>
+    title((p.name as string) || "State") +
+    row("Abbreviation", p.stusps) +
+    row("GEOID", p.geoid)],
+  [["us-counties-fill"], (p: Record<string, unknown>) => {
+    const county = (p.NAME as string) || "County";
+    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
+    return title(heading) + row("GEOID", p.GEOID);
+  }],
+  [["us-zcta-fill"], (p: Record<string, unknown>) =>
+    title(`ZCTA ${p.zcta5 ?? ""}`) +
+    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">ZCTAs approximate ZIP code service areas but are not the same as ZIP codes.</div>`],
   [["wildfire-incidents-circle"], (p: Record<string, unknown>) => {
     const typeCat = p.type_cat as string | null;
     const typeLabel = typeCat === "WF" ? "WF — Wildfire"

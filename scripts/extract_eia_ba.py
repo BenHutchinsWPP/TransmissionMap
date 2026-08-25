@@ -27,7 +27,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.ops import unary_union
 
-from geo_common import write_shp_csv
+from geo_common import assign_color_index, write_shp_csv
 
 RAW_DIR  = Path("data/raw/eia-ba")
 BUILD    = Path("data/build")
@@ -83,36 +83,6 @@ def _clean_geometry(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         still = int((~gdf.geometry.is_valid).sum())
         print(f"  invalid after repair: {still}")
     return gdf
-
-
-def _assign_colors(gdf: gpd.GeoDataFrame) -> list:
-    """Map-color the areas: no two that touch or overlap share a color.
-
-    Welsh-Powell — build the adjacency graph with a spatial self-join, then walk
-    the areas most-neighbours-first, giving each the first palette color none of
-    its neighbours already holds. Areas count as neighbours within NEAR_DEG of
-    each other, not just where they touch, so a near-miss pair still reads apart.
-    """
-    near = gdf[["geometry"]].copy()
-    near["geometry"] = near.geometry.buffer(NEAR_DEG)
-    pairs = gpd.sjoin(near, near, how="inner", predicate="intersects")
-    adj = {i: set() for i in range(len(gdf))}
-    for left, right in zip(pairs.index, pairs["index_right"]):
-        if left != right:
-            adj[left].add(right)
-            adj[right].add(left)
-
-    colors = {}
-    for i in sorted(adj, key=lambda k: -len(adj[k])):
-        taken = {colors[n] for n in adj[i] if n in colors}
-        colors[i] = next(c for c in range(len(PALETTE) + len(adj[i]) + 1)
-                         if c not in taken)
-
-    over = max(colors.values()) + 1 - len(PALETTE)
-    if over > 0:
-        print(f"  WARNING: needed {over} more colors than the palette holds; "
-              f"reusing from the start")
-    return [PALETTE[colors[i] % len(PALETTE)] for i in range(len(gdf))]
 
 
 # ── ArcGIS download ────────────────────────────────────────────────────────────
@@ -192,7 +162,8 @@ def main():
         "name":         gdf["BAL_AUTH"].apply(clean_str),
         "abbrev":       gdf["BA_Abbrev"].apply(clean_str),
         "area_sqmi":    [clean_int(v) for v in gdf["Area_sq_mi"]],
-        "color":        _assign_colors(gdf),
+        "color":        [PALETTE[i] for i in assign_color_index(
+                            gdf, len(PALETTE), NEAR_DEG, indent="  ")],
     }, geometry=gdf.geometry, crs="EPSG:4326")
 
     # Write output

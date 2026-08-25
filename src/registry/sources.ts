@@ -140,4 +140,24 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     label: "WestTEC 10-Year Horizon",
     tooltip: "Source: WestTEC (Western Transmission Expansion Coalition), a Western Power Pool initiative — West-Wide Transmission Study, 10-Year Horizon Report (Feb 2026)",
   },
+  "cgaz-adm0": {
+    label: "geoBoundaries CGAZ",
+    tooltip: "Source: geoBoundaries Comprehensive Global Administrative Zones — country boundaries",
+  },
+  "cgaz-adm1": {
+    label: "geoBoundaries CGAZ",
+    tooltip: "Source: geoBoundaries Comprehensive Global Administrative Zones — state/province boundaries",
+  },
+  "census-states": {
+    label: "Census Cartographic Boundaries",
+    tooltip: "Source: U.S. Census Bureau — cartographic boundary files, state boundaries",
+  },
+  "census-counties": {
+    label: "Census Cartographic Boundaries",
+    tooltip: "Source: U.S. Census Bureau — cartographic boundary files, county boundaries",
+  },
+  "census-zcta": {
+    label: "Census Cartographic Boundaries",
+    tooltip: "Source: U.S. Census Bureau — cartographic boundary files, ZIP Code Tabulation Areas (ZCTA)",
+  },
 };

@@ -7,7 +7,6 @@ export interface Downloads {
   geojson?: string | null;  // line/polygon layers — GeoJSON pack (also holds CSV)
   shp?: string | null;      // line/polygon layers — Shapefile pack (also holds CSV)
   tif?: string | null;      // raster layers — GeoTIFF pack
-  url?: string | null;      // external source link (opens in new tab)
 }
 
 export interface RampDef {

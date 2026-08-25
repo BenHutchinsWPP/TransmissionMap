@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -46,6 +46,8 @@ help:
 	@echo "  make nws-zones   build shared NWS zone PMTiles (public + fire weather zones) → data/layers/nws_zones.pmtiles"
 	@echo "  make boem-wind   build BOEM offshore wind leases → data/layers/boem_wind_leases.geojson.gz"
 	@echo "  make admin-lines build Natural Earth border lines (weather overlay) → data/layers/admin_lines.geojson.gz"
+	@echo "  make census-boundaries build US states + ZCTA boundaries (Census) → $(BUILD)/{us_states,us_zcta}.gpkg"
+	@echo "  make world-boundaries  build countries + admin-1 boundaries (geoBoundaries CGAZ) → $(BUILD)/{countries,admin1_boundaries}.gpkg"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
@@ -151,6 +153,12 @@ pipeline:
 	@echo "=== WestTEC 10-Year Horizon (West-Wide Transmission Study) ==="
 	@$(PY) $(SCRIPTS)/extract_westtec.py || \
 	    echo "  [skip] WestTEC — place ZIPs at data/raw/westtec/ (see script header)"
+	@echo "=== US states + ZCTA boundaries (Census) ==="
+	@$(PY) $(SCRIPTS)/extract_us_census_boundaries.py || \
+	    echo "  [skip] census boundaries — download failed (see script header)"
+	@echo "=== Countries + admin-1 boundaries (geoBoundaries CGAZ) ==="
+	@$(PY) $(SCRIPTS)/extract_cgaz_boundaries.py || \
+	    echo "  [skip] world boundaries — download failed (see script header)"
 	@echo "── Renaming intermediate SHPs → final snake_case names ──"
 	@$(MAKE) _rename
 	@echo ""
@@ -313,6 +321,24 @@ admin-lines:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/extract_admin_lines.py
 	@$(PY) $(SCRIPTS)/build_tiles.py --only admin_lines
+
+# ── US states + ZCTA boundaries (Census TIGER cartographic) ─────────────────
+# Auto-downloads cb_2025_us_state_500k (3.2 MB) + cb_2020_us_zcta520_500k
+# (66 MB) to data/raw/census_boundaries/ → data/build/{us_states,us_zcta}.gpkg.
+# Background context layers under Regions — see docs/layers/us-states.md /
+# docs/layers/us-zcta.md. Public domain (US Government work).
+census-boundaries:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/extract_us_census_boundaries.py
+
+# ── Countries + admin-1 boundaries (geoBoundaries CGAZ) ──────────────────────
+# Auto-downloads geoBoundariesCGAZ_ADM0 + ADM1 shapefile zips (~104 MB each)
+# to data/raw/geoboundaries/ → data/build/{countries,admin1_boundaries}.gpkg.
+# Background context layers under Regions — see docs/layers/countries.md /
+# docs/layers/admin1.md. License CC BY 4.0 (attribution required).
+world-boundaries:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/extract_cgaz_boundaries.py
 
 # ── Validate: build inputs + layer outputs ──────────────────────────────────
 # Run after `make pipeline` (checks data/build/ shapefiles) and again after

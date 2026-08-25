@@ -47,7 +47,7 @@ function layerRowHtml(entry: LayerDef) {
 }
 
 function downloadMenuHtml(entry: LayerDef) {
-  const { csv, geojson, shp, tif, url } = entry.downloads ?? {};
+  const { csv, geojson, shp, tif } = entry.downloads ?? {};
   // No format pack → no download button. The source link lives on the Data Credits
   // page, reachable via the info button — one fewer link to maintain.
   if (!csv && !geojson && !shp && !tif) return "";
@@ -56,7 +56,6 @@ function downloadMenuHtml(entry: LayerDef) {
     geojson ? `<a href="${DATA_ORIGIN}${geojson}" download>GeoJSON</a>` : "",
     shp ? `<a href="${DATA_ORIGIN}${shp}" download>SHP</a>` : "",
     tif ? `<a href="${DATA_ORIGIN}${tif}" download>GeoTIFF</a>` : "",
-    url ? `<a href="${url}" target="_blank" rel="noopener">Source data ↗</a>` : "",
   ].filter(Boolean).join("");
   return `
     <div class="dl-wrap">

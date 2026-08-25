@@ -460,4 +460,35 @@ describe('buildPopupHtml', () => {
   it('returns null for unknown layer', () => {
     expect(buildPopupHtml('unknown-layer', {})).toBeNull();
   });
+
+  it('routes countries-fill', () => {
+    const out = buildPopupHtml('countries-fill', { name: 'Canada', iso_a3: 'CAN' });
+    expect(out).toContain('Canada');
+    expect(out).toContain('CAN');
+  });
+
+  it('routes admin1-fill and degrades gracefully when country is missing', () => {
+    const out = buildPopupHtml('admin1-fill', { name: 'Ontario', iso_a3: 'CAN' });
+    expect(out).toContain('Ontario');
+    expect(out).not.toContain('undefined');
+    expect(out).not.toContain('null');
+  });
+
+  it('routes us-states-fill', () => {
+    const out = buildPopupHtml('us-states-fill', { name: 'Texas', stusps: 'TX', geoid: '48' });
+    expect(out).toContain('Texas');
+    expect(out).toContain('TX');
+  });
+
+  it('routes us-counties-fill with state name appended to title', () => {
+    const out = buildPopupHtml('us-counties-fill', { NAME: 'Harris', STATE_NAME: 'Texas', GEOID: '48201' });
+    expect(out).toContain('Harris, Texas');
+    expect(out).toContain('48201');
+  });
+
+  it('routes us-zcta-fill and preserves the leading zero in zcta5', () => {
+    const out = buildPopupHtml('us-zcta-fill', { zcta5: '00501' });
+    expect(out).toContain('00501');
+    expect(out).toContain('not the same as ZIP codes');
+  });
 });

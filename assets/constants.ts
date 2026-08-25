@@ -52,6 +52,10 @@ export const DATA = {
   control_areas:      DATA_ORIGIN + "data/layers/control_areas.geojson.gz",
   eia_ba:             DATA_ORIGIN + "data/layers/eia_ba.geojson.gz",
   retail_territories: DATA_ORIGIN + "data/layers/retail_territories.pmtiles",
+  countries:          DATA_ORIGIN + "data/layers/countries.geojson.gz",          // geoBoundaries CGAZ country outlines
+  admin1_boundaries:  DATA_ORIGIN + "data/layers/admin1_boundaries.geojson.gz",  // geoBoundaries CGAZ state/province outlines
+  us_states:          DATA_ORIGIN + "data/layers/us_states.geojson.gz",       // Census cartographic state boundaries
+  us_zcta:            DATA_ORIGIN + "data/layers/us_zcta.pmtiles",            // Census cartographic ZCTA boundaries
   nlr_wind_100m:          DATA_ORIGIN + "data/layers/nlr_wind_100m.pmtiles",          // NREL/NLR WIND Toolkit raster (baked color)
   nlr_wind_100m_lut:      DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.i16",          // Int16 m/s*100 grid for hover readout
   nlr_wind_100m_lut_meta: DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.json",         // grid dims + bbox + scale
@@ -169,6 +173,10 @@ export const SOURCE_ATTRIB: Record<string, string> = {
   "wecc-paths":               '<a href="https://www.wecc.org/">WECC</a>',
   "bia-tribal-lands":         '<a href="https://biamaps.geoplatform.gov/biatracts/">Bureau of Indian Affairs</a>',
   "mines":                    '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>',
+  "countries":                '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
+  "admin1":                   '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
+  "us-states":                '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>',
+  "us-zcta":                  '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>',
 };
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────

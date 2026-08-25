@@ -102,9 +102,7 @@ export const transmissionLayers: LayerDef[] = [
     defaultOn:      false,
     ogfStatusLayer: true,
     mapLayerIds:    ["ogf-planned-lines-casing", "ogf-planned-lines"],
-    downloads: {
-      url: "https://ourgridfuture.org",
-    },
+    downloads: {},
   },
   */
   {
@@ -118,9 +116,7 @@ export const transmissionLayers: LayerDef[] = [
     westtecColorLayer: true,
     mapLayerIds:       ["westtec-lines-casing", "westtec-lines"],
     lineHighlightKeys: ["name"],
-    downloads: {
-      url: "https://www.westernpowerpool.org/",
-    },
+    downloads: {},
   },
   {
     id:          "wecc-paths",
@@ -134,7 +130,6 @@ export const transmissionLayers: LayerDef[] = [
                   "wecc-path-lines-highlight", "wecc-paths-circles", "wecc-paths-label"],
     downloads: {
       geojson: "data/releases/wecc-paths.zip",
-      url: "https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf",
     },
   },
 ];

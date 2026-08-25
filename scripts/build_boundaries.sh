@@ -77,6 +77,26 @@ ogr2ogr -f GeoJSON "$GEOJSON" "$SHP" \
   -lco COORDINATE_PRECISION=5
 echo "  [ok] $GEOJSON  $(du -sh "$GEOJSON" | cut -f1)"
 
+echo "--- 2b/3 map-colour → color_idx (US Counties Regions layer) ---"
+# Additive column only: GEOID/NAME/STUSPS/STATE_NAME and the promoteId target are
+# untouched, so the ODIN and NWS feature-state joins are unaffected. Counties are
+# joined on touching geometry — a buffer at this density would make a whole metro
+# area mutually adjacent.
+PY_BIN="venv/bin/python"
+[ -x "$PY_BIN" ] || PY_BIN="python3"
+"$PY_BIN" - "$GEOJSON" <<'PYEOF'
+import sys
+sys.path.insert(0, "scripts")
+import geopandas as gpd
+from geo_common import assign_color_index
+
+path = sys.argv[1]
+gdf = gpd.read_file(path)
+gdf["color_idx"] = assign_color_index(gdf, indent="  ")
+gdf.to_file(path, driver="GeoJSON", COORDINATE_PRECISION=5)
+print(f"  [ok] {path}  (+color_idx)")
+PYEOF
+
 echo "--- 3/3 build_tiles.py → PMTiles (source layer: county_boundaries) ---"
 # Tiling params live in scripts/tile_manifest.yaml, not here — one source of
 # truth, so `make tiles` and `make boundaries` cannot drift apart.

@@ -100,8 +100,9 @@ turns public datasets into PMTiles consumed by the frontend.
   - **`assets/layers/`** — MapLibre layer builders
     - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
-    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc}.ts` — per-source builders
-      (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/NEXRAD radar — all the live + hazard layers)
+    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,admin}.ts` — per-source builders
+      (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/NEXRAD radar — all the live + hazard layers;
+      `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1)
   - **`assets/user-data/`** — user-imported/drawn layers
     - `user-data.ts` — core (add/remove/save/render); `user-data-draw.ts` draw mode
     - `user-data-import.ts` GeoJSON/KML/KMZ import; `user-data-export.ts` export
@@ -121,8 +122,10 @@ turns public datasets into PMTiles consumed by the frontend.
   - `renewable.ts` wind/solar/geo/hydro; `land.ts` PAD-US/tribal/crithab; `regions.ts` NERC/BA/retail
   - `conditions.ts` — hazards + everything live: static WHP & seismic PGA, live wildfire
     (perimeters/incidents/smoke), NWS alerts, ODIN outages, NEXRAD radar; `rail.ts` railroads
-- `scripts/` — data pipeline: `extract_*.py` (per dataset), `fetch_*.py` (live
-  feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
+- `scripts/` — data pipeline: `extract_*.py` (per dataset — e.g.
+  `extract_us_census_boundaries.py` for US states/ZCTA,
+  `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
+  (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
 - `docs/adding-a-layer.md` — **read this before adding any map layer**
 - `docs/pipeline.md` — how the data pipeline fits together

@@ -1,7 +1,8 @@
 # Release Artifacts
 
-Inventory of all data files for the July 2026 build, with sizes and sources. These
-files live under `data/` and are required for the app to function.
+Inventory of all data files for the current build, with sizes and sources. These
+files live under `data/` and are required for the app to function. Sizes are read
+from a completed local build; live-feed artifacts vary with each cron refresh.
 
 The OSM source file (`north-america-latest.osm.pbf`, 19.2 GB) is not listed —
 it is re-downloaded from Geofabrik on demand and never committed. This build's
@@ -13,7 +14,7 @@ which includes the recovered line voltages and the new `is_dc` HVDC field.
 ## App data — files loaded by the map at runtime
 
 These live under `data/layers/` and must be present for the app to function.
-Two files — `odin_outages.json` and the live wildfire/NWS-alert feeds — are
+`odin_outages.json`, `wildfire_live.geojson.gz` and `nws_alerts.geojson.gz` are
 **live-feed artifacts** refreshed by cron onto the `data` branch rather than
 built by `make tiles`; they're listed here because they still ship as app data.
 
@@ -24,20 +25,24 @@ built by `make tiles`; they're listed here because they still ship as app data.
 | `data/layers/padus.pmtiles` | 68 MB | USGS PAD-US protected & managed lands (PMTiles) |
 | `data/layers/usfs_wildfire_potential.pmtiles` | 64 MB | USFS wildfire hazard potential raster (PMTiles, baked color) |
 | `data/layers/osm_transmission_lines.pmtiles` | 58 MB | OSM transmission lines (PMTiles, zoom 2–11) |
+| `data/layers/us_zcta.pmtiles` | 55 MB | Census ZIP Code Tabulation Areas, 33,791 features (PMTiles, zoom 4–11) |
 | `data/layers/hifld_transmission_lines.pmtiles` | 38 MB | HIFLD transmission lines (PMTiles, zoom 2–11) |
 | `data/layers/osm_pipelines_lines.pmtiles` | 30 MB | OSM pipeline routes (PMTiles, zoom 3–12) |
 | `data/layers/worldpop_pop_density_lut.i16` | 25 MB | Coarse Int16 people/km² value grid for the legend hover readout (lazy-loaded) |
 | `data/layers/osm_generators.pmtiles` | 17 MB | OSM generators (PMTiles, zoom 7–14) |
 | `data/layers/hifld_natgas_lines.pmtiles` | 16 MB | HIFLD natural gas pipeline lines (PMTiles) |
 | `data/layers/retail_territories.pmtiles` | 15 MB | HIFLD retail electric territories (PMTiles, zoom 2–10) |
+| `data/layers/wildfire_live.geojson.gz` | 14 MB | Live wildfire hotspots, perimeters, incidents and smoke — live feed (cron-refreshed) |
 | `data/layers/worldpop_pop_density.pmtiles` | 11 MB | WorldPop population density, log-scale (raster PMTiles) — CC BY 4.0 |
 | `data/layers/gsa_solar_pvout.pmtiles` | 10 MB | Global Solar Atlas PVOUT, kWh/kWp/day (raster PMTiles, WEBP, zoom 2–7) — CC BY 4.0 |
 | `data/layers/nws_zones.pmtiles` | 7.2 MB | NWS forecast zones, shared join infra for zone-based alerts (PMTiles) |
 | `data/layers/osm_substations_polygons.geojson.gz` | 4.8 MB | OSM substation polygon footprints |
 | `data/layers/tribal_lands.geojson.gz` | 4.5 MB | Census TIGER AIANNH tribal lands |
+| `data/layers/admin1_boundaries.geojson.gz` | 4.1 MB | geoBoundaries CGAZ states/provinces worldwide, 3,224 units (DP 0.01°) |
+| `data/layers/countries.geojson.gz` | 3.9 MB | geoBoundaries CGAZ country outlines, 218 features (DP 0.005°) — CC BY 4.0 |
 | `data/layers/nlr_wind_100m.pmtiles` | 3.4 MB | NREL/NLR WIND Toolkit mean wind speed @ 100 m (raster PMTiles, WEBP, zoom 1–6) |
 | `data/layers/osm_plants_polygons.geojson.gz` | 3.4 MB | OSM power plant polygon footprints |
-| `data/layers/county_boundaries.pmtiles` | 2.5 MB | Census TIGER county boundaries, shared join infra (PMTiles) |
+| `data/layers/county_boundaries.pmtiles` | 2.5 MB | Census county boundaries — paints the Census Counties layer and is the shared join target for ODIN outages and NWS county alerts (PMTiles, zoom 2–8) |
 | `data/layers/bia_tribal_lands.geojson.gz` | 1.9 MB | BIA AIAN-LAR tribal lands |
 | `data/layers/osm_substations_points.geojson.gz` | 1.9 MB | OSM substation points |
 | `data/layers/gsa_solar_pvout_lut.i16` | 1.5 MB | Coarse Int16 kWh/kWp/day value grid for the legend hover readout (lazy-loaded) |
@@ -46,11 +51,16 @@ built by `make tiles`; they're listed here because they still ship as app data.
 | `data/layers/hifld_substations.geojson.gz` | 1012 KB | HIFLD substation points |
 | `data/layers/ogf_planned_transmission.geojson.gz` | 931 KB | Our Grid Future planned transmission projects |
 | `data/layers/eia_generators.geojson.gz` | 925 KB | EIA Form 860 generator units |
+| `data/layers/eia_ba.geojson.gz` | 826 KB | EIA balancing authority territories |
 | `data/layers/osm_plants_points.geojson.gz` | 616 KB | OSM power plant centroids |
 | `data/layers/control_areas.geojson.gz` | 579 KB | HIFLD control areas (balancing authorities) |
 | `data/layers/ihfc_geo_heatflow.pmtiles` | 462 KB | IHFC heat flow, mW/m² (raster PMTiles, WEBP, zoom 2–7) — CC BY 4.0 |
 | `data/layers/wecc_path_lines.geojson.gz` | 449 KB | WECC path digitized corridor lines |
 | `data/layers/nerc_regions.geojson.gz` | 332 KB | HIFLD NERC regions |
+| `data/layers/us_states.geojson.gz` | 305 KB | Census state boundaries, 56 features (DP 0.005°) |
+| `data/layers/admin_lines.geojson.gz` | 143 KB | Natural Earth country/state border lines — white highlights over the weather wash, no standalone layer |
+| `data/layers/odin_outages.json` | 138 KB | ORNL ODIN live county outage counts — no geometry, live feed (cron-refreshed) |
+| `data/layers/westtec_10yr.geojson.gz` | 111 KB | WestTEC 10-Year Horizon planned transmission |
 | `data/layers/hifld_natgas_points.geojson.gz` | 106 KB | HIFLD natural gas & petroleum facility points |
 | `data/layers/mines.geojson.gz` | 69 KB | MSHA large mines, peak employment ≥ 50 (~2.3k points, gzipped GeoJSON) |
 | `data/layers/ihfc_geo_heatflow_lut.i16` | 66 KB | Coarse Int16 mW/m² value grid for the legend hover readout (lazy-loaded) |
@@ -61,14 +71,14 @@ built by `make tiles`; they're listed here because they still ship as app data.
 | `data/layers/usgs_seismic_pga.pmtiles` | 33 KB | USGS seismic hazard PGA, 2% in 50yr (raster PMTiles) |
 | `data/layers/eia_crude_pipelines.geojson.gz` | 28 KB | EIA crude-oil pipelines |
 | `data/layers/eia_product_pipelines.geojson.gz` | 25 KB | EIA petroleum-product pipelines |
-| `data/layers/odin_outages.json` | 13 KB | ORNL ODIN live county outage counts — no geometry, live feed (cron-refreshed) |
+| `data/layers/nws_alerts.geojson.gz` | 20 KB | NWS active weather alerts — live feed (cron-refreshed) |
 | `data/layers/wecc_paths.geojson.gz` | 9 KB | WECC path point markers |
 | `data/layers/nlr_wind_100m_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/usgs_seismic_pga_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/worldpop_pop_density_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/gsa_solar_pvout_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
 | `data/layers/ihfc_geo_heatflow_lut.json` | <1 KB | Lookup-grid metadata (dims, bbox, scale) |
-| **Total** | **544 MB** | (49 files) |
+| **Total** | **624 MB** | (58 files) |
 
 ---
 
@@ -121,9 +131,13 @@ sizes vary and are not pinned here.
 | `osm-datacenters` | point | `.zip` (CSV) |
 | `worldpop-pop-density` | raster | `.zip` — COG GeoTIFF |
 
-Layers that link to source instead of shipping a pack (registry `downloads.url`
-only): `tribal-lands` (Census), `railroads` (BTS), `gsa-solar-pvout`
-(energydata.info), plus the `skip: true` layers below.
+Layers with no pack show no download button at all; their source link lives in
+the Data Credits panel, reached from the info button. `tribal-lands` (Census),
+`railroads` (BTS) and `gsa-solar-pvout` (energydata.info) work this way, as do
+the five administrative-boundary layers (Countries, States / Provinces, Census
+States, Census Counties, Census ZIP Codes) — every one of those is directly
+downloadable from Census or geoBoundaries, so mirroring it adds nothing — plus
+the `skip: true` layers below.
 
 Layers marked `skip: true` in the manifest produce no ZIP: the OurGridFuture
 planned-transmission layer (no redistribution — link out to ourgridfuture.org),
@@ -166,6 +180,28 @@ re-downloading from source.coop (which requires authentication).
 - VAL_DATE column is corrupted int32 — null-coerced in `extract_hifld_lines.py`
 - SUB_1/SUB_2 substation names are noisier than the original HIFLD export
 
+### Administrative boundaries (Census cartographic + geoBoundaries CGAZ)
+
+Both sets auto-download on first run of their extract script and are skipped on
+re-run if already present. Neither needs preserving to reproduce a build — the
+URLs are stable and public — but the sizes are worth knowing before a cold run.
+
+| File | Size | Source | Downloaded |
+|---|--:|---|---|
+| `data/raw/census_boundaries/cb_2025_us_state_500k.zip` | 3.1 MB | [Census cartographic boundary files](https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html), GENZ2025 | 2026-08-25 |
+| `data/raw/census_boundaries/cb_2020_us_zcta520_500k.zip` | 64 MB | Census cartographic boundary files, GENZ2020 — the last vintage to ship ZCTAs | 2026-08-25 |
+| `data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip` | 99 MB | [geoBoundaries CGAZ](https://www.geoboundaries.org/) ADM0 — CC BY 4.0 | 2026-08-25 |
+| `data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip` | 99 MB | geoBoundaries CGAZ ADM1 — CC BY 4.0 | 2026-08-25 |
+| `data/raw/boundaries/cb_2024_us_county_500k.zip` | 12 MB | Census cartographic boundary files, GENZ2024 — shared county tileset | 2026-05-28 |
+| **Total** | **~277 MB** | | |
+
+The shapefile `.zip` is used for CGAZ rather than the published `.geojson`,
+which is 401 MB for ADM0 and 360 MB for ADM1 — GDAL reads the same geometry out
+of the zip at a quarter of the transfer.
+
+**Attribution required:** geoBoundaries (William & Mary geoLab), CC BY 4.0. The
+Census files are public domain (17 U.S.C. § 105).
+
 ### EIA (Form 860, 2025 Early Release)
 
 Only two workbooks from the EIA-860 ZIP are read by `extract_eia_generators.py`.
@@ -186,10 +222,11 @@ separately so they can be restored without re-downloading the whole archive.
 
 | Category | Size |
 |---|--:|
-| App data (map layers) | 544 MB |
+| App data (map layers) | 624 MB |
 | User download packs (`data/releases/` ZIPs) | 525 MB (repackaged app/pipeline data) |
 | HIFLD pipeline inputs (original GeoJSON) | ~137 MB |
 | SeerAI parquet (active source) | ~42 MB |
+| Administrative boundary inputs (Census + geoBoundaries) | ~277 MB |
 | EIA pipeline inputs (used files only) | ~15 MB |
 | EIA full archive | ~22 MB |
-| **Grand total (app data + release packs)** | **~1,069 MB** |
+| **Grand total (app data + release packs)** | **~1,149 MB** |

@@ -47,7 +47,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:      false,
     natgasPtsLayer: true,
     mapLayerIds:    ["hifld-petroleum-facilities"],
-    downloads:      {},   // no pack; wire a csv/geojson pack if restored
+    downloads: {},   // no pack; wire a csv/geojson pack if restored
   },
   {
     id:                "eia-crude-pipelines",
@@ -59,9 +59,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["name", "operator"],
     mapLayerIds:       ["eia-crude-pipelines"],
-    downloads: {
-      url: "https://www.eia.gov/maps/map_data/CrudeOil_Pipelines_US_EIA.zip",
-    },
+    downloads: {},
   },
   {
     id:                "eia-product-pipelines",
@@ -73,9 +71,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["name", "operator"],
     mapLayerIds:       ["eia-product-pipelines"],
-    downloads: {
-      url: "https://www.eia.gov/maps/map_data/PetroleumProduct_Pipelines_US_EIA.zip",
-    },
+    downloads: {},
   },
   */
   {

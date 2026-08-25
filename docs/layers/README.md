@@ -71,6 +71,8 @@ Administrative and operational boundaries for understanding grid organization.
 
 **HIFLD regions** ([hifld-regions](hifld-regions.md)) covers NERC reliability regions, balancing-authority / control areas, and retail electricity territories — the three boundary sets that define how the US grid is operated and regulated. **EIA Balancing Authorities** ([eia-ba](eia-ba.md)) provides an independent dataset of US balancing-authority boundaries with annual net generation — coexists with HIFLD control areas from a different source and vintage, useful for comparing boundary interpretations or as an alternative for workflows that prefer EIA's generalization.
 
+Administrative boundaries give the electrical layers geographic footing. **Census Counties** ([boundaries](boundaries.md)) draws the Census TIGER county tileset that county-keyed data layers (outages, weather alerts) also join onto by `GEOID`. **Census States** ([us-states](us-states.md)) and **Census ZIP Codes (ZCTA)** ([us-zcta](us-zcta.md)) add the two other Census cartographic-boundary tiers. **Countries** ([countries](countries.md)) and **States / Provinces** ([admin1](admin1.md)) extend that same administrative context worldwide, from geoBoundaries CGAZ.
+
 ---
 
 ## 🌡 Conditions
@@ -78,16 +80,6 @@ Administrative and operational boundaries for understanding grid organization.
 Physical-risk layers for siting and resilience analysis.
 
 **Seismic hazard** ([seismic-hazard](seismic-hazard.md)) is the USGS 2018 National Seismic Hazard Model peak ground acceleration (2% probability of exceedance in 50 years), a baked-color raster with a hover readout. **Wildfire hazard** ([wildfire-hazard](wildfire-hazard.md)) is the USFS RMRS Fire Lab Wildfire Hazard Potential 2023 — a categorized raster of relative wildfire risk. **Live wildfire** ([wildfire-live](wildfire-live.md)) adds three hourly-refreshed layers — active perimeters + VIIRS hotspots, named incidents, and NOAA HMS smoke — served off the orphan `data` branch. **Live weather alerts** ([nws-alerts](nws-alerts.md)) is a curated, frequently-refreshed feed of polygon-bearing NOAA/NWS active alerts (tornado, severe thunderstorm, flash flood, fire weather, heat, high wind, winter storm, tropical), colored by alert group and served off the same orphan `data` branch pattern. **Power outages** ([outages](outages.md)) is a live county-level ODIN choropleth (customers affected) joined onto the shared county-boundary tiles by MapLibre feature-state — the data file carries no geometry. **Weather: Radar** ([weather-radar](weather-radar.md)) is a live NEXRAD composite reflectivity raster from the Iowa Environmental Mesonet — ships disabled (registry entry commented out). **Weather** ([weather-live](weather-live.md)) is a live multi-variable forecast field (temperature, wind, humidity, pressure, cloud cover) from NOAA/NCEP GFS 0.25° — rebuilt every ~3 h with hourly forecast steps, baked to per-variable color images with Int16 hover LUTs, served off the orphan `data` branch.
-
----
-
-## Shared infrastructure (not a map layer)
-
-**County boundaries** ([boundaries](boundaries.md)) is a Census TIGER county
-tileset that draws nothing on its own. County-FIPS-keyed datasets join their
-values onto it via MapLibre `feature-state` rather than shipping duplicate
-polygon geometry — so such a layer is only a `{fips: value}` JSON plus a fill
-layer. First consumer: [power outages](outages.md).
 
 ---
 

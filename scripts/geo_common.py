@@ -92,3 +92,70 @@ def run_extraction(build, *, output, description, require, missing_hint, summary
     if summary:
         summary(gdf)
     write_shp_csv(gdf, Path(args.output))
+
+
+# Size of ADMIN_PALETTE in assets/layers/map-layers-admin.ts, which looks colours
+# up by the index this bakes. The style takes it modulo its own palette length,
+# so a mismatch shows as unused hues rather than a break — but keep them equal.
+ADMIN_PALETTE_LEN = 7
+
+
+def assign_color_index(gdf, n_colors=ADMIN_PALETTE_LEN, near_deg=0.0, indent=""):
+    """Map-color `gdf` so no two touching features share an index.
+
+    Returns a list of ints in `range(n_colors)`, one per row, for the map style
+    to look a palette up by. Welsh-Powell: build the adjacency graph with a
+    spatial self-join, then walk the features most-neighbours-first, giving each
+    the lowest index none of its neighbours holds. Mirrors the colouring in
+    extract_eia_ba.py, which keeps its hex palette inline.
+
+    `near_deg` buffers each feature before the join, in degrees, so units that
+    near-miss still read apart — worth it for a handful of large areas, wasteful
+    for dense ones where plain adjacency is the honest relation. Leave it 0 to
+    join on touching geometry alone.
+    """
+    # Imported here, not at module scope: geo_common must stay importable with
+    # the stdlib alone so scripts/test_*.py can run without the venv (see
+    # .github/workflows/pipeline-tests.yml).
+    import warnings
+
+    import geopandas as gpd
+
+    geom = gdf[["geometry"]].reset_index(drop=True)
+    # Buffering full-resolution coastline is where all the time goes — a handful
+    # of countries carry hundreds of thousands of vertices each. Adjacency needs
+    # far less precision than the shipped geometry, so coarsen first; the
+    # tolerance stays an order of magnitude under the buffer, well inside the
+    # slack the buffer already introduces. Output geometry is untouched.
+    if near_deg >= 0.05:
+        geom = geom.assign(geometry=geom.geometry.simplify(near_deg / 10))
+    # A small buffer even in the "touching" case: shared borders in generalized
+    # source data often miss by a sliver, and an exact-touch join drops those.
+    with warnings.catch_warnings():
+        # Buffering in degrees is the point here: the distances are deliberately
+        # approximate and only feed an adjacency test, so reprojecting per
+        # feature would cost time and change nothing about the colouring.
+        warnings.filterwarnings("ignore", message=".*geographic CRS.*")
+        geom = geom.assign(geometry=geom.geometry.buffer(near_deg or 0.002))
+
+    pairs = gpd.sjoin(geom, geom, how="inner", predicate="intersects")
+    adj = {i: set() for i in range(len(geom))}
+    for left, right in zip(pairs.index, pairs["index_right"]):
+        if left != right:
+            adj[left].add(right)
+            adj[right].add(left)
+
+    colors = {}
+    for i in sorted(adj, key=lambda k: -len(adj[k])):
+        taken = {colors[n] for n in adj[i] if n in colors}
+        colors[i] = next(c for c in range(len(adj[i]) + 2) if c not in taken)
+
+    used = max(colors.values()) + 1 if colors else 0
+    if used > n_colors:
+        print(f"{indent}note: colouring used {used} indices; the {n_colors}-colour "
+              f"palette wraps, so a few neighbours will repeat")
+    clash = sum(1 for i in adj for n in adj[i]
+                if colors[i] % n_colors == colors[n] % n_colors) // 2
+    print(f"{indent}colour index: {min(used, n_colors)} of {n_colors} used, "
+          f"{clash} adjacent pairs sharing a colour")
+    return [colors[i] % n_colors for i in range(len(geom))]

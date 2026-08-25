@@ -32,6 +32,7 @@ Usage:
 from __future__ import annotations
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -39,6 +40,7 @@ import yaml
 
 MANIFEST  = Path("scripts/release_manifest.yaml")
 TILE_MANIFEST = Path("scripts/tile_manifest.yaml")
+ADMIN_STYLE = Path("assets/layers/map-layers-admin.ts")
 CONSTANTS = Path("assets/constants.ts")
 LAYERS    = Path("data/build")  # input shapefiles live here
 OUT_DIR   = Path("data/layers")
@@ -82,6 +84,26 @@ def check_shp(path: Path) -> tuple[str, str]:
     if epsg != 4326:
         return FAIL, f"CRS is {gdf.crs.name if gdf.crs else 'unset'}, want EPSG:4326"
     return PASS, "ok"
+
+
+def _has_column(src: Path, field: str) -> bool:
+    """Is `field` a column of the built artifact? ogr2ogr, so no geopandas import."""
+    try:
+        out = subprocess.run(["ogrinfo", "-so", "-al", str(src)],
+                             capture_output=True, text=True, timeout=120)
+        return f"{field}:" in out.stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def styled_fields(text: str) -> set[str]:
+    """Feature properties the map styles look up, from paletteColor("x") calls.
+
+    Dropping such a field from a tile_manifest `select:` is silent at every other
+    layer of the build: the tiles simply arrive without it and the style's
+    to-number fallback paints every polygon the same colour.
+    """
+    return set(re.findall(r'paletteColor\("([^"]+)"\)', text))
 
 
 def run(strict: bool) -> int:
@@ -134,6 +156,23 @@ def run(strict: bool) -> int:
             continue  # rasters built by build_*_resource.sh, not the tile manifest
         if str(src).startswith("data/build/") and src not in tsrcs:
             record(FAIL, f"release source not produced by tile_manifest (drift?): {src}")
+
+    # 4. styled fields survive the manifest select ---------------------------
+    tile_doc = yaml.safe_load(TILE_MANIFEST.read_text())
+    styled = styled_fields(ADMIN_STYLE.read_text()) if ADMIN_STYLE.exists() else set()
+    for blk in tile_doc.get("layers", []):
+        sel = blk.get("select")
+        if not sel:
+            continue  # no allow-list = every column kept
+        for field in styled:
+            # Only layers that already carry the field can lose it; a layer that
+            # never had one is not styled by it.
+            src = Path(blk.get("src", ""))
+            if field in sel or not src.exists():
+                continue
+            if _has_column(src, field):
+                record(FAIL, f"{blk['id']}: build has `{field}` but select drops it "
+                             f"(styles read it — polygons would render one flat colour)")
 
     # report ------------------------------------------------------------------
     for sev, msg in results:

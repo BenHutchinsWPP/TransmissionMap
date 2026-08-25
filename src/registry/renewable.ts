@@ -32,9 +32,7 @@ export const renewableLayers: LayerDef[] = [
     ramp:          { stops: SOLAR_RAMP_STOPS, max: SOLAR_RAMP_MAX, unit: "kWh/kWp" },
     defaultOn:     false,
     mapLayerIds:   ["gsa-solar-pvout"],
-    downloads: {
-      url: "https://energydata.info/dataset/world-photovoltaic-power-potential-pvout-gis-data-global-solar-atlas",
-    },
+    downloads: {},
   },
   {
     id:            "ihfc-geo-heatflow",
@@ -74,7 +72,6 @@ export const renewableLayers: LayerDef[] = [
     hoverField:  "lease",
     mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-outline"],
     downloads: {
-      url: "https://www.boem.gov/renewable-energy/mapping-and-data",
       geojson: "data/releases/boem-wind-leases.zip",
       shp: "data/releases/boem-wind-leases-shp.zip",
     },

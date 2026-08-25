@@ -25,6 +25,7 @@ import { addPetroleumPipelines } from './map-layers-petroleum.js';
 import { addWestTEC } from './map-layers-westtec.js';
 import { addWildfireHazard, addWildfireLiveAreas, addWildfireLivePoints, addSeismicHazard, addOdinOutages, addNwsAlerts, addNexradRadar, addWeatherLive } from './map-layers-conditions.js';
 import { addMines } from './map-layers-mines.js';
+import { addCountries, addAdmin1, addUsStates, addUsCounties, addUsZcta } from './map-layers-admin.js';
 import { addHighlightLayers } from '../highlights.js';
 
 // >>> ADD-LAYER: add-all-layers
@@ -43,6 +44,16 @@ export function addAllLayers() {
   addEiaBalancingAuthorities();
   addControlAreas();
   addNercRegions();
+
+  // Administrative reference boundaries: broadest first so more detailed
+  // outlines draw on top. us-counties mounts on the shared county_boundaries
+  // source ahead of addOdinOutages() below, so the live outage choropleth
+  // paints over these plain outlines rather than under them.
+  addCountries();
+  addAdmin1();
+  addUsStates();
+  addUsCounties();
+  addUsZcta();
 
   addPadus();
   addTribalLands();

@@ -102,6 +102,14 @@ data/raw/westtec/
 # EIA Balancing Authorities source (auto-downloaded by extract_eia_ba.py)
 data/raw/eia-ba/
 
+# US states + ZCTA source zips (~70 MB — Census TIGER cartographic boundary;
+# re-fetch via extract_us_census_boundaries.py, which downloads them automatically)
+data/raw/census_boundaries/
+
+# Countries + admin-1 source shapefile zips (~207 MB — geoBoundaries CGAZ
+# ADM0/ADM1; re-fetch via extract_cgaz_boundaries.py, which downloads them automatically)
+data/raw/geoboundaries/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

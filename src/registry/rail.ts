@@ -14,8 +14,6 @@ export const railLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["RROWNER1", "SUBDIV"],
     mapLayerIds:       ["railroads"],
-    downloads: {
-      url: "https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about",
-    },
+    downloads: {},
   },
 ];

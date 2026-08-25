@@ -90,6 +90,8 @@ const CLICKABLE_LAYERS = [
   "nerc-fill", "ba-fill", "eiaba-fill", "retail-fill",
   "odin-outages-fill",
   "boem-wind-leases-fill",
+  // Administrative reference boundaries — background context, lowest priority.
+  "us-zcta-fill", "us-counties-fill", "us-states-fill", "admin1-fill", "countries-fill",
 ];
 
 // Layers that earn a pointer cursor but are not popup targets — their click
@@ -208,7 +210,7 @@ function onMapClick(e: MapMouseEvent | MapTouchEvent) {
 // outages) — without it, picker rows for that source all fall through to the
 // generic layer-id label and look like duplicate entries.
 const LABEL_FIELDS = ["name", "Name", "NAME", "label", "title", "plant_name",
-  "operator", "pipeline", "comname", "unitname", "OWNER", "RROWNER"];
+  "operator", "pipeline", "comname", "unitname", "OWNER", "RROWNER", "zcta5"];
 
 function featureLabel(f: MapGeoJSONFeature) {
   const p = f.properties || {};

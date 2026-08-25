@@ -73,7 +73,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-perimeters-fill", "wildfire-perimeters-line", "wildfire-hotspots-heat", "wildfire-hotspots-circle"],
-    downloads: { url: "https://firms.modaps.eosdis.nasa.gov/data/active_fire/" },
+    downloads: {},
   },
   {
     id:          "wildfire-smoke",
@@ -85,7 +85,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-smoke-fill", "wildfire-smoke-line"],
-    downloads: { url: "https://www.ospo.noaa.gov/Products/land/hms.html" },
+    downloads: {},
   },
   {
     id:          "wildfire-incidents",
@@ -97,7 +97,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-incidents-circle"],
-    downloads: { url: "https://data-nifc.opendata.arcgis.com/" },
+    downloads: {},
   },
   {
     id:           "usfs-wildfire-potential",
@@ -108,9 +108,7 @@ export const conditionLayers: LayerDef[] = [
     swatch:       "#FF0000",
     defaultOn:    false,
     mapLayerIds:  ["usfs-wildfire-potential"],
-    downloads: {
-      url: "https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential",
-    },
+    downloads: {},
   },
   {
     id:          "nws-alerts",
@@ -122,7 +120,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["nws-alerts-fill", "nws-alerts-line"],
-    downloads: { url: "https://www.weather.gov/alerts" },
+    downloads: {},
   },
   {
     id:          "odin-outages",
@@ -134,7 +132,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
-    downloads: { url: "https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" },
+    downloads: {},
   },
   {
     id:          "nexrad-radar",
@@ -146,7 +144,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["geomet-radar-rain", "geomet-radar-snow", "nexrad-radar"],
-    downloads: { url: "https://mesonet.agron.iastate.edu/GIS/ridge.phtml" },
+    downloads: {},
   },
   {
     id:          "weather-live",
@@ -161,7 +159,7 @@ export const conditionLayers: LayerDef[] = [
     weatherVarLayer: true,
     defaultOn:   false,
     mapLayerIds: ["weather-live", "weather-live-b", "weather-admin-lines-states", "weather-admin-lines-countries"],
-    downloads: { url: "https://registry.opendata.aws/noaa-gfs-bdp-pds/" },
+    downloads: {},
   },
   {
     id:           "usgs-seismic-pga",
@@ -173,8 +171,6 @@ export const conditionLayers: LayerDef[] = [
     ramp:         { stops: SEIS_RAMP_STOPS, max: SEIS_RAMP_MAX, unit: "g" },
     defaultOn:    false,
     mapLayerIds:  ["usgs-seismic-pga"],
-    downloads: {
-      url: "https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1",
-    },
+    downloads: {},
   },
 ];
