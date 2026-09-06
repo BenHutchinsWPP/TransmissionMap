@@ -1,6 +1,15 @@
-// Data source metadata — label, tooltip, and credits dialog ID for each source.
-// >>> ADD-LAYER: layer-sources — see docs/adding-a-layer.md §5
-import type { LayerSourceDef } from '../types.js';
+import type { LayerSourceDef, DownloadRegion } from '../types.js';
+
+export const REGION_CODE_MAP: Record<DownloadRegion, string> = {
+  'north-america': 'na',
+  'europe': 'eu',
+  'asia': 'as',
+  'south-america': 'sa',
+  'africa': 'af',
+  'oceania': 'oc',
+  'central-america': 'ca',
+  'antarctica': 'an',
+};
 
 export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
   "osm": {

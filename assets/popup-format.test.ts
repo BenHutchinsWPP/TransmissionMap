@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { osmTlLayerIds } from '../src/registry/transmission.js';
 import {
   row, websiteRow, title,
   renderEiaGen, renderOgfPlanned, renderHifldNatgasPts, renderGeoHydroPts,
@@ -435,10 +436,17 @@ describe('buildPopupHtml', () => {
     expect(out).toContain('Test Plant');
   });
 
-  it('routes osm-transmission-lines-hv', () => {
-    const out = buildPopupHtml('osm-transmission-lines-hv', { name: 'HV Line', nominal_kv: 345 });
-    expect(out).toContain('HV Line');
-    expect(out).toContain('345 kV');
+  // Every voltage-class archive gets its own style layers, so the popup router
+  // has to know all of them. A layer id built without the archive suffix matches
+  // only the sub-50 kV file, and popups silently stop working above it.
+  it('routes every osm transmission style layer', () => {
+    const ids = osmTlLayerIds('hv', 'mv', 'lv', 'unknown', 'dc');
+    expect(ids.length).toBeGreaterThan(1);
+    for (const id of ids) {
+      const out = buildPopupHtml(id, { name: 'HV Line', nominal_kv: 345 });
+      expect(out, id).toContain('HV Line');
+      expect(out, id).toContain('345 kV');
+    }
   });
 
   it('routes hifld-transmission-lines-hv with SUB_1/SUB_2', () => {

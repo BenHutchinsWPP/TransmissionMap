@@ -7,6 +7,11 @@ import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
 import { MW_SLIDER_MAX } from './constants.js';
 import { isValidLocale } from '../src/i18n/index.js';
+import type { LayerScope } from '../src/types.js';
+
+// Layer-list scopes only. Continental download packs are picked per-download in
+// the layer menu, so they never reach the URL.
+export const VALID_REGIONS = new Set<string>(['usa', 'global']);
 
 // Build lookup maps once for fast urlCode ↔ id resolution.
 const _URLCODE_TO_ID = Object.fromEntries(
@@ -70,6 +75,11 @@ export interface UrlStateData {
   buildings3d: boolean;
   hillshade: boolean;
   lang?: string;
+  region?: LayerScope;
+  // Active Map Experience (assets/experiences.ts). The caller resolves the
+  // pristine/edited question first: an edited view passes null so the link
+  // stops claiming to be the curated one.
+  experienceId?: string | null;
 }
 
 export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
@@ -171,6 +181,17 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
   const lang = params.get('lang');
   if (lang && isValidLocale(lang)) data.lang = lang;
 
+  // Region
+  const region = params.get('region');
+  if (region && VALID_REGIONS.has(region)) data.region = region as LayerScope;
+  // Map Experience — validated by shape only. Resolving the slug against the
+  // catalogue here would pull all sixteen narratives into the initial bundle,
+  // so a slug that no longer names a story is dropped by assets/experiences.ts
+  // once the map is up. The pattern is still a trust boundary: the value is
+  // written back into the link and used as a lookup key.
+  const exp = params.get('exp');
+  if (exp && /^[a-z0-9-]{1,64}$/.test(exp)) data.experienceId = exp;
+
   return data;
 }
 
@@ -265,6 +286,15 @@ export function formatUrlState(data: UrlStateData): string[] {
 
   // Language (default 'en' omitted)
   if (data.lang && data.lang !== 'en') parts.push(`lang=${encodeURIComponent(data.lang)}`);
+
+  // Region (default 'global' omitted)
+  // 'usa' is the default scope, so it stays out of the URL.
+  if (data.region && data.region !== 'usa' && VALID_REGIONS.has(data.region)) {
+    parts.push(`region=${encodeURIComponent(data.region)}`);
+  }
+  // Map Experience — always last, so url-state.ts can diff the parts above it
+  // against the snapshot the experience left behind.
+  if (data.experienceId) parts.push('exp=' + data.experienceId);
 
   return parts;
 }

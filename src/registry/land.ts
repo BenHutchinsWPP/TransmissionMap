@@ -13,6 +13,7 @@ export const landLayers: LayerDef[] = [
     defaultOn:     false,
     hoverField:    "name",
     mapLayerIds:   ["padus-fill", "padus-outline"],
+    regions:       ["usa"],
     downloads: {},   // no download offered — map layer is a filtered summary subset, not the full dataset
   },
   {
@@ -26,6 +27,7 @@ export const landLayers: LayerDef[] = [
     defaultOn:     false,
     hoverField:    "name",
     mapLayerIds:   ["tribal-fill", "tribal-outline"],
+    regions:       ["usa"],
     downloads: {},
   },
   {
@@ -39,6 +41,7 @@ export const landLayers: LayerDef[] = [
     defaultOn:     false,
     hoverField:    "LARNAME",
     mapLayerIds:   ["bia-tribal-fill", "bia-tribal-outline"],
+    regions:       ["usa"],
     downloads: {
       geojson: "data/releases/bia-tribal-lands.zip",
       shp: "data/releases/bia-tribal-lands-shp.zip",
@@ -54,6 +57,7 @@ export const landLayers: LayerDef[] = [
     swatch:        "#b45309",
     defaultOn:     false,
     mapLayerIds:   ["mines-icons"],
+    regions:       ["usa"],
     downloads: {},   // filtered subset (peak employment ≥ 50), not the full MSHA dataset
   },
   {
@@ -66,6 +70,7 @@ export const landLayers: LayerDef[] = [
     swatch:      "#f59e0b",
     defaultOn:   false,
     mapLayerIds: ["crithab-fill", "crithab-outline"],
+    regions:     ["usa"],
     downloads: {},
   },
 ];

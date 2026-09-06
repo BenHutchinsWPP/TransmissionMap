@@ -1,6 +1,6 @@
 # Weather Forecast
 
-**Live weather fields** over North America — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout, formatted to the display units chosen in File ▸ Settings… (see [settings.md](../settings.md)); humidity and cloud cover are always %. Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 4× finer resolution (0.0625°) as a lossy WebP.
+**Live weather fields** worldwide — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout, formatted to the display units chosen in File ▸ Settings… (see [settings.md](../settings.md)); humidity and cloud cover are always %. Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 2× finer resolution (0.125°) as a lossy WebP.
 
 ## Source
 
@@ -8,12 +8,12 @@
 |---|---|
 | **Provider** | [NOAA/NCEP GFS](https://registry.opendata.aws/noaa-gfs-bdp-pds/) 0.25° via AWS Open Data anonymous mirror (bucket `noaa-gfs-bdp-pds`) |
 | **Dataset** | GFS 0.25°; forecast cycles: 00, 06, 12, 18 UTC (published ~3.5–4.5 h after cycle time); hourly output steps f000–f120 |
-| **Coverage** | Global 0.25° grid; map display spans the North American domain |
+| **Coverage** | Global 0.25° grid; map display spans −180…180, −85…85 (the display raster is warped to Web Mercator) |
 | **Variables** | 2 m temperature (`2t`), 2 m dew point (`2d`), 10 m u-wind (`10u`), 10 m v-wind (`10v`), 10 m gust wind (`10fg`), total cloud cover (`tcc`), mean sea level pressure (`msl`) |
 | **Vintage** | Live forecast — each cycle (00/06/12/18 UTC) is published ~3.5–4.5 h after cycle time; the base step is the hour nearest "now". Three stamps: `run_utc` (model cycle — the age chip text), `valid_utc` (the forecast valid time — shown on the timebar) and `generated_utc` (when we pulled the cycle — the stale check and chip coloring). |
 | **License** | **Public domain** — US government work, 17 U.S.C. § 105. No API key required. |
 | **Attribution** | NOAA/NCEP GFS (courtesy credit; no attribution required) |
-| **Served** | Per-variable rasters: `<var>.webp` (4× cubic-upsampled display), `<var>.i16` (native 0.25° int16 LUT, SI×10, nodata −32768) · Per non-base time-slider step: `<var>_<step>h.webp`, `<var>_<step>h.i16.gz`, `wind_uv_<step>h.png` · Plus: `wind_uv.png` (u/v offset-encoded for particle animation), `meta.json` (run/step/valid/generated times + feed status + `steps`, shared across all variables) — on the orphan **`data`** branch |
+| **Served** | Per-variable rasters: `<var>.webp` (2× cubic-upsampled display), `<var>.i16.gz` (native 0.25° int16 LUT, SI×10, nodata −32768, gzipped) · Per non-base time-slider step: `<var>_<step>h.webp`, `<var>_<step>h.i16.gz`, `wind_uv_<step>h.png` · Plus: `wind_uv.png` (u/v offset-encoded for particle animation), `meta.json` (run/step/valid/generated times + feed status + `steps`, shared across all variables) — on the orphan **`data`** branch |
 | **Built by** | `scripts/fetch_weather_live.py`, run every ~3 h by `.github/workflows/weather-data.yml` |
 | **Download origin** | AWS S3 bucket `noaa-gfs-bdp-pds`: `s3://noaa-gfs-bdp-pds/gfs.{YYYYMMDD}/{HH}/atmos/` · Per-variable GRIBs fetched via HTTP range-request from the anonymous mirror (no key). |
 
@@ -36,9 +36,10 @@ within the hour. GFS is freely accessible via AWS Open Data at
   temp/dew point, m/s for wind, % for cloud, mb for pressure). Relative humidity is
   derived from 2 m temperature and dew point using the Magnus formula.
 - **Int16 LUT:** Raw SI values are packed as `int16 = round(value × 10)` on the native
-  0.25° grid, with nodata set to **−32768**. Saved as `.i16` binary. (Scaling by 10
-  keeps single-decimal precision for hover readout without floats.)
-- **Display image:** The 0.25° field is upsampled **4× with cubic resampling** on the
+  0.25° grid, with nodata set to **−32768**. Saved as gzipped `.i16.gz` binary —
+  the browser fetches the grid whole, with no range-request path as the tiles have.
+  (Scaling by 10 keeps single-decimal precision for hover readout without floats.)
+- **Display image:** The 0.25° field is upsampled **2× with cubic resampling** on the
   native lat/lon grid (~0.0625°, ~7 km), then colorized using the per-variable `RAMP` in the
   script, which **must stay identical to the matching ramp in `src/colors/ramps.ts`**
   (each file carries a comment pointing at the other). Saved as lossy WEBP (q85),
@@ -117,7 +118,8 @@ only the moving flow lines over the basemap. No extra baked files.
 - **Forecast model, not observations.** GFS is a forecast model. Values are
   predictions, not thermometer/anemometer readings at your cursor. For current conditions,
   refer to official NWS (US) or ECCC (Canada) products.
-- **Upsampled display.** Native resolution 0.25° (~28 km); displayed at 4× cubic upsampling
-  (~7 km). Fine detail is interpolation, not forecast detail — terrain-driven local gradients
-  are smoothed.
+- **Upsampled display.** Native resolution 0.25° (~28 km); displayed at 2× cubic upsampling
+  (~14 km). Fine detail is interpolation, not forecast detail — terrain-driven local gradients
+  are smoothed. The factor is 2 rather than 4 to keep the worldwide frame a
+  reasonable size.
 - Public domain — no attribution required, though a courtesy credit to NOAA/NCEP GFS is appreciated.

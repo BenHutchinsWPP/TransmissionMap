@@ -27,6 +27,10 @@
             <button class="menu-item" data-action="file-open" type="button" data-i18n="menu.fileOpen">Open…</button>
             <button class="menu-item" data-action="save-geojson" type="button" data-i18n="menu.saveGeoJson">Save as GeoJSON…</button>
             <button class="menu-item" data-action="save-kml" type="button" data-i18n="menu.saveKml">Save as KML…</button>
+            <!-- Map Experiences is built and tested but not yet surfaced: uncomment
+                 to list it. The gallery, story card, catalogue and ?exp= deep links
+                 all remain in place behind this one entry point. -->
+            <!-- <button class="menu-item" data-action="open-experiences" type="button" data-i18n="menu.experiences">Experiences…</button> -->
             <button class="menu-item" data-action="toggle-legends" type="button" data-i18n="menu.hideLegends">Hide legends</button>
             <button class="menu-item" data-action="open-settings" type="button" data-i18n="menu.settings">Settings…</button>
             <button class="menu-item" data-action="open-diagnostics" type="button" data-i18n="menu.diagnostics">Diagnostics…</button>
@@ -103,6 +107,9 @@
         <button type="button" id="rotateHintDismiss" aria-label="Dismiss">×</button>
       </div>
 
+      <!-- Map Experiences story card — content built by ui/ui-experiences.ts -->
+      <aside class="story-card" id="storyCard" hidden role="region" aria-label="Map experience"></aside>
+
       <!-- Address / place geocoder — top left -->
       <div class="geocoder" id="geocoder">
         <div class="geocoder-wrap">
@@ -136,10 +143,35 @@
 
         <!-- Reset all layer toggles, filters, modes + basemap to defaults -->
         <div class="panel-toolbar">
+          <div class="region-dropdown" id="regionDropdown">
+            <button type="button" class="region-dropdown-btn" id="regionDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Scope the layer list to US or worldwide data" data-i18n-aria-label="region.selectAria">
+              <span id="regionActiveIcon" class="region-btn-icon" aria-hidden="true"></span>
+              <span id="regionActiveText">USA</span>
+              <span class="region-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div class="dropdown region-menu" id="regionMenu" hidden role="menu">
+              <button type="button" class="region-menu-item" data-region="usa" role="menuitemradio" aria-checked="true">
+                <svg class="region-icon" viewBox="0 0 16 12" width="14" height="11" aria-hidden="true">
+                  <rect width="16" height="12" fill="#b22234"/>
+                  <path d="M0 1.85h16M0 3.7h16M0 5.54h16M0 7.38h16M0 9.23h16M0 11.08h16" stroke="#fff" stroke-width="0.92"/>
+                  <rect width="6.4" height="6.46" fill="#3c3b6e"/>
+                </svg>
+                <span class="region-menu-label" data-i18n="region.usa">USA</span>
+              </button>
+              <button type="button" class="region-menu-item" data-region="global" role="menuitemradio" aria-checked="false">
+                <svg class="region-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.5"/>
+                  <ellipse cx="8" cy="8" rx="3" ry="6.5"/>
+                  <path d="M1.5 8h13M2.7 4.5h10.6M2.7 11.5h10.6"/>
+                </svg>
+                <span class="region-menu-label" data-i18n="region.global">Global</span>
+              </button>
+            </div>
+          </div>
           <button type="button" class="reset-layers-btn" id="resetLayersBtn"
                   title="Restore every layer's visibility, filters, MW/year ranges, display mode and basemap to defaults"
                   data-i18n-title="panel.resetLayersTitle">
-            ↺ <span data-i18n="panel.resetLayers">Reset layers</span>
+            ↺ <span data-i18n="panel.resetLayers">Reset</span>
           </button>
         </div>
 
@@ -583,6 +615,31 @@
     </div>
   </dialog>
 
+  <!-- ODIN outage staleness cutoff dialog (auto-shown when live outage data is too old) -->
+  <dialog class="disclaimer-dialog wildfire-stale-dialog" id="odinStaleDialog">
+    <div class="disclaimer-content">
+      <div class="disclaimer-header">
+        <h2 data-i18n="stale.odin.title">⚠ Live outage data is stale</h2>
+      </div>
+      <p class="disclaimer-body" data-i18n-html="stale.odin.body1">
+        The live power-outage data is <strong id="odinStaleAge">—</strong> old —
+        beyond the safe limit. The feed may be broken or delayed, so the
+        <strong>power outages layer has been turned off</strong> to avoid showing
+        outage counts that have since been restored.
+      </p>
+      <p class="disclaimer-body" data-i18n-html="stale.odin.body2">
+        Do not rely on stale outage data for any safety or restoration decision.
+        It will re-enable automatically once a fresh update arrives. Meanwhile,
+        <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" target="_blank" rel="noopener">ORNL ODIN</a>
+        publishes the current county-level counts.
+      </p>
+      <div class="disclaimer-footer wildfire-stale-footer">
+        <button class="disclaimer-dismiss" id="odinStaleDismiss" type="button" data-i18n="stale.dismiss">Keep disabled</button>
+        <button class="disclaimer-accept disclaimer-danger" id="odinStaleReenable" type="button" data-i18n="stale.reenable">I understand the risk — re-enable</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- NWS alert staleness cutoff dialog (auto-shown when live alert data is too old) -->
   <dialog class="disclaimer-dialog wildfire-stale-dialog" id="nwsStaleDialog">
     <div class="disclaimer-content">
@@ -638,17 +695,13 @@
           <span data-source-credit="hifld-ba"><a href="https://source.coop/seerai/hifld/control-areas/control-areas/control-areas.parquet" target="_blank" rel="noopener">Balancing Authorities</a></span>,
           <span data-source-credit="hifld-retail"><a href="https://source.coop/seerai/hifld/electric-retail-service-territories/retail-service-territories/retail-service-territories.parquet" target="_blank" rel="noopener">Retail Territories</a></span>
         </li>
-        <li data-source-credit="eia-ba"><a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33" target="_blank" rel="noopener">EIA Balancing Authorities</a> — U.S. Energy Information Administration balancing authority areas, hosted on ArcGIS Online.</li>
-        <li data-source-credit="cgaz-adm0"><a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries</a> — Comprehensive Global Administrative Zones (CGAZ), country boundaries — open license (see site for per-country terms).</li>
-        <li data-source-credit="cgaz-adm1"><a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries</a> — Comprehensive Global Administrative Zones (CGAZ), state/province boundaries — open license (see site for per-country terms).</li>
-        <li data-source-credit="census-states"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank" rel="noopener">US Census Bureau</a> — cartographic boundary files, state boundaries — public domain.</li>
-        <li data-source-credit="census-counties"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank" rel="noopener">US Census Bureau</a> — cartographic boundary files, county boundaries — public domain.</li>
-        <li data-source-credit="census-zcta"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank" rel="noopener">US Census Bureau</a> — cartographic boundary files, ZIP Code Tabulation Areas (ZCTA) — public domain. <strong>Display note:</strong> ZCTAs approximate ZIP code service areas but are not the same as ZIP codes.</li>
+        <li><a href="https://www.eia.gov/" target="_blank" rel="noopener">U.S. Energy Information Administration (EIA)</a> — public domain: <span data-source-credit="eia"><a href="https://www.eia.gov/electricity/data/eia860/" target="_blank" rel="noopener">Form 860</a> (generators, 2025 early-release)</span>; <span data-source-credit="eia-ba"><a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33" target="_blank" rel="noopener">Balancing Authorities</a></span> (hosted on ArcGIS Online); <span data-source-credit="eia-atlas"><a href="https://atlas.eia.gov/" target="_blank" rel="noopener">U.S. Energy Atlas</a> (crude-oil &amp; petroleum-product pipelines, Jan 2020)</span>.</li>
+        <li><a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries</a> — Comprehensive Global Administrative Zones (CGAZ): <span data-source-credit="cgaz-adm0">country boundaries</span>; <span data-source-credit="cgaz-adm1">state/province boundaries</span> — open license (see site for per-country terms).</li>
+        <li><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank" rel="noopener">US Census Bureau</a> — cartographic boundary files: <span data-source-credit="census-states">state boundaries</span>; <span data-source-credit="census-counties">county boundaries</span>; <span data-source-credit="census-zcta">ZIP Code Tabulation Areas (ZCTA)</span> — public domain. <strong>Display note:</strong> ZCTAs approximate ZIP code service areas but are not the same as ZIP codes.</li>
         <li data-source-credit="hifld-tribal"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line 2025</a> — AIANNH — public domain. <strong>Display note:</strong> Administrative boundaries only; not for consultation or determining historical extent.</li>
         <li data-source-credit="bia-bogs"><a href="https://onemap-bia-geospatial.hub.arcgis.com/" target="_blank" rel="noopener">Bureau of Indian Affairs (BIA)</a> — AIAN-LAR (American Indian and Alaska Native Land Area Representation) — Jul 2026 — public domain. <strong>Display note:</strong> Boundary for illustrative purposes. Does not constitute legal jurisdiction or land title.</li>
         <li data-source-credit="ogf"><a href="https://ourgridfuture.org" target="_blank" rel="noopener">Our Grid Future</a> / Horizon Energy Systems — June 2026 — non-commercial use</li>
         <li data-source-credit="westtec"><a href="https://www.westernpowerpool.org/" target="_blank" rel="noopener">WestTEC — West-Wide Transmission Study</a> — 10-Year Horizon Report (February 2026). Western Transmission Expansion Coalition, a Western Power Pool initiative. Planned projects &amp; WestTEC-identified upgrades.</li>
-        <li data-source-credit="eia"><a href="https://www.eia.gov/electricity/data/eia860/" target="_blank" rel="noopener">EIA Form 860</a> — 2025 early-release — public domain</li>
         <li data-source-credit="msha-mines"><a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp" target="_blank" rel="noopener">MSHA Mine Data Retrieval System</a> — large mines only (peak quarterly employment ≥ 50); filtered subset, not the full dataset. Public domain (US DOL).</li>
         <li data-source-credit="usgs-padus"><a href="https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-download" target="_blank" rel="noopener">USGS PAD-US 4.1</a> — Jun 2026 — public domain. <strong>Display note:</strong> features are filtered for aesthetic and display clarity (selected categories only); this is not a complete or regulatory representation. Full dataset available at the linked USGS site.</li>
         <li data-source-credit="nlr-wind"><a href="https://www.nlr.gov/grid/wind-toolkit.html" target="_blank" rel="noopener">NREL/NLR WIND Toolkit</a> — 100 m wind speed — public domain</li>
@@ -657,7 +710,6 @@
         <li data-source-credit="nrel-doe-hydrothermal"><a href="https://gdr.openei.org/submissions/842" target="_blank" rel="noopener">NREL/DOE Geothermal Data Repository</a> — 2016 — public domain</li>
         <li data-source-credit="worldpop"><a href="https://www.worldpop.org/geodata/summary?id=24798" target="_blank" rel="noopener">WorldPop / Univ. Southampton</a> — 2020, 1 km, scaled to UN totals — CC BY 4.0</li>
         <li data-source-credit="fws-crithab"><a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html" target="_blank" rel="noopener">USFWS ECOS Critical Habitat</a> — live tile service — public domain</li>
-        <li data-source-credit="usgs-seismic"><a href="https://earthquake.usgs.gov/arcgis/rest/services/haz/US1hz050_2014/MapServer" target="_blank" rel="noopener">USGS Seismic Hazard Model 2014</a> — live tile service — public domain</li>
         <li data-source-credit="bts-narn"><a href="https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about" target="_blank" rel="noopener">BTS / FRA NARN</a> — May 2026 — public domain</li>
         <li data-source-credit="noaa-nws"><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NOAA National Weather Service</a> — Active weather alerts. US Government work, public domain. <strong>Display note:</strong> curated event allowlist only (~40 event types across convective/flood/fire/heat/wind/winter/tropical/marine-wind; excludes e.g. Small Craft Advisory, Special Weather Statement, air-quality, AMBER/admin).</li>
         <li data-source-credit="eccc-msc"><a href="https://api.weather.gc.ca/" target="_blank" rel="noopener">Environment and Climate Change Canada (MSC GeoMet)</a> — Active weather alerts; Canadian weather radar (rain/snow rate) WMS. <strong>Display note:</strong> curated event allowlist only (warnings/watches matched to the same groups; excludes special weather statements + air quality warnings).</li>
@@ -668,7 +720,6 @@
         <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>
         <li data-source-credit="ornl-odin"><a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" target="_blank" rel="noopener">ORNL ODIN</a> — live county-level power-outage aggregates (customers affected, incident count). Utilities self-report; coverage is partial (~34–38 states). No license declared (DOE/ORNL public program).</li>
         <li data-source-credit="usgs-nshm"><a href="https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1" target="_blank" rel="noopener">USGS National Seismic Hazard Model</a> — 2018, Peak Ground Acceleration (PGA), 2% in 50yr (≈2475-yr return), Site Class B/C — public domain</li>
-        <li data-source-credit="eia-atlas"><a href="https://atlas.eia.gov/" target="_blank" rel="noopener">EIA U.S. Energy Atlas</a> — crude-oil &amp; petroleum-product pipelines (public domain). Vintage Jan 2020.</li>
         <li data-source-credit="boem"><a href="https://www.boem.gov/renewable-energy/mapping-and-data" target="_blank" rel="noopener">Bureau of Ocean Energy Management (BOEM)</a> — Offshore Wind Leases — public domain.</li>
         <li data-source-credit="wecc-paths"><a href="https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf" target="_blank" rel="noopener">WECC Path Rating Catalog</a> — 2026 Public Version (V3, March 2026) — path definitions, ratings &amp; directionality. 🚧 Under construction — layer is a work in progress.</li>
         <!-- Required wording per tilezen/joerd/docs/attribution.md — do not reword.
@@ -690,6 +741,20 @@
         <button id="closeSettings" type="button" aria-label="Close">×</button>
       </div>
       <div id="settingsBody"></div>
+    </div>
+  </dialog>
+
+  <!-- Map Experiences gallery — content built by ui/ui-experiences.ts -->
+  <dialog class="credits-dialog experiences-dialog" id="experiencesDialog">
+    <div class="credits-content">
+      <div class="credits-header">
+        <h2 data-i18n="experiences.title">Map Experiences</h2>
+        <button id="closeExperiences" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="exp-intro" data-i18n="experiences.intro">Guided views of the grid. Each one sets the camera, layers and filters, then explains what you are looking at.</p>
+      <input id="experiencesSearch" class="exp-search" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search experiences…" data-i18n-placeholder="experiences.searchPlaceholder">
+      <div id="experiencesBody"></div>
     </div>
   </dialog>
 

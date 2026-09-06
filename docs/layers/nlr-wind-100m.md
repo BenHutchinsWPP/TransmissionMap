@@ -11,7 +11,7 @@
 | **Acquired** | 2026-06-04 (recovered from Internet Archive — see note below) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution requested** | "Source: NREL Wind Integration National Dataset (WIND) Toolkit" (Draxl et al. 2015, *Applied Energy* 151:355–366) |
-| **Served** | `data/layers/nlr_wind_100m.pmtiles` — raster PMTiles (WEBP, baked color, z1–6, 3.5 MB) + `nlr_wind_100m_lut.i16`/`.json` for hover readout (1.3 MB, lazy-loaded) |
+| **Served** | `data/layers/nlr_wind_100m.pmtiles` — raster PMTiles (WEBP, baked color, z1–6, 3.5 MB) + `nlr_wind_100m_lut.i16.gz`/`.json` for hover readout (0.4 MB gzipped, lazy-loaded) |
 | **Built by** | `scripts/build_wind_resource.sh` (+ `scripts/wind_color_ramp.txt`) → `data/build/wind/` → PMTiles + COG |
 | **Raw input** | Three regional GeoTIFFs extracted from `data/raw/wind/{us,canada,mexico}-wind-data.zip` (**not committed**) |
 
@@ -94,8 +94,8 @@ versions. The colour tiles carry no values.
 ### Hover readout — value at the cursor
 
 Because the tiles are colour-only, a tiny **value lookup grid** is shipped alongside them:
-`data/layers/nlr_wind_100m_lut.i16` (Int16 = round(m/s × 100), 0.1° ≈ 11 km, NW-origin
-row-major, NoData = 0; ~1.3 MB) + `nlr_wind_100m_lut.json` (dims + bbox + scale). It is
+`data/layers/nlr_wind_100m_lut.i16.gz` (Int16 = round(m/s × 100), 0.1° ≈ 11 km, NW-origin
+row-major, NoData = 0) + `nlr_wind_100m_lut.json` (dims + bbox + scale). It is
 **lazy-loaded** the first time the layer is enabled by the generic raster-probe registry
 (`RASTER_PROBES` / `ensureRasterLut` in `assets/raster-probes.ts`, shared with the solar
 layer). On `mousemove`, `sampleRaster()` does a nearest-cell lookup and `updateRasterArrow()`

@@ -1,6 +1,6 @@
 # OSM Substations
 
-OSM substation points and polygon footprints (North America).
+OSM substation points and polygon footprints, worldwide.
 
 ## Source
 
@@ -9,29 +9,31 @@ OSM substation points and polygon footprints (North America).
 | **Provider** | [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
 | **License** | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike required |
 | **Attribution** | © OpenStreetMap contributors |
-| **Source file** | `north-america-latest.osm.pbf` from [Geofabrik](https://download.geofabrik.de/) |
-| **Vintage** | July 2026 (Geofabrik daily extract, downloaded 2026-07-13) |
-| **Coverage** | USA + Canada + Mexico |
-| **Served** | `data/layers/osm_substations_points.geojson.gz` (points) · `data/layers/osm_substations_polygons.geojson.gz` (polygons) |
-| **Built by** | `extract_osm_substations.py` → `data/build/substation_osm.csv` + `data/build/substation_polygons.gpkg` |
+| **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
+| **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
+| **Coverage** | Worldwide (8 continental Geofabrik extracts) |
+| **Served** | `data/layers/osm_substations_points.pmtiles` (points, zoom 4–13) · `data/layers/osm_substations_polygons.pmtiles` (polygons). Points are capped at z13 to clear the host's 100 MiB per-file ceiling; no substation is dropped at any zoom and MapLibre overzooms above it. |
+| **Built by** | `extract_osm_substations.py` → `data/build/substation_osm.csv` + `data/build/substation_polygons.gpkg` → `build_global_tiles.py` |
 
-Both layers served as **gzipped GeoJSON**, not PMTiles — tens of thousands of tiny polygons tile poorly and *grow* as PMTiles. See [hosting & compression](../pipeline.md#hosting--compression).
+Both layers are served as **PMTiles** vector tiles, joined from the 8 continental extracts. See [hosting & compression](../pipeline.md#hosting--compression).
 
 ## Download pack
 
 Two separate packs (one per map layer):
 
-- **Points** (`osm-substations-points.zip`) — CSV only: `osm-substations-points.csv`
-- **Polygons** — `osm-substations-polygons.zip` (GeoJSON) / `osm-substations-polygons-shp.zip` (SHP): geometry + `osm-substations-polygons.csv`
+- **Points** (`osm-substations-points-<code>.zip`) — CSV only: `osm-substations-points-<code>.csv`
+- **Polygons** — `osm-substations-polygons-<code>.zip` (GeoJSON) / `osm-substations-polygons-<code>-shp.zip` (SHP): geometry + `osm-substations-polygons-<code>.csv`
 
 Every zip also includes `osm-substations.txt` (this doc) + `disclaimer.txt`.
+
+Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca an`, and the download menu in the layer panel picks it.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 
 ## Processing
 
-- **Selected:** all `power=substation` features → **82,678** points (~1,500 node + ~80,600
-  polygon-centroid + relation centroids). Polygon layer = the **~80,600** closed-way footprints.
+- **Selected:** all `power=substation` features — node, polygon-centroid and relation
+  centroids. The polygon layer carries the closed-way footprints.
 - **Row filter:** none at extract time (see caveats for display-time filtering)
 - **Computed:** `nominal_kv` parsed numeric from `voltage_raw`; `sub_type` carried through from OSM tags
 - **Columns:** polygon layer drops `voltage_raw` / `ref` / `op_wikidata` vs. the point layer

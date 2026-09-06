@@ -92,9 +92,9 @@ build_probe_lut() {
     -srcnodata 0 -dstnodata 0 "$BUILD/wind_${HEIGHT}_na.tif" "$BUILD/wind_lut_f.tif"
   gdal_translate -q -ot Int16 -scale 0 16 0 1600 -a_nodata 0 \
     "$BUILD/wind_lut_f.tif" "$BUILD/wind_lut_i.tif"
-  rc_write_lut "$BUILD/wind_lut_i.tif" "$OUT_TILES/nlr_wind_${HEIGHT}_lut.i16" \
+  rc_write_lut "$BUILD/wind_lut_i.tif" "$OUT_TILES/nlr_wind_${HEIGHT}_lut.i16.gz" \
     "$OUT_TILES/nlr_wind_${HEIGHT}_lut.json" 100 "$BUILD/wind"
-  echo "  [ok] $OUT_TILES/nlr_wind_${HEIGHT}_lut.i16  $(du -sh "$OUT_TILES/nlr_wind_${HEIGHT}_lut.i16" | cut -f1)  ($(cat "$OUT_TILES/nlr_wind_${HEIGHT}_lut.json"))"
+  echo "  [ok] $OUT_TILES/nlr_wind_${HEIGHT}_lut.i16.gz  $(du -sh "$OUT_TILES/nlr_wind_${HEIGHT}_lut.i16.gz" | cut -f1)  ($(cat "$OUT_TILES/nlr_wind_${HEIGHT}_lut.json"))"
 }
 
 rc_check_deps gdalwarp gdaldem gdal_translate gdaladdo gdalinfo pmtiles unzip

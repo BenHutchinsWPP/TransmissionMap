@@ -14,6 +14,7 @@ export const pipelineLayers: LayerDef[] = [
     lineHighlightKeys:   ["name"],
     mapLayerIds:         ["hifld-natgas-interstate", "hifld-natgas-intrastate",
                           "hifld-natgas-hgl", "hifld-natgas-gathering"],
+    regions:             ["usa"],
     downloads: {
       geojson: "data/releases/hifld-natgas-lines.zip",
       shp: "data/releases/hifld-natgas-lines-shp.zip",
@@ -29,6 +30,7 @@ export const pipelineLayers: LayerDef[] = [
     swatch:         "#06b6d4",
     defaultOn:      false,
     mapLayerIds:    ["hifld-natgas-points"],
+    regions:        ["usa"],
     downloads: {
       csv: "data/releases/hifld-natgas-points.zip",
     },
@@ -87,6 +89,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["name"],
     mapLayerIds:       ["osm-pipelines-lines"],
+    regions:           ["global"],
     downloads: {
       geojson: "data/releases/osm-pipelines-lines.zip",
       shp: "data/releases/osm-pipelines-lines-shp.zip",
@@ -105,6 +108,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:     false,
     pipelineLayer: true,
     mapLayerIds:   ["osm-pipelines-points"],
+    regions:       ["global"],
     downloads: {
       csv: "data/releases/osm-pipelines-points.zip",
     },

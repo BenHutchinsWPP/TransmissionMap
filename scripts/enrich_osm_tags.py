@@ -6,7 +6,7 @@ Reads the intermediate shapefiles written by extract_osm_lines.py and writes
 ``*_processed.shp`` siblings with structured fields (voltage, operator, etc.).
 Skips files whose ``_processed`` sibling already exists.
 
-Lines:      nominal_kv, cables, circuits, frequency, location, operator, op_wikidata, line_type, wires, ref, const
+Lines:      nominal_kv, cables, circuits, frequency, location, operator, op_wikidata, line_type, wires, ref, const, minz
 Pipelines:  pipeline, facil_type, substance, operator, op_wikidata  (lines)
             pipeline, operator                                       (points)
 """
@@ -17,6 +17,7 @@ import argparse
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 
 # ---------------------------------------------------------------------------
@@ -346,6 +347,62 @@ def _add_is_dc(gdf):
     return gdf
 
 
+# Zoom floor per feature, mirroring OpenInfraMap's selection rules
+# (tegola/layers.yml, imposm/power.py): the long EHV trunks carry the map at
+# far-out zoom and the rest of the network joins as you zoom in, so a low-zoom
+# tile holds a coherent grid rather than an arbitrary sample of one.
+# process_continental_osm.py / tile_manifest.yaml apply it with tippecanoe's
+# `-j` filter against `$zoom`.
+#
+# `line=` values that describe geometry *inside* a substation — a whole
+# substation is sub-pixel until z6, and these cluster in the densest spots on
+# the map.  `electrode` is deliberately absent: an HVDC electrode line runs
+# between substations and belongs on the voltage ladder.
+_SUBSTATION_INTERNAL = frozenset({"bay", "busbar", "substation", "internal", "transformer"})
+
+# Web Mercator resolution at z0, metres per pixel.
+_PIXEL_M_Z0 = 156543.03
+
+
+def _add_minzoom(gdf):
+    """Add `minz`, the lowest zoom at which the feature is worth drawing.
+
+    Two floors, whichever is higher:
+
+    * **voltage** — OIM's tegola ladder: 200 kV and up from z2, 100 kV from z4,
+      25 kV from z6, everything else (including untagged voltage) from z8.
+    * **length** — OIM's ``ST_Length(geometry) > !PIXEL_WIDTH! / 4``, resolved to
+      the first zoom at which the way covers a quarter of a pixel.  A way held
+      back by this floor leaves a sub-pixel gap in its corridor by construction,
+      which is what makes the selection safe to do per feature.  Measured in
+      Web Mercator metres, the projection the pixel is in — so, like OIM, a way
+      at 50°N clears the floor at 1/cos(lat) of its ground length.
+    """
+    if 'nominal_kv' not in gdf.columns or gdf.empty:
+        return gdf
+
+    kv = pd.to_numeric(gdf['nominal_kv'], errors='coerce').fillna(-1).to_numpy()
+    geom = gdf.geometry if gdf.crs else gdf.geometry.set_crs(4326)
+    # Web Mercator is undefined past ±85°, so an Antarctic way can measure
+    # non-finite; treat it as long and let its voltage decide.
+    length_m = np.nan_to_num(geom.to_crs(3857).length.to_numpy(),
+                             nan=np.inf, posinf=np.inf)
+
+    volt_z = np.select([kv >= 200, kv >= 100, kv >= 25], [2, 4, 6], default=8)
+    with np.errstate(divide='ignore'):
+        len_z = np.ceil(np.log2(_PIXEL_M_Z0 / 4 / np.maximum(length_m, 1.0)))
+    minz = np.clip(np.maximum(volt_z, len_z), 2, 8).astype('int32')
+
+    if 'line_type' in gdf.columns:
+        internal = gdf['line_type'].fillna('').isin(_SUBSTATION_INTERNAL).to_numpy()
+        minz = np.where(internal, np.maximum(minz, 6), minz)
+
+    gdf['minz'] = minz
+    counts = pd.Series(minz).value_counts().sort_index()
+    print("    minz: " + ', '.join(f"z{z}: {n}" for z, n in counts.items()))
+    return gdf
+
+
 def _add_kv_range(gdf):
     """Add kv_range bucket column derived from nominal_kv for transmission line styling.
 
@@ -403,6 +460,7 @@ def main():
         """Fill kV from name, bucket into kv_range, derive is_undergrnd/is_dc."""
         gdf = _fill_kv_from_name(gdf)
         gdf = _add_kv_range(gdf)
+        gdf = _add_minzoom(gdf)
         gdf = _add_is_dc(gdf)
         gdf["is_undergrnd"] = (
             (gdf["power"] == "cable")
@@ -412,10 +470,10 @@ def main():
         return gdf
 
     jobs = [
-        ("Power lines",       "power_line*lines.shp",          line_fdefs,          None,                 _line_post_hook),
-        ("Pipeline routes",   "pipeline_lines.shp",            pipeline_line_fdefs, PIPELINE_LINE_FIELDS, _drop_nonfuel),
-        ("Pipeline features", "pipeline_feature_lines.shp",    pipeline_line_fdefs, PIPELINE_LINE_FIELDS, None),
-        ("Pipeline feat pts", "pipeline_feature_points.shp",   pipeline_pt_fdefs,   PIPELINE_PT_FIELDS,   None),
+        ("Power lines",       "power_line*lines*.shp",         line_fdefs,          None,                 _line_post_hook),
+        ("Pipeline routes",   "pipeline_lines*.shp",           pipeline_line_fdefs, PIPELINE_LINE_FIELDS, _drop_nonfuel),
+        ("Pipeline features", "pipeline_feature_lines*.shp",   pipeline_line_fdefs, PIPELINE_LINE_FIELDS, None),
+        ("Pipeline feat pts", "pipeline_feature_points*.shp",  pipeline_pt_fdefs,   PIPELINE_PT_FIELDS,   None),
     ]
 
     for label, pat, fdefs, keep_src, post_hook in jobs:

@@ -92,6 +92,15 @@ def build_layer(layer):
         run(tip)
         os.replace(out_tmp, out)
         seq.unlink()
+        # A layer too large for one file under the host's 100 MiB ceiling is
+        # split into per-voltage-class archives, the same six the global build
+        # produces — the frontend names those, not the undivided file.
+        if layer.get("split_voltage_bands"):
+            from build_global_tiles import split_transmission_bands
+            split_transmission_bands(out, OUT, base=lid)
+            out.unlink()
+            print(f"  [done] {lid} split into voltage-class archives")
+            return
     else:
         sys.exit(f"ERROR: layer {lid}: unknown format {layer['format']!r}")
     print(f"  [done] {out.name}  ({out.stat().st_size // 1024} KiB)")

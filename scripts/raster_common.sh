@@ -47,14 +47,20 @@ rc_bake_tiles() {
   echo "  zooms: $(pmtiles show "$out" 2>/dev/null | grep -iE 'min zoom|max zoom' | tr '\n' ' ')"
 }
 
-# rc_write_lut <int16_tif> <out_i16> <out_json> <scale> <work_prefix>
-#   Dump band-1 bytes (ENVI = flat NW-origin row-major) to .i16 and write the
+# rc_write_lut <int16_tif> <out_i16_gz> <out_json> <scale> <work_prefix>
+#   Dump band-1 bytes (ENVI = flat NW-origin row-major), gzip them, and write the
 #   dims/bbox/scale sidecar. Caller builds the Int16 tif (its -scale differs).
+#
+#   Gzipped because the browser fetches this grid whole — there is no range-request
+#   path for it, unlike the tiles. The grids are mostly NoData zeros and shrink by
+#   60-90%. ensureRasterLut (assets/raster-probes.ts) inflates any LUT whose URL
+#   ends in .gz via DecompressionStream, so the name carries the contract: the
+#   .gz suffix in assets/constants.ts is what selects the inflate path.
 rc_write_lut() {
   local i16="$1" out_i16="$2" out_json="$3" scale="$4" wp="$5"
   mkdir -p "$(dirname "$out_i16")"
   gdal_translate -q -of ENVI "$i16" "${wp}_lut.envi"
-  cp "${wp}_lut.envi" "$out_i16"
+  gzip -9 -c "${wp}_lut.envi" > "$out_i16"
   gdalinfo -json "$i16" | SCALE="$scale" python3 -c '
 import sys, json, os
 d = json.load(sys.stdin)

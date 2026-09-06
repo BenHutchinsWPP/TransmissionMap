@@ -52,7 +52,7 @@ export interface DiagCheck {
 export type DiagResult = Omit<DiagCheck, 'run'> & DiagOutcome;
 
 // In dev DATA_ORIGIN is "" (constants.ts), so the layer-host probes hit
-// localhost rather than GitHub and legitimately differ from production.
+// localhost rather than the layer host and legitimately differ from production.
 export const DIAG_ENV: string = import.meta.env.PROD ? 'production' : 'dev';
 
 export const PROBE_TIMEOUT_MS = 5_000;
@@ -326,7 +326,8 @@ export const DIAG_CHECKS: DiagCheck[] = [
   check('pmtiles-range', 'Byte-range requests (PMTiles)', 'required', async () => {
     // Range is a CORS-safelisted request header, so no preflight. Only the
     // status matters — reading Content-Range would need the host to expose it.
-    const url = DATA.osm_transmission_lines;
+    // Any PMTiles archive proves the host.
+    const url = DATA.osm_transmission_lines_kv300;
     const p = await fetchProbe(url, { headers: { Range: 'bytes=0-127' } });
     discardBody(p.response);
     if (!p.response) return mk('fail', `${url} — ${p.detail}`);

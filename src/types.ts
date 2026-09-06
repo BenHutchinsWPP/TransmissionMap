@@ -32,6 +32,24 @@ export interface BucketDef {
   icon?: string;
 }
 
+// What the region selector scopes: which layers the panel lists. Map data is
+// one planet-wide tileset per layer, so this never reloads a source.
+//   'usa'    — everything, US-only datasets included (the default)
+//   'global' — only layers with worldwide coverage; US-only ones are hidden
+export type LayerScope = 'usa' | 'global';
+
+// Which continental download pack a button points at. Independent of LayerScope:
+// packs stay per continent because a pack is a file someone opens in QGIS.
+export type DownloadRegion =
+  | 'north-america'
+  | 'europe'
+  | 'asia'
+  | 'south-america'
+  | 'africa'
+  | 'oceania'
+  | 'central-america'
+  | 'antarctica';
+
 export interface FuelEntry {
   id: string;
   urlCode: string;
@@ -54,6 +72,7 @@ export interface LayerDef {
   defaultOn: boolean;
   mapLayerIds: string[];
   downloads: Downloads;
+  regions?: LayerScope[];
   // optional feature flags
   fuelLayer?: boolean;
   voltageLayer?: boolean;
@@ -144,4 +163,9 @@ export interface AppState {
   liveFcMeta: Record<string, { generated_utc?: string; feed_status?: Record<string, string>; feed_last_ok?: Record<string, string | null> }>;
   rasterLut: Record<string, { meta: RasterMeta; data: Int16Array }>;
   rasterLutLoading: Record<string, boolean>;
+  regionScope: LayerScope;
+  // ─── Map Experiences (assets/experiences.ts) ───────────────────────────────
+  experienceId: string | null;        // active experience id, or null
+  experienceDirty: boolean;           // the view has been edited since it was applied
+  experiencePristine: string | null;  // URL param string captured right after apply
 }

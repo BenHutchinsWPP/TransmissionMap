@@ -69,12 +69,34 @@ my_layer: "data/layers/my_layer.geojson.gz",   // GeoJSON
 my_layer: "data/layers/my_layer.pmtiles",        // PMTiles
 ```
 
+Write the path as a plain double-quoted literal. `scripts/validate_build.py`
+finds every expected layer by regexing `"data/layers/…"` out of this file, and
+`scripts/publish_data.sh` publishes exactly that list — a path built with a
+template literal or a `.map()` is invisible to both, so the layer never gets
+pushed and `make validate` reports it as an orphan.
+
+A layer split across several archives (see [hosting-plan.md](hosting-plan.md))
+gets one `DATA` key each, and its builder opens each as a separate MapLibre
+source — see `OSM_TL_BANDS` in `src/registry/transmission.ts` and
+`addTransmissionLines()` in `assets/layers/layer-init.ts`.
+Everything keyed off `LayerDef.mapLayerIds` then follows for free; the registries
+keyed on a *source* or *style-layer* id do not (`assets/popup.ts`,
+`assets/popup-format.ts`, `assets/ui/ui-search.ts`, `assets/hover.ts`,
+`SOURCE_ATTRIB`).
+
 For raster layers with a hover LUT, add three entries:
 ```ts
-my_lut:      "data/layers/my_layer_lut.i16",
+my_lut:      "data/layers/my_layer_lut.i16.gz",
 my_lut_meta: "data/layers/my_layer_lut.json",
 my_tiles:    "data/layers/my_layer.pmtiles",
 ```
+
+The `.gz` suffix is load-bearing: `ensureRasterLut` picks the DecompressionStream
+path by testing the URL, so a LUT written gzipped but named `.i16` is read as raw
+Int16 and yields nonsense values rather than an error. `rc_write_lut` gzips, so
+keep the name in step with it. The LUT is fetched whole — there is no
+range-request path for it as there is for the tiles — which is why it is gzipped
+and why its resolution is chosen for the wire, not the screen.
 
 Anchor: `>>> ADD-LAYER: data-urls`
 
@@ -112,6 +134,9 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
     //   line    → geojson + shp
     //   polygon → geojson + shp
     //   raster  → tif
+    // Point at the un-suffixed path even for an OSM-derived layer built per
+    // continent (`continental: true` in release_manifest.yaml) — the panel
+    // inserts the continent code into every format it lists.
     // point example:
     csv: "data/releases/my-layer.zip",
     // line/polygon example:
@@ -350,7 +375,9 @@ in this order** (add layer-specific sections in between as needed, e.g. "OSM tag
    `Coverage`, `Version`, `Acquired` where known.
 3. **`## Download pack`** — the ZIP contents. One pack per layer, format-named
    (point → CSV `<id>.zip`; line/polygon → GeoJSON `<id>.zip` + SHP `<id>-shp.zip`,
-   each also containing the attribute CSV; raster → GeoTIFF `<id>.zip`). Every ZIP
+   each also containing the attribute CSV; raster → GeoTIFF `<id>.zip`). A
+   `continental: true` layer builds each of those once per continent, as
+   `<id>-<code>.zip` / `<id>-<code>-shp.zip`. Every ZIP
    also holds `<id>.txt` (doc) + `disclaimer.txt`. If no pack ships, say so
    explicitly and link the upstream source (live services, no-redistribution, or
    too-large layers — these are `skip: true` in `release_manifest.yaml`).

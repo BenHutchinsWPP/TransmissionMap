@@ -42,8 +42,13 @@ layers:
 
   - id: osm_substations_points
     src: data/build/substation_osm.csv
-    format: geojson
+    format: pmtiles
     select: [osm_id, name, nominal_kv, operator, sub_type]
+    min_zoom: 0
+    # z13 keeps every substation (nothing is dropped at any zoom) and brings the
+    # world archive from 106 MB to 84 MB, under the 100 MiB publishing ceiling.
+    max_zoom: 13
+    flags: [-r1, --no-tile-size-limit, --no-feature-limit, --preserve-input-order]
 
   - id: osm_substations_polygons
     src: data/build/substation_polygons.gpkg
@@ -56,7 +61,9 @@ layers:
     format: pmtiles
     select: [osm_id, name, source, gen_method, gen_type, output_mw, operator]
     min_zoom: 7
-    max_zoom: 14
+    # z14 alone was 48% of the archive. z13 takes the world file from 120 MB to
+    # 63 MB, under the 100 MiB publishing ceiling, with no features dropped.
+    max_zoom: 13
     max_tile_bytes: 2000000
     flags: [--drop-densest-as-needed, --extend-zooms-if-still-dropping]
 
@@ -249,12 +256,31 @@ layers:
   - id: osm_transmission_lines
     src: data/build/transmission_lines.gpkg
     format: pmtiles
-    select: [osm_id, nominal_kv, cables, circuits, operator, name, is_undergrnd, is_dc]
+    # cables/circuits are read by nothing in assets/ or src/ — dropping them
+    # from the tiles is lossless for the map and buys ~5 MB per continent.
+    # `minz` is the per-feature zoom floor enrich_osm_tags.py::_add_minzoom
+    # writes from voltage, length and `line=`; the -j filter below selects on
+    # it so each zoom carries a coherent grid instead of a thinned sample.
+    # Mirrors TRANSMISSION_ZOOM_LADDER in scripts/build_global_tiles.py.
+    # minz must stay in `select`: tippecanoe evaluates -j against the emitted
+    # properties, so dropping it makes the filter match nothing.
+    select: [osm_id, nominal_kv, operator, name, is_undergrnd, is_dc, minz]
     precision: 6
     min_zoom: 2
     max_zoom: 11
     simplification: 5
-    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed, --extend-zooms-if-still-dropping]
+    # Emit the six per-voltage-class archives the frontend names rather than one
+    # file. The band table lives in build_global_tiles.py (TRANSMISSION_BANDS) so
+    # this path and `make global-tiles` cannot cut the layer differently.
+    split_voltage_bands: true
+    flags:
+      # Simplify the low zooms only, so maxzoom keeps every vertex the tile grid
+      # can hold — one screen pixel of accuracy at z15, where a line meets a
+      # substation bus. Mirrors process_continental_osm.py.
+      - --simplify-only-low-zooms
+      - --maximum-tile-bytes=1000000
+      - -j
+      - '{"*":["any",["<=","minz",2],["all",[">=","$zoom",3],["<=","minz",3]],["all",[">=","$zoom",4],["<=","minz",4]],["all",[">=","$zoom",5],["<=","minz",5]],["all",[">=","$zoom",6],["<=","minz",6]],["all",[">=","$zoom",7],["<=","minz",7]],[">=","$zoom",8]]}'
 
   # Shared county-boundary infra (Census TIGER cartographic, cb_2024_us_county_500k).
   # Also built standalone by scripts/build_boundaries.sh (`make boundaries`), which

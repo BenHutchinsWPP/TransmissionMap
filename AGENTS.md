@@ -1,6 +1,6 @@
 # TransmissionMap
 
-Static web map (MapLibre GL, vanilla JS, Vite-bundled) of US energy
+Static web map (MapLibre GL, vanilla JS, Vite-bundled) of global energy
 infrastructure: transmission lines, substations, generators, pipelines,
 renewable-resource rasters, land constraints. A Python/shell pipeline
 turns public datasets into PMTiles consumed by the frontend.
@@ -81,6 +81,8 @@ turns public datasets into PMTiles consumed by the frontend.
     - `odin-outages.ts` — ODIN county outage feature-state join (hand-rolled live feed)
     - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)
+    - `experiences.ts` — Map Experiences controller: applies a curated preset
+      (camera/layers/filters/basemap/3D) and tracks the active story; no DOM
     - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
       is called from the existing catch blocks in `map.ts`, `layers/layer-init.ts`,
       `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
@@ -95,6 +97,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `ui-mydata.ts` — My Data tab wiring
     - `ui-search.ts` — feature search; `ui-geocoder.ts` — place search
     - `ui-openwith.ts` — "open with" link builder
+    - `ui-experiences.ts` — Map Experiences gallery + floating story card; lazy chunk, opened from the File menu
     - `ui-diagnostics.ts` — Diagnostics dialog; lazy chunk, opened from the File menu
     - `ui-settings.ts` — Settings dialog (display units); lazy chunk, opened from the File menu
   - **`assets/layers/`** — MapLibre layer builders
@@ -122,16 +125,27 @@ turns public datasets into PMTiles consumed by the frontend.
   - `renewable.ts` wind/solar/geo/hydro; `land.ts` PAD-US/tribal/crithab; `regions.ts` NERC/BA/retail
   - `conditions.ts` — hazards + everything live: static WHP & seismic PGA, live wildfire
     (perimeters/incidents/smoke), NWS alerts, ODIN outages, NEXRAD radar; `rail.ts` railroads
+  - `experiences.ts` — Map Experiences catalogue (curated camera/layer/filter presets + narratives)
+- `scripts/build_global_tiles.py` — joins the 8 continental OSM builds into one
+  planet-wide artifact per layer (what the map reads), capping any archive over the
+  host's 100 MiB per-file ceiling. Transmission is re-tiled from the GeoPackages in
+  one global pass (deduping the seam overlaps) and cut into six voltage-class
+  archives — `TRANSMISSION_BANDS`, mirrored by `OSM_TL_BANDS` in
+  `src/registry/transmission.ts`. Download packs stay per-continent.
+  See `docs/hosting-plan.md` and `docs/pipeline.md`.
 - `scripts/` — data pipeline: `extract_*.py` (per dataset — e.g.
   `extract_us_census_boundaries.py` for US states/ZCTA,
   `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
 - `docs/adding-a-layer.md` — **read this before adding any map layer**
+- `docs/map-experiences.md` — curated guided views (`File ▸ Experiences…`, `?exp=`)
 - `docs/pipeline.md` — how the data pipeline fits together
 - `docs/data-sources.md` — where every dataset comes from
 - `docs/layers/<layer>.md` — one doc per layer (source URL, columns, build)
 - `docs/release-artifacts.md` — inventory of data files + download packs
+- `docs/hosting-plan.md` — where each asset class is hosted and how the world
+  transmission archive is split by voltage class
 
 ## Task routing — read these, not the whole repo
 
@@ -143,6 +157,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: wire `filter:all` too, and claim a unique URL code — see `docs/url-state.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
+| Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`, and a programmatic layer switch-on has to call `syncWeatherLiveVisibility()` / `syncZoneVisibility()` by hand) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
 | Fix voltage colors | `src/colors/voltage.ts` |
@@ -160,14 +175,21 @@ turns public datasets into PMTiles consumed by the frontend.
 | IT/security asks what URLs to whitelist | `docs/network-allowlist.md` |
 | "Things aren't loading" reports / add a diagnostics check | `assets/diagnostics.ts` (`DIAG_CHECKS`), `assets/ui/ui-diagnostics.ts` (silent footgun: host probes duplicate `docs/network-allowlist.md` — update both) |
 | Pipeline / tile build | `docs/pipeline.md`, then named script |
+| Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
+| How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
+| Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them; a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
 
 ## Commands
 
 - `make help` — list all targets
 - `make check` — verify CLI deps (osmium, ogr2ogr, tippecanoe)
 - `make install` — create venv + Python deps
-- `make pipeline` — full data pipeline (slow; needs `data/raw/` inputs)
+- `make pipeline` — full data pipeline for one region (slow; needs `data/raw/` inputs)
+- `make continental-all` — run the OSM pipeline for all 8 continents; must precede `make global-tiles`
 - `make tiles` — build PMTiles from extracted data
+- `make global-tiles` — join the 8 continental OSM builds into one world tileset per layer;
+  transmission is re-tiled globally instead and cut into six voltage-class archives
+- `make publish-data` — force-push the layers `constants.ts` names + `data/releases` to the orphan `data-static` branch (the prod host)
 - `make validate` — check tile_manifest output matches `assets/constants.ts` (run after wiring a new layer)
 - `npm run dev` — serve site locally (Vite dev server, hot reload)
 - `npm run build` — production bundle (output: `dist/`); **gates on `typecheck` + `lint` via `prebuild` — fails on any type or lint error**

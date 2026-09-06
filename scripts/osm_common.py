@@ -38,6 +38,7 @@ SHARED_FILTER_TAGS = [
     "power=generator",
     "power=plant",
     "telecom=data_center",
+    "telecom=data_centre",
     "building=data_center",
     "building=data_centre",
 ]

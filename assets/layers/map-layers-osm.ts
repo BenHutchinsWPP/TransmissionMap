@@ -13,10 +13,20 @@ import {
   genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
 } from './layer-init.js';
 import { PIPELINE_TYPE_MAP } from '../filters.js';
+import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 
 export function addOsmTransmission() {
   addTransmissionLines({
-    sourceId: "osm-transmission-lines", url: DATA.osm_transmission_lines, sourceLayer: "osm_transmission_lines",
+    // One source per voltage-class archive, ascending — OSM_TL_BANDS is the
+    // single definition of the split and also derives the layer ids the registry
+    // lists. Ascending order is paint order: EHV is added last and draws on top.
+    sources: OSM_TL_BANDS.map(b => ({
+      id:     `osm-transmission-lines${b.suffix}`,
+      url:    DATA[b.dataKey as keyof typeof DATA],
+      suffix: b.suffix,
+      kv:     b.kv,
+    })),
+    sourceLayer: "osm_transmission_lines",
     registryId: "osm-transmission-lines", prefix: "osm-transmission-lines",
     kvExpr: ["coalesce", ["get", "nominal_kv"], -1],
     color: voltageColorExpr("nominal_kv", "#a39dbe"),
@@ -30,6 +40,8 @@ export function addOsmTransmission() {
 export function addOsmSubstationPoints() {
   addSubstationPoints({
     sourceId: "osm-substations-points",
+    url: DATA.osm_substations_points,
+    sourceLayer: "osm_substations_points",
     kvField:  "nominal_kv",
     layerIds: { hv: "osm-substations-points-hv", lv: "osm-substations-points-lv", label: "osm-substations-label" },
   });
@@ -37,7 +49,9 @@ export function addOsmSubstationPoints() {
 
 export function addOsmSubstationPolygons() {
   addPolygonLayer({
-    sourceId: "osm-substations-polygons", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "osm-substations-polygons",
+    source: { type: "vector", url: pmtilesUrl(DATA.osm_substations_polygons) },
+    sourceLayer: "osm_substations_polygons",
     prefix: "osm-substations-polygons", color: voltageColorExpr("nominal_kv", "#a78bfa"),
     fillMinzoom: 9, fillOpacity: 0.30,
     outlineMinzoom: 9, outlineWidth: 1.5, outlineOpacity: 0.7,
@@ -46,7 +60,9 @@ export function addOsmSubstationPolygons() {
 
 export function addOsmPlantPolygons() {
   addPolygonLayer({
-    sourceId: "osm-plants-polygons", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "osm-plants-polygons",
+    source: { type: "vector", url: pmtilesUrl(DATA.osm_plants_polygons) },
+    sourceLayer: "osm_plants_polygons",
     prefix: "osm-plants-polygons", color: OSM_GEN_COLOR,
     fillMinzoom: 5, fillOpacity: 0.20,
     outlineMinzoom: 5, outlineWidth: 1.5, outlineOpacity: 0.7,

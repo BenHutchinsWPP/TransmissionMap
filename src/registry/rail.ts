@@ -15,6 +15,7 @@ export const railLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["RROWNER1", "SUBDIV"],
     mapLayerIds:       ["railroads"],
+    regions:           ["usa"],
     downloads: {},
   },
 ];

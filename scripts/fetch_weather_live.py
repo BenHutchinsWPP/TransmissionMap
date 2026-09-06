@@ -7,7 +7,7 @@ Emits, per variable, into the output DIRECTORY (-o):
                15..75, upsampled 4x (cubic; 0.25 deg native is blocky —
                smooth the image only, not the LUT), then warped to Web
                Mercator rows so the lon/lat-cornered image source registers.
-  <var>.i16    flat Int16 grid of value x scale at NATIVE 0.25 deg on the
+  <var>.i16.gz flat Int16 grid of value x scale at NATIVE 0.25 deg on the
                cropped grid — the hover-readout LUT (see
                assets/raster-probes.ts). NoData = -32768.
   wind_uv.png  wind-only extra: native-res RGB PNG, u in R / v in G, linearly
@@ -100,9 +100,11 @@ NATIVE_W, NATIVE_H = 1440, 721
 LON = -180.0 + 0.25 * np.arange(NATIVE_W)   # ascending, -180..179.75
 LAT = 90.0 - 0.25 * np.arange(NATIVE_H)     # descending, 90..-90
 
-# Crop: US + Canada + margin.
-CROP_WEST, CROP_EAST, CROP_SOUTH, CROP_NORTH = -170.0, -50.0, 15.0, 75.0
-UPSAMPLE = 4  # display-raster cubic upsample factor; LUT stays native res
+# Crop: the whole globe. North/south stop at 85 deg because the display raster is
+# warped to Web Mercator, which runs to infinity at the poles (see
+# to_web_mercator_rows); GFS itself carries data all the way to +-90.
+CROP_WEST, CROP_EAST, CROP_SOUTH, CROP_NORTH = -180.0, 180.0, -85.0, 85.0
+UPSAMPLE = 2  # display-raster cubic upsample factor; LUT stays native res
 
 LUT_NODATA = -32768
 UV_MIN, UV_MAX = -40.0, 40.0  # wind_uv.png offset-encoding range, m/s
@@ -453,9 +455,10 @@ def bake_image(vals_native, ramp, path, quality=85):
 
 
 def write_lut(vals_native, scale, path):
-    """Int16 hover grid. A path ending .i16.gz is gzip-compressed (used for
-    the per-step LUTs — smooth fields shrink ~4x, and the frontend
-    decompresses via DecompressionStream)."""
+    """Int16 hover grid. A path ending .i16.gz is gzip-compressed — every LUT
+    is, base and per-step alike. The browser fetches these whole (no range
+    path), smooth fields shrink ~4x, and the frontend inflates via
+    DecompressionStream."""
     lut = np.where(np.isfinite(vals_native),
                    np.round(np.nan_to_num(vals_native) * scale), LUT_NODATA)
     lut = lut.astype("int16")
@@ -578,7 +581,7 @@ def main():
                 print(f"    {city}: {v:.1f} {spec['si_units']}")
 
             bake_image(cropped, spec["ramp"], outdir / f"{name}.webp")
-            write_lut(cropped, spec["scale"], outdir / f"{name}.i16")
+            write_lut(cropped, spec["scale"], outdir / f"{name}.i16.gz")
 
             h, w = cropped.shape
             var_meta = {

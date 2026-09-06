@@ -8,22 +8,80 @@
 // Consumed by ui.ts (init + resetLayersToDefaults + wireLangChanged).
 
 import { state } from '../state.js';
-import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
+import { LAYERS, LAYER_SOURCES, REGION_CODE_MAP } from '../../src/registry/index.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
-import type { LayerDef, BucketDef } from '../../src/types.js';
+import type { LayerDef, BucketDef, LayerScope, DownloadRegion } from '../../src/types.js';
 import { HEAT_RAMP } from '../../src/colors/ramps.js';
 import { DATA_ORIGIN } from '../constants.js';
 import { rampLegendHtml } from './ui-legends.js';
 import { escapeHtml } from '../utils/utils.js';
 import { t } from '../../src/i18n/index.js';
 
+// 'usa' lists everything — a US visitor wants the worldwide layers too, so the
+// US scope is the superset. 'global' is the narrowing one: it drops layers whose
+// data stops at the US border (HIFLD, PAD-US, NERC, tribal, ZCTA, EIA), which
+// would otherwise render as an empty checkbox everywhere else on Earth.
+export function isLayerInRegion(layer: LayerDef, scope: LayerScope = state.regionScope): boolean {
+  if (scope === 'usa') return true;
+  if (!layer.regions || layer.regions.length === 0) return true;
+  return layer.regions.includes('global');
+}
+
+// Every OSM-derived pack is built per continent: Geofabrik's continental
+// extracts are the pipeline's unit of work, and a download is a file someone
+// opens in QGIS, so each format (CSV, GeoJSON, SHP) ships one archive per
+// continental code. Non-OSM packs are single-file and stay flat links.
+export function isContinentalPack(pathStr?: string | null): boolean {
+  return !!pathStr && pathStr.includes('data/releases/osm-');
+}
+
+// The continent code sits ahead of the format suffix:
+//   osm-transmission-lines.zip      → osm-transmission-lines-eu.zip
+//   osm-transmission-lines-shp.zip  → osm-transmission-lines-eu-shp.zip
+// An already-coded path is rewritten in place, so repeat calls are idempotent.
+const PACK_SUFFIX_RE = /(?:-(?:na|eu|as|sa|af|oc|ca|an))?(-shp)?\.zip$/;
+
+export function getRegionalDownloadPath(pathStr: string, region: DownloadRegion): string {
+  if (!isContinentalPack(pathStr)) return pathStr;
+  const code = REGION_CODE_MAP[region] || 'na';
+  return pathStr.replace(PACK_SUFFIX_RE, (_match, shp = '') => `-${code}${shp}.zip`);
+}
+
 export function buildLayersPanel() {
   const groups = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "conditions"];
   for (const group of groups) {
     const container = document.getElementById(`layer-rows-${group}`);
     if (!container) continue;
-    const entries = LAYERS.filter(l => l.group === group);
+    const entries = LAYERS.filter(l => l.group === group && isLayerInRegion(l, state.regionScope));
     container.innerHTML = entries.map(layerRowHtml).join("");
+  }
+
+  // Hide or show collapsible layer-sections if all child row containers are empty
+  const sections = document.querySelectorAll<HTMLElement>('.layers-body .layer-section[data-collapsible]');
+  sections.forEach(section => {
+    const rowContainers = section.querySelectorAll('[id^="layer-rows-"]');
+    if (rowContainers.length > 0) {
+      const hasAnyRows = Array.from(rowContainers).some(c => c.children.length > 0);
+      section.style.display = hasAnyRows ? '' : 'none';
+    }
+  });
+
+  const regionMenu = document.getElementById('regionMenu');
+  if (regionMenu) {
+    const activeItem = regionMenu.querySelector<HTMLButtonElement>(`.region-menu-item[data-region="${state.regionScope}"]`);
+    regionMenu.querySelectorAll<HTMLButtonElement>('.region-menu-item').forEach(item => {
+      const active = item.dataset.region === state.regionScope;
+      item.classList.toggle('region-menu-item--active', active);
+      item.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+    const iconEl = document.getElementById('regionActiveIcon');
+    const textEl = document.getElementById('regionActiveText');
+    if (activeItem) {
+      const svg = activeItem.querySelector('svg');
+      if (iconEl && svg) iconEl.innerHTML = svg.outerHTML;
+      const label = activeItem.querySelector('.region-menu-label');
+      if (textEl && label) textEl.textContent = label.textContent;
+    }
   }
 }
 
@@ -50,6 +108,33 @@ function layerRowHtml(entry: LayerDef) {
     ${yearFilterBlockHtml(entry)}`;
 }
 
+// Continents offered for a continental pack, in the order the packs are built.
+// Labels come from the same region.* keys the old selector used.
+const DOWNLOAD_REGIONS: { id: DownloadRegion; key: string }[] = [
+  { id: 'north-america',  key: 'region.northAmerica' },
+  { id: 'europe',         key: 'region.europe' },
+  { id: 'asia',           key: 'region.asia' },
+  { id: 'south-america',  key: 'region.southAmerica' },
+  { id: 'africa',         key: 'region.africa' },
+  { id: 'oceania',        key: 'region.oceania' },
+  { id: 'central-america',key: 'region.centralAmerica' },
+  { id: 'antarctica',     key: 'region.antarctica' },
+];
+
+// One format entry. A continental pack expands to the continent list via a native
+// <details> — no JS, and ui.ts's outside-click handler already ignores clicks
+// inside .dl-menu, so opening one does not dismiss the menu.
+function downloadFormatHtml(label: string, path?: string | null) {
+  if (!path) return "";
+  if (!isContinentalPack(path)) {
+    return `<a href="${DATA_ORIGIN}${path}" download>${label}</a>`;
+  }
+  const links = DOWNLOAD_REGIONS.map(r =>
+    `<a href="${DATA_ORIGIN}${getRegionalDownloadPath(path, r.id)}" download>${escapeHtml(t(r.key))}</a>`
+  ).join("");
+  return `<details class="dl-group"><summary>${label}</summary><div class="dl-regions">${links}</div></details>`;
+}
+
 function downloadMenuHtml(entry: LayerDef) {
   const { csv, geojson, shp, tif } = entry.downloads ?? {};
   // No format pack → no download button. The source link lives on the Data Credits
@@ -58,10 +143,10 @@ function downloadMenuHtml(entry: LayerDef) {
   const label = t(entry.titleKey);
   const dlText = t('layer.download');
   const items = [
-    csv ? `<a href="${DATA_ORIGIN}${csv}" download>CSV</a>` : "",
-    geojson ? `<a href="${DATA_ORIGIN}${geojson}" download>GeoJSON</a>` : "",
-    shp ? `<a href="${DATA_ORIGIN}${shp}" download>SHP</a>` : "",
-    tif ? `<a href="${DATA_ORIGIN}${tif}" download>GeoTIFF</a>` : "",
+    downloadFormatHtml("CSV", csv),
+    downloadFormatHtml("GeoJSON", geojson),
+    downloadFormatHtml("SHP", shp),
+    downloadFormatHtml("GeoTIFF", tif),
   ].filter(Boolean).join("");
   return `
     <div class="dl-wrap">

@@ -9,7 +9,7 @@ layers consume it:
 | `wildfire-incidents` | Named Incidents (~24h) | `WFI` | `incident` (Point) | NIFC WFIGS incident locations |
 | `wildfire-smoke` | Smoke Detection (~24h) | `SMK` | `smoke` (Polygon) | NOAA HMS smoke polygons |
 
-All four `_type`s are merged into a **single** `wildfire_live.geojson`; the frontend
+All four `_type`s are merged into a **single** `wildfire_live.geojson.gz`; the frontend
 splits them into the map layers above by filtering on `_type`. These are **not** the
 static [Wildfire Hazard Potential](wildfire-hazard.md) raster — that is a different
 provider, layer, and pipeline.
@@ -19,17 +19,17 @@ provider, layer, and pipeline.
 | | |
 |---|---|
 | **Providers** | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (VIIRS active fire) · [NIFC WFIGS](https://data-nifc.opendata.arcgis.com/) (US perimeters + incidents) · [CWFIS](https://cwfis.cfs.nrcan.gc.ca/) (Canada perimeter estimates) · [NOAA HMS](https://www.ospo.noaa.gov/Products/land/hms.html) (smoke) |
-| **Coverage** | Hotspots: CONUS + Hawaii + Canada + Mexico/Central America (FIRMS country feeds). Perimeters: US (NIFC, surveyed) **+ Canada (CWFIS Fire M3, hotspot-derived estimates)**. Incidents + smoke are **US-only** (NIFC/NOAA are US agencies) |
+| **Coverage** | Hotspots: Worldwide (FIRMS global satellite feed). Perimeters: US (NIFC, surveyed) **+ Canada (CWFIS Fire M3, hotspot-derived estimates)**. Incidents + smoke are **US-only** (NIFC/NOAA are US agencies) |
 | **Vintage** | Rolling — VIIRS last 24 h; US perimeters/incidents = WFIGS *Current*; CA perimeters = CWFIS M3 *current* (daily); smoke = latest available HMS day |
 | **License** | Public domain (US Government work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105)); CWFIS under [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution) |
-| **Served (prod)** | `wildfire_live.geojson` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok; ~5 min CDN lag). URL in `assets/constants.ts` → `DATA.wildfire_live`. |
-| **Served (dev)** | Local `data/layers/wildfire_live.geojson` — **not in git** (`data/layers/` is gitignored). `make wildfire-dev` builds it, fetching all feeds live (no manual downloads). Offline: pass pre-downloaded VIIRS CSVs to `fetch_wildfire_live.py` as positional args. |
+| **Served (prod)** | `wildfire_live.geojson.gz` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok; ~5 min CDN lag). URL in `assets/constants.ts` → `DATA.wildfire_live`. |
+| **Served (dev)** | Local `data/layers/wildfire_live.geojson.gz` — **not in git** (`data/layers/` is gitignored). `make wildfire-dev` builds it, fetching all feeds live (no manual downloads). Offline: pass pre-downloaded VIIRS CSVs to `fetch_wildfire_live.py` as positional args. |
 | **Built by** | `scripts/fetch_wildfire_live.py` (merges all feeds: VIIRS hotspots, NIFC + CWFIS perimeters, NIFC incidents, HMS smoke) |
 | **Refresh** | `.github/workflows/wildfire-data.yml` — `workflow_dispatch` fired every 30 min (`:07`/`:37`) by cron-job.org (primary), plus a sparse every-6h GitHub cron (`:32`) as disaster insurance in case the external trigger silently dies (a never-triggered workflow can't raise a failure alert). Force-pushes an amended commit to the `data` branch (no history growth). `main` is never touched. Failed runs surface only as an amber chip / stale modal on the map (no automatic issue). The cron-job.org job authenticates with a fine-grained PAT (Actions R/W, this repo only) set to never expire. |
 
 > **Hosting.** Lives on a one-commit orphan `data` branch rather than a Release asset —
-> GitHub Release assets have no CORS, which breaks live-map fetches. R2 is the deferred
-> upgrade if traffic grows. No download pack is built (live data — point users upstream).
+> GitHub Release assets send no CORS header, so they can back downloads but not
+> live-map fetches. No download pack is built (live data — point users upstream).
 
 ## Live endpoints (upstream)
 
@@ -37,16 +37,13 @@ All pulled by `fetch_wildfire_live.py` (the workflow just runs it):
 
 - **FIRMS VIIRS 24 h** (S-NPP + NOAA-20), two paths:
   - **Primary (`FIRMS_MAP_KEY` env var set — the prod path):** quota'd area API,
-    `firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/-180,5,-40,75/2` —
-    one North+Central-America bbox per sensor (**includes Alaska**), 2 UTC days
-    trimmed to a rolling 24 h in the script. Key: free from
-    https://firms.modaps.eosdis.nasa.gov/api/map_key/ (5000 req/10 min); stored as
-    the `FIRMS_MAP_KEY` Actions secret.
-  - **Fallback (no key, or API fetch fails):** anonymous flat files, which
-    rate-limit runner IPs under load and **exclude Alaska**:
-    - USA: `.../{suomi-npp,noaa-20}-viirs-c2/USA_contiguous_and_Hawaii/...24h.csv`
-    - Canada: `.../{suomi-npp,noaa-20}-viirs-c2/csv/{SUOMI,J1}_VIIRS_C2_Canada_24h.csv`
-    - Mexico/Central America: `.../csv/{SUOMI,J1}_VIIRS_C2_Central_America_24h.csv` (Mexico has no standalone country file; it lives in the Central_America region)
+    `firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/world/2` —
+    worldwide coverage per sensor, 2 UTC days trimmed to a rolling 24 h in the script.
+    Key: free from https://firms.modaps.eosdis.nasa.gov/api/map_key/ (5000 req/10 min);
+    stored as the `FIRMS_MAP_KEY` Actions secret.
+  - **Fallback (no key, or API fetch fails):** anonymous flat files:
+    - `SUOMI_VIIRS_C2_Global_24h.csv`
+    - `J1_VIIRS_C2_Global_24h.csv`
 - **WFIGS perimeters (US):** `services3.arcgis.com/.../WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query`
 - **CWFIS perimeter estimates (CA):** `cwfis.cfs.nrcan.gc.ca/geoserver/public/ows` WFS 2.0, `typeNames=public:m3_polygons_current`, GeoJSON (CORS `*`)
 - **WFIGS incidents:** `services3.arcgis.com/.../WFIGS_Incident_Locations_Current/FeatureServer/0/query`

@@ -14,8 +14,8 @@
 //   Old cache buckets are deleted automatically on activate.
 // =============================================================================
 
-const STATIC_VERSION = 'v34';  // network-first static strategy (purges stale cache-first bundles)
-const DATA_VERSION   = 'v3';   // ← bump this after running build_tiles.sh
+const STATIC_VERSION = 'v35';  // network-first static strategy (purges stale cache-first bundles)
+const DATA_VERSION   = 'v4';   // ← bump this after running build_tiles.sh
 
 const STATIC_CACHE = `tm-static-${STATIC_VERSION}`;
 const DATA_CACHE   = `tm-data-${DATA_VERSION}`;

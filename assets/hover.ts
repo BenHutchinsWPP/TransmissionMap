@@ -87,45 +87,55 @@ export function initPolygonHover() {
 }
 
 // ─── Vector line click-highlight ─────────────────────────────────────────────
-// Config is driven by LayerDef.lineHighlightKeys; source/source-layer derived
-// from first mapLayerIds entry at init time.
+// Config is driven by LayerDef.lineHighlightKeys; sources and source-layers are
+// derived from the layer's mapLayerIds at init time. A layer can be backed by
+// several sources, so `hl` holds one highlight layer per source and they are
+// driven together — one filter, one visibility flip, however many sources.
 
-interface LineHlCfg { src: string; sl: string | undefined; key: string[]; hl: string }
+interface LineHlCfg { key: string[]; hl: string[] }
 
 const NEVER_MATCH = ["==", ["get", "\x00"], "\x00\x01"];
 const LINE_HL_BY_LAYER: Record<string, LineHlCfg> = {};
-let activeLineHl: string | null = null;
+let activeLineHl: string[] = [];
 
 export function initLineHighlight() {
   if (!state.map) return;
   const styleLayers = state.map.getStyle().layers;
   for (const layer of LAYERS) {
     if (!layer.lineHighlightKeys) continue;
-    const firstId = layer.mapLayerIds.find(id => state.map!.getLayer(id));
-    if (!firstId) continue;
-    const styleLayer = state.map.getLayer(firstId) as StyleLayer;
-    const src = styleLayer.source;
-    const sl  = styleLayer.sourceLayer || undefined;
-    if (!src || !state.map.getSource(src)) continue;
 
-    const hlId = src + "-line-hl";
-    const hlDef: LayerSpecification = {
-      id: hlId, type: "line", source: src,
-      layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-      filter: NEVER_MATCH as FilterSpecification,
-      paint: {
-        "line-color": "#3b82f6",
-        "line-gap-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 12, 4] as ExpressionSpecification,
-        "line-width": 2.5,
-        "line-opacity": 0.95,
-      },
-    };
-    if (sl) (hlDef as Record<string, unknown>)["source-layer"] = sl;
-    state.map.addLayer(hlDef);
+    // Every distinct source behind this layer, with its source-layer.
+    const srcs = new Map<string, string | undefined>();
+    for (const id of layer.mapLayerIds) {
+      const sty = state.map.getLayer(id) as StyleLayer | undefined;
+      if (sty?.source && state.map.getSource(sty.source) && !srcs.has(sty.source))
+        srcs.set(sty.source, sty.sourceLayer || undefined);
+    }
+    if (!srcs.size) continue;
 
-    const cfg: LineHlCfg = { src, sl, key: layer.lineHighlightKeys, hl: hlId };
+    const hlIds: string[] = [];
+    for (const [src, sl] of srcs) {
+      const hlId = src + "-line-hl";
+      const hlDef: LayerSpecification = {
+        id: hlId, type: "line", source: src,
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        filter: NEVER_MATCH as FilterSpecification,
+        paint: {
+          "line-color": "#3b82f6",
+          "line-gap-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 12, 4] as ExpressionSpecification,
+          "line-width": 2.5,
+          "line-opacity": 0.95,
+        },
+      };
+      if (sl) (hlDef as Record<string, unknown>)["source-layer"] = sl;
+      state.map.addLayer(hlDef);
+      hlIds.push(hlId);
+    }
+
+    const cfg: LineHlCfg = { key: layer.lineHighlightKeys, hl: hlIds };
     for (const lyr of styleLayers) {
-      if ((lyr as { source?: string }).source === src && lyr.type === "line" && lyr.id !== hlId)
+      const src = (lyr as { source?: string }).source;
+      if (src && srcs.has(src) && lyr.type === "line" && !hlIds.includes(lyr.id))
         LINE_HL_BY_LAYER[lyr.id] = cfg;
     }
   }
@@ -137,14 +147,16 @@ export function highlightLine(layerId: string, props: Record<string, unknown>): 
   if (cfg.key.some(f => props[f] == null || props[f] === "")) return false;
   const conds = cfg.key.map(f => ["==", ["to-string", ["get", f]], String(props[f])]);
   clearLineHighlight();
-  state.map.setFilter(cfg.hl, ["all", ...conds] as FilterSpecification);
-  state.map.setLayoutProperty(cfg.hl, "visibility", "visible");
+  for (const hl of cfg.hl) {
+    state.map.setFilter(hl, ["all", ...conds] as FilterSpecification);
+    state.map.setLayoutProperty(hl, "visibility", "visible");
+  }
   activeLineHl = cfg.hl;
   return true;
 }
 
 export function clearLineHighlight() {
-  if (activeLineHl && state.map?.getLayer(activeLineHl))
-    state.map.setLayoutProperty(activeLineHl, "visibility", "none");
-  activeLineHl = null;
+  for (const hl of activeLineHl)
+    if (state.map?.getLayer(hl)) state.map.setLayoutProperty(hl, "visibility", "none");
+  activeLineHl = [];
 }

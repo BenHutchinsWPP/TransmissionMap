@@ -1,0 +1,13 @@
+{
+  "directory": "data/raw/osm",
+  "extracts": [
+    { "output": "africa-latest.osm.pbf",            "polygon": { "file_name": "scripts/geofabrik_bounds/africa.poly",            "file_type": "poly" } },
+    { "output": "antarctica-latest.osm.pbf",        "polygon": { "file_name": "scripts/geofabrik_bounds/antarctica.poly",        "file_type": "poly" } },
+    { "output": "asia-latest.osm.pbf",              "polygon": { "file_name": "scripts/geofabrik_bounds/asia.poly",              "file_type": "poly" } },
+    { "output": "australia-oceania-latest.osm.pbf", "polygon": { "file_name": "scripts/geofabrik_bounds/australia-oceania.poly", "file_type": "poly" } },
+    { "output": "central-america-latest.osm.pbf",   "polygon": { "file_name": "scripts/geofabrik_bounds/central-america.poly",   "file_type": "poly" } },
+    { "output": "europe-latest.osm.pbf",            "polygon": { "file_name": "scripts/geofabrik_bounds/europe.poly",            "file_type": "poly" } },
+    { "output": "north-america-latest.osm.pbf",     "polygon": { "file_name": "scripts/geofabrik_bounds/north-america.poly",     "file_type": "poly" } },
+    { "output": "south-america-latest.osm.pbf",     "polygon": { "file_name": "scripts/geofabrik_bounds/south-america.poly",     "file_type": "poly" } }
+  ]
+}

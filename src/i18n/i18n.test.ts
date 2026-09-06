@@ -56,9 +56,12 @@ describe('i18n Core Engine', () => {
       expect(isValidLocale('ko')).toBe(true);
       expect(isValidLocale('it')).toBe(true);
       expect(isValidLocale('hi')).toBe(true);
-      expect(isValidLocale('nv')).toBe(true);
       expect(isValidLocale('vi')).toBe(true);
       expect(isValidLocale('tl')).toBe(true);
+
+      // Withheld from the picker pending a Diné speaker's review — the
+      // dictionary still ships, but the locale is not selectable.
+      expect(isValidLocale('nv')).toBe(false);
 
       expect(isValidLocale('nl')).toBe(false);
       expect(isValidLocale('en-US')).toBe(false);
@@ -66,11 +69,11 @@ describe('i18n Core Engine', () => {
       expect(isValidLocale('unknown')).toBe(false);
     });
 
-    it('SUPPORTED_LOCALES lists all 15 locale definitions', () => {
-      expect(SUPPORTED_LOCALES).toHaveLength(15);
+    it('SUPPORTED_LOCALES lists the 14 selectable locale definitions', () => {
+      expect(SUPPORTED_LOCALES).toHaveLength(14);
       expect(SUPPORTED_LOCALES.map(l => l.code)).toEqual([
         'en', 'es', 'fr', 'de', 'zh', 'pt', 'ru', 'ja', 'ar',
-        'ko', 'it', 'hi', 'nv', 'vi', 'tl',
+        'ko', 'it', 'hi', 'vi', 'tl',
       ]);
     });
 
@@ -92,11 +95,11 @@ describe('i18n Core Engine', () => {
       });
       expect(arDef.dir).toBe('rtl');
 
-      const nvDef = getLocaleDef('nv');
-      expect(nvDef).toEqual({
-        code: 'nv',
-        name: 'Navajo',
-        nativeName: 'Diné Bizaad',
+      const hiDef = getLocaleDef('hi');
+      expect(hiDef).toEqual({
+        code: 'hi',
+        name: 'Hindi',
+        nativeName: 'हिन्दी',
         dir: 'ltr',
       });
     });
@@ -122,7 +125,6 @@ describe('i18n Core Engine', () => {
       ['ko', '파일', '지도 레이어', '송전선로'],
       ['it', 'File', 'Livelli mappa', 'Trasmissione'],
       ['hi', 'फ़ाइल', 'मानचित्र परतें', 'पारेषण'],
-      ['nv', 'Naaltsoos', 'Kéyah bikʼi sinilígíí', 'Atsingeeł beʼatiin'],
       ['vi', 'Tệp', 'Lớp bản đồ', 'Truyền tải điện'],
       ['tl', 'File', 'Mga Layer ng Mapa', 'Transmisyon'],
     ] as const)('translates keys in %s', async (code, file, layers, transmission) => {

@@ -1,6 +1,6 @@
 # OSM Pipelines
 
-OSM pipeline route segments and facility points (global, North America focus).
+OSM pipeline route segments and facility points, worldwide.
 For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld-natgas.md).
 
 ## Source
@@ -10,9 +10,9 @@ For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld
 | **Provider** | [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
 | **License** | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike required |
 | **Attribution** | © OpenStreetMap contributors |
-| **Source file** | `north-america-latest.osm.pbf` from [Geofabrik](https://download.geofabrik.de/) |
-| **Vintage** | July 2026 (Geofabrik daily extract, downloaded 2026-07-13) |
-| **Coverage** | USA + Canada + Mexico |
+| **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
+| **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
+| **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_pipelines_lines.pmtiles` (routes, PMTiles z5–12) · `data/layers/osm_pipelines_points.geojson.gz` (points) |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/pipeline_routes.gpkg` + `data/build/pipeline_points.csv` → `tippecanoe -l osm_pipelines_lines` |
 
@@ -20,17 +20,19 @@ For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld
 
 Two separate packs (one per map layer):
 
-- **Lines** — `osm-pipelines-lines.zip` (GeoJSON) / `osm-pipelines-lines-shp.zip` (SHP): geometry + `osm-pipelines-lines.csv`
-- **Points** (`osm-pipelines-points.zip`) — CSV only: `osm-pipelines-points.csv`
+- **Lines** — `osm-pipelines-lines-<code>.zip` (GeoJSON) / `osm-pipelines-lines-<code>-shp.zip` (SHP): geometry + `osm-pipelines-lines-<code>.csv`
+- **Points** (`osm-pipelines-points-<code>.zip`) — CSV only: `osm-pipelines-points-<code>.csv`
 
 Every zip also includes `osm-pipelines.txt` (this doc) + `disclaimer.txt`.
+
+Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca an`, and the download menu in the layer panel picks it.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 
 ## Processing
 
-- **Routes:** `man_made=pipeline` line features → **100,965**
-- **Points:** `pipeline=*` point features (valves, pig launchers, meter stations) → **14,427**
+- **Routes:** `man_made=pipeline` line features
+- **Points:** `pipeline=*` point features (valves, pig launchers, meter stations)
 - **Row filter:** non-fuel routes dropped (`scripts/enrich_osm_tags.py`, `_FUEL_SUBSTANCES` allowlist) — only pipelines carrying a generator fuel (natural gas, oil/crude, refined products & NGL, hydrogen, coal) or untagged are kept. Water, sewage, industrial gases, petrochemical feedstock, etc. removed (14,110 rows).
 - **Columns kept (routes):** `osm_id`, `name`, `substance`, `operator`, `pipeline`, `op_wikidat`
 - **Map styling:** routes colored by `substance`, bucketed to generator-fuel type

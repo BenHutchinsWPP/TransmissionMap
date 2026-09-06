@@ -1,9 +1,7 @@
 // Layer registry entries — regions, load context, and test layers.
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
 import type { LayerDef } from '../types.js';
-import { convDensity, densityLabel } from '../units.js';
-
-export const regionLayers: LayerDef[] = [
+import { convDensity, densityLabel } from '../units.js';export const regionLayers: LayerDef[] = [
   // ── Load context ─────────────────────────────────────────────────────────────
   {
     id:            "osm-datacenters",
@@ -23,6 +21,7 @@ export const regionLayers: LayerDef[] = [
       { id: "clusters", label: "Clusters", layers: ["osm-dc-clusters", "osm-dc-cluster-count", "osm-dc-circles"] },
       { id: "heat",     label: "Heatmap",  layers: ["osm-dc-heat", "osm-dc-heat-points"] },
     ],
+    regions:       ["global"],
     downloads: {
       csv: "data/releases/osm-datacenters.zip",
     },
@@ -46,6 +45,7 @@ export const regionLayers: LayerDef[] = [
     },
     defaultOn:     false,
     mapLayerIds:   ["worldpop-pop-density"],
+    regions:       ["global"],
     downloads: {
       tif: "data/releases/worldpop-pop-density.zip",
     },
@@ -63,6 +63,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "sub_nm",
     mapLayerIds:  ["nerc-fill", "nerc-outline"],
+    regions:      ["usa"],
     downloads: {
       geojson: "data/releases/nerc-regions.zip",
       shp: "data/releases/nerc-regions-shp.zip",
@@ -79,6 +80,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["ba-fill", "ba-outline", "ba-label"],
+    regions:      ["usa"],
     downloads: {
       geojson: "data/releases/control-areas.zip",
       shp: "data/releases/control-areas-shp.zip",
@@ -95,6 +97,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["eiaba-fill", "eiaba-outline", "eiaba-label"],
+    regions:      ["usa"],
     downloads: {
       geojson: "data/releases/eia-ba.zip",
       shp: "data/releases/eia-ba-shp.zip",
@@ -111,6 +114,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["retail-fill", "retail-outline"],
+    regions:      ["usa"],
     downloads: {
       geojson: "data/releases/retail-territories.zip",
       shp: "data/releases/retail-territories-shp.zip",
@@ -127,6 +131,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["countries-fill", "countries-outline", "countries-label"],
+    regions:      ["global"],
     downloads: {},
   },
   {
@@ -140,6 +145,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["admin1-fill", "admin1-outline", "admin1-label"],
+    regions:      ["global"],
     downloads: {},
   },
   {
@@ -153,6 +159,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "name",
     mapLayerIds:  ["us-states-fill", "us-states-outline", "us-states-label"],
+    regions:      ["usa"],
     downloads: {},
   },
   {
@@ -166,6 +173,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "GEOID",
     mapLayerIds:  ["us-counties-fill", "us-counties-outline", "us-counties-label"],
+    regions:      ["usa"],
     downloads: {},
   },
   {
@@ -179,7 +187,7 @@ export const regionLayers: LayerDef[] = [
     defaultOn:    false,
     hoverField:   "zcta5",
     mapLayerIds:  ["us-zcta-fill", "us-zcta-outline", "us-zcta-label"],
+    regions:      ["usa"],
     downloads: {},
   },
-
 ];

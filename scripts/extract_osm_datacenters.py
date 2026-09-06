@@ -75,6 +75,7 @@ _IM3_SPATIAL_RADIUS_M = 150
 # Tags used to identify data centers in osmium tags-filter expressions.
 _OSMIUM_FILTERS = [
     "telecom=data_center",
+    "telecom=data_centre",
     "building=data_center",
     "building=data_centre",
 ]

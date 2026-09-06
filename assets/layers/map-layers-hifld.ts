@@ -12,7 +12,8 @@ import {
 
 export function addHifldTransmission() {
   addTransmissionLines({
-    sourceId: "hifld-transmission-lines", url: DATA.hifld_transmission_lines, sourceLayer: "hifld_transmission_lines",
+    sources: [{ id: "hifld-transmission-lines", url: DATA.hifld_transmission_lines }],
+    sourceLayer: "hifld_transmission_lines",
     registryId: "hifld-transmission-lines", prefix: "hifld-transmission-lines",
     kvExpr: ["to-number", ["get", "VOLTAGE"], -1],
     color: voltageColorExpr("VOLTAGE", "#a39dbe"),

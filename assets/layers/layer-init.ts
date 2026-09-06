@@ -17,6 +17,7 @@ import {
 } from '../../src/colors/buckets.js';
 import { registerBaseFilter } from '../filters.js';
 import { recordDiagEvent } from '../diag-log.js';
+import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
 
 // Re-export so map-layers-*.ts can import from one place
 export { registerBaseFilter };
@@ -25,11 +26,8 @@ export { registerBaseFilter };
 // >>> ADD-LAYER: lazy-geojson
 const LAZY_GEOJSON: Record<string, string> = {
   "ogf-planned-transmission":   DATA.ogf_planned_transmission,
-  "osm-substations-points":     DATA.osm_substations_points,
-  "osm-substations-polygons":   DATA.osm_substations_polygons,
   "hifld-substations":          DATA.hifld_substations,
   "osm-plants-points":          DATA.osm_plants_points,
-  "osm-plants-polygons":        DATA.osm_plants_polygons,
   "eia-generators":             DATA.eia_generators,
   "osm-pipelines-points":       DATA.osm_pipelines_points,
   "hifld-natgas-points":        DATA.hifld_natgas_points,
@@ -90,7 +88,10 @@ export function ensureLayerData(registryId: string): Promise<void> {
           feed_status: geojson.feed_status,
         };
       }
-      (state.map!.getSource(registryId) as GeoJSONSource).setData(geojson);
+      const src = state.map?.getSource(registryId) as GeoJSONSource | undefined;
+      if (src && typeof src.setData === 'function') {
+        src.setData(geojson);
+      }
       window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId } }));
     } catch (err) {
       console.warn('[TransmissionMap] ensureLayerData failed for', registryId, err);
@@ -102,8 +103,9 @@ export function ensureLayerData(registryId: string): Promise<void> {
   return _inflight[registryId];
 }
 
-async function fetchGeojson(url: string) {
-  const resp = await fetch(url);
+
+export async function fetchGeojson(url: string, init?: RequestInit) {
+  const resp = await fetch(url, init);
   if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText} for ${url}`);
   if (url.endsWith(".gz")) {
     const stream = resp.body!.pipeThrough(new DecompressionStream("gzip"));
@@ -216,27 +218,65 @@ export function addPolygonLayer({ sourceId, source, sourceLayer = undefined as (
 }
 
 // ─── Transmission lines helper ────────────────────────────────────────────────
-export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, prefix,
+// `sources` is a list so a layer can span several archives. Every style layer is
+// added across ALL sources before the next one starts, so paint order stays
+// global: a 765 kV line in one archive draws over a 20 kV line in another, not
+// under it. `suffix` distinguishes the per-source layer ids and is "" when there
+// is only one source, which is what the HIFLD caller passes.
+//
+// A source may also declare the voltage range it holds, as `kv: [min, max)`.
+// OSM transmission ships as six archives split by voltage class, and a style
+// tier only needs a layer on a source whose range it overlaps — an `mv` layer
+// over the EHV archive would match nothing but still cost a per-frame filter
+// evaluation. Omitting `kv` means "could hold anything", which is what a single
+// undivided archive is.
+export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
                                kvExpr, color, opacity, nameField = undefined as (string | undefined), undergroundExpr = undefined as (ExpressionSpecification | undefined),
                                dcExpr = undefined as (ExpressionSpecification | undefined) }: {
-  sourceId: string; url: string; sourceLayer: string; registryId: string; prefix: string;
+  sources: { id: string; url: string; suffix?: string; kv?: [number, number] }[];
+  sourceLayer: string; registryId: string; prefix: string;
   kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string; undergroundExpr?: ExpressionSpecification;
   dcExpr?: ExpressionSpecification;
 }) {
-  if (!state.map || state.map.getSource(sourceId)) return;
-  state.map.addSource(sourceId, { type: "vector", url: pmtilesUrl(url), attribution: SOURCE_ATTRIB[sourceId] });
+  const map = state.map;
+  if (!map || sources.some(s => map.getSource(s.id))) return;
+  // Attribution keys off the registry id: the six voltage-class sources share
+  // one credit, and MapLibre collapses the byte-identical strings into one.
+  for (const s of sources)
+    map.addSource(s.id, { type: "vector", url: pmtilesUrl(s.url), attribution: SOURCE_ATTRIB[registryId] });
   const vis = initialVisibility(registryId);
 
+  // Half-open [min, max) overlap. A tier with no range (the DC overlays) applies
+  // to every source, since HVDC runs at every voltage class.
+  const holds = (s: { kv?: [number, number] }, kv?: [number, number]) =>
+    !s.kv || !kv || (s.kv[0] < kv[1] && kv[0] < s.kv[1]);
+
+  // Adds one style layer per source that can hold the tier, and registers each
+  // with the base filter.
+  const addAcross = (tier: string, spec: (srcId: string) => Record<string, unknown>,
+                     filter: FilterSpecification | null, kv?: [number, number]) => {
+    for (const s of sources) {
+      if (!holds(s, kv)) continue;
+      const id = `${prefix}${s.suffix ?? ""}-${tier}`;
+      map.addLayer({ id, source: s.id, "source-layer": sourceLayer, ...spec(s.id) } as LayerSpecification);
+      registerBaseFilter(id, filter);
+    }
+  };
+
   // Tiers added lowest-voltage first so higher tiers paint on top; line-sort-key
-  // orders by kV within each tier.
-  const tiers = [
-    { id: "lv",      minzoom: 9, filter: ["all", [">", kvExpr, 0], ["<", kvExpr, 50]] as FilterSpecification },
-    { id: "unknown", minzoom: 5, filter: ["<=", kvExpr, 0] as FilterSpecification },
-    { id: "mv",      minzoom: 5, filter: ["all", [">=", kvExpr, 50], ["<", kvExpr, 100]] as FilterSpecification },
-    { id: "hv",      minzoom: 0, filter: [">=", kvExpr, 100] as FilterSpecification },
-  ];
+  // orders by kV within each tier. z2 is the floor both transmission tilesets
+  // are built to; the tiers above it are style choices about clutter. The kV
+  // range each tier selects comes from OSM_TL_TIERS, the same table the registry
+  // derives its layer ids from, so the two cannot disagree about which archive
+  // carries which tier.
+  const tierStyle: Record<string, { minzoom: number; filter: FilterSpecification }> = {
+    lv:      { minzoom: 9, filter: ["all", [">", kvExpr, 0], ["<", kvExpr, 50]] },
+    unknown: { minzoom: 5, filter: ["<=", kvExpr, 0] },
+    mv:      { minzoom: 5, filter: ["all", [">=", kvExpr, 50], ["<", kvExpr, 100]] },
+    hv:      { minzoom: 2, filter: [">=", kvExpr, 100] },
+  };
+  const tiers = OSM_TL_TIERS.map(t => ({ ...t, ...tierStyle[t.id] }));
   for (const t of tiers) {
-    const id = `${prefix}-${t.id}`;
     // 100-199 kV shares the hv tier but fades like the low classes: alpha-blending
     // toward the basemap keeps it muted on light and dark maps alike.
     const op = t.id === "hv" && opacity.hvLow !== undefined
@@ -246,13 +286,12 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
     if (undergroundExpr) {
       paint["line-dasharray"] = ["case", undergroundExpr, ["literal", [3, 3]], ["literal", [1, 0]]] as unknown as ExpressionSpecification;
     }
-    state.map.addLayer({
-      id, type: "line", source: sourceId, "source-layer": sourceLayer,
+    addAcross(t.id, () => ({
+      type: "line",
       minzoom: t.minzoom, filter: t.filter,
       layout: { visibility: vis, "line-cap": "round", "line-join": "round", "line-sort-key": kvExpr },
-      paint: paint as unknown as Record<string, unknown>,
-    } as LayerSpecification);
-    registerBaseFilter(id, t.filter);
+      paint,
+    }), t.filter, t.kv);
   }
 
   // HVDC white dashes, drawn over every kV tier.  This is the zoomed-OUT cue:
@@ -261,10 +300,9 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
   // are not meant to — placement (dash of the base stroke) and current (these
   // white ticks) are separate readings.
   if (dcExpr) {
-    const dcId = `${prefix}-dc`;
-    state.map.addLayer({
-      id: dcId, type: "line", source: sourceId, "source-layer": sourceLayer,
-      minzoom: 0, filter: dcExpr as FilterSpecification,
+    addAcross("dc", () => ({
+      type: "line",
+      minzoom: 2, filter: dcExpr as FilterSpecification,
       layout: { visibility: vis, "line-cap": "butt", "line-join": "round" },
       paint: {
         "line-color":     DC_STRIPE_COLOR,
@@ -272,14 +310,12 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
         "line-dasharray": DC_STRIPE_DASH,
         "line-opacity":   0.95,
       },
-    } as LayerSpecification);
-    registerBaseFilter(dcId, dcExpr as FilterSpecification);
+    }), dcExpr as FilterSpecification);
 
     // Zoomed-IN cue: name the circuit outright with a repeating "DC" along the
     // route, dense enough that a corridor is unmistakable at a glance.
-    const dcLabelId = `${prefix}-dc-label`;
-    state.map.addLayer({
-      id: dcLabelId, type: "symbol", source: sourceId, "source-layer": sourceLayer,
+    addAcross("dc-label", () => ({
+      type: "symbol",
       minzoom: DC_LABEL_MINZOOM, filter: dcExpr as FilterSpecification,
       layout: {
         visibility: vis,
@@ -301,16 +337,14 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
         "text-halo-width": 1.8,
         "text-halo-blur":  0.3,
       },
-    } as LayerSpecification);
-    registerBaseFilter(dcLabelId, dcExpr as FilterSpecification);
+    }), dcExpr as FilterSpecification);
   }
 
   if (!nameField) return;
   const name    = ["coalesce", ["get", nameField], ""] as unknown as ExpressionSpecification;
   const hasName = ["!=", name, ""] as FilterSpecification;
-  const labelId = `${prefix}-label`;
-  state.map.addLayer({
-    id: labelId, type: "symbol", source: sourceId, "source-layer": sourceLayer,
+  addAcross("label", () => ({
+    type: "symbol",
     minzoom: 9, filter: hasName,
     layout: {
       visibility: vis,
@@ -332,16 +366,20 @@ export function addTransmissionLines({ sourceId, url, sourceLayer, registryId, p
       "text-halo-width": 2,
       "text-halo-blur":  0.5,
     },
-  } as LayerSpecification);
-  registerBaseFilter(labelId, hasName);
+  }), hasName);
 }
 
 // ─── Substation points helper ─────────────────────────────────────────────────
-export function addSubstationPoints({ sourceId, kvField, layerIds }: {
+export function addSubstationPoints({ sourceId, kvField, layerIds, url, sourceLayer }: {
   sourceId: string; kvField: string; layerIds: { hv: string; lv: string; label: string };
+  url?: string; sourceLayer?: string;
 }) {
   if (!state.map || state.map.getSource(sourceId)) return;
-  state.map.addSource(sourceId, { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB[sourceId] });
+  if (url) {
+    state.map.addSource(sourceId, { type: "vector", url: pmtilesUrl(url), attribution: SOURCE_ATTRIB[sourceId] });
+  } else {
+    state.map.addSource(sourceId, { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB[sourceId] });
+  }
 
   const vis = initialVisibility(sourceId);
   const paint = {
@@ -352,20 +390,29 @@ export function addSubstationPoints({ sourceId, kvField, layerIds }: {
     "circle-stroke-opacity": 0.8,
   };
   const kvNum = ["to-number", ["get", kvField], -1];
+  const srcLayerProp = sourceLayer ? { "source-layer": sourceLayer } : {};
 
   state.map.addLayer({
-    id: layerIds.hv, type: "circle", source: sourceId,
-    minzoom: 0, filter: [">=", kvNum, 200] as unknown as FilterSpecification,
-    layout: { visibility: vis }, paint,
-  } as LayerSpecification);
-  registerBaseFilter(layerIds.hv, [">=", kvNum, 200] as unknown as FilterSpecification);
-
-  state.map.addLayer({
-    id: layerIds.lv, type: "circle", source: sourceId,
+    id: layerIds.lv, type: "circle", source: sourceId, ...srcLayerProp,
     minzoom: 7, filter: ["<", kvNum, 200] as unknown as FilterSpecification,
-    layout: { visibility: vis }, paint,
+    layout: {
+      visibility: vis,
+      "circle-sort-key": kvNum as unknown as ExpressionSpecification,
+    },
+    paint,
   } as LayerSpecification);
   registerBaseFilter(layerIds.lv, ["<", kvNum, 200] as unknown as FilterSpecification);
+
+  state.map.addLayer({
+    id: layerIds.hv, type: "circle", source: sourceId, ...srcLayerProp,
+    minzoom: 0, filter: [">=", kvNum, 200] as unknown as FilterSpecification,
+    layout: {
+      visibility: vis,
+      "circle-sort-key": kvNum as unknown as ExpressionSpecification,
+    },
+    paint,
+  } as LayerSpecification);
+  registerBaseFilter(layerIds.hv, [">=", kvNum, 200] as unknown as FilterSpecification);
 
   const labelVisible = ["any",
     [">", kvNum, 399],
@@ -374,10 +421,19 @@ export function addSubstationPoints({ sourceId, kvField, layerIds }: {
     ["all", [">", kvNum,  49], [">", ["zoom"], 10]],
     [">", ["zoom"], 11],
   ] as unknown as FilterSpecification;
-  const subName = ["coalesce", ["get", "name"], ""] as unknown as ExpressionSpecification;
+  const subName = ["match",
+    ["coalesce", ["get", "name"], ""],
+    ["", "nan", "NaN", "None"], "",
+    ["coalesce", ["get", "name"], ""]
+  ] as unknown as ExpressionSpecification;
+  const labelFilter = ["all",
+    labelVisible,
+    ["!=", subName, ""],
+  ] as unknown as FilterSpecification;
+
   state.map.addLayer({
-    id: layerIds.label, type: "symbol", source: sourceId,
-    minzoom: 6, filter: labelVisible,
+    id: layerIds.label, type: "symbol", source: sourceId, ...srcLayerProp,
+    minzoom: 6, filter: labelFilter,
     layout: {
       visibility: vis,
       "symbol-sort-key": ["-", 10000, kvNum] as unknown as ExpressionSpecification,
@@ -403,7 +459,7 @@ export function addSubstationPoints({ sourceId, kvField, layerIds }: {
       "text-halo-blur": 0.5,
     },
   } as LayerSpecification);
-  registerBaseFilter(layerIds.label, labelVisible);
+  registerBaseFilter(layerIds.label, labelFilter);
 }
 
 // ─── PAD-US and CritHab ───────────────────────────────────────────────────────

@@ -64,9 +64,10 @@ export function subRadius(kvField: string): ExpressionSpecification {
     ];
   }
   return ["interpolate", ["linear"], ["zoom"],
-    5,  kvBucket(1, 2, 3, 4),
-    10, kvBucket(2, 4, 6, 8),
-    15, kvBucket(3, 6, 9, 12),
+    2,  kvBucket(1, 1.5, 2, 2.5),
+    5,  kvBucket(1.5, 2.5, 3.5, 4.5),
+    10, kvBucket(2.5, 4.5, 6.5, 8.5),
+    15, kvBucket(3.5, 6.5, 9.5, 12.5),
   ] as unknown as ExpressionSpecification;
 }
 

@@ -20,7 +20,7 @@ The app fails to load or shows no data without these.
 | Host | Why | If blocked |
 |---|---|---|
 | `www.wpptx.org` | The app itself (GitHub Pages) | Page doesn't load at all |
-| `raw.githubusercontent.com` | All map data + live feeds (wildfire, NWS alerts, outages, weather) + GeoJSON/CSV download packs, served from the repo's `data-static` and `data` branches | Basemap renders but every data layer is empty; stale-data warnings appear |
+| `raw.githubusercontent.com` | Everything the map fetches from this project: the built layers and download packs on the `data-static` branch, and the live feeds (wildfire, NWS alerts, outages, weather) on the `data` branch | Basemap renders but every data layer is empty, and stale-data warnings appear |
 | `tiles.openfreemap.org` | Default basemap: Light/Dark/Hydro vector tiles, map label fonts, icons; also the road/place/boundary overlay drawn over Aerial | Gray/blank background on Light, Dark and Hydro; all map text missing; Aerial shows imagery with no roads or place names |
 | `geocode-api.arcgis.com` | Search box (place/address lookup) | Place search silently returns nothing |
 

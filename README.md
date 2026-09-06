@@ -1,6 +1,6 @@
-# North America Electrical Transmission Map
+# Global Electrical Transmission Map
 
-Interactive map of US electric transmission infrastructure — lines, substations, generators, pipelines, renewable resources, and land constraints. For educational and informational use only; do not rely on for operational, safety, or regulatory decisions.
+Interactive map of global electric transmission infrastructure — lines, substations, generators, pipelines, renewable resources, and land constraints. For educational and informational use only; do not rely on for operational, safety, or regulatory decisions.
 
 ⚡ Live: **[TransmissionMap](https://www.wpptx.org/)**
 
@@ -13,7 +13,7 @@ Interactive map of US electric transmission infrastructure — lines, substation
 - **Feature search** — type "Grizzly" and fly to Grizzly 500 kV directly.
 - **Per-layer filters** — show only wind generators, only ≥230 kV substations, etc.
 - **Aerial basemap toggle** — ESRI World Imagery to spot newly-built facilities not yet in OSM.
-- **HIFLD substations & lines** — the US public-domain dataset that fills in gaps OSM hasn't covered yet.
+- **HIFLD substations & lines** — a US public-domain dataset that fills in gaps OSM hasn't covered yet.
 - **EIA generators** — plant-level capacity, fuel, NERC region, balancing authority for the US.
 - **Direct downloads** — GeoJSON / CSV for every layer, ready for Google Earth or GIS software.
 
@@ -24,13 +24,15 @@ Interactive map of US electric transmission infrastructure — lines, substation
 ```bash
 git clone https://github.com/benhutchinswpp/TransmissionMap.git
 cd TransmissionMap
-git restore -s origin/data-static -- data/   # prebuilt map data (not in main)
+# prebuilt map data (not in main) — see docs/hosting-plan.md
+curl -L https://github.com/BenHutchinsWPP/TransmissionMap/archive/data-static.tar.gz \
+  | tar xz --strip-components=1
 npm install
 npm run dev
 # open http://localhost:5173
 ```
 
-The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from the orphan `data-static` branch via `raw.githubusercontent.com`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md).
+The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from the `data-static` branch over `raw.githubusercontent.com`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md); for where each asset class is hosted, [docs/hosting-plan.md](docs/hosting-plan.md).
 
 ---
 

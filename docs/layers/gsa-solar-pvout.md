@@ -6,11 +6,11 @@
 |---|---|
 | **Provider** | [Global Solar Atlas](https://globalsolaratlas.info/) — Solargis, funded by the World Bank / ESMAP |
 | **Dataset** | [World — PVOUT (Global Solar Atlas) on EnergyData.info](https://energydata.info/dataset/world-photovoltaic-power-potential-pvout-gis-data-global-solar-atlas) — `World_PVOUT_GISdata_LTAy_AvgDailyTotals_GlobalSolarAtlas-v2_GEOTIFF.zip`. PVOUT = specific PV power output, kWh/kWp/day; **LTAy** = long-term yearly average of daily totals |
-| **Coverage** | Global EPSG:4326 ~930 m resolution; clipped to North America (to 65° N) for this build |
+| **Coverage** | Global EPSG:4326 ~930 m resolution; clipped to the modelled band 60° S – 65° N |
 | **Vintage** | Global Solar Atlas v2 (Solargis model, 1994/1999/2007–onward depending on region) |
 | **License** | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — Solargis / World Bank — **attribution required** |
 | **Attribution required** | "© 2024 Global Solar Atlas / Solargis / World Bank" — carried on the MapLibre raster source `attribution` |
-| **Served** | `data/layers/gsa_solar_pvout.pmtiles` — raster PMTiles (WEBP, baked color, z2–7, 11 MB) + `gsa_solar_pvout_lut.i16`/`.json` for hover readout (1.6 MB, lazy-loaded) |
+| **Served** | `data/layers/gsa_solar_pvout.pmtiles` — raster PMTiles (WEBP, baked color, z2–7, 11 MB) + `gsa_solar_pvout_lut.i16.gz`/`.json` for hover readout (1.2 MB gzipped, lazy-loaded) |
 | **Built by** | `scripts/build_solar_resource.sh` (+ `scripts/solar_color_ramp.txt`) → `data/build/solar/` → PMTiles + COG |
 | **Raw input** | `PVOUT.tif` from global GSA zip (auto-downloaded to `data/raw/solar/` — **zip not committed**, ~345 MB) |
 
@@ -48,9 +48,9 @@ daily PV yield, in **kWh/kWp/day**.
 | Cell value | specific PV yield (PVOUT), **kWh/kWp/day** — read directly off band 1 |
 | Data type | `Float32` (continuous; not a class code) |
 | NoData | source = `NaN`; set to `0` in processing — ocean / outside-mask cells (rendered transparent) |
-| Cell size | ~930 m (0.008333°) native; download resampled to ~2 km (0.02°) |
+| Cell size | ~930 m (0.008333°) native; download resampled to ~5 km (0.05°) |
 | CRS | EPSG:4326 (already — no reprojection needed) |
-| NA value range | ~0.7 – 5.9 kWh/kWp/day (mean ≈ 3.9), from `gdalinfo -stats` on the NA clip |
+| World value range | ~1.5 – 6.6 kWh/kWp/day (mean ≈ 4.2) |
 
 **How a cell becomes a number:** nothing to decode — the raster *is* the value. Sampling a
 pixel returns a float like `5.19` and that is 5.19 kWh/kWp/day.
@@ -63,14 +63,14 @@ Simpler than wind: the GSA raster is already global EPSG:4326, single continuous
 1. **Download** the global PVOUT (LTAy) zip from the Global Solar Atlas API into
    `data/raw/solar/` (skipped if already present).
 2. **Extract** `PVOUT.tif` into `data/build/solar/`.
-3. **Clip** to the North-America bbox (`gdalwarp -te -170 5 -50 72`, `-dstnodata 0` so
+3. **Clip** to the modelled world bbox (`gdalwarp -te -180 -60 180 65`, `-dstnodata 0` so
    ocean/outside reads 0 to match the wind layer's convention). PVOUT data tops out at
    65° N, so the upper bound is cosmetic — the far Arctic is not modeled.
-4. **Download artifact** → resample to ~2 km then `gdal_translate -of COG -ot Float32` to
+4. **Download artifact** → resample to ~5 km then `gdal_translate -of COG -ot Float32` to
    `data/build/gsa_solar_pvout.tif` — keeps the **actual kWh/kWp/day values** for GIS use.
    `build_releases.py` bundles it into `data/releases/gsa-solar-pvout.zip`.
-   (Full-res NA is ~100 MB Float32, which busts GitHub's 100 MB/file limit; ~2 km is ample
-   for a regional resource-overview download.)
+   (Full-res worldwide is several GB Float32; ~5 km is ample
+   for a resource-overview download.)
 5. **Bake colour** → `gdaldem color-relief -alpha` using `scripts/solar_color_ramp.txt`,
    then reproject the RGBA raster to EPSG:3857.
 6. **Tile** → `gdal_translate -of MBTILES -co TILE_FORMAT=WEBP` + `gdaladdo` overviews →
@@ -88,8 +88,8 @@ hosted WEBP tiles already carry RGBA. The map shows it as a plain MapLibre `rast
 ### Hover readout — value at the cursor
 
 Because the tiles are colour-only, a tiny **value lookup grid** is shipped alongside them:
-`data/layers/gsa_solar_pvout_lut.i16` (Int16 = round(kWh/kWp/day × 100), 0.1° ≈ 11 km,
-NW-origin row-major, NoData = 0; 1.6 MB) + `gsa_solar_pvout_lut.json` (dims + bbox + scale). It
+`data/layers/gsa_solar_pvout_lut.i16.gz` (Int16 = round(kWh/kWp/day × 100), 0.1° ≈ 11 km,
+NW-origin row-major, NoData = 0; ~1.2 MB gzipped) + `gsa_solar_pvout_lut.json` (dims + bbox + scale). It
 is **lazy-loaded** the first time the layer is enabled and sampled on `mousemove` by the
 generic raster-probe registry (`RASTER_PROBES` / `ensureRasterLut` / `sampleRaster` /
 `updateRasterArrow` in `assets/raster-probes.ts`, shared with the wind layer). A ▼ arrow tracks

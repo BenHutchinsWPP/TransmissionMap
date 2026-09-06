@@ -24,10 +24,11 @@
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';
-import { state } from './state.js';
+import { state, rebaselineExperience } from './state.js';
 import { setLayerVisibility } from './visibility.js';
 import { updateLegends } from './ui/ui-legends.js';
 import { recordDiagEvent } from './diag-log.js';
+import { fetchGeojson } from './layers/layer-init.js';
 
 // Age → short human string ("42m", "3h 5m", "2d 1h"). Shared by the stale
 // modal below and the hand-rolled age chips (weather-live.ts).
@@ -148,6 +149,9 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     const on = visibleLayers();
     if (on.length === 0) return;          // nothing on screen → nothing unsafe to show
     disabledForStale = on;
+    // The reader didn't ask for this, so it must not count as editing their way
+    // out of an active Map Experience (see url-state.ts).
+    rebaselineExperience();
     for (const id of on) setLayer(id, false);
     updateLegends();
     showStaleModal(age);
@@ -168,9 +172,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     lastFetchMs = Date.now();
     const url = dataUrl();
     try {
-      const resp = await fetch(url, { cache: "no-cache" });
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-      const geojson = await resp.json();
+      const geojson = await fetchGeojson(url, { cache: "no-cache" });
 
       // Check if the data has actually changed by comparing generated_utc timestamps
       const currentGenerated = generatedUtc();

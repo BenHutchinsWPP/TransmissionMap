@@ -6,6 +6,23 @@ vi.mock('./layers/layer-init.js', () => ({
   COUNTY_SRC: 'county_boundaries',
   COUNTY_SRC_LAYER: 'county_boundaries',
 }));
+// The gate reaches visibility.js -> url-state.js -> url-state-codec.js, which
+// reads LEGEND_FILTERS at module load; mock both ends so the chain stays out.
+vi.mock('./visibility.js', () => ({
+  setLayerVisibility: vi.fn(async (id: string, on: boolean) => {
+    const { state } = await import('./state.js');
+    state.layerVisibility[id] = on;
+  }),
+}));
+vi.mock('./ui/ui-legends.js', () => ({ updateLegends: vi.fn(), LEGEND_FILTERS: [] }));
+
+// jsdom's HTMLDialogElement has no showModal/close.
+if (!HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) { this.open = true; };
+}
+if (!HTMLDialogElement.prototype.close) {
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) { this.open = false; };
+}
 
 const REFRESH_MS = 15 * 60_000;
 
@@ -190,5 +207,106 @@ describe('odin-outages', () => {
       { source: 'county_boundaries', sourceLayer: 'county_boundaries', id: 'A' },
       { odin_out: 150, odin_n: 1, odin_utils: null },
     );
+  });
+});
+
+// ── Stale-data modal ─────────────────────────────────────────────────────────
+// Past MAX_AGE_MS the layer is switched off and the reader is told why. Without
+// this the layer unpainted silently, which is indistinguishable from a fault.
+describe('odin-outages stale modal', () => {
+  async function setupWithDialog() {
+    const { state } = await import('./state.js');
+    document.body.innerHTML =
+      '<dialog id="odinStaleDialog"><span id="odinStaleAge"></span>' +
+      '<button id="odinStaleReenable"></button><button id="odinStaleDismiss"></button></dialog>' +
+      '<input type="checkbox" data-layer-id="odin-outages" checked>' +
+      '<span id="odinAge"></span>';
+    state.layerVisibility = { 'odin-outages': true };
+    const map = {
+      on: vi.fn(),
+      getSource: vi.fn(() => ({})),
+      setFeatureState: vi.fn(),
+      removeFeatureState: vi.fn(),
+    };
+    state.map = map as unknown as typeof StateSingleton.map;
+    return { map, state };
+  }
+
+  function serveAgedHours(h: number) {
+    const gen = new Date(Date.now() - h * 60 * 60_000).toISOString();
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ generated_utc: gen, counties: { '06037': [1200, 3] } }),
+    })));
+  }
+
+  const dlg = () => document.getElementById('odinStaleDialog') as HTMLDialogElement;
+
+  it('opens the modal and switches the layer off when the snapshot is stale', async () => {
+    const { state } = await setupWithDialog();
+    serveAgedHours(8);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(dlg().open).toBe(true);
+    expect(state.layerVisibility['odin-outages']).toBe(false);
+    expect(document.getElementById('odinStaleAge')!.textContent).toBeTruthy();
+    expect(document.querySelector<HTMLInputElement>('input[data-layer-id="odin-outages"]')!.checked)
+      .toBe(false);
+  });
+
+  it('leaves a fresh snapshot alone', async () => {
+    const { state } = await setupWithDialog();
+    serveAgedHours(1);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(dlg().open).toBe(false);
+    expect(state.layerVisibility['odin-outages']).toBe(true);
+  });
+
+  it('re-enable paints the stale snapshot and closes the modal', async () => {
+    const { map, state } = await setupWithDialog();
+    serveAgedHours(8);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(map.setFeatureState).not.toHaveBeenCalled();
+
+    document.getElementById('odinStaleReenable')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(state.layerVisibility['odin-outages']).toBe(true);
+    expect(map.setFeatureState).toHaveBeenCalled();
+    expect(dlg().open).toBe(false);
+  });
+
+  it('keep-disabled closes the modal and leaves the layer off', async () => {
+    const { state } = await setupWithDialog();
+    serveAgedHours(8);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+
+    document.getElementById('odinStaleDismiss')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(state.layerVisibility['odin-outages']).toBe(false);
+    expect(dlg().open).toBe(false);
+  });
+
+  it('stays silent when the layer is not on screen', async () => {
+    const { state } = await setupWithDialog();
+    state.layerVisibility['odin-outages'] = false;
+    serveAgedHours(8);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(dlg().open).toBe(false);
   });
 });

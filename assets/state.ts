@@ -56,4 +56,21 @@ export const state: AppState = {
   liveFcMeta:    {},    // registryId → { generated_utc?, feed_status? } — FeatureCollection-level metadata stash (fallback when features[] is empty, e.g. zero-alert NWS feeds)
   rasterLut:        {}, // raster layer id → { meta, data:Int16Array } — hover value grids (wind/solar)
   rasterLutLoading: {}, // raster layer id → boolean — guards concurrent LUT fetches
+  regionScope:      'usa', // layer-list scope: 'usa' (all layers) | 'global' (worldwide layers only)
+  // Map Experiences — see assets/experiences.ts. `experiencePristine` is the
+  // URL param string as the experience left it; writeUrlState() compares each
+  // later write against it to notice the user has taken the view somewhere else.
+  experienceId:       null,
+  experienceDirty:    false,
+  experiencePristine: null,
 };
+
+// Re-arms the pristine snapshot so the NEXT writeUrlState() becomes the new
+// reference point. Anything that changes a shared param without the reader
+// asking for it — the stale-feed kill switch switching a layer off, a language
+// change — calls this, or url-state.ts's diff reads it as them editing their
+// way out of an active Map Experience. Lives here rather than in url-state.ts
+// so callers don't pull the URL codec in behind it.
+export function rebaselineExperience() {
+  if (state.experienceId && !state.experienceDirty) state.experiencePristine = null;
+}

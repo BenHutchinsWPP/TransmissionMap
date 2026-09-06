@@ -3,6 +3,7 @@
 // No circular deps: this file imports only types.
 
 import type { SupportedLocale } from '../src/i18n/types.js';
+import type { LayerScope } from '../src/types.js';
 
 type Events = {
   'filter:generators':    void;   // MW / fuel / year / status changed
@@ -13,6 +14,10 @@ type Events = {
   'westtec:colorby':      void;   // WestTEC 10-Yr color-by mode changed
   'units:changed':        void;   // display-unit preference changed
   'lang:changed': { locale: SupportedLocale }; // language preference changed
+  'region:changed': { region: LayerScope }; // layer-list scope changed
+  'map:ready':            void;   // style loaded, every layer added, filters applied
+  'exp:dirty':            void;   // the user edited the view out of its experience
+  'exp:ended':            void;   // the active experience was dismissed
   'url:write':            void;   // persist current state to URL / localStorage
 };
 

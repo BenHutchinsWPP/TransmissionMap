@@ -2,7 +2,7 @@
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
-import { pmtilesUrl, initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
+import { initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 
 export const addPopDensity = () => addRasterLayer("worldpop-pop-density", DATA.worldpop_pop_density,

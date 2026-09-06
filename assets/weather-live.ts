@@ -318,8 +318,8 @@ function paintCurrent(): void {
 
   // The cached LUT belongs to the previous bake/variable/step — drop it so
   // the hover bubble doesn't report stale values. weatherStepSuffix routes
-  // raster-probes' lut() to the scrubbed step's gzipped grid (base step
-  // keeps the raw .i16). ensureRasterLut self-guards on the loading flag,
+  // raster-probes' lut() to the scrubbed step's grid; every grid is gzipped,
+  // base included. ensureRasterLut self-guards on the loading flag,
   // so the first enable (where visibility.ts already called it) doesn't
   // double-fetch.
   if (state.rasterLut[REGISTRY_ID]) {

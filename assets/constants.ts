@@ -16,22 +16,37 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 // >>> ADD-LAYER: data-urls — see docs/adding-a-layer.md §4
 //
 // Prod data host: built layers + release ZIPs live on the orphan `data-static`
-// branch (raw GitHub — CORS ok on public repos), NOT on Pages (dist ships no
-// data/). Dev serves them from the local working tree at the Vite root. Wildfire
-// keeps its own URL on the churning `data` branch (force-pushed hourly), so it
-// must NOT share this branch — see `wildfire_live` below and `make publish-data`.
+// branch, served through raw.githubusercontent.com, NOT on Pages (dist ships no
+// data/). Raw answers ranged GETs with HTTP 206 and `access-control-allow-origin:
+// *`, which is what PMTiles needs, and caps responses at `max-age=300`. Its one
+// hard constraint is git's: no file over 100 MiB. Dev serves them from the local
+// working tree at the Vite root. Publish with `make publish-data` (see
+// scripts/publish_data.sh and docs/hosting-plan.md).
+// Wildfire and weather keep their own URLs on the churning `data` branch
+// (force-pushed hourly), so they must NOT share this origin — see
+// `wildfire_live` below.
 export const DATA_ORIGIN = import.meta.env.PROD
   ? "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data-static/"
   : "";
 export const DATA = {
-  osm_transmission_lines:   DATA_ORIGIN + "data/layers/osm_transmission_lines.pmtiles",
+  // Transmission ships as six planet-wide archives split by voltage class: one
+  // world file is 266 MiB against the host's 100 MiB per-file ceiling. The order
+  // is load-bearing — MapLibre paints sources in the order their style layers are
+  // added, so ascending kV puts EHV on top. `nominal_kv = -1` encodes unknown, so
+  // it sorts into `kv0` for free. See docs/hosting-plan.md.
+  osm_transmission_lines_kv0:   DATA_ORIGIN + "data/layers/osm_transmission_lines_kv0.pmtiles",
+  osm_transmission_lines_kv50:  DATA_ORIGIN + "data/layers/osm_transmission_lines_kv50.pmtiles",
+  osm_transmission_lines_kv100: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv100.pmtiles",
+  osm_transmission_lines_kv125: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv125.pmtiles",
+  osm_transmission_lines_kv200: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv200.pmtiles",
+  osm_transmission_lines_kv300: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv300.pmtiles",
   hifld_transmission_lines: DATA_ORIGIN + "data/layers/hifld_transmission_lines.pmtiles",
   ogf_planned_transmission: DATA_ORIGIN + "data/layers/ogf_planned_transmission.geojson.gz",
-  osm_substations_points:   DATA_ORIGIN + "data/layers/osm_substations_points.geojson.gz",
+  osm_substations_points:   DATA_ORIGIN + "data/layers/osm_substations_points.pmtiles",
   hifld_substations:        DATA_ORIGIN + "data/layers/hifld_substations.geojson.gz",
-  osm_substations_polygons: DATA_ORIGIN + "data/layers/osm_substations_polygons.geojson.gz",
+  osm_substations_polygons: DATA_ORIGIN + "data/layers/osm_substations_polygons.pmtiles",
   osm_plants_points:   DATA_ORIGIN + "data/layers/osm_plants_points.geojson.gz",   // power=plant — always loaded
-  osm_plants_polygons: DATA_ORIGIN + "data/layers/osm_plants_polygons.geojson.gz", // plant polygon hulls
+  osm_plants_polygons: DATA_ORIGIN + "data/layers/osm_plants_polygons.pmtiles",   // plant polygon hulls
   osm_generators:      DATA_ORIGIN + "data/layers/osm_generators.pmtiles",         // power=generator — tiles at z7+
   eia_generators:      DATA_ORIGIN + "data/layers/eia_generators.geojson.gz",
   osm_pipelines_lines:  DATA_ORIGIN + "data/layers/osm_pipelines_lines.pmtiles",
@@ -57,30 +72,30 @@ export const DATA = {
   us_states:          DATA_ORIGIN + "data/layers/us_states.geojson.gz",       // Census cartographic state boundaries
   us_zcta:            DATA_ORIGIN + "data/layers/us_zcta.pmtiles",            // Census cartographic ZCTA boundaries
   nlr_wind_100m:          DATA_ORIGIN + "data/layers/nlr_wind_100m.pmtiles",          // NREL/NLR WIND Toolkit raster (baked color)
-  nlr_wind_100m_lut:      DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.i16",          // Int16 m/s*100 grid for hover readout
+  nlr_wind_100m_lut:      DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.i16.gz",          // Int16 m/s*100 grid for hover readout
   nlr_wind_100m_lut_meta: DATA_ORIGIN + "data/layers/nlr_wind_100m_lut.json",         // grid dims + bbox + scale
   gsa_solar_pvout:          DATA_ORIGIN + "data/layers/gsa_solar_pvout.pmtiles",      // Global Solar Atlas PVOUT raster (baked color)
-  gsa_solar_pvout_lut:      DATA_ORIGIN + "data/layers/gsa_solar_pvout_lut.i16",      // Int16 kWh/kWp/day*100 grid for hover readout
+  gsa_solar_pvout_lut:      DATA_ORIGIN + "data/layers/gsa_solar_pvout_lut.i16.gz",      // Int16 kWh/kWp/day*100 grid for hover readout
   gsa_solar_pvout_lut_meta: DATA_ORIGIN + "data/layers/gsa_solar_pvout_lut.json",     // grid dims + bbox + scale
   ihfc_geo_heatflow:          DATA_ORIGIN + "data/layers/ihfc_geo_heatflow.pmtiles",  // IHFC heat flow raster (baked color)
-  ihfc_geo_heatflow_lut:      DATA_ORIGIN + "data/layers/ihfc_geo_heatflow_lut.i16",  // Int16 mW/m²*10 grid for hover readout
+  ihfc_geo_heatflow_lut:      DATA_ORIGIN + "data/layers/ihfc_geo_heatflow_lut.i16.gz",  // Int16 mW/m²*10 grid for hover readout
   ihfc_geo_heatflow_lut_meta: DATA_ORIGIN + "data/layers/ihfc_geo_heatflow_lut.json", // grid dims + bbox + scale
   nrel_hydrothermal_points:  DATA_ORIGIN + "data/layers/nrel_hydrothermal_points.geojson.gz", // NREL/DOE low-temp hydrothermal systems
   osm_datacenters:        DATA_ORIGIN + "data/layers/osm_datacenters.geojson.gz",            // telecom=data_center — lazy-loaded GeoJSON
   worldpop_pop_density:          DATA_ORIGIN + "data/layers/worldpop_pop_density.pmtiles",   // WorldPop 2020 population density (baked log-color)
-  worldpop_pop_density_lut:      DATA_ORIGIN + "data/layers/worldpop_pop_density_lut.i16",   // Int16 ppl/km² grid for hover readout
+  worldpop_pop_density_lut:      DATA_ORIGIN + "data/layers/worldpop_pop_density_lut.i16.gz",   // Int16 ppl/km² grid for hover readout
   worldpop_pop_density_lut_meta: DATA_ORIGIN + "data/layers/worldpop_pop_density_lut.json",  // grid dims + bbox + scale
   usfs_wildfire_potential: DATA_ORIGIN + "data/layers/usfs_wildfire_potential.pmtiles",  // USFS Wildfire Hazard Potential 2023 (classified, baked discrete color)
   usgs_seismic_pga:          DATA_ORIGIN + "data/layers/usgs_seismic_pga.pmtiles",  // USGS NSHM PGA 2% in 50yr raster (baked color)
-  usgs_seismic_pga_lut:      DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.i16",  // Int16 PGA(g)*1000 grid for hover readout
+  usgs_seismic_pga_lut:      DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.i16.gz",  // Int16 PGA(g)*1000 grid for hover readout
   usgs_seismic_pga_lut_meta: DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.json", // grid dims + bbox + scale
   boem_wind_leases:          DATA_ORIGIN + "data/layers/boem_wind_leases.geojson.gz",
   westtec_10yr:              DATA_ORIGIN + "data/layers/westtec_10yr.geojson.gz",
   // Dev: local file (run `make wildfire-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok, ~5min CDN lag).
   // Contains: hotspots (_type=hotspot), perimeters, named incidents, and smoke polygons.
   wildfire_live: import.meta.env.DEV
-    ? DATA_ORIGIN + "data/layers/wildfire_live.geojson"
-    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson",
+    ? DATA_ORIGIN + "data/layers/wildfire_live.geojson.gz"
+    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson.gz",
   // Dev: local file (run `make nws-alerts-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok).
   nws_alerts: import.meta.env.DEV
     ? DATA_ORIGIN + "data/layers/nws_alerts.geojson"
@@ -102,7 +117,7 @@ export const DATA = {
 // (EPSG:3857 image source) and an Int16 hover LUT (EPSG:4326 grid); one
 // shared meta.json carries run_utc/valid_utc/generated_utc/feed_status plus
 // per-variable {width, height, bbox, scale, nodata, units}.
-// `file` is e.g. "temp.webp", "temp.i16", or "meta.json".
+// `file` is e.g. "temp.webp", "temp.i16.gz", or "meta.json".
 export function weatherLiveUrl(file: string): string {
   return import.meta.env.DEV
     ? DATA_ORIGIN + `data/layers/weather_live/${file}`
@@ -115,7 +130,7 @@ export function weatherLiveUrl(file: string): string {
 // MapLibre's image-source `coordinates` is a 4-tuple: NW, NE, SE, SW.
 export type ImageCorners = [[number, number], [number, number], [number, number], [number, number]];
 export const WEATHER_IMAGE_COORDS: ImageCorners = [
-  [-141, 72], [-52, 72], [-52, 22], [-141, 22],
+  [-180, 85], [180, 85], [180, -85], [-180, -85],
 ];
 // Shared by the weather A/B layer pair (map-layers-conditions.ts) and the
 // crossfade in weather-live.ts — the fade's target must equal the wash opacity.

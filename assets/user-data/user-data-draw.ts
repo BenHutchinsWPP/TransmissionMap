@@ -110,8 +110,9 @@ export function initDraw() {
   state.map.on('draw.create', e => {
     for (const f of e.features) {
       state.draw!.setFeatureProperty(f.id, 'color', state.drawDefaultColor);
+      const updated = state.draw!.get(f.id);
+      if (updated) state.draw!.add(updated);
     }
-    state.draw!.set(state.draw!.getAll());
     renderMyDataTab();
     saveUserData();
   });
@@ -196,5 +197,6 @@ export function applyColorPick(picker: HTMLElement, color: string) {
 function setDrawnFeatureColor(id: string, hex: string) {
   if (!state.draw) return;
   state.draw.setFeatureProperty(id, 'color', hex);
-  state.draw.set(state.draw.getAll());
+  const f = state.draw.get(id);
+  if (f) state.draw.add(f);
 }

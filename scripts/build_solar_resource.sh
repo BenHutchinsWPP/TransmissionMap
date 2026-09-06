@@ -4,7 +4,7 @@
 #
 # Produces, from the global GSA PVOUT GeoTIFF zip:
 #   data/layers/gsa_solar_pvout.pmtiles   raster PMTiles (WEBP, baked color) — HOSTED layer
-#   data/layers/gsa_solar_pvout_lut.i16   coarse Int16 value grid — hover readout
+#   data/layers/gsa_solar_pvout_lut.i16.gz   coarse Int16 value grid — hover readout
 #   data/layers/gsa_solar_pvout_lut.json  grid dims + bbox + scale sidecar
 #   data/build/gsa_solar_pvout.tif   NA-clipped Cloud-Optimized GeoTIFF (real values) — DOWNLOAD
 #
@@ -41,9 +41,10 @@ ZIP_URL="https://api.globalsolaratlas.info/download/World/World_PVOUT_GISdata_LT
 ZIP="$RAW/world_pvout_ltay.zip"
 SRC="$BUILD/PVOUT.tif"              # the global single-band raster inside the zip
 
-# North America clip box: xmin ymin xmax ymax. PVOUT data tops out at lat 65N
-# (far-north yield is negligible / unmodeled), so the upper bound is cosmetic.
-NA_BBOX=(-170 5 -50 72)
+# World clip box: xmin ymin xmax ymax. PVOUT is modelled between 60S and 65N —
+# beyond that the yield is negligible / unmodelled — so the box is the data's own
+# extent rather than the full sphere, which keeps empty rows out of every artifact.
+WORLD_BBOX=(-180 -60 180 65)
 
 fetch() {
   mkdir -p "$RAW"
@@ -64,33 +65,33 @@ extract() {
   echo "  [ok] $SRC"
 }
 
-clip_na() {
-  echo "--- clip global raster to the North America bbox (already EPSG:4326) ---"
+clip_world() {
+  echo "--- clip global raster to the modelled world bbox (already EPSG:4326) ---"
   # Source NoData is NaN; -dstnodata 0 makes ocean/outside == 0 to match the wind
   # layer's convention (0 = NoData in the LUT and the transparent ramp stop).
   gdalwarp -overwrite -q \
-    -te "${NA_BBOX[@]}" \
+    -te "${WORLD_BBOX[@]}" \
     -t_srs EPSG:4326 -r bilinear \
     -dstnodata 0 \
     -co COMPRESS=DEFLATE \
-    "$SRC" "$BUILD/solar_pvout_na.tif"
-  echo "  [ok] solar_pvout_na.tif"
+    "$SRC" "$BUILD/solar_pvout_world.tif"
+  echo "  [ok] solar_pvout_world.tif"
 }
 
 build_download() {
   echo "--- download artifact: Cloud-Optimized GeoTIFF (real kWh/kWp/day values) ---"
   mkdir -p "$OUT_DL"
-  # The source is ~930 m; the full-res NA clip is ~100 MB Float32, which busts
-  # GitHub's 100 MB per-file limit. Resample to ~2 km (0.02 deg) — ample fidelity
-  # for a regional resource-overview download and ~20 MB, in line with the wind COG.
-  gdalwarp -overwrite -q -tr 0.02 0.02 -r average -t_srs EPSG:4326 \
-    -srcnodata 0 -dstnodata 0 "$BUILD/solar_pvout_na.tif" "$BUILD/solar_pvout_dl.tif"
+  # The source is ~930 m; a full-res world raster is several GB Float32. Resample
+  # to ~5 km (0.05 deg) — ample fidelity for a resource-overview download and
+  # ~70 MB worldwide, in line with the wind COG's role.
+  gdalwarp -overwrite -q -tr 0.05 0.05 -r average -t_srs EPSG:4326 \
+    -srcnodata 0 -dstnodata 0 "$BUILD/solar_pvout_world.tif" "$BUILD/solar_pvout_dl.tif"
   rc_cog "$BUILD/solar_pvout_dl.tif" "$OUT_DL/gsa_solar_pvout.tif"
   echo "  [ok] $OUT_DL/gsa_solar_pvout.tif  $(du -sh "$OUT_DL/gsa_solar_pvout.tif" | cut -f1)"
 }
 
 build_pmtiles() {
-  rc_bake_tiles "$BUILD/solar_pvout_na.tif" "$RAMP" \
+  rc_bake_tiles "$BUILD/solar_pvout_world.tif" "$RAMP" \
     "$OUT_TILES/gsa_solar_pvout.pmtiles" "$BUILD/solar_pvout"
 }
 
@@ -100,18 +101,18 @@ build_probe_lut() {
   # hover (the hosted tiles carry only baked color). Int16 = round(kWh/kWp/day *
   # 100), NW-origin row-major; 0 = NoData. PVOUT max ~6.7 → 670, well inside Int16.
   gdalwarp -overwrite -q -tr 0.1 0.1 -r average -t_srs EPSG:4326 \
-    -srcnodata 0 -dstnodata 0 "$BUILD/solar_pvout_na.tif" "$BUILD/solar_lut_f.tif"
+    -srcnodata 0 -dstnodata 0 "$BUILD/solar_pvout_world.tif" "$BUILD/solar_lut_f.tif"
   gdal_translate -q -ot Int16 -scale 0 7 0 700 -a_nodata 0 \
     "$BUILD/solar_lut_f.tif" "$BUILD/solar_lut_i.tif"
-  rc_write_lut "$BUILD/solar_lut_i.tif" "$OUT_TILES/gsa_solar_pvout_lut.i16" \
+  rc_write_lut "$BUILD/solar_lut_i.tif" "$OUT_TILES/gsa_solar_pvout_lut.i16.gz" \
     "$OUT_TILES/gsa_solar_pvout_lut.json" 100 "$BUILD/solar"
-  echo "  [ok] $OUT_TILES/gsa_solar_pvout_lut.i16  $(du -sh "$OUT_TILES/gsa_solar_pvout_lut.i16" | cut -f1)  ($(cat "$OUT_TILES/gsa_solar_pvout_lut.json"))"
+  echo "  [ok] $OUT_TILES/gsa_solar_pvout_lut.i16.gz  $(du -sh "$OUT_TILES/gsa_solar_pvout_lut.i16.gz" | cut -f1)  ($(cat "$OUT_TILES/gsa_solar_pvout_lut.json"))"
 }
 
 rc_check_deps gdalwarp gdaldem gdal_translate gdaladdo gdalinfo pmtiles unzip curl
 fetch
 extract
-clip_na
+clip_world
 build_download
 build_pmtiles
 build_probe_lut

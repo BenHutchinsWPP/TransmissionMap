@@ -15,7 +15,7 @@ Continuous raster, Peak Ground Acceleration in **g**, 2% probability of exceedan
 | **Coverage** | CONUS (lon −125…−65, lat 24.4…50) |
 | **Vintage** | 2018 NSHM |
 | **License** | Public domain (US Government work) |
-| **Served** | `data/layers/usgs_seismic_pga.pmtiles` — raster PMTiles, baked color · `_lut.i16`/`_lut.json` — hover readout |
+| **Served** | `data/layers/usgs_seismic_pga.pmtiles` — raster PMTiles, baked color · `_lut.i16.gz`/`_lut.json` — hover readout |
 | **Built by** | `scripts/build_seismic_hazard.sh` (`make seismic`) |
 | **Raw input** | `data/raw/usgs/US_2018_2PctIn50_pga_0pt2sec_1sec_5sec_BC.csv` (37 MB, **not committed**) |
 

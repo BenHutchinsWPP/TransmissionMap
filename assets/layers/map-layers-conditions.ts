@@ -36,7 +36,7 @@ import {
   GEOMET_RADAR_TILE_TEMPLATE, WEATHER_IMAGE_COORDS, TRANSPARENT_PNG,
   WEATHER_WASH_OPACITY,
 } from '../state.js';
-import { pmtilesUrl, initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
+import { initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
   return [

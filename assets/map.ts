@@ -123,6 +123,12 @@ export function initMap() {
     state.map!.on("moveend", writeUrlState);
     writeUrlState();
 
+    // Everything above is in place — layers added, filters applied, 3D restored.
+    // Anything that has to run against a finished map (Map Experiences restoring
+    // an `exp` deep link) hangs off this rather than a second `load` handler,
+    // which would fire at the first `await` above instead of after it.
+    emit('map:ready');
+
     window.addEventListener("hashchange", () => {
       // A hash carrying state params (layers, basemap, 3D, filters) arrived from
       // outside this session — pasted into the address bar, or a back/forward
@@ -202,15 +208,15 @@ const AERIAL_GAP_REGIONS: { id: string; bounds: [number, number, number, number]
 const BASEMAP_LAYER_DEFS: {
   basemap: string; id: string; source: string; minzoom?: number; maxzoom?: number;
 }[] = [
-  { basemap: "street",  id: "osm-bg",           source: "osm-tiles"           },
-  { basemap: "topo",    id: "usgs-topo-bg",     source: "usgs-topo-tiles"     },
-  { basemap: "hydro",   id: "usgs-hydro-bg",    source: "usgs-hydro-tiles"    },
-  { basemap: "aerial",  id: "aerial-usgs-bg",   source: "aerial-usgs-tiles", maxzoom: AERIAL_SEAM_ZOOM },
+  { basemap: "street",  id: "osm-bg",             source: "osm-tiles"           },
+  { basemap: "topo",    id: "usgs-topo-bg",       source: "usgs-topo-tiles"     },
+  { basemap: "hydro",   id: "usgs-hydro-bg",      source: "usgs-hydro-tiles"    },
+  { basemap: "aerial",  id: "aerial-usgs-bg",     source: "aerial-usgs-tiles",   maxzoom: AERIAL_SEAM_ZOOM },
   ...AERIAL_GAP_REGIONS.map(r => ({
     basemap: "aerial", id: `aerial-esri-${r.id}-bg`, source: `aerial-esri-${r.id}`,
     minzoom: AERIAL_GAP_ZOOM, maxzoom: AERIAL_SEAM_ZOOM,
   })),
-  { basemap: "aerial",  id: "aerial-bg",        source: "aerial-tiles",      minzoom: AERIAL_SEAM_ZOOM },
+  { basemap: "aerial",  id: "aerial-bg",          source: "aerial-tiles",        minzoom: AERIAL_SEAM_ZOOM },
 ];
 
 // Every Esri-backed layer, hidden together when the fallback latch trips.
@@ -225,16 +231,16 @@ const BASEMAP_OVERLAY_ANCHOR = 'basemap-overlay-top';
 function addBasemapSources() {
   if (!state.map) return;
   const sources = [
-    { id: "osm-tiles",           tiles: [OSM_TILE_URL],           attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",                                       maxzoom: 19 },
-    { id: "usgs-topo-tiles",     tiles: [USGS_TOPO_TILE_URL],    attribution: "USGS The National Map",                                                                                                          maxzoom: 16 },
+    { id: "osm-tiles",             tiles: [OSM_TILE_URL],             attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",                                       maxzoom: 19 },
+    { id: "usgs-topo-tiles",       tiles: [USGS_TOPO_TILE_URL],      attribution: "USGS The National Map",                                                                                                          maxzoom: 16 },
     // maxzoom 16 is the USGS cache's hard ceiling (z17 is a 404), same as topo;
     // MapLibre overzooms the z16 tile beyond that rather than going blank.
-    { id: "usgs-hydro-tiles",    tiles: [USGS_HYDRO_TILE_URL],   attribution: "USGS The National Map &middot; National Hydrography Dataset",                                                                     maxzoom: 16 },
-    { id: "aerial-tiles",        tiles: [AERIAL_TILE_URL],        attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                              maxzoom: 19 },
+    { id: "usgs-hydro-tiles",      tiles: [USGS_HYDRO_TILE_URL],     attribution: "USGS The National Map &middot; National Hydrography Dataset",                                                                     maxzoom: 16 },
+    { id: "aerial-tiles",          tiles: [AERIAL_TILE_URL],          attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                              maxzoom: 19 },
     // maxzoom 16 is a hard property of the USGS cache (z17+ is a 404), not a
     // preference. It only bites in the fallback case; normally this source is
     // never asked for anything above AERIAL_SEAM_ZOOM anyway.
-    { id: "aerial-usgs-tiles",   tiles: [USGS_AERIAL_TILE_URL],  attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                               maxzoom: 16 },
+    { id: "aerial-usgs-tiles",     tiles: [USGS_AERIAL_TILE_URL],    attribution: "USGS The National Map · NAIP · Esri World Imagery",                                                                               maxzoom: 16 },
   ];
   for (const s of sources) {
     state.map.addSource(s.id, { type: "raster", tiles: s.tiles, tileSize: 256, attribution: s.attribution, maxzoom: s.maxzoom });

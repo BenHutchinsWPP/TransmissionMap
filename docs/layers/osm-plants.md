@@ -1,6 +1,6 @@
 # OSM Plants
 
-OSM plant centroid points and boundary polygons (North America).
+OSM plant centroid points and boundary polygons, worldwide.
 Plant-level features — one row per facility (vs. one row per turbine in [OSM Generators](osm-generators.md)).
 
 ## Source
@@ -10,29 +10,31 @@ Plant-level features — one row per facility (vs. one row per turbine in [OSM G
 | **Provider** | [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
 | **License** | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike required |
 | **Attribution** | © OpenStreetMap contributors |
-| **Source file** | `north-america-latest.osm.pbf` from [Geofabrik](https://download.geofabrik.de/) |
-| **Vintage** | July 2026 (Geofabrik daily extract, downloaded 2026-07-13) |
-| **Coverage** | USA + Canada + Mexico |
-| **Served** | `data/layers/osm_plants_points.geojson.gz` (points) · `data/layers/osm_plants_polygons.geojson.gz` (polygons) |
-| **Built by** | `extract_osm_plants.py` → `data/build/plant_osm.csv` + `data/build/plant_polygons.gpkg` |
+| **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
+| **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
+| **Coverage** | Worldwide (8 continental Geofabrik extracts) |
+| **Served** | `data/layers/osm_plants_points.geojson.gz` (points) · `data/layers/osm_plants_polygons.pmtiles` (polygons, vector tiles capped at z12) |
+| **Built by** | `extract_osm_plants.py` → `data/build/plant_osm.csv` + `data/build/plant_polygons.gpkg` → `build_global_tiles.py` |
 
-Both layers served as **gzipped GeoJSON** (many small geometries).
+Point centroids are served as **gzipped GeoJSON**; plant polygon boundaries are served as **PMTiles** vector tiles.
 
 ## Download pack
 
 Two separate packs (one per map layer):
 
-- **Points** (`osm-plants-points.zip`) — CSV only: `osm-plants-points.csv`
-- **Polygons** — `osm-plants-polygons.zip` (GeoJSON) / `osm-plants-polygons-shp.zip` (SHP): geometry + `osm-plants-polygons.csv`
+- **Points** (`osm-plants-points-<code>.zip`) — CSV only: `osm-plants-points-<code>.csv`
+- **Polygons** — `osm-plants-polygons-<code>.zip` (GeoJSON) / `osm-plants-polygons-<code>-shp.zip` (SHP): geometry + `osm-plants-polygons-<code>.csv`
 
 Every zip also includes `osm-plants.txt` (this doc) + `disclaimer.txt`.
+
+Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca an`, and the download menu in the layer panel picks it.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 
 ## Processing
 
-- **Selected:** `power=plant` relations/areas → **18,047** centroid points, **18,047**
-  boundary polygons
+- **Selected:** `power=plant` relations/areas — one centroid point and one boundary
+  polygon per facility
 - **Row filter:** none
 - **Computed:** `output_mw` = plant total MW from OSM tags; centroid lon/lat for the point layer
 - **Columns kept:** `osm_id`, `name`, `source`, `output_mw`, `operator`, `start_date`

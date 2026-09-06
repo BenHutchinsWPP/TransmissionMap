@@ -38,15 +38,13 @@ interface WeatherLiveMeta {
 }
 
 // lut/meta/metaTransform trio shared by the two weather probes. `varId` is
-// read per call so the main probe follows the dropdown selection. Base step
-// ships a raw .i16; scrubbed steps ship gzipped per-step LUTs
-// (fetch_weather_live.py phase 3) — weather-live.ts keeps weatherStepSuffix
-// current and invalidates the cache on every scrub/refresh.
+// read per call so the main probe follows the dropdown selection. Every LUT
+// ships gzipped, base and per-step alike; weatherStepSuffix is "" for the base
+// step — weather-live.ts keeps it current and invalidates the cache on every
+// scrub/refresh.
 function weatherProbeFiles(varId: () => string) {
   return {
-    lut: () => state.weatherStepSuffix
-      ? weatherLiveUrl(`${varId()}${state.weatherStepSuffix}.i16.gz`)
-      : weatherLiveUrl(`${varId()}.i16`),
+    lut: () => weatherLiveUrl(`${varId()}${state.weatherStepSuffix}.i16.gz`),
     meta: () => weatherLiveUrl("meta.json"),
     metaTransform: (raw: unknown): RasterMeta => {
       const v = (raw as WeatherLiveMeta).vars[varId()];
@@ -115,6 +113,14 @@ export const RASTER_PROBES: Record<string, {
   },
 };
 
+// fetch() resolves on 404, and a 404 body read as Int16Array samples as
+// plausible-looking values — so a missing file has to raise here instead.
+async function fetchOk(url: string): Promise<Response> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText} — ${url}`);
+  return r;
+}
+
 export async function ensureRasterLut(id: string) {
   const probe = RASTER_PROBES[id];
   if (!probe || state.rasterLut[id] || state.rasterLutLoading[id]) return;
@@ -122,8 +128,8 @@ export async function ensureRasterLut(id: string) {
   try {
     const lutUrl = probe.lut();
     const [rawMeta, buf] = await Promise.all([
-      fetch(probe.meta()).then(r => r.json()),
-      fetch(lutUrl).then(r => lutUrl.endsWith(".gz")
+      fetchOk(probe.meta()).then(r => r.json()),
+      fetchOk(lutUrl).then(r => lutUrl.endsWith(".gz")
         ? new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()
         : r.arrayBuffer()),
     ]);

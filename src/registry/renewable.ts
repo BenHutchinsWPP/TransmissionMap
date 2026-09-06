@@ -19,6 +19,7 @@ export const renewableLayers: LayerDef[] = [
     ramp:          { stops: WIND_RAMP_STOPS, max: WIND_RAMP_MAX, minLabel: "0.0", fmt: fmtSpeed },
     defaultOn:     false,
     mapLayerIds:   ["nlr-wind-100m"],
+    regions:       ["usa"],
     downloads: {
       tif: "data/releases/nlr-wind-100m.zip",
     },
@@ -34,6 +35,7 @@ export const renewableLayers: LayerDef[] = [
     ramp:          { stops: SOLAR_RAMP_STOPS, max: SOLAR_RAMP_MAX, unit: "kWh/kWp" },
     defaultOn:     false,
     mapLayerIds:   ["gsa-solar-pvout"],
+    regions:       ["global"],
     downloads: {},
   },
   {
@@ -47,6 +49,7 @@ export const renewableLayers: LayerDef[] = [
     ramp:          { stops: GEO_RAMP_STOPS, max: GEO_RAMP_MAX, unit: "mW/m²" },
     defaultOn:     false,
     mapLayerIds:   ["ihfc-geo-heatflow"],
+    regions:       ["global"],
     downloads: {
       tif: "data/releases/ihfc-geo-heatflow.zip",
     },
@@ -61,6 +64,7 @@ export const renewableLayers: LayerDef[] = [
     swatch:      "#f97316",
     defaultOn:   false,
     mapLayerIds: ["nrel-hydrothermal-points"],
+    regions:     ["usa"],
     downloads: {
       csv: "data/releases/nrel-hydrothermal-points.zip",
     },
@@ -76,6 +80,7 @@ export const renewableLayers: LayerDef[] = [
     defaultOn:   false,
     hoverField:  "lease",
     mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-outline"],
+    regions:     ["usa"],
     downloads: {
       geojson: "data/releases/boem-wind-leases.zip",
       shp: "data/releases/boem-wind-leases-shp.zip",

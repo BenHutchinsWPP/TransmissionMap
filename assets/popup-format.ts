@@ -7,6 +7,7 @@
 // src/i18n/index.js (t).
 
 import { escapeHtml } from './utils/utils.js';
+import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
@@ -233,6 +234,8 @@ const WESTTEC_SCENARIO_LABELS: Record<string, string> = Object.fromEntries(
   WESTTEC_SCENARIO_BUCKETS.flatMap(b =>
     (WESTTEC_SCENARIO_MAP[b.id as keyof typeof WESTTEC_SCENARIO_MAP] ?? []).map(v => [v, b.label])));
 
+const OSM_TL_POPUP_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown", "dc");
+
 const _defs = [
   [["ogf-planned-lines"], renderOgfPlanned],
   [["westtec-lines"], (p: Record<string, unknown>) =>
@@ -243,7 +246,7 @@ const _defs = [
     row("popup.voltage", p.voltage_kv ? `${p.voltage_kv} kV` : null) +
     row("popup.lineType", p.line_type) +
     row("popup.length", p.length_mi ? fmtDistanceMi(Number(p.length_mi)) : null)],
-  [["osm-transmission-lines-hv", "osm-transmission-lines-mv", "osm-transmission-lines-lv", "osm-transmission-lines-unknown", "osm-transmission-lines-dc"], (p: Record<string, unknown>) =>
+  [OSM_TL_POPUP_IDS, (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.transmissionLine")) +
     row("popup.voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
     row("popup.current", p.is_dc ? "DC" : null) +

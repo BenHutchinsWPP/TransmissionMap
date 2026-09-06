@@ -38,7 +38,7 @@ const PRESSURE_RAMP: RampDef = {
 };
 
 // Weather Forecast dropdown entries, in dropdown order. Each carries its own
-// color ramp (SI-unit domain, matching the .i16 LUT baked by
+// color ramp (SI-unit domain, matching the .i16.gz LUT baked by
 // scripts/fetch_weather_live.py) and a display-edge formatter — SI in, a
 // display-unit string out. Consumed by ui-layer-rows.ts (dropdown + legend
 // ramp), raster-probes.ts (hover readout), url-state-codec.ts (wv param).
@@ -74,6 +74,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-perimeters-fill", "wildfire-perimeters-line", "wildfire-hotspots-heat", "wildfire-hotspots-circle"],
+    regions:     ["global"],
     downloads: {},
   },
   {
@@ -87,6 +88,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-smoke-fill", "wildfire-smoke-line"],
+    regions:     ["usa"],
     downloads: {},
   },
   {
@@ -100,6 +102,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["wildfire-incidents-circle"],
+    regions:     ["usa"],
     downloads: {},
   },
   {
@@ -112,6 +115,7 @@ export const conditionLayers: LayerDef[] = [
     swatch:       "#FF0000",
     defaultOn:    false,
     mapLayerIds:  ["usfs-wildfire-potential"],
+    regions:      ["usa"],
     downloads: {},
   },
   {
@@ -125,6 +129,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["nws-alerts-fill", "nws-alerts-line"],
+    regions:     ["usa"],
     downloads: {},
   },
   {
@@ -138,6 +143,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
+    regions:     ["usa"],
     downloads: {},
   },
   {
@@ -151,6 +157,7 @@ export const conditionLayers: LayerDef[] = [
     live:        true,
     defaultOn:   false,
     mapLayerIds: ["geomet-radar-rain", "geomet-radar-snow", "nexrad-radar"],
+    regions:     ["usa"],
     downloads: {},
   },
   {
@@ -167,6 +174,7 @@ export const conditionLayers: LayerDef[] = [
     weatherVarLayer: true,
     defaultOn:   false,
     mapLayerIds: ["weather-live", "weather-live-b", "weather-admin-lines-states", "weather-admin-lines-countries"],
+    regions:     ["global"],
     downloads: {},
   },
   {
@@ -180,6 +188,7 @@ export const conditionLayers: LayerDef[] = [
     ramp:         { stops: SEIS_RAMP_STOPS, max: SEIS_RAMP_MAX, unit: "g" },
     defaultOn:    false,
     mapLayerIds:  ["usgs-seismic-pga"],
+    regions:      ["usa"],
     downloads: {},
   },
 ];

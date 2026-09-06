@@ -6,7 +6,9 @@
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
 // ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
 // first File > Diagnostics… click). ui-settings.js (lazy — Settings dialog,
-// loaded on first File > Settings… click). src/i18n/index.js (t), state-bus.js (on).
+// loaded on first File > Settings… click). ui-experiences.js (lazy — Map
+// Experiences gallery + story card, loaded on first File > Experiences… click).
+// src/i18n/index.js (t), state-bus.js (on).
 // Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
@@ -24,6 +26,33 @@ async function draw(): Promise<DrawChunk> {
     _chunk.initDraw();
   }
   return _chunk;
+}
+
+export function positionColorMenu(menu: HTMLElement, swatch: HTMLElement) {
+  const rect = swatch.getBoundingClientRect();
+  menu.style.position = 'fixed';
+  menu.style.zIndex = '1000';
+
+  const menuWidth = menu.offsetWidth || 103;
+  const menuHeight = menu.offsetHeight || 92;
+
+  const winWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const winHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+
+  let left = rect.left;
+  if (left + menuWidth > winWidth - 8) {
+    left = Math.max(8, winWidth - menuWidth - 8);
+  }
+  if (left < 8) left = 8;
+  menu.style.left = `${left}px`;
+  menu.style.right = 'auto';
+
+  let top = rect.bottom + 5;
+  if (top + menuHeight > winHeight - 8 && rect.top - 5 - menuHeight >= 0) {
+    top = rect.top - 5 - menuHeight;
+  }
+  menu.style.top = `${top}px`;
+  menu.style.bottom = 'auto';
 }
 
 // ─── Event handlers ───────────────────────────────────────────────────────────
@@ -69,6 +98,14 @@ async function onMenubarClick(e: MouseEvent) {
       m.openDiagnostics();
       return;
     }
+    // Same reasoning again: Map Experiences is its own lazy chunk
+    // (ui-experiences.js — the catalogue and the story controller) and must not
+    // drag in the draw chunk either.
+    if (menuItem.dataset.action === 'open-experiences') {
+      const m = await import('./ui-experiences.js');
+      m.openExperiences();
+      return;
+    }
     // Same reasoning again: Settings is its own lazy chunk (ui-settings.js)
     // and must not drag in the draw chunk either.
     if (menuItem.dataset.action === 'open-settings') {
@@ -99,6 +136,9 @@ async function onMenubarClick(e: MouseEvent) {
       const wasOpen = !menu.hidden;
       document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
       menu.hidden = wasOpen;
+      if (!wasOpen) {
+        positionColorMenu(menu, swatch);
+      }
     }
     return;
   }
@@ -111,7 +151,7 @@ async function onMenubarClick(e: MouseEvent) {
     return;
   }
 
-  if (target?.closest('.color-custom')) return;
+  if (target?.closest('.color-menu')) return;
 
   document.querySelectorAll<HTMLElement>('.menu-dropdown:not([hidden])').forEach(m => {
     m.hidden = true;
@@ -129,6 +169,20 @@ export function wireMenubar() {
   });
 
   document.addEventListener('click', onMenubarClick);
+
+  window.addEventListener('scroll', () => {
+    document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
+  }, { capture: true, passive: true });
+
+  window.addEventListener('resize', () => {
+    document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
+  }, { passive: true });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
+    }
+  });
 
   document.addEventListener('input', async e => {
     const inp = (e.target as Element)?.closest<HTMLInputElement>('.color-custom[type=color]');

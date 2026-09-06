@@ -4,6 +4,7 @@ The CSV is the attribute table with the geometry replaced by a representative
 point (lon/lat), so it stays human-browsable without a GIS tool.
 """
 import argparse
+import gzip
 import json
 import os
 import sys
@@ -16,12 +17,17 @@ def write_json_atomic(obj, path, **json_kwargs):
     Dumps to a `.tmp` sibling in the same directory (so `os.replace` stays on
     one filesystem) then atomically renames it over `path`. An interrupted
     write leaves the old file intact instead of a truncated/corrupt one.
+    Automatically compresses with gzip if `path` ends with `.gz`.
     """
     json_kwargs.setdefault("separators", (",", ":"))
     path = Path(path)
     tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w") as f:
-        json.dump(obj, f, **json_kwargs)
+    if str(path).endswith(".gz"):
+        with gzip.open(tmp_path, "wt", encoding="utf-8") as f:
+            json.dump(obj, f, **json_kwargs)
+    else:
+        with open(tmp_path, "w") as f:
+            json.dump(obj, f, **json_kwargs)
     os.replace(tmp_path, path)
 
 
@@ -33,6 +39,9 @@ def read_prev_feed_last_ok(path):
     duration forward: on a subfeed failure the previous stamp survives, so
     the frontend chip can say how old the carried data is."""
     try:
+        if str(path).endswith(".gz"):
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                return json.load(f).get("feed_last_ok") or {}
         with open(path) as f:
             return json.load(f).get("feed_last_ok") or {}
     except Exception:

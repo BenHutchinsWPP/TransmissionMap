@@ -17,6 +17,7 @@ export const generatorLayers: LayerDef[] = [
     genModeCode:   "o",
     filterType:  "fuel_osm",
     filterField: "source",
+    regions:     ["global"],
     downloads: {
       csv: "data/releases/osm-plants-points.zip",
     },
@@ -35,6 +36,7 @@ export const generatorLayers: LayerDef[] = [
     mapLayerIds:   ["osm-plants-polygons-fill", "osm-plants-polygons-outline"],
     filterType:  "fuel_osm",
     filterField: "source",
+    regions:     ["global"],
     downloads: {
       geojson: "data/releases/osm-plants-polygons.zip",
       shp: "data/releases/osm-plants-polygons-shp.zip",
@@ -53,6 +55,7 @@ export const generatorLayers: LayerDef[] = [
     mapLayerIds:   ["osm-gen-circles"],
     filterType:  "fuel_osm",
     filterField: "source",
+    regions:     ["global"],
     downloads: {
       csv: "data/releases/osm-generators.zip",
     },
@@ -75,6 +78,7 @@ export const generatorLayers: LayerDef[] = [
     filterField:   "energy_source",
     bucketField:      "gen_status",
     filterGroupCode:  "s",
+    regions:          ["usa"],
     filterBuckets: [
       { id: "existing",   label: "Existing",           color: "#fbbf24", urlCode: "e" },
       { id: "retirement", label: "Planned Retirement", color: "#f97316", urlCode: "r" },

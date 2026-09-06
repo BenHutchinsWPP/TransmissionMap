@@ -32,7 +32,7 @@ describe('ui-settings', () => {
 
     const langSelect = dialog.querySelector<HTMLSelectElement>('#settingsLanguageSelect');
     expect(langSelect).not.toBeNull();
-    expect(langSelect!.options.length).toBe(15);
+    expect(langSelect!.options.length).toBe(14);   // nv withheld from the picker
     expect(langSelect!.value).toBe('en');
 
     const dimSelects = dialog.querySelectorAll<HTMLSelectElement>('.settings-select[data-unit-dim]');

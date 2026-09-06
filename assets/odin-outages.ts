@@ -24,10 +24,13 @@
 //       to ODIN from the browser.
 // Wired from ui/ui.ts init() via initOdinOutages().
 
-import { state, DATA } from './state.js';
+import { state, DATA, rebaselineExperience } from './state.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
 import { escapeHtml } from './utils/utils.js';
 import { recordDiagEvent } from './diag-log.js';
+import { setLayerVisibility } from './visibility.js';
+import { updateLegends } from './ui/ui-legends.js';
+import { fmtAge } from './live-staleness.js';
 
 const REGISTRY_ID = "odin-outages";
 
@@ -55,6 +58,12 @@ let records: Record<string, Record<string, unknown>[]> = {};
 let appliedFips = new Set<string>();
 let generatedUtc: string | undefined;
 let inflight = false;
+// Stale-data safety, mirroring live-staleness.ts for the GeoJSON feeds. That
+// factory drives a GeoJSON source; this layer is a feature-state join, so the
+// same behavior is wired by hand here.
+let acknowledged = false;      // reader accepted stale data — do not re-prompt
+let staleBlocked = false;      // snapshot is past MAX_AGE_MS and unacknowledged
+let disabledForStale = false;  // we turned the layer off, so re-enable restores it
 
 // Popup (popup-format.ts) reads the numbers for a clicked county from here as a
 // fallback; the primary path merges feature-state in popup.ts.
@@ -116,15 +125,20 @@ async function refetch(): Promise<void> {
     // is open we must also UNPAINT what's already there — otherwise the map goes
     // on showing hours-old outages while the legend quietly says "stale".
     const then = gen ? Date.parse(gen) : NaN;
+    const next = (data.counties || {}) as Record<string, [number, number, OdinUtil[]?]>;
     if (!Number.isNaN(then) && Date.now() - then > MAX_AGE_MS) {
-      console.warn("[TransmissionMap] ODIN snapshot is stale (>6h) — not painting", gen);
       clearJoin();
+      // Keep the snapshot in memory unpainted, so "re-enable" has something to
+      // show; appliedFips stays empty because nothing is on the map.
+      snapshot = next;
+      records = (data.records || {}) as Record<string, Record<string, unknown>[]>;
+      appliedFips = new Set();
       generatedUtc = gen;
       renderOdinAge();
+      enterStale(Date.now() - then);
       return;
     }
-
-    const next = (data.counties || {}) as Record<string, [number, number, OdinUtil[]?]>;
+    exitStale();
     // Clear feature-state for counties that dropped out of the new snapshot.
     for (const fips of appliedFips) {
       if (!(fips in next)) clearFips(fips);
@@ -142,6 +156,8 @@ async function refetch(): Promise<void> {
     const then = generatedUtc ? Date.parse(generatedUtc) : NaN;
     if (!Number.isNaN(then) && Date.now() - then > MAX_AGE_MS) {
       clearJoin();
+      appliedFips = new Set();
+      enterStale(Date.now() - then);
     }
     renderOdinAge();
   } finally {
@@ -256,8 +272,55 @@ function isVisible(): boolean {
   return !!state.layerVisibility[REGISTRY_ID];
 }
 
+// ── Stale-data gate ───────────────────────────────────────────────────────────
+// Past MAX_AGE_MS the layer is turned off and the reader is told why, rather
+// than left with an empty choropleth that looks like a broken layer.
+function setOdinLayer(on: boolean) {
+  setLayerVisibility(REGISTRY_ID, on);
+  const cb = document.querySelector<HTMLInputElement>(
+    `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
+  if (cb) cb.checked = on;
+}
+
+function enterStale(age: number) {
+  staleBlocked = true;
+  if (acknowledged || !isVisible()) return;   // nothing on screen → nothing unsafe
+  // The reader did not ask for this, so it must not read as editing their way
+  // out of an active Map Experience (see url-state.ts).
+  rebaselineExperience();
+  setOdinLayer(false);
+  disabledForStale = true;
+  updateLegends();
+  const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
+  const ageEl = document.getElementById("odinStaleAge");
+  if (ageEl) ageEl.textContent = fmtAge(age);
+  if (dlg && !dlg.open) dlg.showModal();
+}
+
+function exitStale() {
+  staleBlocked = false;
+  acknowledged = false;   // fresh again → a future staleness re-prompts
+}
+
+function wireStaleDialog() {
+  const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
+  document.getElementById("odinStaleReenable")?.addEventListener("click", () => {
+    acknowledged = true;
+    if (disabledForStale) { setOdinLayer(true); disabledForStale = false; }
+    applyJoin();
+    appliedFips = new Set(Object.keys(snapshot));
+    updateLegends();
+    dlg?.close();
+  });
+  document.getElementById("odinStaleDismiss")?.addEventListener("click", () => {
+    disabledForStale = false;
+    dlg?.close();
+  });
+}
+
 export function initOdinOutages() {
   if (!state.map) return;
+  wireStaleDialog();
 
   // Re-apply the join whenever the source finishes (re)loading tiles — feature
   // state only sticks to features present in currently-loaded tiles. This also
@@ -267,6 +330,7 @@ export function initOdinOutages() {
   state.map.on("sourcedata", (e) => {
     const ev = e as { sourceId?: string; isSourceLoaded?: boolean };
     if (ev.sourceId !== SRC || !ev.isSourceLoaded) return;
+    if (staleBlocked) return;
     if (Object.keys(snapshot).length) { applyJoin(); return; }
     if (isVisible() && !inflight) void refetch();
   });

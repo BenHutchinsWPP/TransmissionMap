@@ -4,7 +4,7 @@
 #
 # Produces, from the USGS 2018 National Seismic Hazard Model CSV grid:
 #   data/layers/usgs_seismic_pga.pmtiles    raster PMTiles (WEBP, baked color) — HOSTED layer
-#   data/layers/usgs_seismic_pga_lut.i16    coarse Int16 value grid — hover readout
+#   data/layers/usgs_seismic_pga_lut.i16.gz    coarse Int16 value grid — hover readout
 #   data/layers/usgs_seismic_pga_lut.json   grid dims + bbox + scale sidecar
 #   data/build/usgs_seismic_pga.tif         Cloud-Optimized GeoTIFF (real g) — DOWNLOAD
 #
@@ -112,9 +112,9 @@ build_probe_lut() {
   # PGA max ≈ 2.87 g → ×1000 = 2866, well inside Int16. nodata 0.
   gdal_translate -q -ot Int16 -scale 0 32.767 0 32767 -a_nodata 0 \
     "$BUILD/seismic_pga.tif" "$BUILD/seismic_lut_i.tif"
-  rc_write_lut "$BUILD/seismic_lut_i.tif" "$OUT_TILES/usgs_seismic_pga_lut.i16" \
+  rc_write_lut "$BUILD/seismic_lut_i.tif" "$OUT_TILES/usgs_seismic_pga_lut.i16.gz" \
     "$OUT_TILES/usgs_seismic_pga_lut.json" 1000 "$BUILD/seismic"
-  echo "  [ok] $OUT_TILES/usgs_seismic_pga_lut.i16  $(du -sh "$OUT_TILES/usgs_seismic_pga_lut.i16" | cut -f1)  ($(cat "$OUT_TILES/usgs_seismic_pga_lut.json"))"
+  echo "  [ok] $OUT_TILES/usgs_seismic_pga_lut.i16.gz  $(du -sh "$OUT_TILES/usgs_seismic_pga_lut.i16.gz" | cut -f1)  ($(cat "$OUT_TILES/usgs_seismic_pga_lut.json"))"
 }
 
 rc_check_deps gdalwarp gdaldem gdal_translate gdaladdo gdalinfo gdal_grid pmtiles python3

@@ -55,6 +55,15 @@ class TestWriteJsonAtomic(unittest.TestCase):
             content = Path(path).read_text()
             self.assertNotIn(" ", content)
 
+    def test_gzip_compression_when_path_ends_with_gz(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "out.json.gz")
+            write_json_atomic({"hello": "world", "list": [1, 2, 3]}, path)
+            import gzip
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                data = json.load(f)
+            self.assertEqual(data, {"hello": "world", "list": [1, 2, 3]})
+
 
 class TestReadPrevFeedLastOk(unittest.TestCase):
     def test_missing_file_returns_empty_dict(self):
@@ -71,6 +80,18 @@ class TestReadPrevFeedLastOk(unittest.TestCase):
             self.assertEqual(
                 read_prev_feed_last_ok(path),
                 {"eccc": "2026-07-15T12:00:00Z"},
+            )
+
+    def test_valid_gzip_file_returns_feed_last_ok(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "prev.json.gz")
+            payload = {"feed_last_ok": {"wfigs": "2026-07-15T12:00:00Z"}}
+            import gzip
+            with gzip.open(path, "wt", encoding="utf-8") as f:
+                json.dump(payload, f)
+            self.assertEqual(
+                read_prev_feed_last_ok(path),
+                {"wfigs": "2026-07-15T12:00:00Z"},
             )
 
     def test_file_missing_feed_last_ok_key_returns_empty_dict(self):

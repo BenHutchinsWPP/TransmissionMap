@@ -38,14 +38,15 @@ from osm_common import _run, _has, find_pbf
 # Voltage parsing
 # ---------------------------------------------------------------------------
 def _to_kv(v: int) -> int:
-    """Convert a raw OSM voltage integer to kV.
+    """Convert a raw OSM voltage integer in volts to kV.
 
-    OSM convention is volts (138000), but many mappers enter kV directly (138).
-    Heuristic: ≥ 1000 → volts, divide by 1000.  < 1000 → already kV, use as-is.
-    All standard transmission/distribution voltages (12, 34, 69, 115, 138, 230,
-    345, 500, 765 kV) are well below 1000, so the boundary is unambiguous.
+    In OSM, voltage is in Volts. Transmission voltages are 10,000–1,150,000 V (10–1150 kV).
+    Values < 1000 V (e.g. 400 V, 230 V, 690 V, 950 V) are low-voltage distribution in volts
+    and floor to 0 kV (they must never be mistaken for 400/950 kV transmission).
     """
-    return v // 1000 if v >= 1000 else v
+    if v >= 1000:
+        return v // 1000
+    return 0
 
 
 def _best_name(props: dict) -> str:
@@ -75,21 +76,14 @@ def _best_name_hstore(ot: str) -> str:
 
 
 def _parse_voltage(v_str: str):
-    """Parse an OSM voltage string → (nominal_kv: int|None, voltage_raw: str).
-
-    Handles:
-      '138000'          → (138, '138')
-      '138'             → (138, '138')      ← kV already; previously gave (0, '0')
-      '345000;138000'   → (345, '345;138')
-      '345;138'         → (345, '345;138')
-      ''  / None        → (None, '')
-    """
+    """Parse an OSM voltage string → (nominal_kv: int|None, voltage_raw: str)."""
     if not v_str:
         return None, ""
     levels = sorted(
         {_to_kv(int(p)) for p in str(v_str).split(";") if p.strip().isdigit() and int(p) > 0},
         reverse=True,
     )
+    levels = [k for k in levels if k > 0]
     if not levels:
         return None, ""
     return levels[0], ";".join(str(v) for v in levels)
@@ -349,12 +343,33 @@ def merge_and_write(poly_df, node_df, out_csv):
         if col in merged.columns:
             merged[col] = merged[col].replace("", None)
 
-    # Sort: named substations first, then by nominal_kv descending within each group
+    # Filter to real transmission substations:
+    # 1. Strictly exclude all minor distribution kiosks, distribution boxes, and pole transformers
+    # 2. Keep explicit transmission types: transmission, converter, generation, industrial, traction, transition, switching, substation, compensation
+    # 3. For untagged/other: keep only if verified transmission voltage (nominal_kv >= 50)
+    sub_type_norm = merged["sub_type"].fillna("").astype(str).str.strip().str.lower()
+    kv_num = pd.to_numeric(merged["nominal_kv"], errors="coerce").fillna(-1)
+    minor_types = {"minor_distribution", "distribution", "transformer_tower", "pole", "kiosk", "cabinet"}
+    is_minor = sub_type_norm.isin(minor_types)
+    major_types = {"transmission", "converter", "generation", "industrial", "traction", "transition", "switching", "substation", "compensation"}
+    is_major = sub_type_norm.isin(major_types)
+    is_trans_kv = kv_num >= 50
+    keep_mask = ~is_minor & (is_major | is_trans_kv)
+    
+    dropped_count = len(merged) - keep_mask.sum()
+    if dropped_count > 0:
+        log.info("  Filtered out %d minor distribution boxes / untagged kiosks", dropped_count)
+    merged = merged[keep_mask].copy()
+
+    # Sort: lowest nominal_kv first, highest nominal_kv last
+    # In vector tiles and canvas/WebGL rendering, features written later draw ON TOP.
+    has_name = merged["name"].notna() & (merged["name"] != "")
+    merged["_has_name"] = has_name
     merged = merged.sort_values(
-        ["name", "nominal_kv"],
-        ascending=[True, False],
-        na_position="last",
-    )
+        ["nominal_kv", "_has_name"],
+        ascending=[True, True],
+        na_position="first",
+    ).drop(columns=["_has_name"])
 
     # osm_type (way/node/relation) served its purpose for deduplication; drop from output
     merged = merged.drop(columns=["osm_type"], errors="ignore")
@@ -406,6 +421,17 @@ def write_polygon_shp(poly_gdf, out_shp):
     for col in str_cols:
         if col in gdf.columns:
             gdf[col] = gdf[col].replace("", None)
+
+    # Filter to real transmission substations
+    sub_type_norm = gdf["sub_type"].fillna("").astype(str).str.strip().str.lower()
+    kv_num = pd.to_numeric(gdf["nominal_kv"], errors="coerce").fillna(-1)
+    minor_types = {"minor_distribution", "distribution", "transformer_tower", "pole", "kiosk", "cabinet"}
+    is_minor = sub_type_norm.isin(minor_types)
+    major_types = {"transmission", "converter", "generation", "industrial", "traction", "transition", "switching", "substation", "compensation"}
+    is_major = sub_type_norm.isin(major_types)
+    is_trans_kv = kv_num >= 50
+    keep_mask = ~is_minor & (is_major | is_trans_kv)
+    gdf = gdf[keep_mask].copy()
 
     # Force all to MultiPolygon so the SHP has a single geometry type
     from shapely.geometry import MultiPolygon

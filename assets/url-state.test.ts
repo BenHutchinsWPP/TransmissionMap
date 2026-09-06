@@ -7,7 +7,7 @@ import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs', 'lang']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs', 'lang', 'region', 'exp']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -38,8 +38,12 @@ beforeEach(() => {
   state.buildings3d     = false;
   state.hillshade       = false;
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
+  state.regionScope     = 'usa';
   state.mapReady        = false;
   state.map             = null;
+  state.experienceId       = null;
+  state.experienceDirty    = false;
+  state.experiencePristine = null;
   setLocale('en');
   history.replaceState(null, '', '#');
 });
@@ -379,6 +383,28 @@ describe('round-trip serialization', () => {
     expect(state.terrain3d).toBe(true);
     expect(getLocale()).toBe('zh');
   });
+
+  it('reads and writes region parameter correctly', () => {
+    state.regionScope = 'global';
+    writeUrlState();
+    expect(location.hash).toContain('region=global');
+
+    state.regionScope = 'usa';
+    readUrlState();
+    expect(state.regionScope).toBe('global');
+
+    // Default 'usa' is omitted from URL
+    state.regionScope = 'usa';
+    writeUrlState();
+    expect(location.hash).not.toContain('region=');
+  });
+
+  it('ignores a continent left in an old shared link', () => {
+    location.hash = '#region=europe';
+    state.regionScope = 'usa';
+    readUrlState();
+    expect(state.regionScope).toBe('usa');
+  });
 });
 
 describe('writeUrlState – bearing/pitch (rotation/tilt)', () => {
@@ -412,6 +438,73 @@ describe('writeUrlState – bearing/pitch (rotation/tilt)', () => {
     writeUrlState();
     const posStr = location.hash.slice(1).split('?')[0];
     expect(posStr.split('/')).toHaveLength(3);
+  });
+});
+
+describe('map experiences – exp param', () => {
+  beforeEach(() => {
+    state.mapReady = true;
+    state.map = mockMap();
+  });
+
+  it('parses a known experience slug into state', () => {
+    setHash('exp=columbia-hydro');
+    readUrlState();
+    expect(state.experienceId).toBe('columbia-hydro');
+  });
+
+  // Existence is checked by assets/experiences.ts, not the codec — resolving it
+  // here would pull the whole catalogue into the initial bundle. The codec only
+  // guards the shape.
+  it('accepts any well-formed slug', () => {
+    setHash('exp=not-a-story-yet');
+    readUrlState();
+    expect(state.experienceId).toBe('not-a-story-yet');
+  });
+
+  it('rejects a malformed slug', () => {
+    setHash('exp=' + encodeURIComponent('<script>'));
+    readUrlState();
+    expect(state.experienceId).toBeNull();
+  });
+
+  it('writes exp while the view still matches the snapshot the story left', () => {
+    state.experienceId = 'columbia-hydro';
+    writeUrlState();                       // records the pristine snapshot
+    expect(location.hash).toContain('exp=columbia-hydro');
+    writeUrlState();                       // nothing changed — still the story
+    expect(location.hash).toContain('exp=columbia-hydro');
+    expect(state.experienceDirty).toBe(false);
+  });
+
+  it('keeps exp across camera moves — the camera is not part of the snapshot', () => {
+    state.experienceId = 'columbia-hydro';
+    writeUrlState();
+    state.map = mockMap({ bearing: 30, pitch: 40 });
+    writeUrlState();
+    expect(location.hash).toContain('exp=columbia-hydro');
+    expect(state.experienceDirty).toBe(false);
+  });
+
+  it('drops exp once the user edits a param the story owns', () => {
+    state.experienceId = 'columbia-hydro';
+    writeUrlState();
+    state.basemap = 'dark';
+    writeUrlState();
+    expect(state.experienceDirty).toBe(true);
+    expect(location.hash).not.toContain('exp=');
+    expect(location.hash).toContain('bm=d');
+  });
+
+  it('stays dirty once edited, even if the view is put back by hand', () => {
+    state.experienceId = 'columbia-hydro';
+    writeUrlState();
+    state.basemap = 'dark';
+    writeUrlState();
+    state.basemap = 'light';
+    writeUrlState();
+    expect(state.experienceDirty).toBe(true);
+    expect(location.hash).not.toContain('exp=');
   });
 });
 

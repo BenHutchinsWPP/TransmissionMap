@@ -16,6 +16,7 @@ Usage (offline — pass pre-downloaded VIIRS CSVs instead of fetching):
 
 import argparse
 import csv
+import gzip
 import io
 import json
 import os
@@ -77,25 +78,18 @@ CWFIS_PERIMETERS_URL = (
 
 # ── FIRMS VIIRS 24h CSV feeds (fetched when no CSV paths are given) ──────────
 # Primary: the quota'd area API (5000 req/10min per key) when FIRMS_MAP_KEY is
-# set — one North+Central-America bbox per sensor, which also covers Alaska.
+# set — 'world' query per sensor for global satellite coverage.
 # The API's day-range param is UTC-calendar-day granular, so we ask for 2 days
 # and let read_viirs_csvs trim to a rolling 24 h.
-FIRMS_API_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/-180,5,-40,75/2"
+FIRMS_API_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{sensor}/world/2"
 FIRMS_API_SENSORS = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT"]
 
 # Fallback: anonymous flat files (rate-limited for runner IPs under load —
-# see docs/layers/wildfire-live.md). USA region file + Canada and
-# Central_America (incl. Mexico) country files, for S-NPP and NOAA-20.
-# read_viirs_csvs dedups across them, so border overlap between files is
-# fine. Alaska has no flat-file feed — API path only.
+# see docs/layers/wildfire-live.md). Global 24h CSV feeds for S-NPP and NOAA-20.
 FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
 VIIRS_URLS = [
-    f"{FIRMS_BASE}/suomi-npp-viirs-c2/USA_contiguous_and_Hawaii/SUOMI_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv",
-    f"{FIRMS_BASE}/noaa-20-viirs-c2/USA_contiguous_and_Hawaii/J1_VIIRS_C2_USA_contiguous_and_Hawaii_24h.csv",
-    f"{FIRMS_BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Canada_24h.csv",
-    f"{FIRMS_BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Canada_24h.csv",
-    f"{FIRMS_BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Central_America_24h.csv",
-    f"{FIRMS_BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Central_America_24h.csv",
+    f"{FIRMS_BASE}/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv",
+    f"{FIRMS_BASE}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_24h.csv",
 ]
 
 # ── NOAA HMS smoke URL ────────────────────────────────────────────────────────
@@ -111,8 +105,12 @@ def load_previous_features(filepath: str, feature_type: str, country: str | None
     if not os.path.exists(filepath):
         return []
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        if filepath.endswith(".gz"):
+            with gzip.open(filepath, "rt", encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
         res = []
         for feat in data.get("features", []):
             p = feat.get("properties", {})

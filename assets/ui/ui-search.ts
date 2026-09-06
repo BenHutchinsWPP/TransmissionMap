@@ -1,6 +1,7 @@
 // ─── Feature search (inside layers panel) ───────────────────────────────────
 
 import { state } from '../state.js';
+import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 import { escapeHtml } from '../utils/utils.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
 
@@ -16,11 +17,18 @@ interface SearchResult {
 const SEARCH_SOURCES = [
   { sourceId: "eia-generators",  sourceLayer: null,             label: "EIA Plant",          fields: ["plant_name", "technology", "state", "ba_code"] },
   { sourceId: "osm-datacenters",  sourceLayer: null,             label: "Data Center",        fields: ["name", "operator", "addr_city", "addr_state"] },
-  { sourceId: "osm-substations-points", sourceLayer: null,             label: "OSM Substation",     fields: ["name", "operator"] },
+  { sourceId: "osm-substations-points", sourceLayer: "osm_substations_points", label: "OSM Substation",     fields: ["name", "operator"] },
   { sourceId: "hifld-substations",      sourceLayer: null,             label: "HIFLD Substation",   fields: ["name"] },
   { sourceId: "osm-generators",         sourceLayer: "osm_generators", label: "OSM Generator",      fields: ["name", "source", "operator"] },
   { sourceId: "osm-plants-points",      sourceLayer: null,             label: "Power Plant",        fields: ["name", "operator", "source"] },
-  { sourceId: "osm-transmission-lines",  sourceLayer: "osm_transmission_lines",  label: "OSM Transmission",   fields: ["name", "operator"],        layerId: "osm-transmission-lines" },
+  // One entry per voltage-class archive — querySourceFeatures reads a single
+  // source, so a lone "osm-transmission-lines" entry would only ever find lines
+  // under 50 kV. They all report to the same registry layer for the visibility
+  // check, and a line is in exactly one archive, so results cannot duplicate.
+  ...OSM_TL_BANDS.map(b => ({
+    sourceId: `osm-transmission-lines${b.suffix}`, sourceLayer: "osm_transmission_lines",
+    label: "OSM Transmission", fields: ["name", "operator"], layerId: "osm-transmission-lines",
+  })),
   { sourceId: "hifld-transmission-lines", sourceLayer: "hifld_transmission_lines", label: "HIFLD Transmission", fields: ["OWNER"],                   layerId: "hifld-transmission-lines" },
   { sourceId: "ogf-planned-transmission", sourceLayer: null, label: "Planned Transmission", fields: ["Project", "Owner", "FromSub", "ToSub", "StatesFull"] },
   { sourceId: "westtec-10yr", sourceLayer: null, label: "WestTEC Project", fields: ["name"] },
@@ -66,13 +74,15 @@ function _featureCenter(feature: GeoJSON.Feature) {
 }
 
 function _sourceFeatures(src: (typeof SEARCH_SOURCES)[number]): GeoJSON.Feature[] | null {
-  if (!state.map?.getSource(src.sourceId)) return null;
+  const map = state.map;
+  if (!map?.getSource(src.sourceId)) return null;
   if (src.sourceLayer === null && state.sourcesData[src.sourceId]) {
     return state.sourcesData[src.sourceId] as GeoJSON.Feature[];
   }
   const opts = src.sourceLayer ? { sourceLayer: src.sourceLayer } : {};
-  try { return state.map.querySourceFeatures(src.sourceId, opts); }
-  catch { return null; }
+  // A source still loading its header has nothing to match yet.
+  try { return map.querySourceFeatures(src.sourceId, opts); }
+  catch { return []; }
 }
 
 function _matchResult(f: GeoJSON.Feature, src: (typeof SEARCH_SOURCES)[number], query: string) {

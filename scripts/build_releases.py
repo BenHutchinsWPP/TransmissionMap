@@ -4,13 +4,19 @@ build_releases.py — Build per-layer download ZIP packs.
 
 Reads scripts/release_manifest.yaml and produces, per layer, one of:
 
-  - raster (has `tif:`)       → <layer-id>.zip
+  - raster (has `tif:`)       → <pack-id>.zip
         {<layer-id>.tif, <layer-id>.txt, disclaimer.txt}
-  - point (`csv_only: true`)  → <layer-id>.zip
+  - point (`csv_only: true`)  → <pack-id>.zip
         {<name>.csv, <layer-id>.txt, disclaimer.txt}
-  - line/polygon (else)       → <layer-id>.zip AND <layer-id>-shp.zip
-        <layer-id>.zip:     {<name>.geojson, <name>.csv, <layer-id>.txt, disclaimer.txt}
-        <layer-id>-shp.zip: {<name>.shp/.shx/.dbf/.prj/.cpg, <name>.csv, <layer-id>.txt, disclaimer.txt}
+  - line/polygon (else)       → <pack-id>.zip AND <pack-id>-shp.zip
+        <pack-id>.zip:     {<name>.geojson, <name>.csv, <layer-id>.txt, disclaimer.txt}
+        <pack-id>-shp.zip: {<name>.shp/.shx/.dbf/.prj/.cpg, <name>.csv, <layer-id>.txt, disclaimer.txt}
+
+`<pack-id>` is the layer id, or `<layer-id>-<code>` for a `continental: true`
+layer — those are built once per Geofabrik continent (na eu as sa af oc ca an)
+from source paths carrying a `{code}` placeholder. Every format a continental
+layer offers is built for every continent, so the download menu can expand any
+one of them into the same eight links.
 
 CSV rides inside every vector zip (both the GeoJSON pack and the SHP pack) as
 an attribute preview; there is no standalone CSV-only pack for line/polygon
@@ -43,6 +49,11 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).parent.parent
+
+# Geofabrik continental extracts, in the order process_continental_osm.py builds
+# them. A `continental: true` layer gets one pack per code, per format.
+CONTINENT_CODES = ["na", "eu", "as", "sa", "af", "oc", "ca", "an"]
+SOURCE_KEYS = ("geojson_gz", "shp", "geojson", "csv", "tif")
 
 _PANDOC_AVAILABLE: bool | None = None  # cached on first use
 
@@ -194,7 +205,14 @@ def write_shp_and_csv(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> 
     _write_csv(gdf, stem, zf)  # full attribute table — all features
 
     fam = gdf.geom_type.str.replace("Multi", "", regex=False)
-    dominant = fam.mode(dropna=True).iloc[0]
+    dominant_fams = fam.mode(dropna=True)
+    if dominant_fams.empty:
+        # A shapefile header declares one geometry type, so a layer with no
+        # features has nothing to write. The CSV above still ships. Antarctica
+        # has no substation polygons, and every continent gets every format.
+        log.info("    %s: no features — CSV only", stem)
+        return
+    dominant = dominant_fams.iloc[0]
     keep = fam == dominant
     if (~keep).any():
         log.warning("    %s: dropping %d non-%s feature(s) from the shapefile",
@@ -298,6 +316,26 @@ def build_raster_zip(
     return out
 
 
+def _with_code(entry: dict, code: str) -> dict:
+    """Copy `entry` with the {code} placeholder filled in on every source path."""
+    out = dict(entry)
+    for key in SOURCE_KEYS:
+        if key in out:
+            out[key] = out[key].format(code=code)
+    if "files" in out:
+        out["files"] = {stem.format(code=code): _with_code(spec, code)
+                        for stem, spec in out["files"].items()}
+    return out
+
+
+def pack_variants(layer_id: str, entry: dict, codes: list[str]) -> list[tuple[str, dict]]:
+    """One (pack-id, entry) pair per pack this layer produces — itself, or one
+    per continent when the layer is `continental: true`."""
+    if not entry.get("continental"):
+        return [(layer_id, entry)]
+    return [(f"{layer_id}-{code}", _with_code(entry, code)) for code in codes]
+
+
 def source_exists(entry: dict) -> bool:
     """Return False (with a warning) if any required source file is missing."""
     sources = {}
@@ -308,7 +346,7 @@ def source_exists(entry: dict) -> bool:
         sources[entry.get("doc", "layer")] = entry
 
     for name, spec in sources.items():
-        for key in ("geojson_gz", "shp", "geojson", "csv", "tif"):
+        for key in SOURCE_KEYS:
             if key in spec:
                 p = ROOT / spec[key]
                 if not p.exists():
@@ -321,6 +359,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--layer", help="Build only this layer ID")
     ap.add_argument("--out", default="data/releases", help="Output directory")
+    ap.add_argument("--code", choices=CONTINENT_CODES,
+                    help="Build only this continent's packs (implies continental layers only)")
     args = ap.parse_args()
 
     manifest_path = Path(__file__).parent / "release_manifest.yaml"
@@ -341,32 +381,35 @@ def main() -> None:
             sys.exit(1)
         layers = {args.layer: layers[args.layer]}
 
+    codes = [args.code] if args.code else CONTINENT_CODES
+
     ok = skipped = missing = 0
 
     for layer_id, entry in layers.items():
-        if entry.get("skip"):
+        if entry.get("skip") or (args.code and not entry.get("continental")):
             log.info("[skip] %s", layer_id)
             skipped += 1
             continue
 
-        log.info("[%s]", layer_id)
+        for pack_id, spec in pack_variants(layer_id, entry, codes):
+            log.info("[%s]", pack_id)
 
-        if not source_exists(entry):
-            missing += 1
-            continue
+            if not source_exists(spec):
+                missing += 1
+                continue
 
-        try:
-            if "tif" in entry:
-                outs = [build_raster_zip(layer_id, entry, disclaimer, out_dir)]
-            else:
-                outs = build_vector_zips(layer_id, entry, disclaimer, out_dir)
-            for out in outs:
-                size = out.stat().st_size / 1_000_000
-                log.info("  → %s  (%.1f MB)", out.relative_to(ROOT), size)
-            ok += 1
-        except Exception as exc:
-            log.error("  ERROR: %s", exc)
-            missing += 1
+            try:
+                if "tif" in spec:
+                    outs = [build_raster_zip(pack_id, spec, disclaimer, out_dir)]
+                else:
+                    outs = build_vector_zips(pack_id, spec, disclaimer, out_dir)
+                for out in outs:
+                    size = out.stat().st_size / 1_000_000
+                    log.info("  → %s  (%.1f MB)", out.relative_to(ROOT), size)
+                ok += 1
+            except Exception as exc:
+                log.error("  ERROR: %s", exc)
+                missing += 1
 
     log.info("")
     log.info("Done: %d built, %d skipped, %d missing/failed", ok, skipped, missing)

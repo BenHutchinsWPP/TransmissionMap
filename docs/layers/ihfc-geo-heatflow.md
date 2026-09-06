@@ -7,13 +7,13 @@
 | **Provider** | [International Heat Flow Commission (IHFC)](https://ihfc-iugg.org/) / [GFZ Data Services](https://dataservices.gfz-potsdam.de/), Potsdam |
 | **Dataset** | [Global Heat Flow Database Release 2024, v2026.03](https://doi.org/10.5880/fidgeo.2024.014) — `GHFBD-R2024_v.2026-03.zip` (~18 MB, tab-delimited point data, ~39 MB uncompressed) |
 | **DOI** | `10.5880/fidgeo.2024.014` (GFZ Data Services) |
-| **Coverage** | Global measurement points; filtered to North America (lat 5–75, lon −170 to −50) → ~33,500 points |
+| **Coverage** | Worldwide (lat −85 to 85) → ~89,300 measurement points |
 | **Vintage** | Release 2024, version 2026.03 |
 | **Acquired** | 2026-06-05 |
 | **License** | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — attribution **required** |
 | **Attribution required** | "© IHFC / GFZ Data Services (CC BY 4.0) — Global Heat Flow Database Release 2024" |
 | **Citation** | Global Heat Flow Data Assessment Group et al. (2024). *The Global Heat Flow Database: Release 2024*. V. 2026.03. GFZ Data Services. https://doi.org/10.5880/fidgeo.2024.014 |
-| **Served** | `data/layers/ihfc_geo_heatflow.pmtiles` — raster PMTiles (WEBP, baked color, z2–7) + `ihfc_geo_heatflow_lut.i16`/`.json` for hover readout (lazy-loaded) |
+| **Served** | `data/layers/ihfc_geo_heatflow.pmtiles` — raster PMTiles (WEBP, baked color, z2–7) + `ihfc_geo_heatflow_lut.i16.gz`/`.json` for hover readout (lazy-loaded) |
 | **Built by** | `scripts/build_geothermal_resource.sh` (+ `scripts/geo_color_ramp.txt`) → `data/build/geothermal/` → PMTiles + COG |
 | **Raw input** | `IHFC_2024_GHFDB_v.2026.03.txt` from `GHFBD-R2024_v.2026-03.zip` (auto-downloaded to `data/raw/geothermal/` — **zip not committed**, ~18 MB) |
 
@@ -53,7 +53,7 @@ Like the wind and solar layers, there is **no attribute table and no per-feature
 | NoData | 0 — cells with no data within 2° of a measurement (rendered transparent) |
 | Cell size | 0.5° (~55 km) — coarse, appropriate for IDW of sparse point data |
 | CRS | EPSG:4326 |
-| NA value range | ~1–999 mW/m²; mean ≈ 116 mW/m² across ~33,500 NA points |
+| World value range | ~1–999 mW/m²; mean ≈ 94, median ≈ 65 mW/m² across ~89,300 points |
 
 ## Processing — `scripts/build_geothermal_resource.sh`
 
@@ -61,13 +61,13 @@ Key difference vs wind and solar: the source is **scattered measurement points**
 
 1. **Download** the IHFC 2024 zip from GFZ Data Services into `data/raw/geothermal/` (skipped if already present). ~18 MB, direct HTTP GET, no login.
 2. **Extract** the `.txt` file (the `.xlsx` and PDF are skipped).
-3. **Filter** to NA bbox (lat 5–75, lon −170 to −50), drop implausible values (hf ≤ 1 or ≥ 1000 mW/m²), write `data/build/geothermal/na_heatflow.csv`. The `.txt` uses latin-1 encoding (has `²` as byte 0xb2). Columns used (tab-delimited, skip `#` lines + 4 metadata header rows): index 0 = P1 (`heat_flow`, mW/m²), index 3 = P4 (latitude), index 4 = P5 (longitude).
+3. **Filter** to lat −85 to 85, drop implausible values (hf ≤ 1 or ≥ 1000 mW/m²), write `data/build/geothermal/world_heatflow.csv`. The `.txt` uses latin-1 encoding (has `²` as byte 0xb2). Columns used (tab-delimited, skip `#` lines + 4 metadata header rows): index 0 = P1 (`heat_flow`, mW/m²), index 3 = P4 (latitude), index 4 = P5 (longitude).
 4. **Write VRT** wrapping the CSV so `gdal_grid` can read it with explicit geometry columns.
-5. **Grid via IDW** (`gdal_grid -a invdist:power=2:smoothing=0.5:radius=2.0:max_points=7:min_points=1`) at 0.5° (240×140 cells for the NA bbox). Radius of 2° fills sparse Arctic/Mexico coverage sensibly.
+5. **Grid via IDW** (`gdal_grid -a invdist:power=2:smoothing=0.5:radius=2.0:max_points=7:min_points=1`) at 0.5° (720×340 cells worldwide). Radius of 2° fills sparse coverage sensibly; cells with no measurement inside that radius stay NoData, which leaves genuine gaps where there are no measurements.
 6. **Download artifact** → `gdal_translate -of COG -ot Float32` to `data/build/ihfc_geo_heatflow.tif` — keeps the **actual mW/m² values** for GIS use. At 0.5° the file is tiny (well under 1 MB). `build_releases.py` bundles it into `data/releases/ihfc-geo-heatflow.zip`.
 7. **Bake colour** → `gdaldem color-relief -alpha` using `scripts/geo_color_ramp.txt`, then reproject the RGBA raster to EPSG:3857.
 8. **Tile** → `gdal_translate -of MBTILES -co TILE_FORMAT=WEBP` + `gdaladdo` overviews → `pmtiles convert` to `data/layers/ihfc_geo_heatflow.pmtiles` (z2–7).
-9. **Hover LUT** → resample to 0.5°, scale to Int16 (×10), write `.i16` + `.json` sidecar.
+9. **Hover LUT** → resample to 0.5°, scale to Int16 (×10), write gzipped `.i16.gz` + `.json` sidecar.
 
 ## Rendering — colour is baked into the tiles
 
@@ -75,7 +75,7 @@ The heat-flow → colour mapping is applied **at build time** (`gdaldem color-re
 
 ### Hover readout — value at the cursor
 
-A coarse **value lookup grid** ships alongside the tiles: `data/layers/ihfc_geo_heatflow_lut.i16` (Int16 = round(mW/m² × 10), 0.5°, NW-origin row-major, NoData = 0) + `ihfc_geo_heatflow_lut.json` (dims + bbox + scale). Lazy-loaded on first enable; sampled on `mousemove` by the generic raster-probe registry (`RASTER_PROBES` in `assets/raster-probes.ts`, shared with wind and solar). Prints `"N mW/m² at cursor"`.
+A coarse **value lookup grid** ships alongside the tiles: `data/layers/ihfc_geo_heatflow_lut.i16.gz` (Int16 = round(mW/m² × 10), 0.5°, NW-origin row-major, NoData = 0) + `ihfc_geo_heatflow_lut.json` (dims + bbox + scale). Lazy-loaded on first enable; sampled on `mousemove` by the generic raster-probe registry (`RASTER_PROBES` in `assets/raster-probes.ts`, shared with wind and solar). Prints `"N mW/m² at cursor"`.
 
 Ramp (single source of truth: `scripts/geo_color_ramp.txt`, mirrored by `GEO_RAMP_STOPS` in `src/colors/ramps.ts`): transparent pale yellow → orange → dark red over **0–150 mW/m²**; values above 150 clamp to dark red; NoData (0) is transparent.
 

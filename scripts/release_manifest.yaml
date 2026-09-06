@@ -22,6 +22,12 @@
 # map layer whose pack legitimately bundles two geometry files. Every other
 # multi-file source from the old manifest has been split into one top-level
 # entry per map layer.
+# `continental: true` builds the layer once per Geofabrik continent
+# (na eu as sa af oc ca an) instead of once worldwide: every source path takes a
+# `{code}` placeholder, and the packs are named `<layer-id>-<code>.zip` /
+# `<layer-id>-<code>-shp.zip`. Every format the layer offers is built for every
+# continent, which is what lets the layer panel expand any of them into the same
+# eight download links. See docs/release-artifacts.md.
 # `skip: true` silently skips the layer (live services, no-redistribution).
 #
 # doc: path to docs/layers/<layer>.md — included in every ZIP.
@@ -43,16 +49,21 @@ layers:
 
   osm-transmission-lines:
     doc: docs/layers/osm-transmission-lines.md
-    shp: data/build/transmission_lines.gpkg
+    continental: true
+    shp: data/build/transmission_lines_{code}.gpkg
 
   osm-substations-points:
     doc: docs/layers/osm-substations.md
-    geojson_gz: data/layers/osm_substations_points.geojson.gz
+    continental: true
+    csv: data/build/substation_osm_{code}.csv
+    lat_col: lat
+    lon_col: lon
     csv_only: true
 
   osm-substations-polygons:
     doc: docs/layers/osm-substations.md
-    geojson_gz: data/layers/osm_substations_polygons.geojson.gz
+    continental: true
+    geojson_gz: data/layers/osm_substations_polygons_{code}.geojson.gz
 
   ogf-planned-transmission:
     skip: true  # no redistribution; users download from ourgridfuture.org
@@ -82,19 +93,22 @@ layers:
 
   osm-generators:
     doc: docs/layers/osm-generators.md
-    csv: data/build/generator_osm.csv
+    continental: true
+    csv: data/build/generator_osm_{code}.csv
     lat_col: lat
     lon_col: lon
     csv_only: true
 
   osm-plants-points:
     doc: docs/layers/osm-plants.md
-    geojson_gz: data/layers/osm_plants_points.geojson.gz
+    continental: true
+    geojson_gz: data/layers/osm_plants_points_{code}.geojson.gz
     csv_only: true
 
   osm-plants-polygons:
     doc: docs/layers/osm-plants.md
-    geojson_gz: data/layers/osm_plants_polygons.geojson.gz
+    continental: true
+    geojson_gz: data/layers/osm_plants_polygons_{code}.geojson.gz
 
   # ── Pipelines ─────────────────────────────────────────────────────────────
 
@@ -109,11 +123,13 @@ layers:
 
   osm-pipelines-lines:
     doc: docs/layers/osm-pipelines.md
-    shp: data/build/pipeline_routes.gpkg
+    continental: true
+    shp: data/build/pipeline_routes_{code}.gpkg
 
   osm-pipelines-points:
     doc: docs/layers/osm-pipelines.md
-    geojson_gz: data/layers/osm_pipelines_points.geojson.gz
+    continental: true
+    geojson_gz: data/layers/osm_pipelines_points_{code}.geojson.gz
     csv_only: true
 
   # ── Renewable Resources ───────────────────────────────────────────────────
@@ -196,7 +212,8 @@ layers:
 
   osm-datacenters:
     doc: docs/layers/osm-datacenters.md
-    geojson_gz: data/layers/osm_datacenters.geojson.gz
+    continental: true
+    geojson_gz: data/layers/osm_datacenters_{code}.geojson.gz
     csv_only: true
 
   worldpop-pop-density:

@@ -4,10 +4,8 @@ Inventory of all data files for the current build, with sizes and sources. These
 files live under `data/` and are required for the app to function. Sizes are read
 from a completed local build; live-feed artifacts vary with each cron refresh.
 
-The OSM source file (`north-america-latest.osm.pbf`, 19.2 GB) is not listed —
-it is re-downloaded from Geofabrik on demand and never committed. This build's
-OSM-derived artifacts were rebuilt from the fresh 2026-07-13 Geofabrik extract,
-which includes the recovered line voltages and the new `is_dc` HVDC field.
+The OSM source PBFs are not listed — they are re-downloaded from Geofabrik on
+demand and never committed.
 
 ---
 
@@ -24,30 +22,30 @@ built by `make tiles`; they're listed here because they still ship as app data.
 | `data/layers/crithab.pmtiles` | 74 MB | USFWS ESA critical habitat polygons (PMTiles) |
 | `data/layers/padus.pmtiles` | 68 MB | USGS PAD-US protected & managed lands (PMTiles) |
 | `data/layers/usfs_wildfire_potential.pmtiles` | 64 MB | USFS wildfire hazard potential raster (PMTiles, baked color) |
-| `data/layers/osm_transmission_lines.pmtiles` | 58 MB | OSM transmission lines (PMTiles, zoom 2–11) |
+| `data/layers/osm_transmission_lines_kv{0,50,100,125,200,300}.pmtiles` | ~30–70 MB each | OSM transmission lines, world, one archive per voltage class (PMTiles, zoom 2–11). Split because one world file is past the 100 MiB per-file ceiling — see [hosting-plan.md](hosting-plan.md). |
 | `data/layers/us_zcta.pmtiles` | 55 MB | Census ZIP Code Tabulation Areas, 33,791 features (PMTiles, zoom 4–11) |
 | `data/layers/hifld_transmission_lines.pmtiles` | 38 MB | HIFLD transmission lines (PMTiles, zoom 2–11) |
 | `data/layers/osm_pipelines_lines.pmtiles` | 30 MB | OSM pipeline routes (PMTiles, zoom 3–12) |
-| `data/layers/worldpop_pop_density_lut.i16` | 25 MB | Coarse Int16 people/km² value grid for the legend hover readout (lazy-loaded) |
-| `data/layers/osm_generators.pmtiles` | 17 MB | OSM generators (PMTiles, zoom 7–14) |
+| `data/layers/worldpop_pop_density_lut.i16.gz` | 2.3 MB | Coarse Int16 people/km² value grid for the legend hover readout (lazy-loaded, gzipped — fetched whole, no range path) |
+| `data/layers/osm_generators.pmtiles` | 63 MB | OSM generators, world (PMTiles, zoom 7–13) |
 | `data/layers/hifld_natgas_lines.pmtiles` | 16 MB | HIFLD natural gas pipeline lines (PMTiles) |
 | `data/layers/retail_territories.pmtiles` | 15 MB | HIFLD retail electric territories (PMTiles, zoom 2–10) |
 | `data/layers/wildfire_live.geojson.gz` | 14 MB | Live wildfire hotspots, perimeters, incidents and smoke — live feed (cron-refreshed) |
 | `data/layers/worldpop_pop_density.pmtiles` | 11 MB | WorldPop population density, log-scale (raster PMTiles) — CC BY 4.0 |
 | `data/layers/gsa_solar_pvout.pmtiles` | 10 MB | Global Solar Atlas PVOUT, kWh/kWp/day (raster PMTiles, WEBP, zoom 2–7) — CC BY 4.0 |
 | `data/layers/nws_zones.pmtiles` | 7.2 MB | NWS forecast zones, shared join infra for zone-based alerts (PMTiles) |
-| `data/layers/osm_substations_polygons.geojson.gz` | 4.8 MB | OSM substation polygon footprints |
+| `data/layers/osm_substations_polygons.pmtiles` | ~5 MB | OSM substation polygon footprints (PMTiles) |
 | `data/layers/tribal_lands.geojson.gz` | 4.5 MB | Census TIGER AIANNH tribal lands |
 | `data/layers/admin1_boundaries.geojson.gz` | 4.1 MB | geoBoundaries CGAZ states/provinces worldwide, 3,224 units (DP 0.01°) |
 | `data/layers/countries.geojson.gz` | 3.9 MB | geoBoundaries CGAZ country outlines, 218 features (DP 0.005°) — CC BY 4.0 |
 | `data/layers/nlr_wind_100m.pmtiles` | 3.4 MB | NREL/NLR WIND Toolkit mean wind speed @ 100 m (raster PMTiles, WEBP, zoom 1–6) |
-| `data/layers/osm_plants_polygons.geojson.gz` | 3.4 MB | OSM power plant polygon footprints |
+| `data/layers/osm_plants_polygons.pmtiles` | ~4 MB | OSM power plant polygon footprints (PMTiles, zoom 5–12) |
 | `data/layers/county_boundaries.pmtiles` | 2.5 MB | Census county boundaries — paints the Census Counties layer and is the shared join target for ODIN outages and NWS county alerts (PMTiles, zoom 2–8) |
 | `data/layers/bia_tribal_lands.geojson.gz` | 1.9 MB | BIA AIAN-LAR tribal lands |
-| `data/layers/osm_substations_points.geojson.gz` | 1.9 MB | OSM substation points |
-| `data/layers/gsa_solar_pvout_lut.i16` | 1.5 MB | Coarse Int16 kWh/kWp/day value grid for the legend hover readout (lazy-loaded) |
-| `data/layers/nlr_wind_100m_lut.i16` | 1.3 MB | Coarse Int16 m/s value grid for the legend hover readout (lazy-loaded) |
-| `data/layers/usgs_seismic_pga_lut.i16` | 1.2 MB | Coarse Int16 PGA (g) value grid for the legend hover readout (lazy-loaded) |
+| `data/layers/osm_substations_points.pmtiles` | ~25 MB | OSM substation points, world (PMTiles, zoom 4–13) |
+| `data/layers/gsa_solar_pvout_lut.i16.gz` | 1.2 MB | Coarse Int16 kWh/kWp/day value grid for the legend hover readout (lazy-loaded) |
+| `data/layers/nlr_wind_100m_lut.i16.gz` | 0.4 MB | Coarse Int16 m/s value grid for the legend hover readout (lazy-loaded) |
+| `data/layers/usgs_seismic_pga_lut.i16.gz` | 0.2 MB | Coarse Int16 PGA (g) value grid for the legend hover readout (lazy-loaded) |
 | `data/layers/hifld_substations.geojson.gz` | 1012 KB | HIFLD substation points |
 | `data/layers/ogf_planned_transmission.geojson.gz` | 931 KB | Our Grid Future planned transmission projects |
 | `data/layers/eia_generators.geojson.gz` | 925 KB | EIA Form 860 generator units |
@@ -63,7 +61,7 @@ built by `make tiles`; they're listed here because they still ship as app data.
 | `data/layers/westtec_10yr.geojson.gz` | 111 KB | WestTEC 10-Year Horizon planned transmission |
 | `data/layers/hifld_natgas_points.geojson.gz` | 106 KB | HIFLD natural gas & petroleum facility points |
 | `data/layers/mines.geojson.gz` | 69 KB | MSHA large mines, peak employment ≥ 50 (~2.3k points, gzipped GeoJSON) |
-| `data/layers/ihfc_geo_heatflow_lut.i16` | 66 KB | Coarse Int16 mW/m² value grid for the legend hover readout (lazy-loaded) |
+| `data/layers/ihfc_geo_heatflow_lut.i16.gz` | 185 KB | Coarse Int16 mW/m² value grid for the legend hover readout (lazy-loaded) |
 | `data/layers/osm_datacenters.geojson.gz` | 65 KB | OSM data center facilities |
 | `data/layers/boem_wind_leases.geojson.gz` | 59 KB | BOEM offshore wind lease polygons (51 leases, gzipped GeoJSON) |
 | `data/layers/osm_pipelines_points.geojson.gz` | 44 KB | OSM pipeline feature points (valves, etc.) |
@@ -86,9 +84,17 @@ built by `make tiles`; they're listed here because they still ship as app data.
 
 These live under `data/releases/`, served as download links in the layer panel
 (`downloads` in the registry → `assets/ui/ui-layer-rows.ts`). In prod they are
-fetched from the orphan `data-static` branch via `raw.githubusercontent.com`
-(pushed by `make publish-data`), not from `main` or Pages. `build_releases.py`
-builds them from `scripts/release_manifest.yaml`.
+fetched from the `data-static` branch via `raw.githubusercontent.com` (pushed by
+`make publish-data`), not from `main` or Pages. `build_releases.py` builds them
+from `scripts/release_manifest.yaml`.
+
+**Packs stay per continent.** The map reads one planet-wide tileset per layer, but
+a download is a file someone opens in QGIS, so OSM-derived packs keep the
+continental split — one per code (`na eu as sa af oc ca an`). Layers marked
+`continental: true` in `release_manifest.yaml` take a `{code}` placeholder, and
+**every format that layer offers is built for every continent**: the SHP pack lands
+as `<layer-id>-<code>-shp.zip`, the code ahead of the format suffix.
+`getRegionalDownloadPath` in `assets/ui/ui-layer-rows.ts` inserts it.
 
 **Convention (one pack per map layer, format-named):** every download link maps
 to exactly one map layer — packs never bundle two layers together. The download
@@ -96,39 +102,41 @@ dropdown is labeled by the *format*, not "ZIP". Geometry determines what ships:
 
 | Geometry | Menu option(s) | ZIP(s) | Contents |
 |---|---|---|---|
-| point | **CSV** | `<layer-id>.zip` | `<name>.csv` (lat/lon + attributes; no GeoJSON) |
-| line / polygon | **GeoJSON**, **SHP** | `<layer-id>.zip`, `<layer-id>-shp.zip` | GeoJSON zip: `<name>.geojson` + `<name>.csv`; SHP zip: `.shp/.shx/.dbf/.prj/.cpg` + `<name>.csv` |
-| raster | **GeoTIFF** | `<layer-id>.zip` | `<layer-id>.tif` (COG) |
+| point | **CSV** | `<pack-id>.zip` | `<name>.csv` (lat/lon + attributes; no GeoJSON) |
+| line / polygon | **GeoJSON**, **SHP** | `<pack-id>.zip`, `<pack-id>-shp.zip` | GeoJSON zip: `<name>.geojson` + `<name>.csv`; SHP zip: `.shp/.shx/.dbf/.prj/.cpg` + `<name>.csv` |
+| raster | **GeoTIFF** | `<pack-id>.zip` | `<layer-id>.tif` (COG) |
+
+`<pack-id>` is the layer id, or `<layer-id>-<code>` for a continental layer.
 
 Every ZIP also bundles the layer doc (`<layer-id>.txt`, via pandoc) and
 `disclaimer.txt`. The attribute-only CSV rides inside *both* the GeoJSON and SHP
 zips so users can preview the tabular data without downloading geometry.
-`data/releases/` currently holds 35 ZIP packs totalling 525 MB; individual pack
-sizes vary and are not pinned here.
+Nothing in `data/releases/` is built without a download link pointing at it: a
+continental layer produces only its eight coded packs, never an extra worldwide one.
 
 | Layer | Geometry | Pack(s) in `data/releases/` |
 |---|---|---|
 | `hifld-transmission-lines` | line | `.zip` + `-shp.zip` |
 | `hifld-substations` | point | `.zip` (CSV) |
-| `osm-transmission-lines` | line | `.zip` + `-shp.zip` |
-| `osm-substations-points` | point | `.zip` (CSV) |
-| `osm-substations-polygons` | polygon | `.zip` + `-shp.zip` |
+| `osm-transmission-lines` | line | `-<code>.zip` + `-<code>-shp.zip` (×8 continents) |
+| `osm-substations-points` | point | `-<code>.zip` (CSV, ×8 continents) |
+| `osm-substations-polygons` | polygon | `-<code>.zip` + `-<code>-shp.zip` (×8 continents) |
 | `wecc-paths` | vector (1 pack, points + highlight lines) | `.zip` (GeoJSON only — mixed geometry; SHP deferred) |
 | `eia-generators` | point | `.zip` (CSV) |
-| `osm-generators` | point | `.zip` (CSV) |
-| `osm-plants-points` | point | `.zip` (CSV) |
-| `osm-plants-polygons` | polygon | `.zip` + `-shp.zip` |
+| `osm-generators` | point | `-<code>.zip` (CSV, ×8 continents) |
+| `osm-plants-points` | point | `-<code>.zip` (CSV, ×8 continents) |
+| `osm-plants-polygons` | polygon | `-<code>.zip` + `-<code>-shp.zip` (×8 continents) |
 | `hifld-natgas-lines` | line | `.zip` + `-shp.zip` |
 | `hifld-natgas-points` | point | `.zip` (CSV) |
-| `osm-pipelines-lines` | line | `.zip` + `-shp.zip` |
-| `osm-pipelines-points` | point | `.zip` (CSV) |
+| `osm-pipelines-lines` | line | `-<code>.zip` + `-<code>-shp.zip` (×8 continents) |
+| `osm-pipelines-points` | point | `-<code>.zip` (CSV, ×8 continents) |
 | `nlr-wind-100m` | raster | `.zip` — COG GeoTIFF, real m/s (EPSG:4326, Float32) |
 | `ihfc-geo-heatflow` | raster | `.zip` — COG GeoTIFF, real mW/m² (0.5°) — CC BY 4.0 |
 | `nrel-hydrothermal-points` | point | `.zip` (CSV) |
 | `nerc-regions` | polygon | `.zip` + `-shp.zip` |
 | `control-areas` | polygon | `.zip` + `-shp.zip` |
 | `retail-territories` | polygon | `.zip` + `-shp.zip` |
-| `osm-datacenters` | point | `.zip` (CSV) |
+| `osm-datacenters` | point | `-<code>.zip` (CSV, ×8 continents) |
 | `worldpop-pop-density` | raster | `.zip` — COG GeoTIFF |
 
 Layers with no pack show no download button at all; their source link lives in

@@ -1,7 +1,7 @@
 # Build Pipeline — Regenerating the Data
 
-The full pipeline is reproducible end-to-end. You only need this if you want fresher
-data than the July 2026 build shipped in `data/`. For the per-layer processing detail
+The full pipeline is reproducible end-to-end. You only need it to rebuild the data
+in `data/` against fresher upstream sources. For the per-layer processing detail
 (filters, column drops, computed fields) see [`layers/`](layers/).
 
 ---
@@ -13,21 +13,24 @@ data than the July 2026 build shipped in `data/`. For the per-layer processing d
 #    tippecanoe must be built from source — see https://github.com/felt/tippecanoe
 make install
 
-# 2. Place the North America PBF in data/raw/osm/
-#    Download from https://download.geofabrik.de/north-america.html
-cp ~/Downloads/north-america-latest.osm.pbf data/raw/osm/
+# 2. Fetch the eight continental PBFs into data/raw/osm/
+python3 scripts/fetch_geofabrik_osm.py --region europe --filter-tags   # repeat per region
 
 # 3. Extract OSM/HIFLD/EIA layers → data/build/
-make pipeline
+#    make continental-all builds all eight; make pipeline builds one region
+make continental-all
 
 # 4. Build PMTiles and GeoJSON for the app → data/layers/
 make tiles
 
-# 5. (deploying) Push data/layers/ + data/releases/ to the orphan 'data-static'
-#    branch that prod fetches from — local dev reads data/layers/ directly
+# 5. Join the 8 continental OSM builds into one world tileset per layer
+make global-tiles
+
+# 6. (deploying) Push data/layers/ + data/releases/ to the data-static branch
+#    prod fetches from — local dev reads data/layers/ directly
 make publish-data
 
-# 6. Bump DATA_VERSION in sw.js (commit to main) — the service worker caches
+# 7. Bump DATA_VERSION in sw.js (commit to main) — the service worker caches
 #    PMTiles byte ranges cache-first; ranges cached from the old file corrupt
 #    reads against a rebuilt one
 ```
@@ -64,19 +67,62 @@ make tiles
 
 ---
 
-## OSM extraction toolchain
+## Continental OSM boundaries & extraction toolchain
+
+The OSM pipeline builds once per Geofabrik continent (`na eu as sa af oc ca an`).
+
+### Canonical regional boundaries
+
+Geofabrik publishes each extract's boundary as a `.poly` file (the osmium/osmosis
+polygon-filter format). The eight continental polygons are vendored at
+[`scripts/geofabrik_bounds/`](../scripts/geofabrik_bounds/):
+
+| Pack code | Region | Geofabrik extract |
+|---|---|---|
+| `na` | North America | `north-america-latest.osm.pbf` |
+| `eu` | Europe | `europe-latest.osm.pbf` |
+| `as` | Asia | `asia-latest.osm.pbf` |
+| `sa` | South America | `south-america-latest.osm.pbf` |
+| `af` | Africa | `africa-latest.osm.pbf` |
+| `oc` | Oceania | `australia-oceania-latest.osm.pbf` |
+| `ca` | Central America | `central-america-latest.osm.pbf` |
+| `an` | Antarctica | `antarctica-latest.osm.pbf` |
+
+The polygons overlap rather than meeting on a shared edge, so features near boundaries
+(e.g., Türkiye, Caucasus, western Russia) exist in both extracts. Deduplication is
+handled during transmission global tiling (`scripts/build_global_tiles.py`; see
+[hosting-plan.md](hosting-plan.md)).
+
+### Reproducing extracts from the OSM planet file
+
+`scripts/geofabrik_bounds/extract-continents.json` is an `osmium extract` config that
+cuts all eight continents out of the planet file in one pass, producing the filenames
+the pipeline expects (`data/raw/osm/<region>-latest.osm.pbf`):
+
+```bash
+curl -O https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf
+
+osmium extract -c scripts/geofabrik_bounds/extract-continents.json \
+  --overwrite planet-latest.osm.pbf
+```
+
+Tag-filtering the planet first with `osmium tags-filter` (using the tags from
+`scripts/fetch_geofabrik_osm.py`) and cutting the continents out of the result is
+much cheaper when only energy infrastructure layers are needed.
+
+### Extraction workflow
 
 Run via `make pipeline`:
 
-1. **Download** — Geofabrik publishes daily `.osm.pbf` extracts; this build uses
-   `north-america-latest.osm.pbf` (19.2 GB).
+1. **Download** — `scripts/fetch_geofabrik_osm.py` fetches continental extracts (or
+   download directly from Geofabrik).
 2. **Filter** — `osmium tags-filter` + `osmium extract` reduce the full continental PBF
    to a small subset, selecting only relevant tags and clipping to the target bounding
    box. This runs **once**, in `extract_osm_lines.py`: the filter is the union of every
    OSM extract script's tags (`SHARED_FILTER_TAGS` in `osm_common.py`), and the
    intermediate (`data/build/*_filtered.osm.pbf` + a `.filters` sidecar recording the
    tag set) is reused by the substation/generator/plant/datacenter scripts via
-   `find_pbf(need_tags=…)` — they fall back to the full 19.2 GB pbf only when the
+   `find_pbf(need_tags=…)` — they fall back to the full continental pbf only when the
    intermediate is missing, stale, or was built without their tags.
 3. **Convert** — `ogr2ogr` reads the filtered PBF via the GDAL OSM driver (with a
    project-local `osmconf.ini` that promotes `power` to the closed-way polygon list) and
@@ -95,24 +141,22 @@ Run via `make pipeline`:
 Two on-disk formats are served to the app, picked per layer by geometry profile:
 
 - **PMTiles** — vector tiles for *few-large* or *very dense* geometries (transmission /
-  pipeline lines, OSM generators, PAD-US, tribal lands, regions). Tiles load lazily via
+  pipeline lines, OSM generators, OSM substations & plant polygons, PAD-US, tribal lands, regions). Tiles load lazily via
   HTTP range requests and tippecanoe's simplification shrinks detailed geometry
   dramatically (e.g. PAD-US 806 MB SHP → 62 MB tiles).
-- **Gzipped GeoJSON** (`.geojson.gz`) — for *many-small* geometries (substation / plant
-  points & polygons, EIA generators, pipeline points). These tile *poorly* (tens of
-  thousands of tiny polygons replicate across zoom levels and *grow* as PMTiles), but
-  gzip crushes GeoJSON's repetitive structure ~8×. Files are shipped **pre-gzipped**;
+- **Gzipped GeoJSON** (`.geojson.gz`) — for *many-small* geometries (plant
+  points, EIA generators, pipeline points). Files are shipped **pre-gzipped**;
   the app fetches the `.gz` and decompresses in-browser via `DecompressionStream`
   (`fetchGeojson` in `assets/layers/layer-init.ts`). `build_tiles.py` gzips all served
   GeoJSON as its final step.
 
 Neither format lives in `main` — `data/layers/` and `data/releases/` are gitignored.
-`make publish-data` (`scripts/publish_data.sh`) force-pushes them as a single orphan
-commit to the **`data-static`** branch, and prod fetches from
-`raw.githubusercontent.com/.../data-static/` (CORS-enabled; see the `DATA_ORIGIN` logic
-in `assets/constants.ts`). The GitHub Pages deploy (`.github/workflows/deploy.yml`)
-builds only the app bundle — it ships no data. The live wildfire feed uses a separate
-orphan `data` branch on the same pattern (see `layers/wildfire-live.md`).
+`make publish-data` force-pushes the layers `assets/constants.ts` names to the orphan
+`data-static` branch; the per-continent join inputs stay local. Where each asset class
+is hosted, and the 100 MiB ceiling that shapes the archives, is
+[hosting-plan.md](hosting-plan.md). The GitHub Pages deploy
+(`.github/workflows/deploy.yml`) builds only the app bundle — it ships no data. The
+live wildfire feed uses a separate orphan `data` branch (see `layers/wildfire-live.md`).
 
 The per-layer docs in [`layers/`](layers/) record which format each layer uses and the
 tippecanoe zoom range applied.

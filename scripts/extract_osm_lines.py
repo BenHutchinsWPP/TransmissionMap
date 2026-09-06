@@ -321,7 +321,7 @@ def _export_centroids(geojsonseq_path, out_shp, batch_size=5000,
     log.info("    -> %d points from %d features", centroid_count, total_features)
 
 
-def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False):
+def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False, suffix=""):
     """osmium tags-filter → osmium extract → ogr2ogr per feature."""
     tag_map = settings.get("tag_map", {})
     bb = settings.get("bounding_box", {})
@@ -441,7 +441,7 @@ def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False
                 extra = _EXTRA_WHERE.get(feat)
                 sql_where = f"({where}) AND {extra}" if extra else where
                 for layer in layers:
-                    out = Path(output_dir) / f"{safe}_{layer}.shp"
+                    out = Path(output_dir) / f"{safe}_{layer}{suffix}.shp"
                     local_osmconf = Path(__file__).parent.parent / "osmconf.ini"
                     osmconf_args = (
                         ["--config", "OSM_CONFIG_FILE", str(local_osmconf)]
@@ -461,8 +461,8 @@ def fast_convert(pbf_files, settings, enabled_features, output_dir, all_na=False
         log.info("  Done: %s", stem)
 
 
-def main(settings_path="settings.yaml", input_dir=None, output_dir=None,
-         features=None, all_na=False):
+def main(settings_path="settings.yaml", input_dir=None, input_file=None, output_dir=None,
+         features=None, all_na=False, suffix=""):
     _require_tools()
     d = Path(__file__).resolve().parent.parent
     os.chdir(d)
@@ -479,20 +479,25 @@ def main(settings_path="settings.yaml", input_dir=None, output_dir=None,
     enabled = features or s.get("features", list(tm.keys()))
 
     log.info("OSM → SHP extraction")
-    log.info("  Input:   %s", input_dir)
     log.info("  Output:  %s", output_dir)
 
-    pbfs = find_pbf_files(input_dir)
-    if not pbfs:
-        log.error("No .osm.pbf files in %s", input_dir)
-        sys.exit(1)
-    log.info("  Files:   %d", len(pbfs))
+    if input_file:
+        pbfs = [input_file]
+        log.info("  Input file: %s", input_file)
+    else:
+        log.info("  Input dir:  %s", input_dir)
+        pbfs = find_pbf_files(input_dir)
+        if not pbfs:
+            log.error("No .osm.pbf files in %s", input_dir)
+            sys.exit(1)
+        log.info("  Files:   %d", len(pbfs))
+
     for f in pbfs:
         log.info("    %s  (%.1f GB)", Path(f).name, os.path.getsize(f) / 1e9)
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    fast_convert(pbfs, s, enabled, output_dir, all_na=all_na)
+    fast_convert(pbfs, s, enabled, output_dir, all_na=all_na, suffix=suffix)
     log.info("")
     log.info("Output (%d files):", len(list(Path(output_dir).glob("*.shp"))))
     for f in sorted(Path(output_dir).glob("*.shp")):
@@ -504,7 +509,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="OSM PBF → Shapefiles (FAST mode only)")
     ap.add_argument("--settings", "-s", default="settings.yaml")
     ap.add_argument("--input-dir", "-i")
+    ap.add_argument("--input-file", "-I")
     ap.add_argument("--output-dir", "-o")
+    ap.add_argument("--suffix", default="", help="Suffix for output shapefiles (e.g. _eu, _na)")
     ap.add_argument("--verbose", "-v", action="store_true")
     ap.add_argument("--debug", "-d", action="store_true")
     ap.add_argument("--features", "-f", nargs="*",
@@ -514,5 +521,5 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.debug:
         log.setLevel(logging.DEBUG)
-    main(settings_path=a.settings, input_dir=a.input_dir,
-         output_dir=a.output_dir, features=a.features, all_na=a.all_na)
+    main(settings_path=a.settings, input_dir=a.input_dir, input_file=a.input_file,
+         output_dir=a.output_dir, features=a.features, all_na=a.all_na, suffix=a.suffix)

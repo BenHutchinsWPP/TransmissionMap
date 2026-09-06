@@ -28,12 +28,15 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
 	@echo "  make install     create venv + install Python deps + verify system tools"
 	@echo "  make pipeline    OSM PBF → SHP/CSV in $(BUILD)/"
+	@echo "  make continental-osm REGION=<region>  build all OSM layers for a continent (e.g. REGION=eu / REGION=oceania)"
+	@echo "  make continental-all build all OSM layers for all 8 continental extracts"
+	@echo "  make global-tiles    join the 8 continental builds into one world tileset per layer, under the 100 MiB per-file host ceiling (transmission is re-tiled and split by voltage class)"
 	@echo "  make land        build PAD-US + Tribal land layers → $(BUILD)/{padus,tribal_lands}.gpkg (no OSM needed)"
 	@echo "  make regions     build NERC/BA/Retail region layers → $(BUILD)/ (manual parquet input)"
 	@echo "  make natgas      build HIFLD natural gas pipelines + points → $(BUILD)/ (manual parquet input)"
@@ -52,7 +55,7 @@ help:
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
-	@echo "  make publish-data force-push data/layers + data/releases → orphan 'data-static' branch (raw host; needs public repo)"
+	@echo "  make publish-data force-push the layers constants.ts names + data/releases → orphan 'data-static' branch (prod host; needs public repo)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
 	@echo "  make clean       remove $(BUILD)/ AND data/layers + data/releases"
@@ -165,6 +168,34 @@ pipeline:
 	@echo "Done. Outputs in $(BUILD)/:"
 	@ls -lh $(BUILD)/ 2>/dev/null | awk 'NR>1 {print "  " $$NF "  (" $$5 ")"}'
 
+# ── Continental OSM Pipeline: generate all OSM layers per region ──────────
+# Usage:
+#   make continental-osm REGION=eu
+#   make continental-osm REGION=oceania
+#   make continental-all
+continental-osm:
+	@if [ -z "$(REGION)" ]; then \
+	    echo "ERROR: REGION is required. Example: make continental-osm REGION=eu"; \
+	    echo "Run '$(PY) $(SCRIPTS)/process_continental_osm.py --list' to see all regions."; \
+	    exit 1; \
+	fi
+	@$(PY) $(SCRIPTS)/process_continental_osm.py --region $(REGION)
+
+continental-all:
+	@$(PY) $(SCRIPTS)/process_continental_osm.py --all
+
+# ── One world tileset per layer ────────────────────────────────────────────
+# Folds the 8 continental builds into the planet-wide archives the map reads,
+# then caps the archives that would otherwise pass the host's 100 MiB per-file
+# ceiling. Transmission is the exception: it is re-tiled from the continental
+# GeoPackages in one global pass and cut into six voltage-class archives.
+# Download packs stay per-continent. See docs/hosting-plan.md.
+#   make global-tiles
+#   make global-tiles LAYER=osm_substations_points
+#   make global-tiles TRIM_ONLY=1   # just the ceiling caps, skip the joins
+global-tiles:
+	@$(PY) $(SCRIPTS)/build_global_tiles.py $(if $(LAYER),--only $(LAYER)) $(if $(TRIM_ONLY),--trim-only)
+
 # Helper: copy a GeoPackage from one stem to another.
 # Usage: $(call cp_shp,src_stem,dst_stem)
 define cp_shp
@@ -257,12 +288,12 @@ whp:
 
 # ── Active wildfire live layer (local dev) ───────────────────────────────────
 # Fetches everything live (VIIRS hotspots + NIFC perimeters/incidents + NOAA
-# HMS smoke) → data/layers/wildfire_live.geojson (single file, all _types).
+# HMS smoke) → data/layers/wildfire_live.geojson.gz (single file, all _types).
 # Pass pre-downloaded CSVs to the script directly for offline use. In
 # production this runs via .github/workflows/wildfire-data.yml.
 wildfire-dev:
 	@$(PY) $(SCRIPTS)/fetch_wildfire_live.py \
-		-o data/layers/wildfire_live.geojson
+		-o data/layers/wildfire_live.geojson.gz
 
 # ── Active NWS weather alerts live layer (local dev) ─────────────────────────
 # Fetches api.weather.gov active alerts, curates to an allowlisted set of
@@ -272,6 +303,14 @@ wildfire-dev:
 nws-alerts-dev:
 	@$(PY) $(SCRIPTS)/fetch_nws_alerts.py \
 		-o data/layers/nws_alerts.geojson
+
+# ── ODIN county power outages live layer (local dev) ─────────────────────────
+# Fetches the ORNL ODIN county aggregates → data/layers/odin_outages.json, which
+# the map joins onto county_boundaries by FIPS (see assets/odin-outages.ts).
+# In production this runs via .github/workflows/alerts-outages.yml.
+outages-dev:
+	@$(PY) $(SCRIPTS)/fetch_odin_outages.py \
+		-o data/layers/odin_outages.json
 
 # ── Live weather fields (local dev) ────────────────────────────────────────────
 # NOAA/NCEP GFS 0.25° forecasts (temperature, wind, humidity, etc.) via byte-range

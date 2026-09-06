@@ -5,6 +5,7 @@
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
+import type { LayerScope } from '../../src/types.js';
 import { YEAR_FILTER_MIN, YEAR_FILTER_MAX, YEAR_FILTER_DEFAULT } from '../../src/colors/ramps.js';
 import { MW_SLIDER_MAX, mwToPos } from '../filters.js';
 import { setLayerVisibility, applyAllGenModes } from '../visibility.js';
@@ -47,7 +48,7 @@ import { RASTER_PROBES, updateRasterArrow } from '../raster-probes.js';
 // an array), so reading it here costs nothing. ui-diagnostics.js and
 // diagnostics.js are NOT imported here — pulling either in statically would
 // defeat their lazy-chunk split (see ui-menubar.ts).
-import { getDiagLog, DIAG_EVENT } from '../diag-log.js';
+import { getDiagLog, DIAG_EVENT, recordDiagEvent } from '../diag-log.js';
 import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
 
 function resetLayerState() {
@@ -142,7 +143,9 @@ export async function init() {
 }
 
 // ─── Reset all layer settings to defaults ────────────────────────────────────
-function resetLayersToDefaults() {
+// Exported for assets/experiences.ts: a Map Experience starts from the same
+// clean slate the Reset button produces, so the two can never drift apart.
+export function resetLayersToDefaults() {
   resetLayerState();
   state.mwFilter = { min: 0, max: MW_SLIDER_MAX };
   state.smokeOpacity = 1;
@@ -189,6 +192,7 @@ function resetLayersToDefaults() {
   const hillshadeToggle = document.getElementById("hillshadeToggle") as HTMLInputElement | null;
   if (hillshadeToggle) hillshadeToggle.checked = false;
 
+  state.regionScope = 'usa';
   buildLayersPanel();
   buildLegends();
   applyAllGenModes();
@@ -258,8 +262,11 @@ function wireUI() {
   wireWeatherVarSelect();
   wireYearFilter();
   wireResetLayers();
+  wireRegionSelect();
   wireUnitsChanged();
   wireLangChanged();
+
+  wireExperienceDeepLink();
 
   wireFeatureSearch();
   wireGeocoder();
@@ -267,6 +274,122 @@ function wireUI() {
   wireMenubar();
   wirePanelTabs();
   wireMyData();
+}
+
+// The region selector scopes what the panel lists: 'usa' lists everything,
+// 'global' hides the US-only layers. Which continental download pack a button
+// points at is chosen per-download in the menu, not here. Map data is planet-wide
+// — one tileset per layer — so changing scope never reloads a source.
+function wireRegionSelect() {
+  const dropdown = document.getElementById("regionDropdown");
+  const btn = document.getElementById("regionDropdownBtn") as HTMLButtonElement | null;
+  const menu = document.getElementById("regionMenu");
+  const iconEl = document.getElementById("regionActiveIcon");
+  const textEl = document.getElementById("regionActiveText");
+  if (!dropdown || !btn || !menu) return;
+
+  const updateUI = () => {
+    const activeItem = menu.querySelector<HTMLButtonElement>(`.region-menu-item[data-region="${state.regionScope}"]`);
+    menu.querySelectorAll<HTMLButtonElement>(".region-menu-item").forEach(item => {
+      const active = item.dataset.region === state.regionScope;
+      item.classList.toggle("region-menu-item--active", active);
+      item.setAttribute("aria-checked", active ? "true" : "false");
+    });
+    if (activeItem) {
+      const svg = activeItem.querySelector("svg");
+      if (iconEl && svg) iconEl.innerHTML = svg.outerHTML;
+      const label = activeItem.querySelector(".region-menu-label");
+      if (textEl && label) textEl.textContent = label.textContent;
+    }
+  };
+
+  updateUI();
+
+  const items = () => [...menu.querySelectorAll<HTMLButtonElement>(".region-menu-item")];
+  const close = (refocus = false) => {
+    menu.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    if (refocus) btn.focus();
+  };
+  const open = (focusOption = false) => {
+    menu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    if (focusOption) {
+      (menu.querySelector<HTMLButtonElement>(".region-menu-item--active") ?? items()[0])?.focus();
+    }
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu.hidden) open(); else close();
+  });
+
+  // Arrow keys walk the options and wrap, matching the native <select> this
+  // replaced; the options are buttons, so Enter and Space already activate.
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      open(true);
+    }
+  });
+
+  menu.addEventListener("keydown", (e) => {
+    const all = items();
+    const i = all.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      all[(i + step + all.length) % all.length]?.focus();
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      (e.key === "Home" ? all[0] : all[all.length - 1])?.focus();
+    } else if (e.key === "Tab") {
+      close();
+    }
+  });
+
+  menu.addEventListener("click", (e) => {
+    const item = (e.target as Element)?.closest<HTMLButtonElement>(".region-menu-item");
+    if (!item || !item.dataset.region) return;
+    const nextScope = item.dataset.region as LayerScope;
+    close(true);
+    if (nextScope === state.regionScope) return;
+    state.regionScope = nextScope;
+    updateUI();
+    buildLayersPanel();
+    emit('region:changed', { region: state.regionScope });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target as Node)) close();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !menu.hidden) close(true);
+  });
+
+  on('region:changed', () => updateUI());
+}
+
+// A hash carrying `exp=<id>` restores a curated story. readUrlState() has
+// already parked the id in state; applying it needs a finished map, and the
+// catalogue plus the story controller live in the ui-experiences lazy chunk —
+// so this is the one place besides the File menu that pulls that chunk in.
+function wireExperienceDeepLink() {
+  if (!state.experienceId) return;
+  on('map:ready', async () => {
+    try {
+      const m = await import('./ui-experiences.js');
+      m.restoreFromUrl();
+    } catch (err) {
+      // The chunk didn't load, so nothing applied the preset. Drop the id or
+      // every later write would keep claiming a story the map isn't showing.
+      console.warn('[TransmissionMap] Map Experiences chunk failed to load:', err);
+      recordDiagEvent('layer', `experiences chunk: ${err}`);
+      state.experienceId = null;
+      emit('url:write');
+    }
+  });
 }
 
 function wirePanelTabs() {
@@ -393,6 +516,7 @@ function wireDialogs() {
     ["creditsDialog", "closeCredits"],
     ["diagnosticsDialog", "closeDiagnostics"],
     ["settingsDialog", "closeSettings"],
+    ["experiencesDialog", "closeExperiences"],
   ]) {
     const dialog = document.getElementById(dialogId) as HTMLDialogElement | null;
     if (!dialog) continue;

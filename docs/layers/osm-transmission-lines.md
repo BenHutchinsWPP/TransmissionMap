@@ -1,6 +1,6 @@
 # OSM Transmission Lines
 
-OSM transmission line and cable features (North America).
+OSM transmission line and cable features, worldwide.
 
 ## Source
 
@@ -9,39 +9,79 @@ OSM transmission line and cable features (North America).
 | **Provider** | [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
 | **License** | [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike required |
 | **Attribution** | © OpenStreetMap contributors |
-| **Source file** | `north-america-latest.osm.pbf` from [Geofabrik](https://download.geofabrik.de/) (19.2 GB) |
-| **Vintage** | July 2026 (Geofabrik daily extract, downloaded 2026-07-13) |
-| **Coverage** | USA + Canada + Mexico |
-| **Served** | `data/layers/osm_transmission_lines.pmtiles` — PMTiles, zoom 2–11 |
+| **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
+| **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
+| **Coverage** | Worldwide (8 continental Geofabrik extracts) |
+| **Served** | `data/layers/osm_transmission_lines_kv{0,50,100,125,200,300}.pmtiles` — six planet-wide PMTiles archives, zoom 2–11, one per voltage class. `make global-tiles` re-tiles the layer from the eight continental GeoPackages in one pass (deduping the seam overlaps) and cuts the classes out of the result. See [hosting-plan.md](../hosting-plan.md). |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/transmission_lines.gpkg` → `tippecanoe -l osm_transmission_lines` |
 
 ## Download pack
 
-`osm-transmission-lines.zip` — `osm-transmission-lines.geojson` · `osm-transmission-lines.csv` · `osm-transmission-lines.md` · `disclaimer.txt`
+- **GeoJSON** (`osm-transmission-lines-<code>.zip`) — `.geojson` + `.csv`
+- **SHP** (`osm-transmission-lines-<code>-shp.zip`) — `.shp/.shx/.dbf/.prj/.cpg` + `.csv`
+
+Every zip also includes `osm-transmission-lines.txt` (this doc) + `disclaimer.txt`.
+
+Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca an`, and the download menu in the layer panel picks it.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 > The GeoJSON in this pack is an ODbL derivative — downstream redistribution must also carry ODbL.
 
 ## Processing
 
-- **Selected:** `power=line` and `power=cable` ways → **335,568 features**
+- **Selected:** `power=line` and `power=cable` ways
 - **Row filter:** none
 - **Computed:** `nominal_kv` parsed to integer kV from raw OSM voltage text; `-1` sentinel = unknown; `is_undergrnd` flag derived from `power=cable` / `location` tags; `is_dc` from `frequency=0`
-- **Columns kept:** `nominal_kv`, `operator`, `name`
-- **Simplification:** tippecanoe per-zoom default (z2–11)
+- **Columns kept:** `nominal_kv`, `operator`, `name`, `minz`
+- **Simplification:** `--simplification=5 --simplify-only-low-zooms` — the
+  Douglas-Peucker pass runs on z2–z10 only, so maxzoom carries every vertex the
+  tile grid holds. Dropping the flag re-simplifies maxzoom; see
+  [hosting-plan.md](../hosting-plan.md).
+
+### Which lines a tile carries, by zoom
+
+`enrich_osm_tags.py::_add_minzoom` writes `minz`, the lowest zoom at which a way
+is worth drawing, and `tippecanoe -j` selects on it (the ladder string is
+`TRANSMISSION_ZOOM_LADDER`, mirrored verbatim in `tile_manifest.yaml`).
+Both rules come from [OpenInfraMap](https://github.com/openinframap/openinframap)
+— `tegola/layers.yml` and `imposm/power.py` — and `minz` is the higher of the two:
+
+| floor | rule |
+|---|---|
+| voltage | ≥200 kV from z2, ≥100 kV from z4, ≥25 kV from z6, everything else from z8 |
+| length | the first zoom at which the way covers a quarter pixel (Web Mercator, so 1/cos(lat) of its ground length) |
+| substation internals | `line=bay\|busbar\|substation\|internal\|transformer` never below z6 — a whole substation is sub-pixel until then, and these cluster where tiles are densest. `line=electrode` is excluded: an HVDC electrode line runs *between* substations. |
+
+Selecting per feature is deterministic, so the same ways appear at the same zooms
+on every rebuild, and a way held back by the length floor leaves a gap under one
+pixel wide. `--drop-densest-as-needed` is not used: it discards whole ways, which
+breaks corridors of many short consecutive ones.
+
+> [!IMPORTANT]
+> `--maximum-tile-bytes` is raised to 1 MB. tippecanoe thins any tile that
+> reaches that ceiling even with no `--drop-*` flag, so it must sit clear of the
+> densest tile (central Europe at z4, ~540 KiB) or the ladder stops being the
+> only thing selecting features. At tippecanoe's 500 KB default that tile
+> silently loses ways.
 
 ## Fields
+
+Measured over the world build: **1,342,239 ways**, deduped from 1,366,072 across the
+eight continental extracts (23,833 seam duplicates removed). Fill rates count the
+`-1` sentinel as unknown, so re-derive them after a rebuild rather than trusting
+these to the decimal.
 
 | Field | % filled | Example values | Notes |
 |---|---:|---|---|
 | `osm_id` | 100% | `12345678` | OSM way ID; popup links to openstreetmap.org/way/{id} |
-| `nominal_kv` | 88.1% | 138 (55,747), 69 (52,677), 115 (50,312), 230 (38,534), 345 (18,190), 46 (11,466), 161 (10,777), 34 (7,937), 500 (6,085), 765 (437), 735 (338) | Parsed integer kV. `-1` sentinel = unknown |
-| `cables` | ~40% | `3`, `6`, `12` | Number of individual conductors |
-| `circuits` | ~55% | `1`, `2`, `4` | Number of circuits; not rendered in popup |
-| `operator` | ~35% | BC Hydro, Bonneville Power Administration, Hydro One | Operating utility |
-| `name` | ~11% | "Big Eddy–DeMoss No 1", "Bonneville PH 1–Hood River No 1" | Most OSM lines unnamed |
-| `is_undergrnd` | 100% | `0`, `1` | `1` when `power=cable` or `location=underground\|underwater`; drives dashed rendering + Line placement filter |
-| `is_dc` | 100% | `0`, `1` | `1` for HVDC (206 ways). Drives the light centre stripe |
+| `nominal_kv` | 82.1% | 110 (197,743), 220 (108,255), 138 (62,876), 132 (61,746), 69 (60,056), 115 (54,990), 230 (47,996), 66 (45,872), 35 (43,783), 400 (38,447), 500 (37,075) | Parsed integer kV. `-1` sentinel = unknown |
+| `cables` | 60.4% | `3`, `6`, `12` | Number of individual conductors. `-1` = unknown — **not** a count |
+| `circuits` | 31.7% | `1`, `2`, `4` | Number of circuits; not rendered in popup. `-1` = unknown |
+| `operator` | 28.3% | RTE, Enedis, National Grid Electricity Distribution Plc, Tauron | Operating utility. Unset is an empty string, not NULL |
+| `name` | 10.4% | "Straumsmo - Bardufoss", "Cottle-Melones", "Арматурная - Лёвинка" | Most OSM lines unnamed |
+| `is_undergrnd` | 100% | `0`, `1` | `1` when `power=cable` or `location=underground\|underwater` (177,743 ways); drives dashed rendering + Line placement filter |
+| `is_dc` | 100% | `0`, `1` | `1` for HVDC (2,558 ways). Drives the light centre stripe |
+| `minz` | 100% | `2`–`8` | Zoom floor; read by the tippecanoe `-j` filter, not by the map. Stripped from the published archives after tiling (`tile-join -x minz`) |
 
 ## Caveats
 
@@ -50,19 +90,13 @@ OSM transmission line and cable features (North America).
 
 ### Voltage and HVDC tagging are messy — how we cope
 
-- **Shapefile truncation (fixed 2026-07-13, this build).** OSM lines are written via
-  `ogr2ogr → ESRI Shapefile`. Any tag not named in `osmconf.ini`'s `[lines]
-  attributes=` is packed into one `other_tags` hstore string, and DBF caps
-  string fields at **254 chars**, silently cutting whatever sorts last. On
-  tag-heavy ways that meant `voltage` — in the previous (May 2026) build ~740
-  lines lost their voltage this way, the Pacific DC Intertie (way 56392650)
-  among them, showing as `-1` / unknown kV. Fix, live as of this build:
-  `voltage`, `cables`, `circuits`, `frequency`, `location`, `wires` are now
-  promoted to real columns. Truncated rows dropped from 6,781 (old build) to
-  1 (this build). The Pacific DC Intertie now correctly reads
-  `nominal_kv=500`, `kv_range=500-600`, `is_dc=1`. Never move `power`,
-  `operator` or `ref` there — the `power_line` WHERE clause and the pipeline
-  layers read them out of `other_tags`.
+- **DBF truncates at 254 chars.** OSM lines are written via `ogr2ogr → ESRI
+  Shapefile`. Any tag not named in `osmconf.ini`'s `[lines] attributes=` is packed
+  into one `other_tags` hstore string, and DBF caps string fields at **254 chars**,
+  silently cutting whatever sorts last — on tag-heavy ways that takes `voltage`
+  with it. So `voltage`, `cables`, `circuits`, `frequency`, `location` and `wires`
+  are promoted to real columns. Never move `power`, `operator` or `ref` there — the
+  `power_line` WHERE clause and the pipeline layers read them out of `other_tags`.
 - **Voltage values are free text.** Seen in the wild: `500000`, `115000;12000`
   (one value per circuit), `14400-24900` (a range), `138000;?`,
   `115000;unknown`, `low`, `?`, `0_(unused)`. `_best_kv()` pulls every integer
@@ -70,24 +104,20 @@ OSM transmission line and cable features (North America).
   5194902 "Experimental HVDC Powerline", tagged `voltage=1333000` → 1333 kV —
   an upstream OSM tag, not a parse error.
 - **Sub-kV values are volts, not kV.** Ways carry `voltage=480 | 240 | 120 |
-  690` (LV service drops). These floor to 0 kV and report as unknown — the
-  old parser read them as 480/240 **kV** and painted them as EHV transmission.
-  Verified in this build: 0 rows leak sub-kV volts into `nominal_kv`.
-- **11.9% of lines have no usable voltage** (39,779 of 335,568 rows), mostly
-  unnamed rural `power=line`. `_fill_kv_from_name()` backfills the ones whose
+  690` (LV service drops). These floor to 0 kV and report as unknown, so no LV
+  service drop reaches `nominal_kv` and paints as EHV transmission.
+- **Some lines have no usable voltage**, mostly unnamed rural `power=line`.
+  `_fill_kv_from_name()` backfills the ones whose
   name embeds a kV number ("… 500kV"); the rest stay `-1` and render in the
   unknown tier (`kv_range=unknown`). This is upstream data absence, not a
-  parsing failure. `nominal_kv` fill is 88.1% overall. `kv_range` buckets:
-  100-200 (126,742), 50-100 (60,838), 200-300 (40,912), 0-50 (40,615), unknown
-  (39,779), 300-400 (19,004), 500-600 (6,086), 400-500 (810).
-- **HVDC:** `frequency=0` is the canonical marker (200 ways, this build) but is
-  not universally tagged, so `_add_is_dc()` falls back to a narrow name match
+  parsing failure.
+- **HVDC:** `frequency=0` is the canonical marker but is not universally tagged,
+  so `_add_is_dc()` falls back to a narrow name match
   (`HVDC`/`DC Intertie`/`bipole`) **only when frequency is absent**; a stated
-  non-zero frequency is authoritative AC. Total: 206 ways (200 by `frequency=0`
-  + 6 by name fallback). Mixed towers tagged `frequency=60;0` carry both and
-  count as DC.
-- **A name saying "HVDC" does not make a line DC.** 151 ways match the HVDC name
-  regex, but 81 declare a non-zero AC frequency and are correctly *not* flagged.
+  non-zero frequency is authoritative AC. Mixed towers tagged `frequency=60;0`
+  carry both and count as DC.
+- **A name saying "HVDC" does not make a line DC.** Many ways match the HVDC name
+  regex while declaring a non-zero AC frequency, and are correctly *not* flagged.
   Two traps this avoids:
   - `"230 kV + Electrode Line of HVDC Pacific DC Intertie"` — a 230 kV **AC**
     circuit that merely shares towers with the intertie's electrode line. (The

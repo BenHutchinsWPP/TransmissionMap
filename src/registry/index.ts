@@ -21,7 +21,7 @@ export const LAYERS = [
   ...conditionLayers,
 ];
 
-export { LAYER_SOURCES } from './sources.js';
+export { LAYER_SOURCES, REGION_CODE_MAP } from './sources.js';
 
 const _layerMap: Map<string, LayerDef> = new Map(LAYERS.map(l => [l.id, l]));
 

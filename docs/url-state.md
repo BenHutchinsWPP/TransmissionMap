@@ -61,6 +61,8 @@ filter never saved or restored, silently. No error — just broken state.
 | `3d` | 3D terrain/buildings (`t`=terrain, `b`=buildings, `tb`=both) | codec |
 | `hs` | hillshade (2D shaded relief) | codec |
 | `lang` | Language selection (`es`, `fr`, `de`, `zh`, etc.) | codec, `formatUrlState` |
+| `region` | Layer-list scope (`global` only; `usa` is the default and is omitted) | codec, `VALID_REGIONS` |
+| `exp` | Active Map Experience slug (`columbia-hydro`, …) | codec (parse) + `url-state.ts` (pristine check); catalogue in `registry/experiences.ts` |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
 | `v f p h j t n r c e g u w a k d i o q x z` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
 
@@ -103,6 +105,17 @@ top-level param keys must be globally unique.
 | 3D terrain/buildings | `3d` | both off |
 | Hillshade | `hs` | off |
 | Language | `lang` | `en` |
+| Map Experience | `exp` | no experience active, **or** the view edited away from one |
+
+### `exp` carries a runtime condition
+
+Every other param is a pure function of state. `exp` is written only while the
+view still matches the story: `writeUrlState()` formats the other params first
+and compares that string against the snapshot `assets/experiences.ts` left in
+`state.experiencePristine`. An edit sets `state.experienceDirty`, emits
+`exp:dirty`, and drops `exp` from the link for the rest of the session. The
+camera is outside the comparison, so panning inside a story keeps the link on
+the story — and a shared `exp` link opens at the story's camera, not the hash's.
 
 The "omit the default" rule is what keeps links short. It also means **both
 sides must agree on the default** — `formatUrlState` skips a value when it

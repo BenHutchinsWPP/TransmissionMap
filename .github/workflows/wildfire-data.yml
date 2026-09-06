@@ -43,7 +43,7 @@ jobs:
     secrets: inherit
     with:
       scripts: scripts/fetch_wildfire_live.py
-      outputs: data/layers/wildfire_live.geojson
+      outputs: data/layers/wildfire_live.geojson.gz
       timeout-minutes: 10
       endpoints: >-
         https://firms.modaps.eosdis.nasa.gov

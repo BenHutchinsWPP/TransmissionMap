@@ -106,6 +106,54 @@ def styled_fields(text: str) -> set[str]:
     return set(re.findall(r'paletteColor\("([^"]+)"\)', text))
 
 
+# Per-continent builds (`osm_generators_eu.pmtiles`) are inputs to the global
+# join, not layers the frontend fetches — `make global-tiles` folds the eight of
+# them into the one archive `assets/constants.ts` names. They are legitimately
+# unreferenced, so long as their global counterpart is a real expected layer.
+CONTINENT_CODES = ("na", "eu", "as", "sa", "af", "oc", "ca", "an")
+
+
+def is_continental_template(src: str) -> bool:
+    """A `{code}` path in release_manifest.yaml — one file per continent.
+
+    These are built by process_continental_osm.py, not by the tile manifest, and
+    the literal templated path never exists on disk. Both the input-sanity and
+    the cross-manifest checks would otherwise report every one of them.
+    """
+    return "{code}" in str(src)
+
+
+def is_continental_build(path: str, expected: set[str]) -> bool:
+    p = Path(path)
+    for suffix in (".geojson.gz", ".pmtiles"):
+        if not p.name.endswith(suffix):
+            continue
+        base, _, code = p.name[: -len(suffix)].rpartition("_")
+        if not base or code not in CONTINENT_CODES:
+            continue
+        # The global counterpart may carry a different extension: the footprint
+        # layers ship per continent as GeoJSON and planet-wide as vector tiles.
+        if any(str(p.with_name(base + ext)) in expected
+               for ext in (".geojson.gz", ".pmtiles")):
+            return True
+        # ...or several files rather than one: transmission is published as one
+        # archive per voltage class, so `osm_transmission_lines.pmtiles` is never
+        # itself expected and the continental inputs would look like orphans.
+        return any(e.startswith(str(p.with_name(base + "_"))) for e in expected)
+    return False
+
+
+def list_expected() -> int:
+    """Print every data/layers path assets/constants.ts fetches, one per line.
+
+    scripts/publish_data.sh reads this so the push carries only what the
+    frontend actually loads — the per-continent join inputs stay local.
+    """
+    for want in sorted(expected_layers(CONSTANTS.read_text())):
+        print(want)
+    return 0
+
+
 def run(strict: bool) -> int:
     results: list[tuple[str, str]] = []  # (severity, message)
 
@@ -120,6 +168,8 @@ def run(strict: bool) -> int:
         p = Path(src)
         if not str(p).startswith("data/build/"):
             continue  # outputs handled below; data/raw handled by nothing (manual)
+        if is_continental_template(src):
+            continue
         if not p.exists():
             record(WARN, f"input absent: {src}")
             continue
@@ -141,19 +191,22 @@ def run(strict: bool) -> int:
             record(FAIL, f"output empty: {want}")
 
     # orphans: files in data/layers/ not referenced by the frontend.
-    # .geojson.gz/.pmtiles/.i16/.json only — ignore dotfiles & dirs.
+    # .geojson.gz/.pmtiles/.i16.gz/.json only — ignore dotfiles & dirs.
     for got in sorted(present):
         gp = Path(got)
         if gp.is_dir() or gp.name.startswith("."):
             continue
-        if got not in expected:
-            record(FAIL, f"orphan in data/layers/ (unreferenced — rename bug?): {got}")
+        if got in expected or is_continental_build(got, expected):
+            continue
+        record(FAIL, f"orphan in data/layers/ (unreferenced — rename bug?): {got}")
 
     # 3. cross-manifest consistency -------------------------------------------
     tsrcs = tile_sources(yaml.safe_load(TILE_MANIFEST.read_text()))
     for key, src in manifest_sources(doc):
         if key == "tif":
             continue  # rasters built by build_*_resource.sh, not the tile manifest
+        if is_continental_template(src):
+            continue  # built per continent by process_continental_osm.py
         if str(src).startswith("data/build/") and src not in tsrcs:
             record(FAIL, f"release source not produced by tile_manifest (drift?): {src}")
 
@@ -219,5 +272,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--strict", action="store_true", help="treat WARN (absent) as FAIL")
     ap.add_argument("--self-test", action="store_true", help="check parsers, no data needed")
+    ap.add_argument("--list-expected", action="store_true",
+                    help="print the data/layers paths constants.ts fetches, one per line")
     args = ap.parse_args()
-    sys.exit(_self_test() if args.self_test else run(args.strict))
+    if args.self_test:
+        sys.exit(_self_test())
+    if args.list_expected:
+        sys.exit(list_expected())
+    sys.exit(run(args.strict))

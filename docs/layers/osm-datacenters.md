@@ -10,15 +10,17 @@ positioned at the node location or the centroid of the building/campus polygon.
 | **Provider** | [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
 | **License** | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution + share-alike required |
 | **Attribution** | © OpenStreetMap contributors |
-| **Source file** | `north-america-latest.osm.pbf` from [Geofabrik](https://download.geofabrik.de/) |
-| **Vintage** | July 2026 (Geofabrik daily extract, downloaded 2026-07-13) |
-| **Coverage** | USA + Canada + Mexico |
+| **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
+| **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
+| **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_datacenters.geojson.gz` — gzipped GeoJSON points, lazy-loaded on first enable |
 | **Built by** | `scripts/extract_osm_datacenters.py` → `data/build/datacenter_osm.csv` → `scripts/build_tiles.py` |
 
 ## Download pack
 
-`osm-datacenters.zip` — `osm-datacenters.geojson` · `osm-datacenters.csv` · `osm-datacenters.md` · `disclaimer.txt`
+`osm-datacenters-<code>.zip` — CSV only: `osm-datacenters-<code>.csv` · `osm-datacenters.txt` (this doc) · `disclaimer.txt`
+
+Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca an`, and the download menu in the layer panel picks it.
 
 > ODbL requires attribution and share-alike on redistributed derivative databases.
 
@@ -34,7 +36,7 @@ Any feature carrying one of:
 
 ## Processing
 
-- **Selected:** matched OSM tags above → **1,913** rows
+- **Selected:** matched OSM tags above
 - **Filter:** `osmium tags-filter` with the three patterns above → intermediate PBF
 - **Export:** `osmium export` (all geometry types — point, polygon, multipolygon)
 - **Nodes:** coordinates used directly
