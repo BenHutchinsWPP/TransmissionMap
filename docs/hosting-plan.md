@@ -7,7 +7,7 @@ Where each asset class is hosted, and how the world transmission archive is cut.
 | asset class | host |
 |---|---|
 | `data/layers` — every built layer | orphan `data-static` branch, via `raw.githubusercontent.com` |
-| `data/releases` — download packs | same branch today; GitHub Releases is the planned future move |
+| `data/releases` — download packs | rolling GitHub Release `data-latest`, via `github.com/.../releases/download/` |
 | live feeds | orphan `data` branch, same host ([layers/wildfire-live.md](layers/wildfire-live.md)) |
 
 `raw.githubusercontent.com` answers ranged `GET`s with `HTTP 206` and
@@ -19,7 +19,15 @@ answers `200` either way. The `pmtiles-range` check in `assets/diagnostics.ts`
 does this correctly.
 
 GitHub Release assets send **no CORS header**, so they can back a download link
-(a plain navigation) but never a PMTiles source or any `fetch()`.
+(a plain navigation) but never a PMTiles source or any `fetch()`. That is why the
+two asset classes are split: layers must stay on raw, packs must not. Release
+assets take **2 GB per file** against the branch's 100 MiB, and they live outside
+the git object store, so publishing one never grows the repository.
+
+The tag rolls in place — `gh release upload --clobber` replaces assets under the
+same `data-latest` tag — because `RELEASES_ORIGIN` in `assets/constants.ts` bakes
+those URLs into the deployed bundle. Changing the tag orphans every download link
+in every already-deployed page.
 
 ## The voltage split
 
@@ -118,8 +126,9 @@ The cost is six PMTiles headers at map init instead of one, fetched in parallel.
 
 `scripts/publish_data.sh` publishes **only the layers `assets/constants.ts`
 names**, via `validate_build.py --list-expected`; the per-continent join inputs
-stay local. It pushes layers and release packs as two staged commits, because
-GitHub rejects a push over ~2 GB.
+stay local. Layers go to the branch as one orphan commit (~1.2 GB, inside
+GitHub's ~2 GB per-push ceiling); download packs go to the `data-latest` Release
+in the same run.
 
 > [!WARNING]
 > `trim_pmtiles()` rewrites through a temp file whose name **must** end in
@@ -133,6 +142,27 @@ GitHub rejects a push over ~2 GB.
 > tile properties — so dropping it silently empties those searches. `DROP_ATTRS`
 > in `build_global_tiles.py` lists what is genuinely unread.
 
-`data-static` is force-pushed as a fresh orphan each publish. GitHub does not
-promptly GC unreachable objects, so repo size grows with every publish even
-though the branch does not; GitHub's guidance is 1 GB recommended / 5 GB soft.
+### Repository headroom — check before every publish
+
+`data-static` is force-pushed as a fresh orphan each publish, which deletes
+nothing: the previous tree's blobs become unreachable and keep counting against
+the repository. GitHub reclaims them with its own maintenance, on a schedule you
+do not control and cannot trigger — **only GitHub Support can run GC on demand.**
+GitHub's guidance is 1 GB recommended / 5 GB soft.
+
+That makes an overshoot one-way. Past the limit GitHub can restrict pushes, so
+you lose the ability to ship the fix; serving is unaffected (raw does not check
+repo size), but you would be stuck until Support prunes.
+
+`publish_data.sh` therefore **refuses to publish** when the result would cross
+`SIZE_CEILING_KB` (4.5 GiB by default). Its estimate counts only blobs whose
+content is not already on the branch — git stores by content hash, so
+republishing an unchanged file costs nothing, and a rebuild that changes every
+tile costs the full tree.
+
+> [!IMPORTANT]
+> Never bypass the check with `SKIP_SIZE_CHECK=1` to "just get this one out".
+> Publishing again cannot undo it. If headroom is short, move data off the branch
+> or open a GitHub Support ticket asking them to garbage-collect the repository —
+> and note that GC only frees objects nothing references, so the content has to
+> leave the branch *before* the ticket, not after.

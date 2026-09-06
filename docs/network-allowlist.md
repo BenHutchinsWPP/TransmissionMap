@@ -42,7 +42,9 @@ links — the app runs without these, those features just won't load.
 ## Click-through links (app works without them)
 
 Some links open external sites in a new tab: the "Open with" menu
-(`google.com`, `openstreetmap.org`, `openinframap.org`) and per-layer source
+(`google.com`, `openstreetmap.org`, `openinframap.org`), the per-layer download
+packs (`github.com`, which redirects to `release-assets.githubusercontent.com`) and
+per-layer source
 citations (various `.gov`/`.org` sites, listed in
 [data-sources.md](data-sources.md)). If blocked, only that click fails —
 nothing in the app breaks.

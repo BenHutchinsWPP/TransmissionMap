@@ -12,7 +12,7 @@ import { LAYERS, LAYER_SOURCES, REGION_CODE_MAP } from '../../src/registry/index
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import type { LayerDef, BucketDef, LayerScope, DownloadRegion } from '../../src/types.js';
 import { HEAT_RAMP } from '../../src/colors/ramps.js';
-import { DATA_ORIGIN } from '../constants.js';
+import { releaseUrl } from '../constants.js';
 import { rampLegendHtml } from './ui-legends.js';
 import { escapeHtml } from '../utils/utils.js';
 import { t } from '../../src/i18n/index.js';
@@ -127,10 +127,10 @@ const DOWNLOAD_REGIONS: { id: DownloadRegion; key: string }[] = [
 function downloadFormatHtml(label: string, path?: string | null) {
   if (!path) return "";
   if (!isContinentalPack(path)) {
-    return `<a href="${DATA_ORIGIN}${path}" download>${label}</a>`;
+    return `<a href="${releaseUrl(path)}" download>${label}</a>`;
   }
   const links = DOWNLOAD_REGIONS.map(r =>
-    `<a href="${DATA_ORIGIN}${getRegionalDownloadPath(path, r.id)}" download>${escapeHtml(t(r.key))}</a>`
+    `<a href="${releaseUrl(getRegionalDownloadPath(path, r.id))}" download>${escapeHtml(t(r.key))}</a>`
   ).join("");
   return `<details class="dl-group"><summary>${label}</summary><div class="dl-regions">${links}</div></details>`;
 }

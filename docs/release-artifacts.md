@@ -84,8 +84,10 @@ built by `make tiles`; they're listed here because they still ship as app data.
 
 These live under `data/releases/`, served as download links in the layer panel
 (`downloads` in the registry → `assets/ui/ui-layer-rows.ts`). In prod they are
-fetched from the `data-static` branch via `raw.githubusercontent.com` (pushed by
-`make publish-data`), not from `main` or Pages. `build_releases.py` builds them
+served as assets of the rolling `data-latest` GitHub Release (uploaded by
+`make publish-data`), not from the `data-static` branch, `main`, or Pages — a
+download is a plain navigation, so it needs no CORS header and gets 2 GB per file
+instead of the branch's 100 MiB. See [hosting-plan.md](hosting-plan.md). `build_releases.py` builds them
 from `scripts/release_manifest.yaml`.
 
 **Packs stay per continent.** The map reads one planet-wide tileset per layer, but

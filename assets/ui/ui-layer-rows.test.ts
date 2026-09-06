@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // url-state.js is imported first to prime the same import cycle ui-legends.test.ts
 // documents (ui-legends → visibility → url-state → url-state-codec → ui-legends).
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import './../url-state.js';
 import { isLayerInRegion, isContinentalPack, getRegionalDownloadPath } from './ui-layer-rows.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -71,5 +71,29 @@ describe('download packs', () => {
     const p = 'data/releases/hifld-substations.zip';
     expect(getRegionalDownloadPath(p, 'europe')).toBe(p);
     expect(getRegionalDownloadPath(p, 'north-america')).toBe(p);
+  });
+});
+
+// Packs are served as GitHub Release assets, whose namespace is flat — the
+// repo-relative path the registry uses has to lose its directory in prod. Both
+// branches are exercised through a fresh import because RELEASES_ORIGIN is
+// resolved once at module load.
+describe('releaseUrl — download pack host', () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+
+  it('keeps the repo-relative path in dev, where Vite serves it from disk', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', false);
+    const { releaseUrl } = await import('../constants.js');
+    expect(releaseUrl('data/releases/osm-generators-na.zip')).toBe('data/releases/osm-generators-na.zip');
+  });
+
+  it('maps to a flat Release asset name in prod', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    const { releaseUrl, RELEASES_ORIGIN } = await import('../constants.js');
+    expect(RELEASES_ORIGIN).toContain('/releases/download/data-latest/');
+    expect(releaseUrl('data/releases/osm-transmission-lines-eu-shp.zip'))
+      .toBe(RELEASES_ORIGIN + 'osm-transmission-lines-eu-shp.zip');
   });
 });

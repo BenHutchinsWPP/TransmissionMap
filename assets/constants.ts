@@ -28,6 +28,22 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 export const DATA_ORIGIN = import.meta.env.PROD
   ? "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data-static/"
   : "";
+
+// Download packs are plain navigations, never fetch() or PMTiles range reads, so
+// they need no CORS header — which frees them from the branch and its 100 MiB
+// per-file ceiling. Release assets allow 2 GB per file and live outside the git
+// object store, so publishing one never grows the repo. The tag rolls in place
+// (`gh release upload --clobber`) to keep these URLs stable, because they are
+// baked into the deployed bundle. See docs/hosting-plan.md.
+export const RELEASES_ORIGIN = import.meta.env.PROD
+  ? "https://github.com/BenHutchinsWPP/TransmissionMap/releases/download/data-latest/"
+  : "";
+
+// Registry entries name packs by repo-relative path. In prod that maps to a flat
+// Release asset name; in dev it stays a path the Vite server serves from disk.
+export function releaseUrl(path: string): string {
+  return import.meta.env.PROD ? RELEASES_ORIGIN + path.replace(/^data\/releases\//, "") : path;
+}
 export const DATA = {
   // Transmission ships as six planet-wide archives split by voltage class: one
   // world file is 266 MiB against the host's 100 MiB per-file ceiling. The order

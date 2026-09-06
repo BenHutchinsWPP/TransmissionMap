@@ -55,7 +55,7 @@ help:
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
-	@echo "  make publish-data force-push the layers constants.ts names + data/releases → orphan 'data-static' branch (prod host; needs public repo)"
+	@echo "  make publish-data publish a build: layers constants.ts names → orphan 'data-static' branch, download packs → 'data-latest' GitHub Release (needs public repo + gh)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
 	@echo "  make clean       remove $(BUILD)/ AND data/layers + data/releases"
