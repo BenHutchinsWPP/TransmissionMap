@@ -218,7 +218,11 @@ async function paintImage(url: string, coords?: ImageCorners): Promise<void> {
   const start = performance.now();
   const fade = (now: number) => {
     if (seq !== paintSeq || !state.map?.getLayer(backId)) return;
-    const t = Math.min(1, (now - start) / WEATHER_FADE_MS);
+    // Clamped at both ends: a rAF callback can carry a timestamp a few ms
+    // earlier than the performance.now() taken just before scheduling it (the
+    // timestamp is the frame's start), which would otherwise drive the opacity
+    // slightly negative and MapLibre rejects the paint value.
+    const t = Math.max(0, Math.min(1, (now - start) / WEATHER_FADE_MS));
     const a = W * t;
     state.map.setPaintProperty(backId, "raster-opacity", a);
     state.map.setPaintProperty(frontId, "raster-opacity", Math.max(0, 1 - (1 - W) / (1 - a)));
