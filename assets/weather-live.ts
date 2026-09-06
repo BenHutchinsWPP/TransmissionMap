@@ -16,6 +16,9 @@
 //       raster. Same shape as odin-outages.ts instead — own timer, own chip, and a
 //       console warning (never a blocking modal) when the feed goes stale: a stale
 //       weather field is cosmetic, not a safety call like a fire perimeter.
+//       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
+//       red and the timebar label drops relative day names for a dated one
+//       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
 // Deps: state (map, weatherLiveUrl, layerVisibility, rasterLut), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
@@ -126,6 +129,14 @@ export function weatherFreshness(): { ageMs: number | null; maxAgeMs: number } {
   const t = generatedUtc ? Date.parse(generatedUtc) : NaN;
   return { ageMs: Number.isNaN(t) ? null : Date.now() - t, maxAgeMs: MAX_AGE_MS };
 }
+// True once the last successful bake is older than MAX_AGE_MS (or no bake has
+// loaded at all). Drives both the red age chip and the timebar's date label —
+// one predicate so the two can never disagree.
+function isStale(): boolean {
+  const t = generatedUtc ? Date.parse(generatedUtc) : NaN;
+  return Number.isNaN(t) || Date.now() - t > MAX_AGE_MS;
+}
+
 let feedStatus: Record<string, string> | undefined;
 let varsMeta: Record<string, WeatherMetaVar> | undefined;
 // `${generated_utc}:${weatherVar}:${stepIdx}` of what's currently painted —
@@ -264,10 +275,10 @@ async function refetch(): Promise<void> {
     // Staleness is measured against when the feed was last baked, not the
     // (always ~current) valid time — a dead pipeline still reports a valid
     // time near "now" forever, since that's how the step is chosen.
-    const genThen = generatedUtc ? Date.parse(generatedUtc) : NaN;
-    if (!Number.isNaN(genThen) && Date.now() - genThen > MAX_AGE_MS) {
-      // Keep painting — an old bake is still broadly right, and the chip turns
-      // red. No modal, unlike the wildfire kill-switch.
+    if (isStale()) {
+      // Keep painting — an old bake is still broadly right, the chip turns red
+      // and the timebar label swaps to a dated one. No modal, unlike the
+      // wildfire kill-switch.
       console.warn("[TransmissionMap] weather feed is stale (>12h)", generatedUtc);
     }
 
@@ -276,6 +287,7 @@ async function refetch(): Promise<void> {
     console.warn("[TransmissionMap] weather refresh failed", err);
     recordDiagEvent('live', `weather-live: ${err}`);
     renderWeatherAge();
+    renderTimebar();
   } finally {
     inflight = false;
   }
@@ -401,12 +413,26 @@ function renderTimebar() {
   range.value = String(stepIdx);
   const t = new Date(Date.parse(steps[stepIdx].valid_utc));
   const sameDay = t.toDateString() === new Date().toDateString();
-  const day = sameDay ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" });
+  // A stale bake's steps still claim to be "Today" / "Sat" — relative day names
+  // read as live data long after the feed stopped. Spell the date out instead
+  // (9/5), and tint the label, so a dead feed is obvious on the map itself.
+  const stale = isStale();
+  const day = stale
+    ? t.toLocaleDateString(undefined, { month: "numeric", day: "numeric" })
+    : sameDay ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" });
   // Steps are exactly on the hour, so no minutes; timeZoneName:"short"
   // appends the local zone abbreviation (e.g. "CDT").
   const clock = t.toLocaleTimeString(undefined, { hour: "numeric", timeZoneName: "short" });
   // No "now" suffix — the red track marker is the current-time indicator.
   label.textContent = `${day} ${clock}`;
+  label.classList.toggle("weather-timebar-label--stale", stale);
+  if (stale) {
+    label.title = generatedUtc
+      ? `Forecast last updated ${new Date(generatedUtc).toLocaleString()}`
+      : "Forecast update time unknown";
+  } else {
+    label.removeAttribute("title");
+  }
 
   // Hour ticks under the slider: dashed minor tick per step, solid tick with
   // a local-time label every 3rd hour — every 6th on a narrow rail
@@ -495,7 +521,7 @@ function renderWeatherAge() {
   if (runUtc) titleParts.push(`model run ${runUtc}${step != null ? ` +${step}h` : ""}`);
   el.title = titleParts.join(" · ");
   const pulledMin = Number.isNaN(pulled) ? Infinity : Math.max(0, (Date.now() - pulled) / 60_000);
-  const stale = Number.isNaN(pulled) || Date.now() - pulled > MAX_AGE_MS;
+  const stale = isStale();
   // The bake refreshes every ~3 h, so a healthy feed sits anywhere in 0–3.5 h;
   // only beyond that does the chip go amber.
   const level = stale ? "stale" : pulledMin <= 210 ? "fresh" : "aging";
@@ -559,5 +585,9 @@ export function initWeatherLive() {
   bootFetch();
 
   setInterval(() => { if (isVisible()) void refetch(); }, REFRESH_MS);
-  setInterval(() => { renderWeatherAge(); trackNow(); }, 60_000);
+  setInterval(() => {
+    renderWeatherAge();
+    trackNow();
+    if (isVisible()) renderTimebar();
+  }, 60_000);
 }

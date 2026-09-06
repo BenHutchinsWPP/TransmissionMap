@@ -2288,6 +2288,9 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   width: 142px;
   font-variant-numeric: tabular-nums;
 }
+/* Stale bake: the label carries a date instead of "Today" — tint it the same
+   red as the stale age chip so the swap reads as a warning, not a format. */
+#weatherTimebar .weather-timebar-label--stale { color: #b91c1c; }
 #weatherTimebar input[type="range"] {
   width: min(320px, 40vw);
 }
