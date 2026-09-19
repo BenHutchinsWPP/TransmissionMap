@@ -18,14 +18,26 @@ turns public datasets into PMTiles consumed by the frontend.
 > Do not create `GEMINI.md` or `.github/copilot-instructions.md`. They are
 > *additional* sources those tools would read, and a second place for rules is
 > how the two drift apart. Edit this file.
+>
+> One exception, for facts rather than rules: a gitignored `AGENTS.local.md`
+> may sit beside this file, carrying what is true of one machine — local-only
+> directories, personal tooling. Read it when it exists. Conventions still
+> belong here, where everyone gets them.
 
 ## Hard rules
 
 - **NEVER read, list, or grep `data/` (tens of GB), `venv/`, `tmp/`,
-  `node_modules/`.** Large binaries; nothing useful for code work.
-  To inspect a dataset's schema/values, *run* the relevant script and print
-  (`df.head()`, `ogrinfo -so`, `head` on a built `.csv`) — never open files in
-  `data/`.
+  `node_modules/`, `dist/`, `coverage/`.** Large binaries; nothing useful for
+  code work. To inspect a dataset's schema/values, *run* the relevant script
+  and print (`df.head()`, `ogrinfo -so`, `head` on a built `.csv`) — never open
+  files in `data/`.
+  `dist/` and `coverage/` are the quiet ones: they are *generated twins of live
+  files* — `dist/assets/` is a bundled copy of every `assets/**/*.ts` symbol —
+  so after a `npm run build` a root-level `grep -r` or `find` cites a file
+  nobody ships. `rg` honours `.gitignore` and skips them; `grep -r`, `find` and
+  `ls` do not. Open one only when the user names its path. The one thing worth
+  reading under `tmp/` is a build log you tee'd there yourself (see *Working
+  style*).
 - Vite bundles the frontend. `src/main.ts` is the entry point; `assets/**/*.ts`
   modules use ES `import`/`export`. Run `npm run dev` for local dev; Vite
   handles module order automatically.
@@ -206,6 +218,13 @@ turns public datasets into PMTiles consumed by the frontend.
 
 ## Working style
 
+- **Orient with `git log --oneline -15` *and* `git branch -r` before the first
+  edit.** `main` is a rewritten 34-commit history that shares no ancestor with
+  the topic branches, so `git log main..origin/<branch>` has no merge base and
+  reports the branch's whole 88–115 commits as "ahead" — that count means
+  nothing here. Check by content instead — `grep` the symbol on `main` — rather
+  than trusting a commit count. `origin/data` and `origin/data-static` are
+  orphan data branches; never diff them against code.
 - Cite/edit exact files; layer questions → check `docs/layers/` first
   instead of grepping code.
 - Prefer greppable anchors over reading whole files. Insertion points are
@@ -227,6 +246,14 @@ turns public datasets into PMTiles consumed by the frontend.
   the code. Run a script over the *built* artifact and count the affected rows
   before proposing a fix — a plausible-looking parser bug and a silent 254-char
   DBF truncation look identical when you only read the source.
+- **Tee the long builds to a log; never let one stream into context.**
+  `make pipeline`, `make continental-all` and `make global-tiles` run for hours
+  and emit tens of thousands of osmium/tippecanoe lines. Run
+  `mkdir -p tmp/logs && make global-tiles 2>&1 | tee tmp/logs/global-tiles.log`,
+  then quote the head *and* the tail (`head -40`, `tail -40`) along with the
+  log path — the first error is the cause and the rest is cascade, and a slice
+  quoted without its path is a silent drop. Grep the log for the layer or error
+  you care about when you need more; don't `cat` it.
 - **You do not visually verify the map — the user does.** Don't start a dev
   server and don't claim a rendering change "works." Run the gates below, then
   say what you changed and what the user should look at.

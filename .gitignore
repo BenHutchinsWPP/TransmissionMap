@@ -1,5 +1,7 @@
 # Personal IDE / workspace config
 Workspace.code-workspace
+# Machine-local agent notes (see the AGENTS.md preamble)
+AGENTS.local.md
 _private/
 HANDOFF.md
 .agents/*
