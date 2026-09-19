@@ -5,6 +5,7 @@
 import { state } from './state.js';
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleLayer } from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
+import { onMapTap, tapBox } from './map-input.js';
 
 // ─── Polygon hover ────────────────────────────────────────────────────────────
 // Config is driven by LayerDef.hoverField; fill/source/source-layer are derived
@@ -29,10 +30,10 @@ export function initPolygonHover() {
   let activeHl: string | null  = null;
   let activeVal: string | null = null;
 
-  state.map.on("click", function onPolygonClearClick(e) {
+  onMapTap(function onPolygonClearClick(e) {
     if (state.editMode === 'edit' || state.measure.active) return;
     if (!activeHl) return;
-    const hits = state.map!.queryRenderedFeatures(e.point, { layers: hoverFillIds() });
+    const hits = state.map!.queryRenderedFeatures(tapBox(e), { layers: hoverFillIds() });
     if (!hits.length) {
       state.map!.setLayoutProperty(activeHl, "visibility", "none");
       activeHl = activeVal = null;
@@ -63,11 +64,9 @@ export function initPolygonHover() {
     if (sl) (def as Record<string, unknown>)["source-layer"] = sl;
     state.map.addLayer(def);
 
-    state.map.on("click", fill, function onPolygonFillClick(e) {
+    onMapTap(fill, function onPolygonFillClick(_e, features) {
       if (state.editMode === 'edit' || state.measure.active) return;
-      if (state.map!.getLayoutProperty(fill, "visibility") === "none") return;
-      if (!e.features?.length) return;
-      const val = e.features[0].properties[field];
+      const val = features[0].properties[field];
       if (val == null) return;
 
       const same = activeHl === hl && activeVal === String(val);

@@ -6,10 +6,12 @@
 //       forbidden fetch header). Search fires on Enter only — every request
 //       costs a metered geocode, and the 20k/month free tier is plenty for
 //       explicit searches but not for per-keystroke autocomplete.
-// Deps: state (map, draw), constants (ESRI_TOKEN), utils (escapeHtml),
+// Deps: state (map, draw), map-input (close results on a map tap),
+//       constants (ESRI_TOKEN), utils (escapeHtml),
 //       user-data (pin + My Data refresh). DOM: #geocoderInput/#geocoderResults.
 
 import { state } from '../state.js';
+import { onMapTap } from '../map-input.js';
 import { ESRI_TOKEN } from '../constants.js';
 import { escapeHtml } from '../utils/utils.js';
 import { renderMyDataTab, saveUserData } from '../user-data/user-data.js';
@@ -126,4 +128,5 @@ export function wireGeocoder() {
   document.addEventListener("click", (e) => {
     if (!(e.target as Element)?.closest("#geocoder")) hideGeocoderResults();
   });
+  onMapTap(hideGeocoderResults);
 }

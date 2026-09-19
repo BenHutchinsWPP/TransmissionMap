@@ -2,7 +2,7 @@
 
 import * as maplibregl from 'maplibre-gl';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
-import { type MapMouseEvent, type MapTouchEvent, type MapGeoJSONFeature } from 'maplibre-gl';
+import { type MapGeoJSONFeature } from 'maplibre-gl';
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
 import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
@@ -14,6 +14,7 @@ import { zoneFeatureLit } from './nws-zone-join.js';
 import { ICON_SVG } from './icons.js';
 import { escapeHtml } from './utils/utils.js';
 import { t } from '../src/i18n/index.js';
+import { onMapTap, onMapHover, onMapPointLeave, tapBox, type MapPointerEvent } from './map-input.js';
 
 function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   const name = featureLabel(f);
@@ -137,34 +138,23 @@ function tryHighlightLine(feature: MapGeoJSONFeature) {
          highlightLine(feature.layer.id, feature.properties || {});
 }
 
-// Wider hit box for thumb taps. Sized by device, not per-event: synthesized
-// touch clicks arrive as MouseEvents, and `TouchEvent` is undefined on
-// non-touch desktop browsers (referencing it throws). `pointer: coarse` is the
-// reliable "finger, not mouse" signal.
-const TOUCH_HIT = matchMedia('(pointer: coarse)').matches;
-function hitBox(e: MapMouseEvent | MapTouchEvent): [maplibregl.PointLike, maplibregl.PointLike] {
-  const r = TOUCH_HIT ? 8 : 3;
-  return [
-    [e.point.x - r, e.point.y - r],
-    [e.point.x + r, e.point.y + r],
-  ];
-}
+// Both halves of a double tap arrive as taps — the measure tool builds on that —
+// and the second lands a pixel or two off the first. Picking a feature is a
+// single decision either way, so the pair resolves to one: without this, an
+// empty second tap would call popup.remove() on what the first tap just opened.
+const DOUBLE_TAP_MS = 350;
+let lastTapAt = -Infinity;
 
-// A mobile tap fires two map `click` events (synthesized touch-click + native).
-// They can land a pixel or two apart, so the edit branch's empty-tap
-// `popup.remove()` could tear down a copy popup the sibling click just opened —
-// popup never appeared. Swallow the second click of a tap.
-let lastClickTime = 0;
-function onMapClick(e: MapMouseEvent | MapTouchEvent) {
+function onMapClick(e: MapPointerEvent) {
   if (state.measure.active) return;
   if (!state.map || !state.popup) return;
-  const now = e.originalEvent.timeStamp || Date.now();
-  if (now - lastClickTime < 350) return;
-  lastClickTime = now;
+  const at = performance.now();
+  if (at - lastTapAt < DOUBLE_TAP_MS) return;
+  lastTapAt = at;
   const activeLayers = activeClickableLayers();
   if (!activeLayers.length) return;
 
-  const box = hitBox(e);
+  const box = tapBox(e);
 
   // Edit mode: click any feature (including user loaded layers) to get a Copy button.
   if (state.editMode === 'edit') {
@@ -332,30 +322,10 @@ function showFeaturePicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeatur
 export function initPopups() {
   if (!state.map) return;
   // closeOnClick:false — we manage lifecycle in onMapClick (empty-tap removes the
-  // popup). Leaving it true let a touch tap's double-fired click (synthesized +
-  // native) close the popup on the same tap that opened it — popups never showed
-  // on mobile. See onMapClick.
+  // popup), so one tap can never both open a popup and close it again.
   state.popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, maxWidth: "280px" });
 
-  state.map.on("click", onMapClick);
-
-  // In edit mode, MapboxDraw's simple_select swallows the browser's emulated
-  // click on touch, so the `click` handler above never fires — tapping a feature
-  // to copy did nothing on mobile. Drive the same handler from a detected tap
-  // (single finger, small move). Fires in all modes; the lastClickTime debounce
-  // dedupes against the real `click` on platforms where both arrive.
-  let touchStart: { x: number; y: number; t: number } | null = null;
-  state.map.on("touchstart", e => {
-    touchStart = e.points.length === 1
-      ? { x: e.point.x, y: e.point.y, t: Date.now() } : null;
-  });
-  state.map.on("touchend", e => {
-    if (!touchStart) return;
-    const moved = Math.hypot(e.point.x - touchStart.x, e.point.y - touchStart.y);
-    const dt = Date.now() - touchStart.t;
-    touchStart = null;
-    if (moved < 10 && dt < 500) onMapClick(e);
-  });
+  onMapTap(onMapClick);
 
   // Cursor feedback: one hit-test per animation frame across every clickable
   // layer at once, rather than a per-layer mouseenter/mouseleave pair.
@@ -393,13 +363,13 @@ export function initPopups() {
   const scheduleCursor = () => {
     if (!hoverFrame) hoverFrame = requestAnimationFrame(updateCursor);
   };
-  state.map.on("mousemove", e => {
+  onMapHover(e => {
     if (state.measure.active) return;
     hoverPoint = [e.point.x, e.point.y];
     scheduleCursor();
   });
   state.map.on("moveend", scheduleCursor);
-  state.map.on("mouseout", () => {
+  onMapPointLeave(() => {
     hoverPoint = null;
     if (!state.measure.active) state.map!.getCanvas().style.cursor = "";
   });

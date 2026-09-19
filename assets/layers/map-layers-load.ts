@@ -4,6 +4,7 @@ import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
+import { onMapTap } from '../map-input.js';
 
 export const addPopDensity = () => addRasterLayer("worldpop-pop-density", DATA.worldpop_pop_density,
   '<a href="https://www.worldpop.org/">WorldPop</a>', { opacity: 0.75 });
@@ -116,9 +117,9 @@ export function addOsmDataCenters() {
   registerBaseFilter("osm-dc-heat-points", null);
 
   // Click a cluster → zoom into it.
-  state.map.on("click", "osm-dc-clusters", async (e) => {
-    const f = e.features?.[0];
-    if (!f || !state.map) return;
+  onMapTap("osm-dc-clusters", async (_e, features) => {
+    const f = features[0];
+    if (!state.map) return;
     const src = state.map.getSource("osm-datacenters") as import("maplibre-gl").GeoJSONSource;
     const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id);
     state.map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });

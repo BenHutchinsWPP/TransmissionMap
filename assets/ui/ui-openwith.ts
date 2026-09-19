@@ -1,6 +1,7 @@
 // ─── "Open With" header dropdown ────────────────────────────────────────────
 
 import { state } from '../state.js';
+import { onMapTap } from '../map-input.js';
 import { escapeHtml } from '../utils/utils.js';
 
 const OPEN_WITH_MAPS = [
@@ -72,4 +73,5 @@ export function wireOpenWith() {
   document.addEventListener("click", (e) => {
     if (!openWithWrap?.contains(e.target as Node)) close();
   });
+  onMapTap(close);
 }

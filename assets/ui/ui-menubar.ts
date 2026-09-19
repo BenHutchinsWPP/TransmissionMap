@@ -2,7 +2,8 @@
 // File/Add/Save menu dropdowns, view/edit mode buttons, draw color-picker menus,
 // and the file-open input. onMenubarClick is a single delegated document click
 // handler dispatching to the right action.
-// Deps: state.js, user-data-colors.js (static — lightweight, needed at wire time).
+// Deps: state.js, map-input.js (close menus on a map tap),
+// user-data-colors.js (static — lightweight, needed at wire time).
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
 // ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
 // first File > Diagnostics… click). ui-settings.js (lazy — Settings dialog,
@@ -15,6 +16,7 @@ import { state } from '../state.js';
 import { colorPickerInner } from '../user-data/user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
+import { onMapTap } from '../map-input.js';
 
 // ─── Lazy draw chunk ──────────────────────────────────────────────────────────
 type DrawChunk = typeof import('../user-data/draw-chunk.js');
@@ -153,6 +155,12 @@ async function onMenubarClick(e: MouseEvent) {
 
   if (target?.closest('.color-menu')) return;
 
+  closeMenus();
+}
+
+// Dismissing an open menu by going back to the map is a map tap, not a document
+// click — the two paths below feed this the same way.
+function closeMenus() {
   document.querySelectorAll<HTMLElement>('.menu-dropdown:not([hidden])').forEach(m => {
     m.hidden = true;
     m.previousElementSibling?.setAttribute('aria-expanded', 'false');
@@ -169,6 +177,7 @@ export function wireMenubar() {
   });
 
   document.addEventListener('click', onMenubarClick);
+  onMapTap(closeMenus);
 
   window.addEventListener('scroll', () => {
     document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });

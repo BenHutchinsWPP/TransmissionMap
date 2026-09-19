@@ -16,6 +16,7 @@
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
 import { initialVisibility, registerBaseFilter, ensureLayerData } from './layer-init.js';
+import { onMapTap } from '../map-input.js';
 
 const SWATCH = "#eab308";
 // filter that matches nothing — the highlight shows lines only after a path is clicked
@@ -123,8 +124,8 @@ export function addWeccPaths() {
   registerBaseFilter("wecc-paths-label", null);
 
   // Clicking a path marker highlights that path's matched lines (lazy-loads them once).
-  state.map.on("click", "wecc-paths-circles", (e) => {
-    const num = e.features?.[0]?.properties?.number;
+  onMapTap("wecc-paths-circles", (_e, features) => {
+    const num = features[0]?.properties?.number;
     if (num == null) return;
     ensureLayerData("wecc-path-lines").then(() => {
       state.map?.setFilter("wecc-path-lines-highlight",

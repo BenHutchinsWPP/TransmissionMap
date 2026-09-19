@@ -16,6 +16,7 @@ import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
 import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons, loadFireIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
+import { initMapInput } from './map-input.js';
 import { initRasterProbes } from './raster-probes.js';
 import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
 import { initPopups } from './popup.js';
@@ -59,6 +60,9 @@ export function initMap() {
     showWebglError();
     return;
   }
+
+  // Before anything subscribes: tap/hover delivery for both mouse and touch.
+  initMapInput();
 
   // Surface map errors — MapLibre silently swallows tile/source/style errors
   // unless something listens. Log them so a blank map is diagnosable.

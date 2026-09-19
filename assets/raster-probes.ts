@@ -1,13 +1,14 @@
 // ─── Raster LUT hover probes (wind/solar/geo/pop-density) ────────────────────
 // Imported by: layer-init.ts (ensureRasterLut in addAllLayers),
 //              visibility.ts (setLayerVisibility, updateRasterArrow)
-// Depends on: src/units.ts (fmtSpeed, fmtDensity)
+// Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
 import { state, DATA, weatherLiveUrl } from './state.js';
 import type { RasterMeta } from '../src/types.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { fmtSpeed, fmtDensity } from '../src/units.js';
+import { onMapPoint, onMapPointLeave } from './map-input.js';
 
 // Currently-selected weather variable's display config (ramp + formatter).
 // Falls back to the first entry if state.weatherVar is ever unset/unknown,
@@ -139,6 +140,10 @@ export async function ensureRasterLut(id: string) {
     console.warn("[TransmissionMap] raster LUT load failed", id, err);
     state.rasterLutLoading[id] = false;
   }
+  // A bubble placed by a tap outlives the tap, so a LUT arriving late — or the
+  // hourly weather swap refetching one — has to reach it. Outside the try: a
+  // fault while redrawing the bubble is not a failed load.
+  if (state.rasterLut[id]) resampleBubble();
 }
 
 function sampleRaster(id: string, lng: number, lat: number): number | null {
@@ -153,10 +158,12 @@ function sampleRaster(id: string, lng: number, lat: number): number | null {
 }
 
 // ── Cursor value bubble (Ventusky-style) ─────────────────────────────────────
-// One floating bubble follows the cursor and lists the value of every visible
-// probed raster at that point; the layer-panel rows and legends carry no
-// hover readout. The legacy name updateRasterArrow is kept because
-// visibility.ts calls it with null to clear a layer's line on hide.
+// One floating bubble sits at the cursor — or at the last tap — and lists the
+// value of every visible probed raster under it; the layer-panel rows and
+// legends carry no readout of their own. The anchor is a screen position, so
+// it is re-read whenever the view settles and keeps naming the place it points
+// at. The legacy name updateRasterArrow is kept because visibility.ts calls it
+// with null to clear a layer's line on hide.
 let bubbleEl: HTMLElement | null = null;
 let bubblePoint: { x: number; y: number } | null = null;
 let bubbleHtml = "";
@@ -203,21 +210,42 @@ export function updateRasterArrow(id: string, value: number | null) {
   renderBubble();
 }
 
+// Reads every visible probed raster at the bubble's current screen position.
+// A pointer event already carries the unprojected position, so it hands it over
+// rather than paying for a second terrain readback.
+function resampleBubble(at?: { lng: number; lat: number }) {
+  if (!state.map || !bubblePoint) return;
+  const { lng, lat } = at ?? state.map.unproject([bubblePoint.x, bubblePoint.y]);
+  for (const [id, probe] of Object.entries(RASTER_PROBES)) {
+    const on = probe.active ? probe.active() : state.layerVisibility[id];
+    setBubbleValue(id, on && state.rasterLut[id] ? sampleRaster(id, lng, lat) : null);
+  }
+  renderBubble();
+}
+
 export function initRasterProbes() {
   if (!state.map) return;
-  state.map.on("mousemove", (e) => {
+  // onMapPoint rather than onMapHover: reading a value off the raster is what
+  // these layers are for, so a tap has to produce it as a mouse does.
+  onMapPoint((e) => {
     bubblePoint = { x: e.point.x, y: e.point.y };
-    for (const [id, probe] of Object.entries(RASTER_PROBES)) {
-      const on = probe.active ? probe.active() : state.layerVisibility[id];
-      setBubbleValue(id, on && state.rasterLut[id]
-        ? sampleRaster(id, e.lngLat.lng, e.lngLat.lat)
-        : null);
-    }
-    renderBubble();
+    resampleBubble(e.lngLat);
   });
-  state.map.on("mouseout", () => {
+  onMapPointLeave(() => {
     bubblePoint = null;
     for (const id of Object.keys(RASTER_PROBES)) setBubbleValue(id, null);
     renderBubble();
   });
+  // A finger has no mouseout to stand the bubble down, so it outlives the tap
+  // that placed it and has to be re-read against whatever the view became.
+  // The two overlap on an ordinary pan and each covers something the other
+  // misses: idle is the only one that fires for a change that moves nothing —
+  // a terrain or projection switch, or a raster layer switched on under a
+  // parked bubble — while moveend still arrives when a source never finishes
+  // loading and the map is therefore never idle. Neither fires per frame, which
+  // matters because under 3D terrain map.unproject() reads the terrain coords
+  // framebuffer back off the GPU; idle stays per-settle only for as long as
+  // nothing in the app schedules an unconditional repaint.
+  state.map.on("moveend", () => resampleBubble());
+  state.map.on("idle", () => resampleBubble());
 }

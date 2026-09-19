@@ -61,6 +61,9 @@ turns public datasets into PMTiles consumed by the frontend.
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`
     - `url-state.ts` — `readUrlState`, `writeUrlState` + bus subscription
     - `hover.ts` — polygon hover + line click-highlight
+    - `map-input.ts` — **the only module allowed to subscribe to MapLibre pointer
+      events**; normalises mouse and touch into `onMapTap` / `onMapDoubleTap` /
+      `onMapPoint` / `onMapHover` / `onMapContextMenu` (ESLint enforces the seam)
     - `raster-probes.ts` — `RASTER_PROBES`, `ensureRasterLut`, `updateRasterArrow`
     - `popup.ts` click popups; `popup-format.ts` HTML builder
     - `highlights.ts` search highlights; `measure.ts` distance tool
@@ -158,6 +161,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
 | Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`, and a programmatic layer switch-on has to call `syncWeatherLiveVisibility()` / `syncZoneVisibility()` by hand) |
+| Anything that reacts to a click/tap/hover on the map | `assets/map-input.ts` — subscribe there, never `map.on("click"\|"mousemove"\|…)` (silent footgun: a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
 | Fix voltage colors | `src/colors/voltage.ts` |

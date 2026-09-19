@@ -33,6 +33,7 @@ import { loadLanguage } from '../i18n-store.js';
 import { updateDomTranslations } from '../../src/i18n/index.js';
 import { renderMyDataTab } from '../user-data/user-data.js';
 import { clearFeatureInfo } from '../user-data/user-data-geom.js';
+import { onMapTap } from '../map-input.js';
 import { updateMeasureReadout } from '../measure.js';
 import { buildLayersPanel } from './ui-layer-rows.js';
 import { wireMenubar } from './ui-menubar.js';
@@ -363,6 +364,7 @@ function wireRegionSelect() {
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target as Node)) close();
   });
+  onMapTap(() => close());
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !menu.hidden) close(true);
@@ -483,10 +485,13 @@ function wireDownloadMenus() {
       menu.hidden = !menu.hidden;
       return;
     }
-    if (!t?.closest(".dl-menu") && !t?.closest(".dl-btn")) {
-      document.querySelectorAll<HTMLElement>(".dl-menu:not([hidden])").forEach(m => { m.hidden = true; });
-    }
+    if (!t?.closest(".dl-menu") && !t?.closest(".dl-btn")) closeDownloadMenus();
   });
+  onMapTap(closeDownloadMenus);
+}
+
+function closeDownloadMenus() {
+  document.querySelectorAll<HTMLElement>(".dl-menu:not([hidden])").forEach(m => { m.hidden = true; });
 }
 
 function wirePanelToggle() {

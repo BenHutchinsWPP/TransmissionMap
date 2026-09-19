@@ -1,11 +1,14 @@
 // ─── Measure tool ─────────────────────────────────────────────────────────────
-// Deps: state.js, user-data-geom.js (geom/info), tool-mode.js (exit edit mode
+// Deps: state.js, map-input.js (tap/hover/double-tap/right-click),
+// user-data-geom.js (geom/info), tool-mode.js (exit edit mode
 // without importing user-data-draw → avoids a circular dep), src/units.js (format distance).
 
 import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { state } from './state.js';
 import { haversineMeters, clearFeatureInfo } from './user-data/user-data-geom.js';
 import { exitEdit, registerMeasureDeactivator } from './tool-mode.js';
+import { onMapTap, onMapDoubleTap, onMapHover, onMapContextMenu,
+         type MapPointerEvent, type Unsubscribe } from './map-input.js';
 import { fmtDistance } from '../src/units.js';
 import { t } from '../src/i18n/index.js';
 
@@ -78,7 +81,7 @@ export function updateMeasureReadout(hover?: [number, number]) {
   el.hidden = false;
 }
 
-function onMeasureClick(e: MapMouseEvent) {
+function onMeasureClick(e: MapPointerEvent) {
   if (state.measure.finished) { state.measure.points = []; state.measure.finished = false; }
   state.measure.points.push([e.lngLat.lng, e.lngLat.lat]);
   renderMeasure();
@@ -89,7 +92,7 @@ function onMeasureMove(e: MapMouseEvent) {
   renderMeasure([e.lngLat.lng, e.lngLat.lat]);
 }
 
-function onMeasureDblClick(e: MapMouseEvent) {
+function onMeasureDblClick(e: MapPointerEvent) {
   if (state.measure.finished) return;
   e.preventDefault();
   const pts = state.measure.points;
@@ -119,6 +122,8 @@ function clearMeasure() {
   updateMeasureReadout();
 }
 
+let detach: Unsubscribe[] = [];
+
 function setMeasureActive(on: boolean) {
   if (on === state.measure.active) return;
   if (!state.map) return;
@@ -132,18 +137,22 @@ function setMeasureActive(on: boolean) {
   if (on) {
     if (state.editMode === 'edit') exitEdit();
     ensureMeasureLayers();
+    // Also disables tap-to-zoom, so a double tap finishes the line rather than
+    // zooming the map.
     state.map.doubleClickZoom.disable();
     canvas.style.cursor = 'crosshair';
-    state.map.on('click', onMeasureClick);
-    state.map.on('mousemove', onMeasureMove);
-    state.map.on('dblclick', onMeasureDblClick);
-    state.map.on('contextmenu', onMeasureContext);
+    // The rubber band is a hover preview, so it stays mouse-only; a finger gets
+    // the placed points and the running total.
+    detach = [
+      onMapTap(onMeasureClick),
+      onMapHover(onMeasureMove),
+      onMapDoubleTap(onMeasureDblClick),
+      onMapContextMenu(onMeasureContext),
+    ];
     updateMeasureReadout();
   } else {
-    state.map.off('click', onMeasureClick);
-    state.map.off('mousemove', onMeasureMove);
-    state.map.off('dblclick', onMeasureDblClick);
-    state.map.off('contextmenu', onMeasureContext);
+    for (const off of detach) off();
+    detach = [];
     state.map.doubleClickZoom.enable();
     canvas.style.cursor = '';
     clearMeasure();

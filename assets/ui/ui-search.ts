@@ -1,6 +1,7 @@
 // ─── Feature search (inside layers panel) ───────────────────────────────────
 
 import { state } from '../state.js';
+import { onMapTap } from '../map-input.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 import { escapeHtml } from '../utils/utils.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
@@ -208,4 +209,6 @@ export function wireFeatureSearch() {
     const t = e.target as Element;
     if (!t?.closest("#searchInput") && !t?.closest("#searchResults")) hideResults();
   });
+  // Going back to the map is a map tap, which is not a document click on touch.
+  onMapTap(hideResults);
 }
