@@ -477,7 +477,7 @@ const _defs = [
     const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
     return title(heading) + renderZoneAlertList(entries);
   }],
-  [["smoke-live-fill"], (p: Record<string, unknown>) =>
+  [["wildfire-smoke-fill"], (p: Record<string, unknown>) =>
     title(t("popup.smokePlume")) +
     row("popup.density", p.density as string) +
     row("popup.satellite", p.satellite) +

@@ -25,7 +25,7 @@ import { state } from './state.js';
 import { writeUrlState } from './url-state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
-import { setLayerVisibility, applyGenMode, applyAllGenModes } from './visibility.js';
+import { setLayerVisibility, applyGenMode, applyAllGenModes, refetchZoomGatedLayers } from './visibility.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -37,10 +37,11 @@ function makeLayer(id: string, mapLayerIds: string[], heatLayerId?: string): Lay
   } as LayerDef;
 }
 
-function mockMap(existingLayerIds: string[] = []) {
+function mockMap(existingLayerIds: string[] = [], zoom = 10) {
   return {
     getLayer: vi.fn((id: string) => existingLayerIds.includes(id) ? {} : undefined),
     setLayoutProperty: vi.fn(),
+    getZoom: vi.fn(() => zoom),
   };
 }
 
@@ -50,6 +51,7 @@ beforeEach(() => {
   state.mapReady = false;
   state.layerVisibility = {};
   state.genMode = {};
+  state.sourcesLoaded = {};
   _mockLayers.length = 0;
   _mockLayerById.mockReturnValue(undefined);
   for (const k of Object.keys(RASTER_PROBES)) delete (RASTER_PROBES as Record<string, unknown>)[k];
@@ -313,5 +315,78 @@ describe('applyAllGenModes', () => {
     state.map = map as unknown as typeof state.map;
     applyAllGenModes();
     expect(map.setLayoutProperty).not.toHaveBeenCalled();
+  });
+});
+
+// ─── refetchZoomGatedLayers ───────────────────────────────────────────────────
+// The fromZoom fetch gate itself lives in ensureLayerData (mocked here), which
+// this module cannot observe directly. These tests cover what visibility.ts
+// controls: which layers it decides to re-call ensureLayerData for on a zoom
+// settle, given the map's current zoom.
+
+describe('refetchZoomGatedLayers', () => {
+  it('does NOT call ensureLayerData for a fromZoom layer below its threshold', () => {
+    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
+    _mockLayers.push(layer);
+    state.layerVisibility['heavy'] = true;
+    state.mapReady = true;
+    state.map = mockMap([], 5) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).not.toHaveBeenCalled();
+  });
+
+  it('calls ensureLayerData for a fromZoom layer once the zoom is at or above it', () => {
+    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
+    _mockLayers.push(layer);
+    state.layerVisibility['heavy'] = true;
+    state.mapReady = true;
+    state.map = mockMap([], 8) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).toHaveBeenCalledWith('heavy');
+  });
+
+  // A layer with no fromZoom keeps today's behaviour — fetched unconditionally
+  // by setLayerVisibility's own "if (visible) ensureLayerData(registryId)"
+  // call (see 'calls ensureLayerData when showing' above), not by this
+  // zoom-settle re-check, which only concerns zoom-gated layers.
+  it('never calls ensureLayerData for a layer with no fromZoom, at any zoom', () => {
+    const layer = makeLayer('plain', ['plain-circles']); // no fromZoom
+    _mockLayers.push(layer);
+    state.layerVisibility['plain'] = true;
+    state.mapReady = true;
+    state.map = mockMap([], 0) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).not.toHaveBeenCalled();
+  });
+
+  it('skips a fromZoom layer that is not visible', () => {
+    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
+    _mockLayers.push(layer);
+    state.layerVisibility['heavy'] = false;
+    state.mapReady = true;
+    state.map = mockMap([], 10) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).not.toHaveBeenCalled();
+  });
+
+  it('skips a fromZoom layer whose data is already loaded', () => {
+    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
+    _mockLayers.push(layer);
+    state.layerVisibility['heavy'] = true;
+    state.sourcesLoaded['heavy'] = true;
+    state.mapReady = true;
+    state.map = mockMap([], 10) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when mapReady is false', () => {
+    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
+    _mockLayers.push(layer);
+    state.layerVisibility['heavy'] = true;
+    state.mapReady = false;
+    state.map = mockMap([], 10) as unknown as typeof state.map;
+    refetchZoomGatedLayers();
+    expect(ensureLayerData).not.toHaveBeenCalled();
   });
 });

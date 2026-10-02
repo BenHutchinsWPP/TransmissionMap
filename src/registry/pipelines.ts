@@ -14,6 +14,10 @@ export const pipelineLayers: LayerDef[] = [
     lineHighlightKeys:   ["name"],
     mapLayerIds:         ["hifld-natgas-interstate", "hifld-natgas-intrastate",
                           "hifld-natgas-hgl", "hifld-natgas-gathering"],
+    clickPriority:       {
+      "hifld-natgas-interstate": 690, "hifld-natgas-intrastate": 680,
+      "hifld-natgas-hgl": 670, "hifld-natgas-gathering": 660,
+    },
     regions:             ["usa"],
     downloads: {
       geojson: "data/releases/hifld-natgas-lines.zip",
@@ -30,6 +34,11 @@ export const pipelineLayers: LayerDef[] = [
     swatch:         "#06b6d4",
     defaultOn:      false,
     mapLayerIds:    ["hifld-natgas-points"],
+    clickPriority:  { "hifld-natgas-points": 880 },
+    // ~33,200 features, gas + petroleum facilities combined (docs/layers/hifld-natgas.md);
+    // icons already render from z3, so gating the fetch to the same zoom skips
+    // the download entirely until it would draw anything.
+    fromZoom:       3,
     regions:        ["usa"],
     downloads: {
       csv: "data/releases/hifld-natgas-points.zip",
@@ -89,6 +98,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:         false,
     lineHighlightKeys: ["name"],
     mapLayerIds:       ["osm-pipelines-lines"],
+    clickPriority:     { "osm-pipelines-lines": 650 },
     regions:           ["global"],
     downloads: {
       geojson: "data/releases/osm-pipelines-lines.zip",
@@ -108,6 +118,7 @@ export const pipelineLayers: LayerDef[] = [
     defaultOn:     false,
     pipelineLayer: true,
     mapLayerIds:   ["osm-pipelines-points"],
+    clickPriority: { "osm-pipelines-points": 860 },
     regions:       ["global"],
     downloads: {
       csv: "data/releases/osm-pipelines-points.zip",

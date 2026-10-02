@@ -64,6 +64,7 @@ export const renewableLayers: LayerDef[] = [
     swatch:      "#f97316",
     defaultOn:   false,
     mapLayerIds: ["nrel-hydrothermal-points"],
+    clickPriority: { "nrel-hydrothermal-points": 850 },
     regions:     ["usa"],
     downloads: {
       csv: "data/releases/nrel-hydrothermal-points.zip",
@@ -80,6 +81,7 @@ export const renewableLayers: LayerDef[] = [
     defaultOn:   false,
     hoverField:  "lease",
     mapLayerIds: ["boem-wind-leases-fill", "boem-wind-leases-outline"],
+    clickPriority: { "boem-wind-leases-fill": 450 },
     regions:     ["usa"],
     downloads: {
       geojson: "data/releases/boem-wind-leases.zip",

@@ -60,7 +60,9 @@ turns public datasets into PMTiles consumed by the frontend.
 
 - `index.html` — single page; Vite entry via `<script type="module" src="/src/main.ts">`
 - `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts`
-- `src/types.ts` — shared `LayerDef` interface and other types
+- `src/types.ts` — shared `LayerDef` interface and other types (includes the
+  optional `clickPriority` — map-layer id → click hit-test priority — and
+  `fromZoom` — minimum zoom to fetch the layer's data — fields)
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
   as ambient module state; SI-in/display-string-out formatters + raw converters; imports nothing
 - `sw.js` — service worker (tile caching)
@@ -145,6 +147,13 @@ turns public datasets into PMTiles consumed by the frontend.
   - `conditions.ts` — hazards + everything live: static WHP & seismic PGA, live wildfire
     (perimeters/incidents/smoke), NWS alerts, ODIN outages, NEXRAD radar; `rail.ts` railroads
   - `experiences.ts` — Map Experiences catalogue (curated camera/layer/filter presets + narratives)
+  - `field-schema.ts` — `FIELD_SCHEMA`: per-dataset field types, operators, and
+    (where closed) value domains, keyed by `tile_manifest.yaml` `id` and
+    `select:` field names; pure data, no runtime logic
+  - `condition-compile.ts` — `validateConditions`/`toMapLibreFilter`/`toPredicate`:
+    compiles a `{field, op, value}` condition array checked against
+    `field-schema.ts` into a MapLibre filter expression or a plain-JS predicate;
+    consumed by `assets/filters.ts`'s `compileBucketExpr()`
 - `scripts/build_global_tiles.py` — joins the 8 continental OSM builds into one
   planet-wide artifact per layer (what the map reads), capping any archive over the
   host's 100 MiB per-file ceiling. Transmission is re-tiled from the GeoPackages in
@@ -194,6 +203,9 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add/edit a layer registry entry | `src/registry/<group>.ts` — imports in `src/registry/index.ts` list every group file |
 | Add hover highlight to a polygon layer | set `hoverField` on the `LayerDef` in `src/registry/<group>.ts` |
 | Add line click-highlight to a line layer | set `lineHighlightKeys` on the `LayerDef` in `src/registry/<group>.ts` |
+| Change which feature a click resolves to / add a clickable layer | set `clickPriority` on the `LayerDef` in `src/registry/<group>.ts` (higher number wins); a style layer built outside the registry goes in `UNOWNED_CLICKABLE` in `assets/popup.ts` instead |
+| Gate a layer's fetch on zoom (large point datasets) | set `fromZoom` on the `LayerDef` in `src/registry/<group>.ts` — `assets/layers/layer-init.ts`'s `ensureLayerData()` withholds the fetch below it, and `assets/visibility.ts`'s `refetchZoomGatedLayers()` re-checks it on zoom settle |
+| Add a field to a dataset's filter schema (types, operators, closed value domains) | `src/registry/field-schema.ts` (`FIELD_SCHEMA`); compiled into filter expressions by `src/registry/condition-compile.ts` |
 | Legends | `assets/ui/ui-legends.ts` |
 | Search behavior | `assets/ui/ui-search.ts` |
 | Layer add order / lazy loading | `assets/layers/layer-init.ts` |

@@ -1,6 +1,9 @@
 // ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
 // Imported by: ui.ts (setLayerVisibility, applyAllGenModes),
 //              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
+// Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
+// every zoom settle, via a 'zoomend' listener attached once the map emits
+// 'map:ready' — see refetchZoomGatedLayers below.
 
 import { state } from './state.js';
 import { ogfColorExpr, westtecColorExpr } from '../src/colors/buckets.js';
@@ -96,8 +99,31 @@ export function applyWestTECColorBy() {
   state.map.setPaintProperty("westtec-lines", "line-color", westtecColorExpr(state.westtecColorBy));
 }
 
+// ─── fromZoom fetch gate: re-run on zoom settle ────────────────────────────────
+// ensureLayerData() withholds a layer's fetch below its LayerDef.fromZoom (see
+// layer-init.ts's header). That gate is only checked when something calls
+// ensureLayerData, so a layer switched on while zoomed out would otherwise
+// stay unloaded forever once the map reaches that zoom. This re-checks every
+// visible, not-yet-loaded, zoom-gated layer on each zoom settle and re-calls
+// ensureLayerData for the ones that now qualify; ensureLayerData is
+// idempotent and de-dupes in-flight calls, so this is cheap even when nothing
+// has crossed its threshold yet.
+export function refetchZoomGatedLayers() {
+  if (!state.mapReady || !state.map) return;
+  const zoom = state.map.getZoom();
+  for (const entry of LAYERS) {
+    if (entry.fromZoom === undefined) continue;
+    if (!state.layerVisibility[entry.id]) continue;
+    if (state.sourcesLoaded[entry.id]) continue;
+    if (zoom >= entry.fromZoom) ensureLayerData(entry.id);
+  }
+}
+
 // ─── Bus subscription ─────────────────────────────────────────────────────────
 import { on } from './state-bus.js';
 on('gen:mode', ({ id }) => applyGenMode(id));
 on('ogf:colorby', applyOGFColorBy);
 on('westtec:colorby', applyWestTECColorBy);
+// Attached once the map is ready (style loaded, layers added) rather than at
+// module load, since state.map does not exist yet at import time.
+on('map:ready', () => state.map?.on('zoomend', refetchZoomGatedLayers));

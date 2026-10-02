@@ -514,4 +514,14 @@ describe('buildPopupHtml', () => {
     expect(out).toContain('00501');
     expect(out).toContain('not the same as ZIP codes');
   });
+
+  it('routes wildfire-smoke-fill by its real MapLibre layer id', () => {
+    const out = buildPopupHtml('wildfire-smoke-fill', {
+      density: 'Medium', satellite: 'MODIS', start_dt: '2026-07-15', end_dt: '2026-07-18',
+    });
+    expect(out).toContain('Smoke Plume');
+    expect(out).toContain('Medium');
+    expect(out).toContain('MODIS');
+    expect(out).toContain('2026-07-15');
+  });
 });

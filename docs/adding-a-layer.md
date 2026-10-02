@@ -161,6 +161,8 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `ramp: { stops, max, unit, minLabel?, maxLabel?, fmt? }` | Inline color-ramp legend in the panel row |
 | `hoverField: "name"` | Polygon highlight on click — set to the feature property used to match the active feature |
 | `lineHighlightKeys: ["name"]` | Line click-highlight — set to one or more feature properties that uniquely identify a line |
+| `clickPriority: { "my-layer-circles": 500 }` | **Required for a clickable layer.** Maps each of this entry's MapLibre layer ids to its click hit-test priority — higher number tested first when overlapping features exist. `assets/popup.ts` folds every `LayerDef.clickPriority` into its query order at module load; see §10. |
+| `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-init.ts`); `assets/visibility.ts`'s `refetchZoomGatedLayers()` re-checks it on zoom settle. Omit for anything fetched at its default visibility. |
 
 **Ramp stops** are `[value, "r,g,b"]` pairs matching the gdaldem color ramp — define them as `<X>_RAMP_STOPS` / `<X>_RAMP_MAX` in `src/colors/ramps.ts` and reference them here (see **§3R**). `minLabel`/`maxLabel` override the default "0" / `max+ unit` labels.
 
@@ -294,15 +296,24 @@ Anchor: `>>> ADD-LAYER: legend-filters`
 
 ## 10. `assets/popup.ts` — click popup
 
-### Add to `CLICKABLE_LAYERS`
+### Declare the layer's click priority
+
+A clickable layer's hit-test priority is declared on its own `LayerDef`, not in
+a hand-kept array — see `clickPriority` in **§5**:
 
 ```ts
-const CLICKABLE_LAYERS = [
-  // existing...
-  "my-layer-circles",   // add in priority order (top = wins the click)
+{
+  id: "my-layer",
+  mapLayerIds: ["my-layer-circles"],
+  clickPriority: { "my-layer-circles": 500 },  // higher number wins an overlapping click
   // ...
-];
+}
 ```
+
+`assets/popup.ts` builds its query order at module load from every registered
+`LayerDef.clickPriority`, sorted descending. A style layer built outside the
+registry (no `LayerDef` to hang a priority on) goes in `UNOWNED_CLICKABLE` in
+`assets/popup.ts` instead, with a comment naming why it has no registry entry.
 
 ### Add a renderer to the `_defs` table in `assets/popup-format.ts`
 
@@ -404,13 +415,13 @@ Update `docs/data-sources.md`:
 [ ] assets/constants.ts                    — DATA.my_layer (+ lut/meta if raster)
 [ ] src/registry/sources.ts               — LAYER_SOURCES entry (if new source)
 [ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…)
+[ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
 [ ] assets/layers/map-layers-*.ts         — addMyLayer() builder
 [ ] assets/layers/layer-init.ts           — LAZY_GEOJSON entry (GeoJSON only)
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — addMyLayer() call in addAllLayers()
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)
-[ ] assets/popup.ts                       — CLICKABLE_LAYERS entry
-[ ] assets/popup-format.ts                — renderer tuple in the _defs table
+[ ] assets/popup-format.ts                — renderer tuple in the _defs table (clickable layers)
 [ ] assets/filters.ts                     — bus subscription (if new filter type)
 [ ] assets/ui/ui-filters.ts              — emit events (if new filter type)
 [ ] index.html                            — layer-rows-* div (if new group: full section + ui/ui.ts)

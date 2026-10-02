@@ -54,6 +54,15 @@ const OSM_TL_LAYER_IDS = [
   ...osmTlLayerIds(...OSM_TL_OVERLAYS),
 ];
 
+// Click hit-test priority for the tiered (non-overlay) style layers, highest
+// voltage tier tested first — matches OSM_TL_TIERS order (hv, mv, lv, unknown
+// is the priority order used by the popup's queryRenderedFeatures list, so the
+// tiers are named explicitly rather than via OSM_TL_TIERS' own order).
+const OSM_TL_CLICK_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown");
+const OSM_TL_CLICK_PRIORITY: Record<string, number> = Object.fromEntries(
+  OSM_TL_CLICK_IDS.map((id, i) => [id, 800 - i * 10])
+);
+
 export const transmissionLayers: LayerDef[] = [
   // ── Substations ──────────────────────────────────────────────────────────────
   {
@@ -67,6 +76,7 @@ export const transmissionLayers: LayerDef[] = [
     defaultOn:     false,
     voltageLayer:  true,
     mapLayerIds:   ["osm-substations-points-hv", "osm-substations-points-lv", "osm-substations-label"],
+    clickPriority: { "osm-substations-points-hv": 980, "osm-substations-points-lv": 970 },
     filterType:    "kv",
     filterField:   "nominal_kv",
     regions:       ["global"],
@@ -86,6 +96,7 @@ export const transmissionLayers: LayerDef[] = [
     voltageLayer:  true,
     hoverField:    "osm_id",
     mapLayerIds:   ["osm-substations-polygons-fill", "osm-substations-polygons-outline"],
+    clickPriority: { "osm-substations-polygons-fill": 940 },
     filterType:    "kv",
     filterField:   "nominal_kv",
     regions:       ["global"],
@@ -105,6 +116,7 @@ export const transmissionLayers: LayerDef[] = [
     defaultOn:     false,
     voltageLayer:  true,
     mapLayerIds:   ["hifld-substations-hv", "hifld-substations-lv", "hifld-substations-label"],
+    clickPriority: { "hifld-substations-hv": 960, "hifld-substations-lv": 950 },
     filterType:    "kv",
     filterField:   "max_kv",
     regions:       ["usa"],
@@ -126,6 +138,7 @@ export const transmissionLayers: LayerDef[] = [
     voltageLayer:        true,
     lineHighlightKeys:   ["name"],
     mapLayerIds:         OSM_TL_LAYER_IDS,
+    clickPriority:       OSM_TL_CLICK_PRIORITY,
     filterType:    "kv",
     filterField:   "nominal_kv",
     regions:       ["global"],
@@ -146,6 +159,10 @@ export const transmissionLayers: LayerDef[] = [
     voltageLayer:        true,
     lineHighlightKeys:   ["SUB_1", "SUB_2"],
     mapLayerIds:         ["hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown", "hifld-transmission-lines-dc", "hifld-transmission-lines-dc-label"],
+    clickPriority:       {
+      "hifld-transmission-lines-hv": 730, "hifld-transmission-lines-mv": 720,
+      "hifld-transmission-lines-lv": 710, "hifld-transmission-lines-unknown": 700,
+    },
     filterType:    "kv",
     filterField:   "VOLTAGE",
     regions:       ["usa"],
@@ -179,6 +196,7 @@ export const transmissionLayers: LayerDef[] = [
     defaultOn:         false,
     westtecColorLayer: true,
     mapLayerIds:       ["westtec-lines-casing", "westtec-lines"],
+    clickPriority:     { "westtec-lines": 990 },
     lineHighlightKeys: ["name"],
     regions:           ["usa"],
     downloads: {},
@@ -194,6 +212,7 @@ export const transmissionLayers: LayerDef[] = [
     defaultOn:   false,
     mapLayerIds: ["wecc-path-corridors", "wecc-path-corridors-outline",
                   "wecc-path-lines-highlight", "wecc-paths-circles", "wecc-paths-label"],
+    clickPriority: { "wecc-paths-circles": 910 },
     regions:     ["usa"],
     downloads: {
       geojson: "data/releases/wecc-paths.zip",

@@ -95,6 +95,11 @@ export interface LayerDef {
   pipelineLayer?: boolean;
   hoverField?: string;
   lineHighlightKeys?: string[];
+  // Maps each layer id to its click hit-test priority: higher numbers tested
+  // first when overlapping features exist. Only clickable layers, not heat/label/casing.
+  clickPriority?: Record<string, number>;
+  // Minimum zoom level to fetch this layer's data; absent means fetch when visible.
+  fromZoom?: number;
 }
 
 export interface LayerSourceDef {

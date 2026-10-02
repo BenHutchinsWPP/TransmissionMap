@@ -28,8 +28,10 @@ import {
   MINES_STATUS_BUCKETS, MINES_STATUS_MAP,
 } from '../src/colors/minerals.js';
 import { setZoneGroupFilter } from './nws-zone-join.js';
+import { toMapLibreFilter, ConditionError } from '../src/registry/condition-compile.js';
+import { recordDiagEvent } from './diag-log.js';
 
-const OSM_FUEL_MAP = {
+export const OSM_FUEL_MAP = {
   wind:       ["wind"],
   solar:      ["solar"],
   hydro:      ["hydro"],
@@ -160,7 +162,7 @@ function setBucketFilter(mapLayerIds: string[], bucketExpr: FilterSpecification 
 
 function applyBucketFilterToLayers(layerIds: string[], field: string, activeSet: Set<string>, buckets: BucketDef[], valueMap: Record<string, string[]>) {
   if (!state.mapReady) return;
-  const bucketExpr = buildValueFilterExpr(field, activeSet, buckets, valueMap);
+  const bucketExpr = compileBucketExpr(field, activeSet, buckets, valueMap);
   setBucketFilter(layerIds, bucketExpr);
 }
 
@@ -331,7 +333,7 @@ function buildGenFuelExpr(entry: (typeof LAYERS)[number]) {
   const fuelFilter = state.legendFilters.fuel;
   if (!fuelFilter) return null;
   if (entry.filterType === "fuel_osm") {
-    return buildValueFilterExpr(
+    return compileBucketExpr(
       entry.filterField!, globalFuelToOsm(fuelFilter), OSM_FUEL_BUCKETS, OSM_FUEL_MAP);
   }
   if (entry.filterType === "fuel_eia") {
@@ -349,7 +351,7 @@ export function applyGeneratorFilters() {
     const yearExpr = entry.yearFilterLayer ? buildYearFilterExpr() : null;
     // sector_name only exists on EIA data; OSM generators are untouched
     const sectorExpr = entry.filterType === "fuel_eia"
-      ? buildValueFilterExpr("sector_name", state.legendFilters.sector, SECTOR_BUCKETS, SECTOR_MAP)
+      ? compileBucketExpr("sector_name", state.legendFilters.sector, SECTOR_BUCKETS, SECTOR_MAP)
       : null;
 
     let statusExpr: FilterSpecification | null = null;
@@ -429,11 +431,60 @@ export function buildValueFilterExpr(field: string, activeSet: Set<string> | nul
   return anyOfConds(conds);
 }
 
-const LAYER_FILTER_VALUE_MAPS: Record<string, Record<string, string[]>> = {
+export const LAYER_FILTER_VALUE_MAPS: Record<string, Record<string, string[]>> = {
   pipeline_type:    PIPELINE_TYPE_MAP,
   natgas_pipe_type: NATGAS_PIPE_TYPE_MAP,
   natgas_fac_type:  NATGAS_FAC_TYPE_MAP,
 };
+
+// Filtered field → the tile_manifest dataset whose FIELD_SCHEMA entry declares
+// it, so the values expression compiles schema-checked. Keyed by field name,
+// which is unique across the bucket filters; a field absent here keeps the
+// direct builder. `source` is declared identically by osm_plants_points,
+// osm_plants_polygons and osm_generators from one shared definition, so any of
+// the three names the same check.
+export const BUCKET_FILTER_DATASETS: Record<string, string> = {
+  pipe_type:   "hifld_natgas_lines",
+  fac_type:    "hifld_natgas_points",
+  substance:   "osm_pipelines_lines",
+  code:        "nerc_regions",
+  type:        "retail_territories",
+  sector_name: "eia_generators",
+  source:      "osm_plants_points",
+};
+
+// Active legend buckets → the values expression for the field's dataset.
+// Fields with no schema-declared dataset, and bucket sets whose active "other"
+// catch-all makes the expression a disjunction, use buildValueFilterExpr.
+export function compileBucketExpr(
+  field: string,
+  activeSet: Set<string> | null | undefined,
+  allBuckets: { id: string }[],
+  valueMap: Record<string, string[]>,
+): FilterSpecification | null {
+  const dataset = BUCKET_FILTER_DATASETS[field];
+  if (!dataset || !activeSet || activeSet.has("other")) {
+    return buildValueFilterExpr(field, activeSet, allBuckets, valueMap);
+  }
+  if (activeSet.size === allBuckets.length) return null;
+  const allowed: string[] = [];
+  for (const [id, vals] of Object.entries(valueMap)) if (activeSet.has(id)) allowed.push(...vals);
+  if (!allowed.length) return anyOfConds([]);
+  // toMapLibreFilter validates against FIELD_SCHEMA and throws ConditionError
+  // when a bucket value has drifted outside the declared domain. This runs on
+  // the live filter:all path with no surrounding try/catch (state-bus.ts emit
+  // calls every subscriber unguarded), so an escaped throw would abort every
+  // remaining applyXFilter() in the sequence and leave the map half-filtered.
+  // Falling back to the pre-schema builder keeps the filter usable; the
+  // recorded diagnostic is how the drift still gets seen.
+  try {
+    return toMapLibreFilter(dataset, [{ field, op: "in", value: allowed }]) as unknown as FilterSpecification;
+  } catch (err) {
+    if (!(err instanceof ConditionError)) throw err;
+    recordDiagEvent('layer', `${dataset}.${field}: ${err.message}`);
+    return buildValueFilterExpr(field, activeSet, allBuckets, valueMap);
+  }
+}
 
 export function applyLayerFilter(registryId: string) {
   const entry = layerById(registryId);
@@ -445,7 +496,7 @@ export function applyLayerFilter(registryId: string) {
 
   const valueMap = LAYER_FILTER_VALUE_MAPS[entry.filterType];
   const bucketExpr = valueMap
-    ? buildValueFilterExpr(entry.filterField!, active, entry.filterBuckets ?? [], valueMap)
+    ? compileBucketExpr(entry.filterField!, active, entry.filterBuckets ?? [], valueMap)
     : null;
 
   setBucketFilter(entry.mapLayerIds, bucketExpr);

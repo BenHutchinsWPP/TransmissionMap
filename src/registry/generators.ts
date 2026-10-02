@@ -13,8 +13,13 @@ export const generatorLayers: LayerDef[] = [
     defaultOn:     false,
     fuelLayer:     true,
     mapLayerIds:   ["osm-plant-icons", "osm-plant-heat"],
+    clickPriority: { "osm-plant-icons": 920 },
     heatLayerId:   "osm-plant-heat",
     genModeCode:   "o",
+    // ~18,000 features worldwide (docs/layers/osm-plants.md); icons already
+    // render from z3, so gating the fetch to the same zoom skips the download
+    // entirely until it would draw anything.
+    fromZoom:    3,
     filterType:  "fuel_osm",
     filterField: "source",
     regions:     ["global"],
@@ -34,6 +39,7 @@ export const generatorLayers: LayerDef[] = [
     fuelLayer:     true,
     hoverField:    "osm_id",
     mapLayerIds:   ["osm-plants-polygons-fill", "osm-plants-polygons-outline"],
+    clickPriority: { "osm-plants-polygons-fill": 930 },
     filterType:  "fuel_osm",
     filterField: "source",
     regions:     ["global"],
@@ -53,6 +59,7 @@ export const generatorLayers: LayerDef[] = [
     defaultOn:     false,
     fuelLayer:     true,
     mapLayerIds:   ["osm-gen-circles"],
+    clickPriority: { "osm-gen-circles": 890 },
     filterType:  "fuel_osm",
     filterField: "source",
     regions:     ["global"],
@@ -71,8 +78,13 @@ export const generatorLayers: LayerDef[] = [
     defaultOn:     false,
     fuelLayer:     true,
     mapLayerIds:   ["eia-gen-circles", "eia-gen-heat"],
+    clickPriority: { "eia-gen-circles": 900 },
     heatLayerId:   "eia-gen-heat",
     genModeCode:   "e",
+    // ~34,000 US generator rows (docs/layers/eia-generators.md); icons already
+    // render from z3, so gating the fetch to the same zoom skips the download
+    // entirely until it would draw anything.
+    fromZoom:        3,
     yearFilterLayer: true,
     filterType:    "fuel_eia",
     filterField:   "energy_source",

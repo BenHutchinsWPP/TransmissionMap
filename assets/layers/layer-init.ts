@@ -4,7 +4,14 @@
 //              map-layers-*.ts (addTransmissionLines, addPolygonLayer,
 //              addSubstationPoints, pmtilesUrl, initialVisibility, registerBaseFilter)
 // Deps: diag-log.ts (recordDiagEvent — records ensureLayerData failures for the
-//       diagnostics panel).
+//       diagnostics panel); registry/index.ts (layerById — reads a layer's
+//       fromZoom threshold).
+// ensureLayerData's contract: "fetch this if the zoom allows" — a registry id
+// whose LayerDef sets fromZoom is withheld below that zoom, so every caller
+// (bootstrap defaultOn loops included) can call it unconditionally and rely
+// on the gate rather than checking zoom itself. visibility.ts re-runs the
+// gate on zoom settle so a layer switched on while zoomed out still loads
+// once the map reaches its threshold.
 // >>> ADD-LAYER: lazy-geojson — see docs/adding-a-layer.md §7
 
 import type { ExpressionSpecification, GeoJSONSource, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
@@ -18,6 +25,7 @@ import {
 import { registerBaseFilter } from '../filters.js';
 import { recordDiagEvent } from '../diag-log.js';
 import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
+import { layerById } from '../../src/registry/index.js';
 
 // Re-export so map-layers-*.ts can import from one place
 export { registerBaseFilter };
@@ -72,6 +80,13 @@ export function ensureLayerData(registryId: string): Promise<void> {
   if (alias) return ensureLayerData(alias);
   const url = LAZY_GEOJSON[registryId];
   if (!url || state.sourcesLoaded[registryId]) return Promise.resolve();
+  // Fetch gate: a layer with a fromZoom stays unfetched below that zoom, so a
+  // heavy dataset zoomed-out users never render is never downloaded either.
+  // Safe to no-op here rather than error — the caller (a visibility toggle or
+  // a defaultOn bootstrap loop) doesn't need to know the zoom; the map's own
+  // zoom-settle handler (visibility.ts) re-calls this once it qualifies.
+  const fromZoom = layerById(registryId)?.fromZoom;
+  if (fromZoom !== undefined && (state.map?.getZoom() ?? 0) < fromZoom) return Promise.resolve();
   const existing = _inflight[registryId];
   if (existing) return existing;
   _inflight[registryId] = (async () => {

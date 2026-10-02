@@ -1,7 +1,7 @@
 // ─── Popup system ─────────────────────────────────────────────────────────────
 
 import * as maplibregl from 'maplibre-gl';
-import { osmTlLayerIds } from '../src/registry/transmission.js';
+import { LAYERS } from '../src/registry/index.js';
 import { type MapGeoJSONFeature } from 'maplibre-gl';
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
@@ -56,48 +56,35 @@ function showEditPicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]
     }));
 }
 
-// All clickable MapLibre layer IDs (in priority order for queryRenderedFeatures)
-// >>> ADD-LAYER: clickable-layers — see docs/adding-a-layer.md §10
-const OSM_TL_CLICKABLE = osmTlLayerIds("hv", "mv", "lv", "unknown");
+// Click hit-test priority for style layers that are still built (by
+// map-layers-hifld.ts / map-layers-petroleum.ts / nws-zone-join.ts) but whose
+// LayerDef carries no mapLayerIds entry for them, so the registry has nowhere
+// to hang a clickPriority.
+export const UNOWNED_CLICKABLE: Record<string, number> = {
+  // LayerDef commented out in src/registry/transmission.ts pending a
+  // comparison of OGF statuses against WestTEC; map layer still built.
+  "ogf-planned-lines": 1000,
+  // LayerDef commented out in src/registry/pipelines.ts (crude/refined-oil
+  // delivery has no grid-planning value); map layer still built.
+  "hifld-petroleum-facilities": 870,
+  "eia-crude-pipelines": 640,
+  "eia-product-pipelines": 630,
+  // Feature-state-joined choropleths built outside any mapLayerIds array.
+  "nws-zone-fill": 600,
+  "nws-county-fill": 590,
+};
 
-const CLICKABLE_LAYERS = [
-  "ogf-planned-lines",
-  "westtec-lines",
-  "osm-substations-points-hv", "osm-substations-points-lv",
-  "hifld-substations-hv", "hifld-substations-lv",
-  "osm-substations-polygons-fill",
-  "osm-plants-polygons-fill",
-  "osm-plant-icons",
-  "wecc-paths-circles",
-  "eia-gen-circles",
-  "osm-gen-circles",
-  "hifld-natgas-points", "hifld-petroleum-facilities",
-  "osm-pipelines-points",
-  "nrel-hydrothermal-points",
-  "mines-icons",
-  "osm-dc-circles",
-  "osm-dc-points",
-  "osm-dc-heat-points",
-  ...OSM_TL_CLICKABLE,
-  "hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown",
-  "hifld-natgas-interstate", "hifld-natgas-intrastate",
-  "hifld-natgas-hgl", "hifld-natgas-gathering",
-  "osm-pipelines-lines",
-  "eia-crude-pipelines", "eia-product-pipelines",
-  "railroads",
-  "nws-alerts-fill",
-  "nws-zone-fill", "nws-county-fill",
-  "smoke-live-fill",
-  "wildfire-incidents-circle",
-  "wildfire-hotspots-circle",
-  "wildfire-perimeters-fill",
-  "tribal-fill", "bia-tribal-fill", "padus-fill", "crithab-fill",
-  "nerc-fill", "ba-fill", "eiaba-fill", "retail-fill",
-  "odin-outages-fill",
-  "boem-wind-leases-fill",
-  // Administrative reference boundaries — background context, lowest priority.
-  "us-zcta-fill", "us-counties-fill", "us-states-fill", "admin1-fill", "countries-fill",
-];
+// All clickable MapLibre layer IDs, derived from every LayerDef.clickPriority
+// plus UNOWNED_CLICKABLE and sorted by descending priority — that order is
+// what queryRenderedFeatures uses below, so it decides both which feature a
+// click resolves to and the disambiguation picker's row order.
+// >>> ADD-LAYER: clickable-layers — see docs/adding-a-layer.md §10
+const CLICK_PRIORITY: Record<string, number> = { ...UNOWNED_CLICKABLE };
+for (const layer of LAYERS) {
+  if (layer.clickPriority) Object.assign(CLICK_PRIORITY, layer.clickPriority);
+}
+export const CLICKABLE_LAYERS = Object.keys(CLICK_PRIORITY)
+  .sort((a, b) => CLICK_PRIORITY[b] - CLICK_PRIORITY[a]);
 
 // Layers that earn a pointer cursor but are not popup targets — their click
 // does something else (the datacenter cluster zooms in). They ride along in the
