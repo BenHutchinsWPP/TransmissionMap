@@ -65,11 +65,11 @@ turns public datasets into PMTiles consumed by the frontend.
   `fromZoom` — minimum zoom to fetch the layer's data — fields)
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
   as ambient module state; SI-in/display-string-out formatters + raw converters; imports nothing
-- `sw.js` — service worker (tile caching)
+- `sw.js` — service worker (network-first app shell with offline fallback; map data is cross-origin and bypasses it)
 - `assets/` — frontend modules (all TypeScript), split into subfolders:
   - **Root** (`assets/`): cross-cutting modules used by multiple subfolders
     - `map.ts` MapLibre init + basemap switching
-    - `state.ts` mutable global singleton (`AppState`); re-exports constants
+    - `state.ts` mutable global singleton (`AppState`); constants live in `constants.ts` — import them from there
     - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`; see `Events`); no deps
     - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`), `applyGenMode`, `applyAllGenModes`
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`
@@ -158,9 +158,9 @@ turns public datasets into PMTiles consumed by the frontend.
   - `field-schema.ts` — `FIELD_SCHEMA`: per-dataset field types, operators, and
     (where closed) value domains, keyed by `tile_manifest.yaml` `id` and
     `select:` field names; pure data, no runtime logic
-  - `condition-compile.ts` — `validateConditions`/`toMapLibreFilter`/`toPredicate`:
+  - `condition-compile.ts` — `validateConditions`/`toMapLibreFilter`:
     compiles a `{field, op, value}` condition array checked against
-    `field-schema.ts` into a MapLibre filter expression or a plain-JS predicate;
+    `field-schema.ts` into a MapLibre filter expression;
     consumed by `assets/filters.ts`'s `compileBucketExpr()`
 - `scripts/build_global_tiles.py` — joins the 8 continental OSM builds into one
   planet-wide artifact per layer (what the map reads), capping any archive over the
@@ -225,7 +225,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | "Things aren't loading" reports / add a diagnostics check | `assets/diagnostics.ts` (`DIAG_CHECKS`), `assets/ui/ui-diagnostics.ts` (silent footgun: host probes duplicate `docs/network-allowlist.md` — update both) |
 | Pipeline / tile build | `docs/pipeline.md`, then named script |
 | Publishing a build / repo-size headroom | `docs/hosting-plan.md` § *Repository headroom* — read before running `make publish-data` (silent footgun: a force-push to `data-static` deletes nothing, so an overshoot of GitHub's 5 GB soft limit can only be undone by GitHub Support running GC — never set `SKIP_SIZE_CHECK=1` to get past the gate) |
-| Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
+| Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN` / `LIVE_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
 | How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
 | Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them; a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
 

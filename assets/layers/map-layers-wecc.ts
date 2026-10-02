@@ -14,7 +14,8 @@
 // Imported by: add-all-layers.ts. Lazy-loaded via layer-init.ts LAZY_GEOJSON.
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
-import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { initialVisibility, registerBaseFilter, ensureLayerData } from './layer-init.js';
 import { onMapTap } from '../map-input.js';
 

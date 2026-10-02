@@ -1,7 +1,8 @@
 // ─── Renewable resource raster + geothermal + BOEM offshore-lease layers ─────
 
 import type { LayerSpecification } from "maplibre-gl";
-import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { initialVisibility, registerBaseFilter, addPolygonLayer, addRasterLayer } from './layer-init.js';
 
 export const addWindResource = () => addRasterLayer("nlr-wind-100m", DATA.nlr_wind_100m,

@@ -4,7 +4,8 @@
 // Colors/icons come from src/colors/minerals.ts; filter logic in
 // assets/filters.ts (applyMinesFilter); popup in assets/popup-format.ts.
 import type { LayerSpecification } from "maplibre-gl";
-import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { minesIconExpr } from '../../src/colors/minerals.js';
 import { initialVisibility, registerBaseFilter } from './layer-init.js';
 

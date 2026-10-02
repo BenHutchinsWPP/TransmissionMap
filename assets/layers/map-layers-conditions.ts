@@ -6,7 +6,7 @@
 //       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
 //       and the FEMA National Risk Index county choropleth (same shared-source
 //       feature-state pattern; the join lives in ../fema-nri.ts).
-// Deps: layer-init.ts (pmtilesUrl, initialVisibility), state (DATA),
+// Deps: layer-init.ts (pmtilesUrl, initialVisibility), state, constants (DATA),
 //       src/colors/buckets.ts (NRI_RATINGS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
@@ -34,11 +34,12 @@
 // -snow) added underneath and toggled by the same registry row.
 
 import type { LayerSpecification, ExpressionSpecification, RasterTileSource } from "maplibre-gl";
+import { state } from '../state.js';
 import {
-  state, DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
+  DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
   GEOMET_RADAR_TILE_TEMPLATE, WEATHER_IMAGE_COORDS, TRANSPARENT_PNG,
   WEATHER_WASH_OPACITY,
-} from '../state.js';
+} from '../constants.js';
 import { initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
 import { NRI_RATINGS } from '../../src/colors/buckets.js';
 

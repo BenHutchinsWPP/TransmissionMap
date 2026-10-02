@@ -18,11 +18,11 @@
 //       cheaper than modifying the shared factory for a single caller. The
 //       modal's re-enable button gets a matching click listener that calls
 //       refetchZoneAlerts(), since the factory only restores polygon layers.
-// Deps: live-staleness.ts (factory), state (DATA), nws-zone-join.ts
+// Deps: live-staleness.ts (factory), constants (DATA), nws-zone-join.ts
 //       (pruneExpiredZoneAlerts, clearZoneAlerts). Modal DOM in index.html.
 // Wired from ui/ui.ts init() via initNwsStaleness().
 
-import { DATA } from './state.js';
+import { DATA } from './constants.js';
 import { initLiveStaleness } from './live-staleness.js';
 import { pruneExpiredZoneAlerts, clearZoneAlerts, refetchZoneAlerts } from './nws-zone-join.js';
 

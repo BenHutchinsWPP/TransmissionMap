@@ -30,7 +30,7 @@
 //       never disappears); features with no matching alert are unpainted.
 //       `nws_multi` feature-state flags >1 matching alert and thickens the
 //       outline.
-// Deps: state-bus (on 'layer:visibility'), state (map, DATA, layerVisibility), layers/layer-init.ts
+// Deps: state-bus (on 'layer:visibility'), state (map, layerVisibility), constants (DATA), layers/layer-init.ts
 //       (ensureCountyBoundaries, COUNTY_SRC/COUNTY_SRC_LAYER, pmtilesUrl,
 //       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
@@ -55,7 +55,8 @@
 //       so joined zones/counties expire on the same cadence as the polygons.
 
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
-import { state, DATA } from './state.js';
+import { state } from './state.js';
+import { DATA } from './constants.js';
 import {
   ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, pmtilesUrl, initialVisibility,
 } from './layers/layer-init.js';

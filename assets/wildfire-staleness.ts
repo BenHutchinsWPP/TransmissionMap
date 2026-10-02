@@ -4,10 +4,10 @@
 //       parameters: 15 min poll, 6 h max age, the three live wildfire layers
 //       sharing the one `wildfire-live` source, #wildfireStaleDialog modal.
 //       No expiry pruning — wildfire features carry no end time.
-// Deps: live-staleness.ts (factory), state (DATA). Modal DOM in index.html.
+// Deps: live-staleness.ts (factory), constants (DATA). Modal DOM in index.html.
 // Wired from ui/ui.ts init() via initWildfireStaleness().
 
-import { DATA } from './state.js';
+import { DATA } from './constants.js';
 import { initLiveStaleness } from './live-staleness.js';
 
 // Re-fetch the feed this often. The GitHub-Actions feed updates ~hourly, so a

@@ -5,7 +5,8 @@
 // Imported by: add-all-layers.ts.
 
 import type { LayerSpecification } from "maplibre-gl";
-import { state, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { initialVisibility, registerBaseFilter } from './layer-init.js';
 
 // [registryId, sourceAttribKey, color]

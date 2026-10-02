@@ -10,11 +10,12 @@
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as pmtiles from 'pmtiles';
-import { state, BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
+import { state } from './state.js';
+import { BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM,
          OSM_TILE_URL, OFM_STYLE_URLS,
          USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
          AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
-         ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH } from './state.js';
+         ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH } from './constants.js';
 import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons, loadFireIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';

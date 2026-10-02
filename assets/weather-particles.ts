@@ -10,7 +10,7 @@
 //       of the assets/user-data/draw-chunk.ts boundary pattern. Never
 //       statically import this file; doing so pulls it into the initial
 //       bundle.
-// Deps: state.ts (state.map, weatherLiveUrl). Fetches its own copy of
+// Deps: state.ts (state.map), constants.ts (weatherLiveUrl). Fetches its own copy of
 //       meta.json + wind_uv.png (independent of weather-live.ts's refresh
 //       cache) so start/stop has no coupling to that module's internals.
 // Called from: assets/weather-live.ts — startWindParticles() when the layer
@@ -19,7 +19,8 @@
 //       within the same bake (hot-swaps the field, keeps trails);
 //       stopWindParticles() on hide or variable switch away from wind.
 
-import { state, weatherLiveUrl } from './state.js';
+import { state } from './state.js';
+import { weatherLiveUrl } from './constants.js';
 
 // Density-based, not a fixed count: one particle per this many CSS px² of
 // canvas, so a phone viewport isn't 6× denser than a desktop window.

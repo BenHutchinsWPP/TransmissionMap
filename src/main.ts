@@ -1,4 +1,4 @@
-// src/main.js — Vite entry point
+// src/main.ts — Vite entry point
 // Imports CSS, registers service worker, and kicks off the app.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';

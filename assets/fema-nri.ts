@@ -13,7 +13,7 @@
 //       with the layer visible — from a checkbox, a shared link, a story or
 //       Reset — triggers the one fetch, so no caller needs to know about it.
 //       Static data: no refresh, no staleness gate.
-// Deps: state (map, DATA, layerVisibility, nriHazard), layers/layer-init.ts
+// Deps: state (map, layerVisibility, nriHazard), constants (DATA), layers/layer-init.ts
 //       (COUNTY_SRC), src/registry/conditions.ts (NRI_HAZARDS),
 //       diag-log.ts (recordDiagEvent). The source/layers are built by
 //       layers/map-layers-conditions.ts (addFemaNri); the picker is rendered by
@@ -21,7 +21,8 @@
 //       popup (popup-format.ts) reads the merged feature-state and nriVersion().
 // Wired from ui/ui.ts init() via initFemaNri().
 
-import { state, DATA } from './state.js';
+import { state } from './state.js';
+import { DATA } from './constants.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
 import { NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';

@@ -15,7 +15,8 @@
 // >>> ADD-LAYER: lazy-geojson — see docs/adding-a-layer.md §7
 
 import type { ExpressionSpecification, GeoJSONSource, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
-import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import {
   subRadius, bucketColorExpr, LINE_WIDTH, DC_STRIPE_COLOR, DC_STRIPE_WIDTH, DC_STRIPE_DASH,
@@ -159,7 +160,7 @@ export function ensureCountyBoundaries() {
     // whatever data is painted on it. ODIN is the sole consumer today. When a
     // second county-keyed layer lands, this over-credits ODIN whenever that
     // other layer is on alone: move each layer's credit out to the credits panel
-    // (registry `creditId`) and leave only Census here.
+    // (a new registry `creditId` field) and leave only Census here.
     attribution:
       '<a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas.html">US Census TIGER</a>' +
       ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>',

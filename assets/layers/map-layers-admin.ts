@@ -13,7 +13,7 @@
 // join infrastructure owned by layer-init.ts.
 // Deps: layer-init.ts (addPolygonLayer, pmtilesUrl, initialVisibility,
 //       registerBaseFilter, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER),
-//       state (DATA, EMPTY_FC).
+//       state, constants (DATA, EMPTY_FC).
 //
 // addUsCounties() does NOT add its own source — it mounts on the shared
 // county_boundaries PMTiles (owned by layer-init.ts, also used by the ODIN
@@ -23,7 +23,8 @@
 // addOdinOutages() so the live choropleth paints over these county outlines.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
-import { state, DATA, EMPTY_FC } from '../state.js';
+import { state } from '../state.js';
+import { DATA, EMPTY_FC } from '../constants.js';
 import {
   addPolygonLayer, pmtilesUrl, initialVisibility, registerBaseFilter,
   ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER,

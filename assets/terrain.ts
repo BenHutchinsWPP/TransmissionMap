@@ -6,11 +6,12 @@
 // flat at pitch 0 and never touches the camera.
 // Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
 // every unproject and every hit-test under raised ground goes through.
-// Deps: state.js (state + TERRAIN_* constants). Called from ui/ui.ts (toggles),
+// Deps: state.js (state), constants.js (TERRAIN_* constants). Called from ui/ui.ts (toggles),
 // map.ts (apply3dFromState at load-end, ensureBuildingsLayer after the OFM
 // style graft resolves, repositionHillshade from switchBasemap).
 
-import { state, TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './state.js';
+import { state } from './state.js';
+import { TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './constants.js';
 import { maybeShowRotateHint } from './terrain-hint.js';
 
 const TERRAIN_SOURCE_ID = 'terrain-dem';

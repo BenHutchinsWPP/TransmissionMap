@@ -22,12 +22,15 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 // hard constraint is git's: no file over 100 MiB. Dev serves them from the local
 // working tree at the Vite root. Publish with `make publish-data` (see
 // scripts/publish_data.sh and docs/hosting-plan.md).
-// Wildfire and weather keep their own URLs on the churning `data` branch
-// (force-pushed hourly), so they must NOT share this origin — see
-// `wildfire_live` below.
-export const DATA_ORIGIN = import.meta.env.PROD
-  ? "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data-static/"
-  : "";
+// The live feeds (wildfire, NWS alerts, ODIN outages, weather) sit on the
+// churning `data` branch (force-pushed hourly) behind LIVE_ORIGIN instead, so
+// they must NOT use DATA_ORIGIN. In dev both are "" — every file, live or
+// static, is read from the local data/layers/ (run the fetch script first).
+// Paths stay double-quoted data/layers/… string literals after the origin:
+// scripts/validate_build.py scrapes them to decide what to check and publish.
+const RAW_REPO = "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/";
+export const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
+export const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
 
 // Download packs are plain navigations, never fetch() or PMTiles range reads, so
 // they need no CORS header — which frees them from the branch and its 100 MiB
@@ -107,27 +110,21 @@ export const DATA = {
   usgs_seismic_pga_lut_meta: DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.json", // grid dims + bbox + scale
   boem_wind_leases:          DATA_ORIGIN + "data/layers/boem_wind_leases.geojson.gz",
   westtec_10yr:              DATA_ORIGIN + "data/layers/westtec_10yr.geojson.gz",
-  // Dev: local file (run `make wildfire-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok, ~5min CDN lag).
+  // Dev: run `make wildfire-dev` first. Prod: `data` branch (~5 min CDN lag).
   // Contains: hotspots (_type=hotspot), perimeters, named incidents, and smoke polygons.
-  wildfire_live: import.meta.env.DEV
-    ? DATA_ORIGIN + "data/layers/wildfire_live.geojson.gz"
-    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/wildfire_live.geojson.gz",
-  // Dev: local file (run `make nws-alerts-dev` first). Prod: orphan `data` branch on raw.githubusercontent.com (CORS ok).
-  nws_alerts: import.meta.env.DEV
-    ? DATA_ORIGIN + "data/layers/nws_alerts.geojson"
-    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/nws_alerts.geojson",
+  wildfire_live: LIVE_ORIGIN + "data/layers/wildfire_live.geojson.gz",
+  // Dev: run `make nws-alerts-dev` first. Prod: `data` branch.
+  nws_alerts: LIVE_ORIGIN + "data/layers/nws_alerts.geojson",
   county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
   admin_lines: DATA_ORIGIN + "data/layers/admin_lines.geojson.gz", // Natural Earth country/state border lines — white highlights over the weather wash, no standalone layer/legend
   nws_zones: DATA_ORIGIN + "data/layers/nws_zones.pmtiles", // NWS public forecast + fire weather zone polygons — shared join infra, no standalone layer/legend
   // FEMA National Risk Index — geometry-less FIPS → [score, rating]×hazard table
   // (scripts/extract_fema_nri.py), joined onto county_boundaries via feature-state (see fema-nri.ts).
   fema_nri: DATA_ORIGIN + "data/layers/fema_nri.json",
-  // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
-  // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]
-  // snapshot joined onto county_boundaries via MapLibre feature-state (see odin-outages.ts).
-  odin_outages: import.meta.env.DEV
-    ? DATA_ORIGIN + "data/layers/odin_outages.json"
-    : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/odin_outages.json",
+  // Dev: run scripts/fetch_odin_outages.py first. Prod: `data` branch.
+  // FIPS→[customers_out,incident_count] snapshot joined onto county_boundaries
+  // via MapLibre feature-state (see odin-outages.ts).
+  odin_outages: LIVE_ORIGIN + "data/layers/odin_outages.json",
   // Per-layer provenance (licence, row counts, artifact size, per-field
   // coverage, retrieval date) the Data Credits page renders from, grouped
   // under each source's own LAYER_SOURCES label — the manifest's own
@@ -143,9 +140,7 @@ export const DATA = {
 // per-variable {width, height, bbox, scale, nodata, units}.
 // `file` is e.g. "temp.webp", "temp.i16.gz", or "meta.json".
 export function weatherLiveUrl(file: string): string {
-  return import.meta.env.DEV
-    ? DATA_ORIGIN + `data/layers/weather_live/${file}`
-    : `https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/weather_live/${file}`;
+  return LIVE_ORIGIN + `data/layers/weather_live/${file}`;
 }
 
 // Corner coordinates of the weather image (must match WEST/EAST/SOUTH/NORTH in

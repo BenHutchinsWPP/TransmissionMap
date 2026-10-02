@@ -2,23 +2,23 @@
 // sw.js — TransmissionMap Service Worker
 //
 // Caching strategy:
-//   Static assets (JS/CSS/images) — Network-First (cache is offline fallback)
-//                                    while updates are actively shipping.
-//   GeoJSON data files             — Cache-First (full response).
-//   PMTiles range requests         — Cache-First, keyed by URL + Range header
-//                                    so each byte range is stored separately.
+//   Same-origin app shell (HTML/JS/CSS/images) — Network-First; the cache is
+//   the offline fallback.
+//
+// Map data is not cached here. In production every layer comes from
+// raw.githubusercontent.com (DATA_ORIGIN / LIVE_ORIGIN in assets/constants.ts),
+// which is cross-origin, so those requests pass straight through to the
+// browser's HTTP cache (raw serves `max-age=300`). The SW is registered in
+// production only (src/main.ts).
 //
 // Cache invalidation:
 //   Bump STATIC_VERSION when you deploy new JS/CSS.
-//   Bump DATA_VERSION after rebuilding tiles (make pipeline + make tiles).
 //   Old cache buckets are deleted automatically on activate.
 // =============================================================================
 
 const STATIC_VERSION = 'v35';  // network-first static strategy (purges stale cache-first bundles)
-const DATA_VERSION   = 'v4';   // ← bump this after running build_tiles.sh
 
 const STATIC_CACHE = `tm-static-${STATIC_VERSION}`;
-const DATA_CACHE   = `tm-data-${DATA_VERSION}`;
 
 // Pre-cache the HTML shell only. The Vite bundle (hashed filename) and all
 // other static assets are cached on first fetch by handleStatic() below.
@@ -40,7 +40,7 @@ self.addEventListener('install', event => {
 
 // ── Activate: purge stale cache versions ──────────────────────────────────────
 self.addEventListener('activate', event => {
-  const live = new Set([STATIC_CACHE, DATA_CACHE]);
+  const live = new Set([STATIC_CACHE]);
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => !live.has(k)).map(k => caches.delete(k))))
@@ -48,7 +48,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ── Fetch: route to the appropriate strategy ───────────────────────────────────
+// ── Fetch: same-origin GETs only ───────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const req = event.request;
 
@@ -57,15 +57,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  const path = url.pathname;
-
-  if (path.startsWith('/data/')) {
-    // Data files — GeoJSON (full) or PMTiles (range chunks)
-    event.respondWith(handleData(req));
-  } else {
-    // Static assets — HTML, JS, CSS, images
-    event.respondWith(handleStatic(req));
-  }
+  event.respondWith(handleStatic(req));
 });
 
 // Tag cache-served responses so the page's data-usage counter can skip them
@@ -93,31 +85,4 @@ async function handleStatic(req) {
     if (cached) return markCacheHit(cached);
     throw err;
   }
-}
-
-// ── Data: Cache-First, range-aware ────────────────────────────────────────────
-// PMTiles uses HTTP Range requests (e.g. "bytes=0-511") to load individual tiles.
-// The standard Cache API ignores request headers, so a naive cache.match(req)
-// would return the wrong bytes for different ranges of the same file.
-//
-// Fix: use a synthetic cache key that encodes the range in the URL fragment,
-// e.g.  /data/layers/osm_lines.pmtiles#bytes=16384-32767
-// Each unique byte range gets its own entry — correct data, fast lookup.
-async function handleData(req) {
-  const rangeHeader = req.headers.get('range');
-  const cacheKey = rangeHeader
-    ? new Request(req.url + '#' + rangeHeader)   // range-specific key
-    : req;                                        // full-file key (GeoJSON)
-
-  const cache  = await caches.open(DATA_CACHE);
-  const cached = await cache.match(cacheKey);
-  if (cached) return markCacheHit(cached);
-
-  const response = await fetch(req);
-
-  // Cache both full (200 OK) and partial (206 Partial Content) responses.
-  if (response.status === 200 || response.status === 206) {
-    cache.put(cacheKey, response.clone());   // clone: body can only be read once
-  }
-  return response;
 }

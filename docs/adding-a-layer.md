@@ -155,7 +155,6 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 |---|---|
 | `voltageLayer: true` | Shows the voltage legend when this layer is on |
 | `fuelLayer: true` | Shows the fuel legend when this layer is on |
-| `rasterLayer: true` | Marks as a raster (skips vector visibility logic) |
 | `filterType: "kv"\|"fuel_osm"\|"fuel_eia"\|"pipeline_type"` | Enables a filter chip panel |
 | `filterField: "nominal_kv"` | Which feature property the filter reads |
 | `ramp: { stops, max, unit, minLabel?, maxLabel?, fmt? }` | Inline color-ramp legend in the panel row |

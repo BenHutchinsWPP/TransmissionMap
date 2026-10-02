@@ -149,9 +149,9 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     showStaleModal(age);
   }
 
-  // Re-fetch the feed and push it onto the existing source. Cache-busts the
-  // service worker (same-origin dev) and the CDN/browser cache (cross-origin prod)
-  // so we never re-read a stale cached copy.
+  // Re-fetch the feed and push it onto the existing source. `no-cache`
+  // revalidates against the browser's HTTP cache so we never re-read a stale
+  // copy (the service worker never sees data requests — see sw.js).
   let lastFetchMs = 0;   // last refetch attempt — guards the return-to-page path
   let inflight = false;  // concurrent-call guard (interval + visibilitychange + pageshow)
 

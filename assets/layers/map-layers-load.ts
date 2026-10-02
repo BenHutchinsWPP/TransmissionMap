@@ -1,7 +1,8 @@
 // ─── Load context layers ──────────────────────────────────────────────────────
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
-import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import { onMapTap } from '../map-input.js';

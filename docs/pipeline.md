@@ -31,10 +31,6 @@ make global-tiles
 #    per-layer provenance manifest first (make data-manifest, chained via
 #    `publish-data: data-manifest`) so data/layers/manifest.json ships current.
 make publish-data
-
-# 7. Bump DATA_VERSION in sw.js (commit to main) — the service worker caches
-#    PMTiles byte ranges cache-first; ranges cached from the old file corrupt
-#    reads against a rebuilt one
 ```
 
 ### The data manifest (`make data-manifest`)

@@ -11,20 +11,20 @@
 //       cause. `timeout` and `unexpected body` are hints, not proof.
 // The required/optional host probes below cover the same hosts enumerated in
 //       docs/network-allowlist.md — update both together.
-// Deps: state (DATA, tile URLs, live feed caches), constants (GLYPHS_URL,
-//       ESRI_TOKEN — not re-exported by state.ts), diag-log.ts (getDiagLog),
+// Deps: state (live feed caches), constants (DATA, tile URLs, GLYPHS_URL,
+//       ESRI_TOKEN), diag-log.ts (getDiagLog),
 //       live-staleness.ts (fmtAge, feedIssue, liveAgeMs), wildfire-staleness.ts +
 //       nws-staleness.ts (the same max-age cutoffs the kill-switches use, so
 //       this panel can never disagree with them), odin-outages.ts +
 //       weather-live.ts (odinFreshness/weatherFreshness — those two feeds keep
 //       their own snapshot and cutoff rather than using state.sourcesData).
 
+import { state } from './state.js';
 import {
-  state, DATA,
+  DATA, GLYPHS_URL, ESRI_TOKEN,
   OSM_TILE_URL, AERIAL_TILE_URL, USGS_AERIAL_TILE_URL, OFM_STYLE_URLS,
   RADAR_TILE_URL, GEOMET_RADAR_TILE_TEMPLATE, TERRAIN_TILE_URL,
-} from './state.js';
-import { GLYPHS_URL, ESRI_TOKEN } from './constants.js';
+} from './constants.js';
 import { getDiagLog } from './diag-log.js';
 import { fmtAge, feedIssue, liveAgeMs } from './live-staleness.js';
 import { WILDFIRE_MAX_AGE_MS } from './wildfire-staleness.js';
@@ -260,7 +260,7 @@ export const DIAG_CHECKS: DiagCheck[] = [
       const est = await navigator.storage?.estimate?.();
       if (!est || est.quota == null) return mk('skip', 'this browser does not report a storage estimate');
       const mb = (n: number) => `${Math.round(n / 1e6)} MB`;
-      return mk('ok', `${mb(est.usage ?? 0)} used of about ${mb(est.quota)} available for cached tiles and saved data`);
+      return mk('ok', `${mb(est.usage ?? 0)} used of about ${mb(est.quota)} available for the cached app and saved data`);
     } catch (err) {
       return mk('skip', `storage estimate unavailable (${String(err)})`);
     }
@@ -268,8 +268,8 @@ export const DIAG_CHECKS: DiagCheck[] = [
 
   check('service-worker', 'Service worker', 'capability', async () =>
     navigator.serviceWorker?.controller
-      ? mk('ok', 'controlling this page — tiles are served from the local cache')
-      : mk('skip', 'not controlling this page — tiles are fetched fresh on every load')),
+      ? mk('ok', 'controlling this page — the app shell can reload offline')
+      : mk('skip', 'not controlling this page — the app shell needs the network to reload')),
 
   check('clock-skew', 'System clock', 'capability', async () => {
     // Same-origin only: `Date` is not a CORS-safelisted response header, so a

@@ -2,7 +2,8 @@
 // Imported by: layer-init.ts
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
-import { state, DATA, EMPTY_FC, SOURCE_ATTRIB } from '../state.js';
+import { state } from '../state.js';
+import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { bucketColorExpr, ogfColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {

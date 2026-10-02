@@ -1,7 +1,8 @@
 // ─── Search highlight layers ──────────────────────────────────────────────────
 
 import type { GeoJSONSource } from 'maplibre-gl';
-import { state, EMPTY_FC } from './state.js';
+import { state } from './state.js';
+import { EMPTY_FC } from './constants.js';
 
 export function addHighlightLayers() {
   if (!state.map) return;

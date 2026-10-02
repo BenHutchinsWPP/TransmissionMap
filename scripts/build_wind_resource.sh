@@ -9,7 +9,7 @@
 # Why these formats (the "best format" decision):
 #   HOSTING  -> raster PMTiles. One range-requested file, same-origin on GitHub
 #               Pages (no CORS), and the pmtiles:// protocol is already registered
-#               in assets/map.js. Color is baked at build time with gdaldem
+#               in assets/map.ts. Color is baked at build time with gdaldem
 #               color-relief, so the map shows it as a plain `raster` layer with
 #               opacity — no MapLibre raster-color (4.x-only) and no float-tile
 #               encoding needed. Tradeoff: no per-pixel m/s readout; the legend

@@ -1,24 +1,7 @@
-// assets/state.ts — Mutable global runtime state singleton + re-exports of
-// static constants from ./constants.ts (DATA, tile URLs, EMPTY_FC, etc.).
-// Import both state and constants from this file; do not import constants.ts directly.
+// assets/state.ts — Mutable global runtime state singleton.
+// Static constants (DATA, tile URLs, EMPTY_FC, etc.) live in ./constants.ts —
+// import them from there.
 import type { AppState } from '../src/types.js';
-
-export {
-  USER_LAYER_COLORS, USER_FEATURE_THRESHOLD,
-  DATA,
-  OSM_TILE_URL, AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
-  OFM_STYLE_URLS,
-  USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
-  TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION,
-  RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
-  GEOMET_RADAR_TILE_TEMPLATE,
-  WEATHER_IMAGE_COORDS, WEATHER_WASH_OPACITY, WEATHER_FADE_MS,
-  TRANSPARENT_PNG, weatherLiveUrl,
-  BLANK_STYLE, EMPTY_FC, SOURCE_ATTRIB,
-  ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH,
-  DEFAULT_CENTER, DEFAULT_ZOOM,
-} from './constants.js';
-export type { ImageCorners } from './constants.js';
 
 // ─── Global runtime state ────────────────────────────────────────────────────
 export const state: AppState = {

@@ -29,7 +29,8 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 
 ## Processing
 
-`build_railroads()` runs `ogr2ogr` to drop all but the kept fields, then `tippecanoe`
+`scripts/build_tiles.py` (the `railroads` entry in `scripts/tile_manifest.yaml`) runs
+`ogr2ogr` to drop all but the kept fields, then `tippecanoe`
 (z4–z13, `--drop-densest-as-needed --coalesce-densest-as-needed`, layer name `railroads`).
 No field renaming — original BTS column names are preserved.
 

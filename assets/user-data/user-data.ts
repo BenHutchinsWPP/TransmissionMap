@@ -1,5 +1,5 @@
 // ─── User data: layer management + My Data tab + selection highlight ──────────
-// Deps: state, utils, user-data-geom, user-data-colors (no back-imports from url-state)
+// Deps: state, constants, utils, user-data-geom, user-data-colors (no back-imports from url-state)
 // Caches loaded drawnFeatures in `_cachedDrawnFeatures` so a save that happens
 // before MapboxDraw is loaded (lazy chunk; see user-data-draw.ts) doesn't
 // overwrite localStorage with an empty FeatureCollection. `restoreDrawnFeatures()`
@@ -7,7 +7,8 @@
 // replay features loaded before draw was ready.
 
 import type { GeoJSONSource, FilterSpecification, LayerSpecification, MapGeoJSONFeature } from 'maplibre-gl';
-import { state, USER_FEATURE_THRESHOLD, USER_LAYER_COLORS } from '../state.js';
+import { state } from '../state.js';
+import { USER_FEATURE_THRESHOLD, USER_LAYER_COLORS } from '../constants.js';
 import type { UserLayer } from '../../src/types.js';
 import { ensureFeatureUid, ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
 import { escapeHtml } from '../utils/utils.js';

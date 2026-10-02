@@ -4,7 +4,8 @@
 // Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
-import { state, DATA, weatherLiveUrl } from './state.js';
+import { state } from './state.js';
+import { DATA, weatherLiveUrl } from './constants.js';
 import type { RasterMeta } from '../src/types.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { fmtSpeed, fmtDensity } from '../src/units.js';

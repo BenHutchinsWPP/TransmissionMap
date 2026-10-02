@@ -11,7 +11,7 @@
 //       6 h is not painted (console warning only — no modal, unlike
 //       wildfire-staleness.ts).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
-// Deps: state (map, DATA, layerVisibility), diag-log.ts (recordDiagEvent —
+// Deps: state (map, layerVisibility), constants (DATA), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel). Legend age chip
 //       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
@@ -24,7 +24,8 @@
 //       to ODIN from the browser.
 // Wired from ui/ui.ts init() via initOdinOutages().
 
-import { state, DATA, rebaselineExperience } from './state.js';
+import { state, rebaselineExperience } from './state.js';
+import { DATA } from './constants.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
 import { escapeHtml } from './utils/utils.js';
 import { recordDiagEvent } from './diag-log.js';

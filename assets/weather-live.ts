@@ -19,7 +19,7 @@
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
-// Deps: state-bus (on 'layer:visibility'), state (map, weatherLiveUrl, layerVisibility, rasterLut), raster-probes
+// Deps: state-bus (on 'layer:visibility'), state (map, layerVisibility, rasterLut), constants (weatherLiveUrl), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
@@ -33,8 +33,8 @@
 // that visibility.ts's setLayerVisibility() emits.
 
 import type { ImageSource } from 'maplibre-gl';
-import type { ImageCorners } from './state.js';
-import { state, weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS } from './state.js';
+import { state } from './state.js';
+import { weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS, type ImageCorners } from './constants.js';
 import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
