@@ -3,8 +3,11 @@
 //       (wildfire hazard potential, seismic PGA), live GeoJSON (smoke, wildfire,
 //       incidents), and the live ODIN county-outage choropleth (feature-state
 //       data-join onto the shared county_boundaries PMTiles — the FIPS→[out,n]
-//       join itself lives in ../odin-outages.ts; this file only builds the source/layers).
-// Deps: layer-init.ts (pmtilesUrl, initialVisibility), state (DATA).
+//       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
+//       and the FEMA National Risk Index county choropleth (same shared-source
+//       feature-state pattern; the join lives in ../fema-nri.ts).
+// Deps: layer-init.ts (pmtilesUrl, initialVisibility), state (DATA),
+//       src/colors/buckets.ts (NRI_RATINGS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
 // _type field distinguishes: "smoke" | "perimeter" | "hotspot" | "incident"
@@ -37,6 +40,7 @@ import {
   WEATHER_WASH_OPACITY,
 } from '../state.js';
 import { initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
+import { NRI_RATINGS } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
   return [
@@ -450,6 +454,50 @@ export function addOdinOutages() {
       ],
       "line-width": 0.6,
       "line-opacity": 0.7,
+    },
+  } as LayerSpecification);
+}
+
+// ─── FEMA National Risk Index county choropleth ───────────────────────────────
+// ../fema-nri.ts joins the selected hazard's rating code onto the shared
+// county_boundaries tiles as feature-state `nri_r` (and the score as `nri_s`),
+// so switching hazards re-joins the data and never touches this paint. Counties
+// without a code (not applicable, or not yet joined) stay transparent — null
+// guard first, as in addOdinOutages(). Fill fades as you zoom in so the
+// infrastructure drawn over it stays legible.
+export function addFemaNri() {
+  if (!state.map || state.map.getLayer("fema-nri-fill")) return;
+  ensureCountyBoundaries();
+  const vis = initialVisibility("fema-nri");
+  const rating = ["feature-state", "nri_r"] as ExpressionSpecification;
+  const color = [
+    "match", rating,
+    ...NRI_RATINGS.flatMap(r => [r.code, r.color]),
+    "rgba(0,0,0,0)",
+  ] as ExpressionSpecification;
+
+  state.map.addLayer({
+    id: "fema-nri-fill",
+    type: "fill",
+    source: COUNTY_SRC,
+    "source-layer": COUNTY_SRC_LAYER,
+    layout: { visibility: vis },
+    paint: {
+      "fill-color": ["case", ["==", rating, null], "rgba(0,0,0,0)", color],
+      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 0.55, 11, 0.35],
+    },
+  } as LayerSpecification);
+
+  state.map.addLayer({
+    id: "fema-nri-line",
+    type: "line",
+    source: COUNTY_SRC,
+    "source-layer": COUNTY_SRC_LAYER,
+    layout: { visibility: vis },
+    paint: {
+      "line-color": ["case", ["==", rating, null], "rgba(0,0,0,0)", "#6b2150"],
+      "line-width": 0.4,
+      "line-opacity": 0.5,
     },
   } as LayerSpecification);
 }

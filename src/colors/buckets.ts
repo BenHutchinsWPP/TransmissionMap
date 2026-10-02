@@ -436,3 +436,17 @@ export function westtecColorExpr(mode: WesttecColorMode): ExpressionSpecificatio
   const { field, buckets, map } = WESTTEC_COLOR_CFG[mode];
   return bucketMatchExpr(field, buckets, map);
 }
+
+// ─── FEMA National Risk Index rating classes ──────────────────────────────────
+// Codes match scripts/extract_fema_nri.py: 1–5 = FEMA's five ratings, 6 =
+// "Insufficient Data" (drawn grey — the hazard occurs but was not scored).
+// Code 0 ("Not Applicable" / "No Rating") has no entry: the county is left
+// unpainted. ColorBrewer PuRd, kept distinct from the ODIN outage YlOrRd.
+export const NRI_RATINGS: { code: number; label: string; color: string }[] = [
+  { code: 1, label: "Very Low",            color: "#f1eef6" },
+  { code: 2, label: "Relatively Low",      color: "#d7b5d8" },
+  { code: 3, label: "Relatively Moderate", color: "#df65b0" },
+  { code: 4, label: "Relatively High",     color: "#dd1c77" },
+  { code: 5, label: "Very High",           color: "#980043" },
+  { code: 6, label: "Insufficient Data",   color: "#9ca3af" },
+];

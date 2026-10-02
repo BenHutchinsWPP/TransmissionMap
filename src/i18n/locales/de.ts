@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Waldbrand-Gefahrenpotenzial',
   'layer.nwsAlerts': '✂️ Wetterwarnungen (live, gefiltert)',
   'layer.odinOutages': 'Stromausfälle (USA, live)',
+  'layer.femaNri': 'Naturgefahrenrisiko (FEMA NRI)',
   'layer.nexradRadar': 'Wetterradar (live)',
   'layer.weatherLive': 'Wettervorhersage',
   'layer.seismicPga': 'Erdbebengefährdung (PGA, 2 % in 50 J.)',

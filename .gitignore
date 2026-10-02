@@ -112,6 +112,10 @@ data/raw/census_boundaries/
 # ADM0/ADM1; re-fetch via extract_cgaz_boundaries.py, which downloads them automatically)
 data/raw/geoboundaries/
 
+# FEMA National Risk Index county table (~3 MB JSON; re-fetch via extract_fema_nri.py,
+# which downloads it automatically)
+data/raw/fema_nri/
+
 # >>> ADD-LAYER: gitignore — new layer's raw source dir goes ABOVE this line.
 # data/raw/<source>/ is NOT ignored by default; `git add -A` will otherwise
 # commit the (often large) raw download. Built tiles in data/layers/ are

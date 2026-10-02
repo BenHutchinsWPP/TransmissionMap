@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'जंगल की आग: संकट क्षमता',
   'layer.nwsAlerts': '✂️ मौसम चेतावनियाँ (सक्रिय, फ़िल्टर की गई)',
   'layer.odinOutages': 'विद्युत कटौती (अमेरिका, लाइव)',
+  'layer.femaNri': 'प्राकृतिक आपदा जोखिम (FEMA NRI)',
   'layer.nexradRadar': 'मौसम: रडार (लाइव)',
   'layer.weatherLive': 'मौसम पूर्वानुमान',
   'layer.seismicPga': 'भूकंपीय खतरा (PGA, 50 वर्ष में 2%)',

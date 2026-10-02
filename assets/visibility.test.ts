@@ -60,6 +60,24 @@ beforeEach(() => {
 // ─── setLayerVisibility ───────────────────────────────────────────────────────
 
 describe('setLayerVisibility', () => {
+  it('switches the rest of an exclusiveGroup off when one member is switched on', () => {
+    const a = { ...makeLayer('a', ['a-fill']), exclusiveGroup: 'g' };
+    const b = { ...makeLayer('b', ['b-fill']), exclusiveGroup: 'g' };
+    const c = makeLayer('c', ['c-fill']);
+    _mockLayers.push(a, b, c);
+    _mockLayerById.mockImplementation(id => _mockLayers.find(l => l.id === id));
+    state.mapReady = true;
+    state.map = mockMap(['a-fill', 'b-fill', 'c-fill']) as unknown as typeof state.map;
+    document.body.innerHTML = '<input type="checkbox" data-layer-id="a" checked>';
+    state.layerVisibility = { a: true, c: true };
+
+    setLayerVisibility('b', true);
+
+    expect(state.layerVisibility).toEqual({ a: false, b: true, c: true });
+    expect(document.querySelector<HTMLInputElement>('[data-layer-id="a"]')!.checked).toBe(false);
+    expect(state.map!.setLayoutProperty).toHaveBeenCalledWith('a-fill', 'visibility', 'none');
+  });
+
   it('does nothing when entry not found', () => {
     state.mapReady = true;
     state.map = mockMap() as unknown as typeof state.map;

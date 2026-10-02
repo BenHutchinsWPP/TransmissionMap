@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Potencial de perigo de incêndio',
   'layer.nwsAlerts': '✂️ Alertas meteorológicos (ao vivo, filtrados)',
   'layer.odinOutages': 'Interrupções de energia (EUA, ao vivo)',
+  'layer.femaNri': 'Risco de perigos naturais (FEMA NRI)',
   'layer.nexradRadar': 'Radar meteorológico (ao vivo)',
   'layer.weatherLive': 'Previsão do tempo',
   'layer.seismicPga': 'Perigo sísmico (PGA, 2% em 50 anos)',

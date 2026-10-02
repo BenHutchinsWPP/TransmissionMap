@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': '산불: 위험 잠재성',
   'layer.nwsAlerts': '✂️ 기상 특보 (실시간, 필터링됨)',
   'layer.odinOutages': '정전 현황 (미국, 실시간)',
+  'layer.femaNri': '자연재해 위험 (FEMA NRI)',
   'layer.nexradRadar': '기상: 레이더 (실시간)',
   'layer.weatherLive': '일기 예보',
   'layer.seismicPga': '지진 위험도 (PGA, 50년 내 2%)',

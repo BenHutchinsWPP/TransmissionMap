@@ -6,6 +6,7 @@ import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster } from './ui-lege
 import { emit } from '../state-bus.js';
 import { MW_SLIDER_MAX, mwPosToMw, mwToPos } from '../filters.js';
 import { setWeatherVar } from '../weather-live.js';
+import { setNriHazard } from '../fema-nri.js';
 import { refreshWeatherRampBlock } from './ui-legends.js';
 import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
 
@@ -239,6 +240,15 @@ export function wireWeatherVarSelect() {
     if (!sel) return;
     setWeatherVar(sel.value);
     refreshWeatherRampBlock();
+    emit('url:write');
+  });
+}
+
+export function wireNriHazardSelect() {
+  document.addEventListener("change", (e) => {
+    const sel = (e.target as Element)?.closest<HTMLSelectElement>("select[data-nri-hazard-select]");
+    if (!sel) return;
+    setNriHazard(sel.value);
     emit('url:write');
   });
 }

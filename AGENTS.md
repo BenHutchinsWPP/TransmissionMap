@@ -96,6 +96,7 @@ turns public datasets into PMTiles consumed by the frontend.
       reload + age chip (hand-rolled; the factory only does GeoJSON sources)
     - `weather-particles.ts` — wind particle animation over the weather wash (lazy-loaded canvas layer)
     - `odin-outages.ts` — ODIN county outage feature-state join (hand-rolled live feed)
+    - `fema-nri.ts` — FEMA National Risk Index county feature-state join (static table; the hazard picker's `setNriHazard`)
     - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)
     - `experiences.ts` — Map Experiences controller: applies a curated preset
@@ -125,7 +126,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
     - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,admin}.ts` — per-source builders
-      (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/NEXRAD radar — all the live + hazard layers;
+      (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/FEMA NRI/NEXRAD radar — all the live + hazard layers;
       `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1)
   - **`assets/user-data/`** — user-imported/drawn layers
     - `user-data.ts` — core (add/remove/save/render); `user-data-draw.ts` draw mode

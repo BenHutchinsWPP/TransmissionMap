@@ -23,7 +23,7 @@ import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
 import { addPetroleumPipelines } from './map-layers-petroleum.js';
 import { addWestTEC } from './map-layers-westtec.js';
-import { addWildfireHazard, addWildfireLiveAreas, addWildfireLivePoints, addSeismicHazard, addOdinOutages, addNwsAlerts, addNexradRadar, addWeatherLive } from './map-layers-conditions.js';
+import { addWildfireHazard, addWildfireLiveAreas, addWildfireLivePoints, addSeismicHazard, addOdinOutages, addFemaNri, addNwsAlerts, addNexradRadar, addWeatherLive } from './map-layers-conditions.js';
 import { addMines } from './map-layers-mines.js';
 import { addCountries, addAdmin1, addUsStates, addUsCounties, addUsZcta } from './map-layers-admin.js';
 import { addHighlightLayers } from '../highlights.js';
@@ -63,6 +63,7 @@ export function addAllLayers() {
 
   // Live-conditions fills sit above static context fills (land/regions):
   // "what's happening now" beats "what's always there".
+  addFemaNri();            // FEMA NRI county risk choropleth — under the live outages
   addOdinOutages();        // live county-outage choropleth
   addNwsAlerts();          // live GeoJSON — weather alert polygons; above land fills, below infra vectors
   addWildfireLiveAreas();  // live GeoJSON — smoke + perimeter POLYGONS; above NWS, below infra vectors

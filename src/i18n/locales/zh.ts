@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': '火险隐患等级',
   'layer.nwsAlerts': '✂️ 实时天气预警 (精选)',
   'layer.odinOutages': '全美停电监测 (实时)',
+  'layer.femaNri': '自然灾害风险 (FEMA NRI)',
   'layer.nexradRadar': '气象雷达 (实时)',
   'layer.weatherLive': '天气预报',
   'layer.seismicPga': '地震危险性 (PGA, 50年2%概率)',

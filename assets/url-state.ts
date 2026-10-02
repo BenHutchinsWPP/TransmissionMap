@@ -36,6 +36,7 @@ export function readUrlState() {
   if (data.ogfColorBy) state.ogfColorBy = data.ogfColorBy as typeof state.ogfColorBy;
   if (data.westtecColorBy) state.westtecColorBy = data.westtecColorBy as typeof state.westtecColorBy;
   if (data.weatherVar) state.weatherVar = data.weatherVar;
+  if (data.nriHazard) state.nriHazard = data.nriHazard;
   if (data.smokeOpacity !== undefined) state.smokeOpacity = data.smokeOpacity;
   if (data.basemap) state.basemap = data.basemap;
   if (data.projection) state.projection = data.projection;
@@ -66,6 +67,7 @@ export function writeUrlState() {
     ogfColorBy: state.ogfColorBy,
     westtecColorBy: state.westtecColorBy,
     weatherVar: state.weatherVar,
+    nriHazard: state.nriHazard,
     smokeOpacity: state.smokeOpacity,
     basemap: state.basemap,
     projection: state.projection,

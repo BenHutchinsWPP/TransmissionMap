@@ -3,7 +3,7 @@
 // Does NOT touch global state or location/history.
 
 import { LAYERS } from '../src/registry/index.js';
-import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
+import { WEATHER_VARIABLES, NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
 import { MW_SLIDER_MAX } from './constants.js';
 import { isValidLocale } from '../src/i18n/index.js';
@@ -68,6 +68,7 @@ export interface UrlStateData {
   ogfColorBy: string;
   westtecColorBy: string;
   weatherVar: string;
+  nriHazard: string;
   smokeOpacity: number;
   basemap: string;
   projection: string;
@@ -155,6 +156,10 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
   // Weather Forecast variable
   const wv = params.get('wv');
   if (wv && WV_CODE_TO_ID[wv]) data.weatherVar = WV_CODE_TO_ID[wv];
+
+  // FEMA National Risk Index hazard — the NRI field prefix, lowercased
+  const nr = params.get('nr')?.toUpperCase();
+  if (nr && NRI_HAZARDS.some(h => h.id === nr)) data.nriHazard = nr;
 
   // Smoke opacity (integer percent, converted to a 0–1 factor)
   const so = params.get('so');
@@ -262,6 +267,11 @@ export function formatUrlState(data: UrlStateData): string[] {
   // Weather Forecast variable (default "tempwind" omitted)
   if (data.weatherVar && data.weatherVar !== 'tempwind' && WV_ID_TO_CODE[data.weatherVar]) {
     parts.push('wv=' + WV_ID_TO_CODE[data.weatherVar]);
+  }
+
+  // FEMA NRI hazard (default composite omitted)
+  if (data.nriHazard && data.nriHazard !== DEFAULT_NRI_HAZARD) {
+    parts.push('nr=' + data.nriHazard.toLowerCase());
   }
 
   // Smoke opacity (default 100% omitted)

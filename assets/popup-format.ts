@@ -1,6 +1,7 @@
 // ─── Pure formatting logic for popups ────────────────────────────────────────
 // Deps: utils/utils.js (escapeHtml), src/colors/buckets.js (label maps),
-// nws-zone-join.js (alert lookups), src/units.js (every quantity with a unit
+// nws-zone-join.js (alert lookups), fema-nri.js (selected hazard, data version),
+// src/units.js (every quantity with a unit
 // goes through a fmt* helper so it follows the File ▸ Settings… preference —
 // see docs/settings.md). Row labels must stay unit-neutral ("Area", not
 // "Acres") because the rendered value changes with that preference.
@@ -8,10 +9,12 @@
 
 import { escapeHtml } from './utils/utils.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
-import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP } from '../src/colors/buckets.js';
+import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
 import { t } from '../src/i18n/index.js';
+import { nriHazard, nriHazardLabel, nriVersion } from './fema-nri.js';
+import { DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -455,6 +458,28 @@ const _defs = [
       utilRows +
       rawUi +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.odinFooter"))}</div>`;
+  }],
+  [["fema-nri-fill"], (p: Record<string, unknown>) => {
+    // Rating/score come from the feature-state join (merged into p by popup.ts);
+    // county NAME/STATE_NAME from the county_boundaries tile properties.
+    if (p.nri_r == null) return "";
+    const county = (p.NAME as string) || t("popup.county");
+    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
+    const rating = (code: unknown, score: unknown) => {
+      const label = NRI_RATINGS.find(r => r.code === code)?.label;
+      if (!label) return null;
+      return typeof score === "number" ? `${label} (${score.toFixed(1)} national percentile)` : label;
+    };
+    const nriRow = (label: string, val: string | null) => val
+      ? `<div class="popup-row"><span class="popup-key">${escapeHtml(label)}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`
+      : "";
+    const hazard = nriHazard();
+    const version = nriVersion();
+    return title(heading) +
+      nriRow(nriHazardLabel(hazard), rating(p.nri_r, p.nri_s)) +
+      (hazard === DEFAULT_NRI_HAZARD ? "" : nriRow(nriHazardLabel(DEFAULT_NRI_HAZARD), rating(p.nri_cr, p.nri_cs))) +
+      `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(
+        `FEMA National Risk Index${version ? ` (${version})` : ""} · not endorsed by FEMA · planning use only`)}</div>`;
   }],
   [["nws-zone-fill"], (p: Record<string, unknown>) => {
     // nws_group comes from the feature-state join (merged into p by popup.ts).

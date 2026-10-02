@@ -7,7 +7,7 @@ import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'so', '3d', 'hs', 'lang', 'region', 'exp']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'so', '3d', 'hs', 'lang', 'region', 'exp']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -30,6 +30,7 @@ beforeEach(() => {
   state.ogfColorBy      = 'status';
   state.westtecColorBy  = 'scenario';
   state.weatherVar      = 'tempwind';
+  state.nriHazard       = 'RISK';
   state.smokeOpacity    = 1;
   state.mwFilter        = { min: 0, max: MW_SLIDER_MAX };
   state.basemap         = 'light';
@@ -221,6 +222,26 @@ describe('round-trip serialization', () => {
     setHash('wc=zzz');
     readUrlState();
     expect(state.westtecColorBy).toBe('scenario');
+  });
+
+  it('omits nr when the NRI hazard is the default composite', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('nr=');
+  });
+
+  it('round-trips a non-default NRI hazard (wildfire) through nr=wfir', () => {
+    state.nriHazard = 'WFIR';
+    writeUrlState();
+    expect(location.hash).toContain('nr=wfir');
+    state.nriHazard = 'RISK';
+    readUrlState();
+    expect(state.nriHazard).toBe('WFIR');
+  });
+
+  it('leaves the NRI hazard at its default when nr is unknown', () => {
+    setHash('nr=zzzz');
+    readUrlState();
+    expect(state.nriHazard).toBe('RISK');
   });
 
   it('omits wv when weatherVar is the default "tempwind"', () => {

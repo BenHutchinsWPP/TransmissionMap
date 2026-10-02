@@ -21,7 +21,7 @@ import {
 } from './ui-legends.js';
 import {
   wireLayerFilterPanels, wireLegendFilters, wireMwFilter, wireSmokeOpacity,
-  wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireYearFilter,
+  wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireNriHazardSelect, wireYearFilter,
   updateMwSliderUI, updateSmokeOpacityUI, updateYearSliderUI, updateYearPlayBtn,
   stopYearPlayback,
 } from './ui-filters.js';
@@ -43,6 +43,8 @@ import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
+import { initFemaNri, setNriHazard } from '../fema-nri.js';
+import { DEFAULT_NRI_HAZARD } from '../../src/registry/conditions.js';
 import { initWeatherLive, syncWeatherLiveVisibility } from '../weather-live.js';
 import { initNwsZoneJoin, syncZoneVisibility } from '../nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
@@ -92,6 +94,7 @@ export async function init() {
   initWildfireStaleness();
   initNwsStaleness();
   initOdinOutages();
+  initFemaNri();
   initWeatherLive();
   initNwsZoneJoin();
 
@@ -196,6 +199,7 @@ export function resetLayersToDefaults() {
   if (hillshadeToggle) hillshadeToggle.checked = false;
 
   state.regionScope = 'usa';
+  setNriHazard(DEFAULT_NRI_HAZARD);
   buildLayersPanel();
   buildLegends();
   applyAllGenModes();
@@ -263,6 +267,7 @@ function wireUI() {
   wireOgfColorByToggle();
   wireWestTECColorByToggle();
   wireWeatherVarSelect();
+  wireNriHazardSelect();
   wireYearFilter();
   wireResetLayers();
   wireRegionSelect();

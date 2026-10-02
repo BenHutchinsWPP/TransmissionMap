@@ -105,7 +105,7 @@ function activeClickableLayers() {
     state.map!.getLayer(id) && state.map!.getLayoutProperty(id, "visibility") !== "none");
 }
 
-// Feature-state-joined choropleths (ODIN outages, NWS zone/county) draw EVERY
+// Feature-state-joined choropleths (ODIN outages, FEMA NRI, NWS zone/county) draw EVERY
 // county/zone from the shared boundary tiles and paint unlit ones transparent
 // (setFilter can't read feature-state), but queryRenderedFeatures still
 // hit-tests transparent fills — so invisible polygons were selectable. Each
@@ -113,6 +113,7 @@ function activeClickableLayers() {
 // hit only when it's actually painted.
 const HIT_LIT: Record<string, (f: MapGeoJSONFeature) => boolean> = {
   "odin-outages-fill": f => f.state?.odin_out != null,
+  "fema-nri-fill":     f => f.state?.nri_r != null,
   "nws-zone-fill":     f => zoneFeatureLit(f.state),
   "nws-county-fill":   f => zoneFeatureLit(f.state),
 };

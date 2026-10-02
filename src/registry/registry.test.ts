@@ -103,6 +103,7 @@ describe('CLICKABLE_LAYERS click hit-test priority', () => {
     "tribal-fill", "bia-tribal-fill", "padus-fill", "crithab-fill",
     "nerc-fill", "ba-fill", "eiaba-fill", "retail-fill",
     "odin-outages-fill",
+    "fema-nri-fill",
     "boem-wind-leases-fill",
     "us-zcta-fill", "us-counties-fill", "us-states-fill", "admin1-fill", "countries-fill",
   ];

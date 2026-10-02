@@ -354,6 +354,7 @@ const LEGEND_VISIBILITY = [
   { el: "nwsGroupLegend",        show: () => !!state.layerVisibility["nws-alerts"] },
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },
   { el: "odinLegend",            show: () => !!state.layerVisibility["odin-outages"] },
+  { el: "femaNriLegend",         show: () => !!state.layerVisibility["fema-nri"] },
   { el: "radarLegend",           show: () => !!state.layerVisibility["nexrad-radar"] },
   { el: "westtecScenarioLegend", show: () => !!state.layerVisibility["westtec-10yr"] },
   { el: "westtecDatasetLegend",  show: () => !!state.layerVisibility["westtec-10yr"] },

@@ -121,6 +121,10 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     label: "WECC Path Rating Catalog",
     tooltip: "Source: WECC 2026 Path Rating Catalog (Public Version) — path definitions, ratings, and directionality",
   },
+  "fema-nri": {
+    label: "FEMA National Risk Index",
+    tooltip: "Source: FEMA National Risk Index (county level) — not endorsed by FEMA",
+  },
   "ornl-odin": {
     label: "ORNL ODIN",
     tooltip: "Source: ORNL ODIN (Oak Ridge National Laboratory) — live county-level power-outage aggregates; utilities self-report, coverage is partial",

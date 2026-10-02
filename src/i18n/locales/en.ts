@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Fire: Hazard Potential',
   'layer.nwsAlerts': '✂️ Weather Alerts (live, Filtered)',
   'layer.odinOutages': 'Power Outages (US, live)',
+  'layer.femaNri': 'Natural Hazard Risk (FEMA NRI)',
   'layer.nexradRadar': 'Weather: Radar (live)',
   'layer.weatherLive': 'Weather Forecast',
   'layer.seismicPga': 'Seismic Hazard (PGA, 2% in 50yr)',

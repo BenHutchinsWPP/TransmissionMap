@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
+.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -46,6 +46,7 @@ help:
 	@echo "  make hydro-pts   build NREL/DOE hydrothermal points → data/layers/nrel_hydrothermal_pts.geojson.gz"
 	@echo "  make popden      build WorldPop 2020 population density → data/layers/worldpop_pop_density.pmtiles + COG in data/build/"
 	@echo "  make boundaries  build shared county-boundary PMTiles (Census TIGER) → data/layers/county_boundaries.pmtiles"
+	@echo "  make fema-nri    fetch FEMA National Risk Index (counties) → data/layers/fema_nri.json (joined onto county_boundaries)"
 	@echo "  make nws-zones   build shared NWS zone PMTiles (public + fire weather zones) → data/layers/nws_zones.pmtiles"
 	@echo "  make boem-wind   build BOEM offshore wind leases → data/layers/boem_wind_leases.geojson.gz"
 	@echo "  make admin-lines build Natural Earth border lines (weather overlay) → data/layers/admin_lines.geojson.gz"
@@ -336,6 +337,17 @@ seismic:
 # via feature-state. Public domain (US Government work).
 boundaries:
 	@bash $(SCRIPTS)/build_boundaries.sh
+
+# ── FEMA National Risk Index (county level) ─────────────────────────────────
+# scripts/extract_fema_nri.py downloads the county attribute table from FEMA's
+# ArcGIS FeatureServer into data/raw/fema_nri/ (delete it to refetch) and writes
+# the geometry-less FIPS → [score, rating]×hazard table the map joins onto
+# county_boundaries by feature-state (assets/fema-nri.ts). Reports join coverage
+# against data/build/county_boundaries.geojson when `make boundaries` has run.
+# FEMA NRI Terms & Conditions — see docs/layers/fema-nri.md.
+fema-nri:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/extract_fema_nri.py
 
 # ── Shared NWS zones (public forecast + fire weather zones, join infra) ─────
 # scripts/extract_nws_zones.py auto-downloads the WSOM shapefiles (scraping

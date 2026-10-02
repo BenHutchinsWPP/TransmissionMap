@@ -9,7 +9,7 @@
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES, REGION_CODE_MAP } from '../../src/registry/index.js';
-import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
+import { WEATHER_VARIABLES, NRI_HAZARDS } from '../../src/registry/conditions.js';
 import type { LayerDef, BucketDef, LayerScope, DownloadRegion } from '../../src/types.js';
 import { HEAT_RAMP } from '../../src/colors/ramps.js';
 import { releaseUrl } from '../constants.js';
@@ -104,6 +104,7 @@ function layerRowHtml(entry: LayerDef) {
     ${ogfColorByBlockHtml(entry)}
     ${westtecColorByBlockHtml(entry)}
     ${weatherVarBlockHtml(entry)}
+    ${nriHazardBlockHtml(entry)}
     ${filterPanelHtml(entry)}
     ${yearFilterBlockHtml(entry)}`;
 }
@@ -260,6 +261,19 @@ function weatherVarBlockHtml(entry: LayerDef) {
     <div class="gen-mode">
       <select class="weather-var-select" data-weather-var-select
               aria-label="Weather variable for ${escapeHtml(label)}">${options}</select>
+    </div>`;
+}
+
+function nriHazardBlockHtml(entry: LayerDef) {
+  if (!entry.nriHazardLayer) return "";
+  const label = t(entry.titleKey);
+  const options = NRI_HAZARDS.map(h =>
+    `<option value="${h.id}"${state.nriHazard === h.id ? " selected" : ""}>${escapeHtml(h.label)}</option>`,
+  ).join("");
+  return `
+    <div class="gen-mode">
+      <select class="weather-var-select" data-nri-hazard-select
+              aria-label="Hazard for ${escapeHtml(label)}">${options}</select>
     </div>`;
 }
 

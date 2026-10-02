@@ -92,6 +92,10 @@ export interface LayerDef {
   ogfStatusLayer?: boolean;
   westtecColorLayer?: boolean;
   weatherVarLayer?: boolean;
+  nriHazardLayer?: boolean;
+  // Layers sharing a group are shown one at a time: switching one on switches
+  // the others off (assets/visibility.ts). Used for the county choropleths.
+  exclusiveGroup?: string;   // FEMA NRI: one row, hazard picked from NRI_HAZARDS (src/registry/conditions.ts)
   pipelineLayer?: boolean;
   hoverField?: string;
   lineHighlightKeys?: string[];
@@ -160,6 +164,7 @@ export interface AppState {
   ogfColorBy: "status" | "scenario" | "planauth"; // OGF planned-lines color-by mode
   westtecColorBy: "scenario" | "dataset"; // WestTEC 10-Yr color-by mode
   weatherVar: string; // Weather Forecast selected variable id — see WEATHER_VARIABLES
+  nriHazard: string;  // FEMA National Risk Index hazard shown — an NRI_HAZARDS id
   weatherStepSuffix: string; // scrubbed step's file suffix ("" = base step) — routes the hover LUT fetch
   yearFilter: YearFilter;
   yearPlayback: YearPlayback;

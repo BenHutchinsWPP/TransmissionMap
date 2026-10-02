@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Sunog: Potensyal ng Panganib',
   'layer.nwsAlerts': '✂️ Mga Babala sa Panahon (live, Naka-filter)',
   'layer.odinOutages': 'Pagkawala ng Kuryente (US, live)',
+  'layer.femaNri': 'Panganib sa Likas na Sakuna (FEMA NRI)',
   'layer.nexradRadar': 'Panahon: Radar (live)',
   'layer.weatherLive': 'Ulat Panahon',
   'layer.seismicPga': 'Panganib ng Lindol (PGA, 2% sa 50taon)',

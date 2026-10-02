@@ -10,6 +10,7 @@ import {
   WEATHER_CLOUD_RAMP_STOPS, WEATHER_CLOUD_RAMP_MIN, WEATHER_CLOUD_RAMP_MAX,
   WEATHER_PRESSURE_RAMP_STOPS, WEATHER_PRESSURE_RAMP_MIN, WEATHER_PRESSURE_RAMP_MAX,
 } from '../colors/ramps.js';
+import { NRI_RATINGS } from '../colors/buckets.js';
 import { fmtTemp, fmtSpeed, fmtPressure } from '../units.js';
 
 // The LUT/ramp domain stays SI (°C, m/s, mb); conversion to the user's
@@ -47,6 +48,34 @@ const PRESSURE_RAMP: RampDef = {
 // suppresses the color raster image itself (weather-live.ts crossfades a
 // transparent placeholder instead) while keeping particles + hover cursor —
 // used by "Windstream" for a flow-only view over the basemap.
+// FEMA National Risk Index picker entries, in dropdown order: the composite
+// index, then the hazards that matter most to grid assets, then the rest. `id`
+// is FEMA's field prefix and must appear in the served table's `hazards` list
+// (scripts/extract_fema_nri.py HAZARDS); the URL carries it lowercased (`nr=`).
+// Consumed by ui-layer-rows.ts (dropdown), fema-nri.ts (join), popup-format.ts.
+export const NRI_HAZARDS: { id: string; label: string }[] = [
+  { id: "RISK", label: "Overall Risk (all hazards)" },
+  { id: "WFIR", label: "Wildfire" },
+  { id: "HRCN", label: "Hurricane" },
+  { id: "ISTM", label: "Ice Storm" },
+  { id: "SWND", label: "Strong Wind" },
+  { id: "TRND", label: "Tornado" },
+  { id: "HWAV", label: "Heat Wave" },
+  { id: "CWAV", label: "Cold Wave" },
+  { id: "WNTW", label: "Winter Weather" },
+  { id: "IFLD", label: "Inland Flooding" },
+  { id: "CFLD", label: "Coastal Flooding" },
+  { id: "ERQK", label: "Earthquake" },
+  { id: "HAIL", label: "Hail" },
+  { id: "LTNG", label: "Lightning" },
+  { id: "DRGT", label: "Drought" },
+  { id: "LNDS", label: "Landslide" },
+  { id: "AVLN", label: "Avalanche" },
+  { id: "TSUN", label: "Tsunami" },
+  { id: "VLCN", label: "Volcanic Activity" },
+];
+export const DEFAULT_NRI_HAZARD = "RISK";
+
 export const WEATHER_VARIABLES: {
   id: string; label: string; labelKey?: string; urlCode: string; ramp: RampDef; format: (v: number) => string;
   file?: string; noWash?: boolean;
@@ -146,10 +175,29 @@ export const conditionLayers: LayerDef[] = [
     swatch:      "#fd8d3c",   // mid-bucket (100–1k) of the YlOrRd outage ramp
     live:        true,
     defaultOn:   false,
+    exclusiveGroup: "county-choropleth",
     mapLayerIds: ["odin-outages-fill", "odin-outages-line"],
     clickPriority: { "odin-outages-fill": 460 },
     regions:     ["usa"],
     downloads: {},
+  },
+  {
+    id:          "fema-nri",
+    urlCode:     "NRI",
+    label:       "Natural Hazard Risk (FEMA NRI)",
+    titleKey:    "layer.femaNri",
+    group:       "conditions",
+    sourceId:    "fema-nri",
+    swatch:      NRI_RATINGS[3].color,
+    // No static legend ramp: five rating classes, one legend for every hazard
+    // (index.html #femaNriLegend); the picker swaps which hazard is joined.
+    nriHazardLayer: true,
+    defaultOn:   false,
+    exclusiveGroup: "county-choropleth",
+    mapLayerIds: ["fema-nri-fill", "fema-nri-line"],
+    clickPriority: { "fema-nri-fill": 455 },
+    regions:     ["usa"],
+    downloads:   {},
   },
   {
     id:          "nexrad-radar",

@@ -48,6 +48,7 @@ export const state: AppState = {
   ogfColorBy: "status", // OGF planned-lines color-by: "status" | "scenario" | "planauth"
   westtecColorBy: "scenario", // WestTEC 10-Yr color-by: "scenario" | "dataset"
   weatherVar: "tempwind", // Weather Forecast selected variable id — see WEATHER_VARIABLES
+  nriHazard: "RISK",     // FEMA National Risk Index hazard shown — an NRI_HAZARDS id
   weatherStepSuffix: "", // scrubbed step's file suffix ("" = base step) — routes the hover LUT fetch
   yearFilter:   { enabled: false, year: 2025, min: 1900, max: 2031 }, // EIA "alive at year Y"; bounds set in init()
   yearPlayback: { active: false, interval: null, speedMs: 600 },        // year-scrub animation

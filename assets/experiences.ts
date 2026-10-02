@@ -20,24 +20,26 @@
 //       applyOGFColorBy, applyWestTECColorBy), map.js (switchBasemap,
 //       switchProjection), terrain.js (setTerrain3d, setHillshade),
 //       weather-live.js (setWeatherVar, syncWeatherLiveVisibility),
+//       fema-nri.js (setNriHazard),
 //       nws-zone-join.js (syncZoneVisibility),
 //       layers/map-layers-conditions.js (applySmokeOpacity),
 //       ui/ui.js (resetLayersToDefaults), ui/ui-layer-rows.js (buildLayersPanel),
 //       ui/ui-legends.js (buildLegends), url-state.js, state-bus.js,
 //       registry/experiences.js (the catalogue), registry/conditions.js
-//       (WEATHER_VARIABLES), registry/index.js (LAYERS, for the gallery badges).
+//       (WEATHER_VARIABLES, DEFAULT_NRI_HAZARD), registry/index.js (LAYERS, for the gallery badges).
 
 import { state } from './state.js';
 import {
   EXPERIENCES, experienceById, AERIAL_MAX_ZOOM,
   type MapExperience, type ExperienceHighlight,
 } from '../src/registry/experiences.js';
-import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
+import { WEATHER_VARIABLES, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { LAYERS } from '../src/registry/index.js';
 import { setLayerVisibility, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
 import { switchBasemap } from './map.js';
 import { setTerrain3d, setHillshade } from './terrain.js';
 import { setWeatherVar, syncWeatherLiveVisibility } from './weather-live.js';
+import { setNriHazard } from './fema-nri.js';
 import { syncZoneVisibility } from './nws-zone-join.js';
 import { applySmokeOpacity } from './layers/map-layers-conditions.js';
 import { resetLayersToDefaults } from './ui/ui.js';
@@ -125,6 +127,7 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
   // Set before the panel is rebuilt below, so the variable dropdown renders on
   // the value the story asked for.
   setWeatherVar(preset.weatherVar ?? DEFAULT_WEATHER_VAR);
+  setNriHazard(DEFAULT_NRI_HAZARD);
 
   for (const layerId of preset.layersOff ?? []) setLayerVisibility(layerId, false);
   for (const layerId of preset.layersOn ?? []) setLayerVisibility(layerId, true);

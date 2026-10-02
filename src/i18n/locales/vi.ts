@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Cháy rừng: Nguy cơ tiềm ẩn',
   'layer.nwsAlerts': '✂️ Cảnh báo thời tiết (trực tiếp, Đã lọc)',
   'layer.odinOutages': 'Sự cố mất điện (Hoa Kỳ, trực tiếp)',
+  'layer.femaNri': 'Rủi ro thiên tai (FEMA NRI)',
   'layer.nexradRadar': 'Thời tiết: Radar (trực tiếp)',
   'layer.weatherLive': 'Dự báo thời tiết',
   'layer.seismicPga': 'Nguy cơ động đất (PGA, 2% trong 50 năm)',

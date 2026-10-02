@@ -54,6 +54,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `gm` | generator display mode (icons/heat/both) | codec, via `genModeCode` |
 | `oc` | OGF planned-lines color-by (`s`=status, `w`=scenario, `a`=planauth) | codec, `OC_*` maps |
 | `wc` | WestTEC 10 Yr color-by (`s`=scenario, `d`=dataset) | codec, `WC_*` maps |
+| `nr` | FEMA National Risk Index hazard (the NRI field prefix, lowercased: `wfir`, `hrcn`, …) | codec, `NRI_HAZARDS` in `registry/conditions.ts` |
 | `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `ws`=Windstream, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
 | `so` | Fire smoke opacity (integer percent, `0`–`100`) | codec |
 | `bm` | basemap | codec, `BM_*_CODE` maps |
@@ -101,6 +102,7 @@ top-level param keys must be globally unique.
 | Basemap | `bm` | `light` |
 | Projection | `pj` | mercator |
 | Weather variable | `wv` | `tempwind` |
+| FEMA NRI hazard | `nr` | `risk` (the composite) |
 | Fire smoke opacity | `so` | `100` |
 | 3D terrain/buildings | `3d` | both off |
 | Hillshade | `hs` | off |

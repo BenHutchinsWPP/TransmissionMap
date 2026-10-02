@@ -119,6 +119,9 @@ export const DATA = {
   county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
   admin_lines: DATA_ORIGIN + "data/layers/admin_lines.geojson.gz", // Natural Earth country/state border lines — white highlights over the weather wash, no standalone layer/legend
   nws_zones: DATA_ORIGIN + "data/layers/nws_zones.pmtiles", // NWS public forecast + fire weather zone polygons — shared join infra, no standalone layer/legend
+  // FEMA National Risk Index — geometry-less FIPS → [score, rating]×hazard table
+  // (scripts/extract_fema_nri.py), joined onto county_boundaries via feature-state (see fema-nri.ts).
+  fema_nri: DATA_ORIGIN + "data/layers/fema_nri.json",
   // Dev: local file (run scripts/fetch_odin_outages.py first). Prod: `data`
   // branch on raw.githubusercontent.com (CORS ok). FIPS→[customers_out,incident_count]
   // snapshot joined onto county_boundaries via MapLibre feature-state (see odin-outages.ts).

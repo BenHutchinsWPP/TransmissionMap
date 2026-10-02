@@ -133,6 +133,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'احتمالية مخاطر حرائق الغابات',
   'layer.nwsAlerts': '✂️ تنبيهات الطقس (مباشرة، مفلترة)',
   'layer.odinOutages': 'انقطاعات الكهرباء (أمريكا، مباشر)',
+  'layer.femaNri': 'مخاطر الكوارث الطبيعية (FEMA NRI)',
   'layer.nexradRadar': 'رادار الطقس (مباشر)',
   'layer.weatherLive': 'توقعات الطقس',
   'layer.seismicPga': 'المخاطر الزلزالية (PGA، 2% في 50 سنة)',

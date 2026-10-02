@@ -132,6 +132,7 @@ const locale: LocaleDictionary = {
   'layer.usfsWildfirePotential': 'Kǫʼ diidlid biniiyé baa hwiinidzin',
   'layer.nwsAlerts': '✂️ Níłchʼi haneʼ yéego baa hwiinidzin (live)',
   'layer.odinOutages': 'Atsingeeł ałchʼįʼ kʼééldloʼ (US, live)',
+  'layer.femaNri': 'Natural Hazard Risk (FEMA NRI)',
   'layer.nexradRadar': 'Níłchʼi haneʼ: Radar (live)',
   'layer.weatherLive': 'Níłchʼi haneʼ doo yitʼínígíí',
   'layer.seismicPga': 'Kéyah haʼdidiłhałígíí (PGA, 2% in 50yr)',

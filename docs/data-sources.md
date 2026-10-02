@@ -39,6 +39,7 @@ security allowlist review), see [network-allowlist.md](network-allowlist.md).
 | **NOAA / NWS** | [Live weather alerts](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |
 | **NWS** (WSOM zone shapefiles) | [Live weather alerts — zone/county join](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |
 | **Environment and Climate Change Canada** (MSC GeoMet) | [Live weather alerts (Canada)](layers/nws-alerts.md) | Open Government Licence – Canada — attribution required | "Environment and Climate Change Canada (MSC GeoMet)" |
+| **FEMA National Risk Index** | [Natural hazard risk (county)](layers/fema-nri.md) | FEMA NRI Terms & Conditions — planning use; cite the dataset and state "not endorsed by FEMA" | FEMA non-endorsement statement (see the layer doc) |
 | **ORNL ODIN** | [Power outages (live)](layers/outages.md) | No license declared (DOE/ORNL public program) | "ORNL ODIN" |
 | **Iowa Environmental Mesonet** | [Weather: Radar (live)](layers/weather-radar.md) — US | Public domain — underlying NWS NEXRAD data is US federal work, 17 U.S.C. § 105 | "Iowa Environmental Mesonet" |
 | **Environment and Climate Change Canada** (MSC GeoMet radar) | [Weather: Radar (live)](layers/weather-radar.md) — Canada rain/snow | Open Government Licence – Canada — attribution required | "Environment and Climate Change Canada (MSC GeoMet)" |

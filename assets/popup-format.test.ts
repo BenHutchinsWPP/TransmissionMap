@@ -6,6 +6,7 @@ import {
   renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml,
 } from './popup-format.js';
 import { setUnits, DEFAULT_UNITS } from '../src/units.js';
+import { state } from './state.js';
 import { setLocale, loadDictionary } from '../src/i18n/index.js';
 
 beforeEach(() => {
@@ -523,5 +524,34 @@ describe('buildPopupHtml', () => {
     expect(out).toContain('Medium');
     expect(out).toContain('MODIS');
     expect(out).toContain('2026-07-15');
+  });
+});
+
+// ─── fema-nri-fill renderer ──────────────────────────────────────────────────
+
+describe('fema-nri-fill renderer', () => {
+  beforeEach(() => { state.nriHazard = 'RISK'; });
+
+  it('renders the selected hazard rating with its percentile', () => {
+    state.nriHazard = 'WFIR';
+    const out = buildPopupHtml('fema-nri-fill', {
+      NAME: 'Butte', STATE_NAME: 'California',
+      nri_r: 5, nri_s: 99.71, nri_cr: 4, nri_cs: 96.2,
+    });
+    expect(out).toContain('Butte, California');
+    expect(out).toContain('Wildfire');
+    expect(out).toContain('Very High (99.7 national percentile)');
+    expect(out).toContain('Overall Risk');
+    expect(out).toContain('Relatively High (96.2 national percentile)');
+    expect(out).toContain('not endorsed by FEMA');
+  });
+
+  it('does not repeat the composite row when the composite is selected', () => {
+    const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 3, nri_s: 50, nri_cr: 3, nri_cs: 50 });
+    expect(out?.match(/Overall Risk/g)).toHaveLength(1);
+  });
+
+  it('renders nothing for an unlit county (hazard not applicable)', () => {
+    expect(buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: null })).toBe('');
   });
 });

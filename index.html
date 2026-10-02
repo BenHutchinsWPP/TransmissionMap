@@ -484,6 +484,21 @@
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">ORNL ODIN — utilities self-report; coverage is partial (~34–38 states).</div>
           </div>
         </div>
+        <!-- FEMA National Risk Index — one legend for every hazard (ratings share
+             FEMA's five classes); the title names the hazard (fema-nri.ts).
+             Swatches mirror NRI_RATINGS in src/colors/buckets.ts. -->
+        <div class="legend collapsed" id="femaNriLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Hazard Risk: <span id="femaNriHazard">Overall Risk (all hazards)</span></span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#980043"></span><span>Very High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#dd1c77"></span><span>Relatively High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#df65b0"></span><span>Relatively Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#d7b5d8"></span><span>Relatively Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f1eef6"></span><span>Very Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span><span>Insufficient data</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">Unshaded: hazard not applicable. FEMA NRI, county level — for planning, not a local risk assessment.</div>
+          </div>
+        </div>
         <!-- Live weather — baked-color mosaic; carries the selected variable's
              color scale (refreshWeatherRampBlock), the age pill and provenance. -->
         <div class="legend collapsed" id="weatherLegend" hidden data-collapsible>
@@ -722,6 +737,7 @@
         <li data-source-credit="noaa-hms"><a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">NOAA HMS Smoke Detection</a> (OSPO / NESDIS) — analyst-drawn satellite smoke polygons, latest available analysis (may trail real time by several hours) — public domain.</li>
         <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>
         <li data-source-credit="ornl-odin"><a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" target="_blank" rel="noopener">ORNL ODIN</a> — live county-level power-outage aggregates (customers affected, incident count). Utilities self-report; coverage is partial (~34–38 states). No license declared (DOE/ORNL public program).</li>
+        <li data-source-credit="fema-nri"><a href="https://www.arcgis.com/home/item.html?id=39485e8035d446a5bff03259508ae355" target="_blank" rel="noopener">FEMA National Risk Index</a> — county level, composite and 18 hazards (December 2025, v1.20.0). This product uses the Federal Emergency Management Agency’s National Risk Index dataset API or downloadable datasets but is not endorsed by FEMA. The Federal Government or FEMA cannot vouch for the data or analyses derived from these data after the data have been retrieved from the Agency's website(s).</li>
         <li data-source-credit="usgs-nshm"><a href="https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1" target="_blank" rel="noopener">USGS National Seismic Hazard Model</a> — 2018, Peak Ground Acceleration (PGA), 2% in 50yr (≈2475-yr return), Site Class B/C — public domain</li>
         <li data-source-credit="boem"><a href="https://www.boem.gov/renewable-energy/mapping-and-data" target="_blank" rel="noopener">Bureau of Ocean Energy Management (BOEM)</a> — Offshore Wind Leases — public domain.</li>
         <li data-source-credit="wecc-paths"><a href="https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf" target="_blank" rel="noopener">WECC Path Rating Catalog</a> — 2026 Public Version (V3, March 2026) — path definitions, ratings &amp; directionality. 🚧 Under construction — layer is a work in progress.</li>

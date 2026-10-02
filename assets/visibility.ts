@@ -1,4 +1,6 @@
 // ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
+// A layer with an `exclusiveGroup` switches the rest of its group off when it
+// is switched on (and unticks their panel checkboxes).
 // Imported by: ui.ts (setLayerVisibility, applyAllGenModes),
 //              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
 // Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
@@ -16,6 +18,15 @@ import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 export function setLayerVisibility(registryId: string, visible: boolean) {
   const entry = layerById(registryId);
   if (!entry || !state.mapReady || !state.map) return;
+  if (visible && entry.exclusiveGroup) {
+    for (const other of LAYERS) {
+      if (other.id === registryId || other.exclusiveGroup !== entry.exclusiveGroup) continue;
+      if (!state.layerVisibility[other.id]) continue;
+      setLayerVisibility(other.id, false);
+      const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${other.id}"]`);
+      if (cb) cb.checked = false;
+    }
+  }
   state.layerVisibility[registryId] = visible;
   if (visible) ensureLayerData(registryId);
   if (RASTER_PROBES[registryId]) {
