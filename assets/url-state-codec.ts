@@ -56,8 +56,8 @@ const BM_CODE_TO_TYPE: Record<string, string> = { l: "light", d: "dark", s: "str
 const BM_TYPE_TO_CODE: Record<string, string> = { light: "l", dark: "d", street: "s", topo: "t", aerial: "a", hydro: "h" };
 const GM_CHAR_TO_MODE: Record<string, string> = { i: "icons", h: "heat", b: "both", c: "clusters" };
 const GM_MODE_TO_CHAR: Record<string, string> = { icons: "i", heat: "h", both: "b", clusters: "c" };
-const OC_CHAR_TO_MODE: Record<string, string> = { s: "status", w: "scenario", a: "planauth" };
-const OC_MODE_TO_CHAR: Record<string, string> = { status: "s", scenario: "w", planauth: "a" };
+const OC_CHAR_TO_MODE: Record<string, string> = { r: "region", s: "status" };
+const OC_MODE_TO_CHAR: Record<string, string> = { region: "r", status: "s" };
 const WC_CHAR_TO_MODE: Record<string, string> = { s: "scenario", d: "dataset" };
 const WC_MODE_TO_CHAR: Record<string, string> = { scenario: "s", dataset: "d" };
 // Weather Forecast variable dropdown — codes come from WEATHER_VARIABLES.urlCode.
@@ -164,7 +164,7 @@ export function defaultView(): UrlStateData {
     mwFilter: { min: 0, max: MW_SLIDER_MAX },
     yearFilter: { enabled: false, year: YEAR_FILTER_DEFAULT },
     genMode,
-    ogfColorBy: 'status',
+    ogfColorBy: 'region',
     westtecColorBy: 'scenario',
     weatherVar: WEATHER_VARIABLES[0].id,
     nriHazard: DEFAULT_NRI_HAZARD,

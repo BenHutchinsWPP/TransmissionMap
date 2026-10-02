@@ -28,7 +28,7 @@ export const state: AppState = {
   legendFilters:       {},    // legendKey → Set<bucketId>  — keyed by LEGEND_FILTERS[].key; init in init()
   mwFilter: { min: 0, max: 10000 }, // global MW range filter for all generator layers
   genMode: {},          // registryId → "icons" | "heat" | "both" (heat-capable gen layers); init in init()
-  ogfColorBy: "status", // OGF planned-lines color-by: "status" | "scenario" | "planauth"
+  ogfColorBy: "region", // OGF planned-lines color-by: "region" | "status"
   westtecColorBy: "scenario", // WestTEC 10-Yr color-by: "scenario" | "dataset"
   weatherVar: "tempwind", // Weather Forecast selected variable id — see WEATHER_VARIABLES
   nriHazard: "RISK",     // FEMA National Risk Index hazard shown — an NRI_HAZARDS id

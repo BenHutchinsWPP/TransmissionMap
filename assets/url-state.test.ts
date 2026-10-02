@@ -28,7 +28,7 @@ beforeEach(() => {
   state.legendFilters   = {};
   state.layerFilters    = {};
   state.genMode         = {};
-  state.ogfColorBy      = 'status';
+  state.ogfColorBy      = 'region';
   state.westtecColorBy  = 'scenario';
   state.weatherVar      = 'tempwind';
   state.nriHazard       = 'RISK';
@@ -173,7 +173,7 @@ describe('round-trip serialization', () => {
     state.layerVisibility['osm-transmission-lines'] = false; // default on
     state.legendFilters['fuel'] = new Set(['wind', 'nuclear']);
     state.genMode['eia-generators'] = 'heat';
-    state.ogfColorBy = 'planauth';
+    state.ogfColorBy = 'status';
 
     writeUrlState();
 
@@ -184,7 +184,7 @@ describe('round-trip serialization', () => {
     state.layerVisibility = {};
     state.legendFilters = {};
     state.genMode = {};
-    state.ogfColorBy = 'status';
+    state.ogfColorBy = 'region';
 
     readUrlState();
 
@@ -196,10 +196,10 @@ describe('round-trip serialization', () => {
     expect(state.layerVisibility['osm-transmission-lines']).toBe(false);
     expect(state.legendFilters['fuel']).toEqual(new Set(['wind', 'nuclear']));
     expect(state.genMode['eia-generators']).toBe('heat');
-    expect(state.ogfColorBy).toBe('planauth');
+    expect(state.ogfColorBy).toBe('status');
   });
 
-  it('omits oc when ogfColorBy is the default "status"', () => {
+  it('omits oc when ogfColorBy is the default "region"', () => {
     writeUrlState();
     expect(location.hash).not.toContain('oc=');
   });

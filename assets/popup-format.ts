@@ -81,6 +81,7 @@ export function renderOgfPlanned(p: Record<string, unknown>) {
     row("popup.from", p.FromSub) +
     row("popup.to", p.ToSub) +
     row("popup.states", p.StatesFull) +
+    row("popup.region", p.Region) +
     row("popup.rtoIso", p.ISO_RTO) +
     row("popup.planAuth", p.PlanAuth) +
     row("popup.portfolio", p.Portfolio) +

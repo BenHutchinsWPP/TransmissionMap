@@ -96,6 +96,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'OSM 送電線',
   'layer.hifldLines': 'HIFLD 送電線',
   'layer.westtec10yr': 'WestTEC 10年計画研究',
+  'layer.ogfPlanned': 'Our Grid Future 計画送電線',
   'layer.weccPaths': 'WECC パス',
   'layer.osmPlants': 'OSM 発電所',
   'layer.osmPlantPolygons': 'OSM 発電所敷地',
@@ -162,7 +163,7 @@ const locale: LocaleDictionary = {
   'mode.clusters': 'クラスター',
   'colorby.status': 'ステータス',
   'colorby.scenario': 'シナリオ',
-  'colorby.planauth': '計画機関',
+  'colorby.region': '地域',
   'colorby.dataset': '種別',
 
   // Year Filter

@@ -96,6 +96,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'Linee di trasmissione OSM',
   'layer.hifldLines': 'Linee di trasmissione HIFLD',
   'layer.westtec10yr': 'Studio decennale WestTEC',
+  'layer.ogfPlanned': 'Linee pianificate Our Grid Future',
   'layer.weccPaths': 'Percorsi WECC',
   'layer.osmPlants': 'Centrali elettriche OSM',
   'layer.osmPlantPolygons': 'Siti centrali elettriche OSM',
@@ -162,7 +163,7 @@ const locale: LocaleDictionary = {
   'mode.clusters': 'Cluster',
   'colorby.status': 'Stato',
   'colorby.scenario': 'Scenario',
-  'colorby.planauth': 'Autorità',
+  'colorby.region': 'Regione',
   'colorby.dataset': 'Tipo',
 
   // Year Filter

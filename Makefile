@@ -154,7 +154,7 @@ pipeline:
 	    echo "  [skip] eia-ba — ArcGIS download failed (see script header)"
 	@echo "=== Planned transmission (Our Grid Future) ==="
 	@$(PY) $(SCRIPTS)/extract_ogf.py || \
-	    echo "  [skip] OGF — place ZIP at data/raw/ogf/OurGridFuture_PlannedTransmissionProjects_Jun2026.zip (see script header)"
+	    echo "  [skip] OGF — place ZIP at data/raw/ogf/OurGridFuture_PlannedTx_Detailed_08202026.zip (see script header)"
 	@echo "=== WestTEC 10-Year Horizon (West-Wide Transmission Study) ==="
 	@$(PY) $(SCRIPTS)/extract_westtec.py || \
 	    echo "  [skip] WestTEC — place ZIPs at data/raw/westtec/ (see script header)"

@@ -65,7 +65,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `mw` | MW range | codec |
 | `y`  | generator year filter | codec |
 | `gm` | generator display mode (icons/heat/both) | codec, via `genModeCode` |
-| `oc` | OGF planned-lines color-by (`s`=status, `w`=scenario, `a`=planauth) | codec, `OC_*` maps |
+| `oc` | OGF planned-lines color-by (`r`=region, `s`=status) | codec, `OC_*` maps |
 | `wc` | WestTEC 10 Yr color-by (`s`=scenario, `d`=dataset) | codec, `WC_*` maps |
 | `nr` | FEMA National Risk Index hazard (the NRI field prefix, lowercased: `wfir`, `hrcn`, …) | codec, `NRI_HAZARDS` in `registry/conditions.ts` |
 | `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `ws`=Windstream, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
@@ -78,7 +78,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `region` | Layer-list scope (`global` only; `usa` is the default and is omitted) | codec, `VALID_REGIONS` |
 | `exp` | Active Map Experience slug (`columbia-hydro`, …) | codec (parse) + `url-state.ts` (pristine check); catalogue in `registry/experiences.ts` |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
-| `v f p h j t n r c e g u w a k d i o q x z` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
+| `v f p h j t n r c e g u b m k d i o q x z` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
 
 Per-layer bucket filters use `filterGroupCode` (currently only `s`), read as a
 top-level param the same way — so they share the same key namespace as
@@ -87,7 +87,7 @@ everything above.
 Legend-filter `groupCode` assignments: `v`=voltage, `f`=fuel, `p`=pipeline,
 `h`=crithab, `j`=padus, `t`=tribal, `n`=natgasLine, `r`=natgasPts, `c`=nerc,
 `e`=retail, `g`=ogfStatus, `u`=substance (OSM pipeline commodity),
-`w`=ogfScenario (WestTEC Portfolio), `a`=ogfPlanAuth, `k`=mines (commodity),
+`b`=ogfRegion, `m`=ogfWork (OGF type of work), `k`=mines (commodity),
 `d`=minesStatus, `i`=sector (EIA Plants sector), `o`=underground (line placement,
 overhead/underground), `q`=nwsGroup (NWS weather alert group), `x`=westtecScenario,
 `z`=westtecDataset.

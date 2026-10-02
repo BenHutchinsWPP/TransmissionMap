@@ -7,13 +7,13 @@ Planned and under-construction transmission projects from the Our Grid Future na
 | | |
 |---|---|
 | **Provider** | [Our Grid Future](https://ourgridfuture.org) — Horizon Energy Systems |
-| **Dataset** | Planned Transmission Projects National Database, June 2026 edition |
+| **Dataset** | Planned Transmission Projects National Database, 2026-08-20 detailed edition |
 | **Citation** | Abramson, E., Ramsay, E., McFarlane, D., Prorok, M. (2026). *Our Grid Future Planned Transmission Projects National Database*. Horizon Energy Systems. |
 | **License** | Custom — free for non-commercial use; attribution required |
 | **Attribution** | Abramson et al., Horizon Energy Systems, 2026 — see citation in `index.html` |
 | **Served** | GeoJSON (lazy-loaded) — `data/layers/ogf_planned_transmission.geojson.gz` |
 | **Built by** | `scripts/extract_ogf.py` → `build_tiles.py` |
-| **Raw input** | `data/raw/ogf/OurGridFuture_PlannedTransmissionProjects_Jun2026.zip` (shapefile ZIP; manual placement via the download form at ourgridfuture.org; gitignored) |
+| **Raw input** | `data/raw/ogf/OurGridFuture_PlannedTx_Detailed_08202026.zip` (shapefile ZIP supplied by Horizon; manual placement; gitignored) |
 
 ## Download pack
 
@@ -25,19 +25,35 @@ Marked `skip: true` in `scripts/release_manifest.yaml`.
 
 `extract_ogf.py` reads the shapefile from inside the ZIP (`/vsizip/`), reprojects
 to EPSG:4326, keeps only line features with geometry, normalizes inconsistent
-`Status` spellings ("On Hold"/"Hold" → "On hold"), and drops server-computed
+`Status` spellings ("On Hold"/"Hold" → "On hold"), collapses line breaks
+inside `PlanProc` values, and drops server-computed
 columns (`Shape_Leng`, `Shape__Length`, `OBJECTID`, `CalcCapMW`). No geometry
 simplification. `build_tiles.py` then serves it raw as gzipped GeoJSON
-(zoom-less, lazy-loaded). Line color is selectable via a "color by" toggle on
-the layer row (`ogfStatusLayer` in the registry): `Status` (default),
-`Portfolio` (WestTEC scenario), or `PlanAuth` — expression built by
-`ogfColorExpr()` in `src/colors/buckets.ts`, applied by `applyOGFColorBy()`
-in `assets/visibility.ts`, persisted as URL param `oc`. The two OGF legends
-not driving color get dimmed swatches (they remain filters).
+(zoom-less, lazy-loaded).
+
+Two derived fields drive the styling:
+
+- `Region` — `WECC` when at least half a line's length lies inside the WECC
+  polygon of `data/build/nerc_regions.gpkg` (so `extract_regions.py` must run
+  first), or the project is in the WestTEC 10-Year Plan (this adds North
+  Plains Connector, which runs into North Dakota); otherwise OGF's `ISO_RTO`.
+  `ISO_RTO` records market membership, so SPP's western (RTO West) lines such
+  as Colorado's Power Pathway and Ready Wyoming need the geometry test. 181
+  lines are WECC in the 2026-08-20 edition.
+- `Work` — `new` when `Type` includes a new circuit (greenfield or existing
+  right-of-way), else `existing` (rebuild, reconductor, upgrade).
+
+Line color is selectable via a "color by" toggle on the layer row
+(`ogfStatusLayer` in the registry): `Region` (default) or `Status` —
+expression built by `ogfColorExpr()` in `src/colors/buckets.ts`, applied by
+`applyOGFColorBy()` in `assets/visibility.ts`, persisted as URL param `oc`.
+Line style is fixed across both modes: solid for new lines, dashed for work on
+existing lines (`OGF_DASH_EXPR`). The OGF layer does not symbolize WestTEC
+scenarios; the WestTEC 10 Yr layer is the one place those are shown.
 
 ## Fields
 
-Notable columns (June 2026 edition; the full list also includes `RecordID`,
+Notable columns (2026-08-20 edition, 714 features; the full list also includes `RecordID`,
 `ProjectID`, `Segment`, `InfoDate`, `LineType`, `FedPerm`, `StatePerm`,
 `Perm_Updat`, `FP_Filter`, `SP_Filter`, `AltName`, `AllSub`, `StatesAbbr`,
 `LengthSrc`, `Link2`):
@@ -56,17 +72,20 @@ Notable columns (June 2026 edition; the full list also includes `RecordID`,
 | `StatesFull` | States traversed | "Nevada, Idaho" |
 | `ISO_RTO` | RTO/ISO | "WECC" |
 | `PlanAuth` | Planning authority | "WestTEC", "CAISO", "MISO" |
-| `PlanProc` | Planning process / study | "WestTEC 10 Yr Plan", "MTEP24" |
+| `PlanProc` | Planning process / study | "WestTEC 10 Yr Plan (Base Case)", "MTEP24" |
 | `Portfolio` | Study portfolio / scenario | "Base Case", "SRA", "IDA", "Congestion", "LRTP Tranche 1" |
 | `Length_mi` | Length in miles | 285.4 |
 | `Link` | Project page URL | |
 
-WestTEC note: projects from the WestTEC 10-Year Plan carry
-`PlanAuth = "WestTEC"` (and `PlanProc = "WestTEC 10 Yr Plan"` — one misspelled
-variant "WestTec 10 Yr Plan" exists in the raw data). Their `Portfolio` values
-map to the scenario filters on ourgridfuture.org: `Base Case` (Base Case
-Planned Projects), `SRA` (Reliability Assessment), `IDA` (Deliverability
-Assessment), `Congestion` (Congestion Assessment).
+WestTEC note: `PlanProc` is the complete WestTEC membership field. The
+2026-08-20 edition labels every project in the WestTEC 10-Year Report as
+`WestTEC 10 Yr Plan (<scenario>)`, where the scenario is `Base Case`, `SRA`,
+`IDA` or `Congestion` (96 features, 91 projects). `PlanAuth` and `Portfolio`
+record where OGF first sourced a project, so many WestTEC projects keep their
+sponsor there (e.g. Greenlink North/West: `PlanAuth` empty, `Owner = NV
+Energy`). Every WestTEC-labelled line at 345 kV and above lies on the WestTEC
+shapefile routes; 15 of the 27 WestTEC-labelled 230 kV lines appear in the
+report but not on the WestTEC maps.
 
 ## Filters
 
@@ -76,13 +95,13 @@ applied in a single `setFilter` call):
 
 | Legend | Field | groupCode |
 |---|---|---|
+| Region | `Region` | `b` |
 | Project status | `Status` | `g` |
-| WestTEC scenario | `Portfolio` | `w` |
-| Planning authority | `PlanAuth` | `a` |
+| Type of work | `Work` | `m` |
 
 ## Caveats
 
 - Data represents planned projects and may not reflect current approval or construction status.
 - No redistribution of raw data; users wanting the source file should download directly from ourgridfuture.org.
 - Coverage is US-focused; some cross-border projects may be included.
-- Vintage: June 2026 edition (shapefile ZIP via ourgridfuture.org download form).
+- Vintage: 2026-08-20 detailed edition (shapefile ZIP supplied by Horizon).

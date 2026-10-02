@@ -162,7 +162,6 @@ const locale: LocaleDictionary = {
   'mode.clusters': 'Áłah yistłʼin',
   'colorby.status': 'Átʼée dooleełgi',
   'colorby.scenario': 'Bikʼehgo naanish',
-  'colorby.planauth': 'Alą́ąjįʼ dah sidáhígíí',
   'colorby.dataset': 'Átʼéhígíí',
 
   // Year Filter

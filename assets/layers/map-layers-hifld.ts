@@ -5,7 +5,7 @@ import type { ExpressionSpecification, FilterSpecification, LayerSpecification }
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import { bucketColorExpr, ogfColorExpr, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
+import { bucketColorExpr, ogfColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
   pmtilesUrl, initialVisibility, registerBaseFilter,
@@ -252,7 +252,7 @@ export function addOGFPlannedTransmission() {
     paint: {
       "line-color": ogfColorExpr(state.ogfColorBy),
       "line-width": OGF_LINE_WIDTH,
-      "line-dasharray": [4, 2],
+      "line-dasharray": OGF_DASH_EXPR,
       "line-opacity": 0.95,
     },
   } as unknown as LayerSpecification);

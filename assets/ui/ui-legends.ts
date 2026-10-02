@@ -16,7 +16,7 @@ import {
   KV_BUCKETS, VOLTAGE_LEGEND, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
-  OGF_SCENARIO_BUCKETS, OGF_PLANAUTH_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
+  OGF_REGION_BUCKETS, OGF_WORK_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
   NWS_GROUP_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_DATASET_BUCKETS,
 } from '../../src/colors/buckets.js';
 import {
@@ -76,15 +76,15 @@ export const LEGEND_FILTERS = [
   { key: "retail", groupCode: "e", buckets: RETAIL_TYPE_BUCKETS,
     masterId: "retailAllCb", legendId: "retailLegend", itemsId: "retailLegendItems",
     title: "Utility type", swatch: "color", apply: applyRetailTypeFilter },
+  { key: "ogfRegion", groupCode: "b", buckets: OGF_REGION_BUCKETS,
+    masterId: "ogfRegionAllCb", legendId: "ogfRegionLegend", itemsId: "ogfRegionLegendItems",
+    title: "Region", titleKey: "popup.region", swatch: "color", apply: applyOGFFilters },
   { key: "ogfStatus", groupCode: "g", buckets: OGF_STATUS_BUCKETS,
     masterId: "ogfStatusAllCb", legendId: "ogfStatusLegend", itemsId: "ogfStatusLegendItems",
     title: "Project status", titleKey: "legend.status", swatch: "color", apply: applyOGFFilters },
-  { key: "ogfScenario", groupCode: "w", buckets: OGF_SCENARIO_BUCKETS,
-    masterId: "ogfScenarioAllCb", legendId: "ogfScenarioLegend", itemsId: "ogfScenarioLegendItems",
-    title: "WestTEC scenario", swatch: "color", apply: applyOGFFilters },
-  { key: "ogfPlanAuth", groupCode: "a", buckets: OGF_PLANAUTH_BUCKETS,
-    masterId: "ogfPlanAuthAllCb", legendId: "ogfPlanAuthLegend", itemsId: "ogfPlanAuthLegendItems",
-    title: "Planning authority", swatch: "color", apply: applyOGFFilters },
+  { key: "ogfWork", groupCode: "m", buckets: OGF_WORK_BUCKETS,
+    masterId: "ogfWorkAllCb", legendId: "ogfWorkLegend", itemsId: "ogfWorkLegendItems",
+    title: "Type of work", swatch: "line", apply: applyOGFFilters },
   { key: "mines", groupCode: "k", buckets: MINES_COMMODITY_BUCKETS,
     masterId: "minesAllCb", legendId: "minesLegend", itemsId: "minesLegendItems",
     title: "Mines — commodity", swatch: "icon", apply: applyMinesFilter },
@@ -195,7 +195,7 @@ function buildLegendSection(cfg: LegendFilter) {
       : cfg.swatch === "none"
       ? ""
       : cfg.swatch === "line"
-      ? `<span class="legend-line-swatch${b.id === "underground" ? " legend-line-swatch--dashed" : ""}"></span>`
+      ? `<span class="legend-line-swatch${b.id === "underground" || b.id === "existing" ? " legend-line-swatch--dashed" : ""}"></span>`
       : `<span class="legend-swatch" style="background:${b.color}"></span>`;
     const labelText = (b as { labelKey?: string }).labelKey
       ? t((b as { labelKey?: string }).labelKey!)
@@ -344,9 +344,9 @@ const LEGEND_VISIBILITY = [
   { el: "nercLegend",       show: () => !!state.layerVisibility["nerc-regions"] },
   { el: "retailLegend",     show: () => !!state.layerVisibility["retail-territories"] },
   { el: "whpLegend",             show: () => !!state.layerVisibility["usfs-wildfire-potential"] },
+  { el: "ogfRegionLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "ogfStatusLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
-  { el: "ogfScenarioLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
-  { el: "ogfPlanAuthLegend",     show: () => !!state.layerVisibility["ogf-planned-transmission"] },
+  { el: "ogfWorkLegend",         show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "minesLegend",           show: () => !!state.layerVisibility["mines"] },
   { el: "minesStatusLegend",     show: () => !!state.layerVisibility["mines"] },
   { el: "smokeLiveLegend",        show: () => !!state.layerVisibility["wildfire-smoke"] },

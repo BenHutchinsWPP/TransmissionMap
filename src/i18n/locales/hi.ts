@@ -96,6 +96,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'OSM पारेषण लाइनें',
   'layer.hifldLines': 'HIFLD पारेषण लाइनें',
   'layer.westtec10yr': 'WestTEC 10-वर्षीय अध्ययन',
+  'layer.ogfPlanned': 'Our Grid Future नियोजित लाइनें',
   'layer.weccPaths': 'WECC पथ',
   'layer.osmPlants': 'OSM विद्युत संयंत्र',
   'layer.osmPlantPolygons': 'OSM विद्युत संयंत्र स्थल',
@@ -162,7 +163,7 @@ const locale: LocaleDictionary = {
   'mode.clusters': 'क्लस्टर',
   'colorby.status': 'स्थिति',
   'colorby.scenario': 'परिदृश्य',
-  'colorby.planauth': 'योजना प्राधिकरण',
+  'colorby.region': 'क्षेत्र',
   'colorby.dataset': 'प्रकार',
 
   // Year Filter

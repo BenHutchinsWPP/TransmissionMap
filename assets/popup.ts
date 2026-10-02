@@ -69,9 +69,6 @@ function showEditPicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]
 // LayerDef carries no mapLayerIds entry for them, so the registry has nowhere
 // to hang a clickPriority.
 export const UNOWNED_CLICKABLE: Record<string, number> = {
-  // LayerDef commented out in src/registry/transmission.ts pending a
-  // comparison of OGF statuses against WestTEC; map layer still built.
-  "ogf-planned-lines": 1000,
   // LayerDef commented out in src/registry/pipelines.ts (crude/refined-oil
   // delivery has no grid-planning value); map layer still built.
   "hifld-petroleum-facilities": 870,

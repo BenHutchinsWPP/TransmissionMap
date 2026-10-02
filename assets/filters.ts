@@ -13,8 +13,8 @@ import {
   TRIBAL_BUCKETS, TRIBAL_MAP,
   NERC_BUCKETS, NERC_MAP,
   OGF_STATUS_BUCKETS, OGF_STATUS_MAP,
-  OGF_SCENARIO_BUCKETS, OGF_SCENARIO_MAP,
-  OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP,
+  OGF_REGION_BUCKETS, OGF_REGION_MAP,
+  OGF_WORK_BUCKETS, OGF_WORK_MAP,
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
   SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
   SECTOR_BUCKETS, SECTOR_MAP,
@@ -185,15 +185,15 @@ export function applySubstanceFilter() {
     "substance", state.legendFilters.substance, SUBSTANCE_BUCKETS, SUBSTANCE_MAP);
 }
 
-// Status + scenario + planning-authority all target the same two OGF map
+// Status + region + type of work all target the same two OGF map
 // layers, so they must be combined in one setFilter call — applying them via
 // separate applyBucketFilterToLayers calls would clobber each other.
 export function applyOGFFilters() {
   if (!state.mapReady) return;
   const expr = combineFilters(
     buildValueFilterExpr("Status",    state.legendFilters.ogfStatus,   OGF_STATUS_BUCKETS,   OGF_STATUS_MAP),
-    buildValueFilterExpr("Portfolio", state.legendFilters.ogfScenario, OGF_SCENARIO_BUCKETS, OGF_SCENARIO_MAP),
-    buildValueFilterExpr("PlanAuth",  state.legendFilters.ogfPlanAuth, OGF_PLANAUTH_BUCKETS, OGF_PLANAUTH_MAP));
+    buildValueFilterExpr("Region",    state.legendFilters.ogfRegion,   OGF_REGION_BUCKETS,   OGF_REGION_MAP),
+    buildValueFilterExpr("Work",      state.legendFilters.ogfWork,     OGF_WORK_BUCKETS,     OGF_WORK_MAP));
   setBucketFilter(["ogf-planned-lines-casing", "ogf-planned-lines"], expr);
 }
 

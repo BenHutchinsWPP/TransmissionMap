@@ -70,6 +70,8 @@ export interface LayerDef {
   swatch: string;
   live?: boolean;
   defaultOn: boolean;
+  // left out of the layers panel; the layer still loads from a URL or experience
+  hidden?: boolean;
   mapLayerIds: string[];
   downloads: Downloads;
   regions?: LayerScope[];
@@ -161,7 +163,7 @@ export interface AppState {
   legendFilters: Record<string, Set<string>>; // legendKey → active bucket Set
   mwFilter: MwFilter;
   genMode: Record<string, string>;
-  ogfColorBy: "status" | "scenario" | "planauth"; // OGF planned-lines color-by mode
+  ogfColorBy: "region" | "status"; // OGF planned-lines color-by mode
   westtecColorBy: "scenario" | "dataset"; // WestTEC 10-Yr color-by mode
   weatherVar: string; // Weather Forecast selected variable id — see WEATHER_VARIABLES
   nriHazard: string;  // FEMA National Risk Index hazard shown — an NRI_HAZARDS id

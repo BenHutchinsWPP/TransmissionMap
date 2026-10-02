@@ -96,6 +96,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'Đường dây truyền tải OSM',
   'layer.hifldLines': 'Đường dây truyền tải HIFLD',
   'layer.westtec10yr': 'Nghiên cứu 10 năm WestTEC',
+  'layer.ogfPlanned': 'Đường dây quy hoạch Our Grid Future',
   'layer.weccPaths': 'Tuyến WECC',
   'layer.osmPlants': 'Nhà máy điện OSM',
   'layer.osmPlantPolygons': 'Khuôn viên nhà máy điện OSM',
@@ -162,7 +163,7 @@ const locale: LocaleDictionary = {
   'mode.clusters': 'Nhóm cụm',
   'colorby.status': 'Trạng thái',
   'colorby.scenario': 'Kịch bản',
-  'colorby.planauth': 'Cơ quan quy hoạch',
+  'colorby.region': 'Khu vực',
   'colorby.dataset': 'Loại dữ liệu',
 
   // Year Filter

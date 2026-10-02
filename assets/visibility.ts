@@ -86,11 +86,10 @@ export function applyAllGenModes() {
 
 // ─── OGF planned-lines color-by ───────────────────────────────────────────────
 // Repaints the lines for the selected mode and dims the swatches of the two
-// OGF legends that are NOT driving color (they remain filters, not color keys).
+// OGF legend that is NOT driving color (it remains a filter, not a color key).
 const OGF_LEGEND_MODES = {
-  ogfStatusLegend:   "status",
-  ogfScenarioLegend: "scenario",
-  ogfPlanAuthLegend: "planauth",
+  ogfRegionLegend: "region",
+  ogfStatusLegend: "status",
 } as const;
 
 export function applyOGFColorBy() {

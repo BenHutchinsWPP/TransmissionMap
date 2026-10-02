@@ -60,7 +60,7 @@ export interface MapExperience {
     legendFilters?: Record<string, string[]>; // legend key → active bucket ids
     layerFilters?: Record<string, string[]>;  // layer id → active bucket ids
     genMode?: Record<string, string>;         // layer id → display mode
-    ogfColorBy?: 'status' | 'scenario' | 'planauth';
+    ogfColorBy?: 'region' | 'status';
     westtecColorBy?: 'scenario' | 'dataset';
     weatherVar?: string;        // WEATHER_VARIABLES id
     smokeOpacity?: number;      // 0–1

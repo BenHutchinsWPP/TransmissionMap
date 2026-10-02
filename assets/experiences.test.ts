@@ -257,7 +257,7 @@ describe('applying one view after another', () => {
     layersOn: ['ogf-planned-transmission', 'westtec-10yr', 'wildfire-smoke', 'eia-generators'],
     basemap: 'dark',
     legendFilters: { fuel: ['coal'] },
-    ogfColorBy: 'planauth',
+    ogfColorBy: 'status',
     westtecColorBy: 'dataset',
     smokeOpacity: 0.4,
     terrain3d: true,
@@ -269,13 +269,13 @@ describe('applying one view after another', () => {
     applyPreset(presetOf(PLAIN));
     const clean = snapshot();
     // Guards against a vacuous pass: the clean view really is at the defaults.
-    expect(clean.ogfColorBy).toBe('status');
+    expect(clean.ogfColorBy).toBe('region');
     expect(clean.westtecColorBy).toBe('scenario');
     expect(clean.smokeOpacity).toBe(1);
     expect(clean.terrain3d).toBe(false);
 
     applyPreset(LEAKY);
-    expect(state.ogfColorBy).toBe('planauth');
+    expect(state.ogfColorBy).toBe('status');
     expect(state.westtecColorBy).toBe('dataset');
     expect(state.smokeOpacity).toBe(0.4);
     expect([...state.legendFilters.fuel]).toEqual(['coal']);

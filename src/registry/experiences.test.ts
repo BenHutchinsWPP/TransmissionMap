@@ -189,7 +189,7 @@ describe('EXPERIENCES state presets', () => {
 
   it('color-by presets stay within the modes the toggles offer', () => {
     for (const exp of EXPERIENCES) {
-      if (exp.state.ogfColorBy) expect(['status', 'scenario', 'planauth']).toContain(exp.state.ogfColorBy);
+      if (exp.state.ogfColorBy) expect(['region', 'status']).toContain(exp.state.ogfColorBy);
       if (exp.state.westtecColorBy) expect(['scenario', 'dataset']).toContain(exp.state.westtecColorBy);
     }
   });

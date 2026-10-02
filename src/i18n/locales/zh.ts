@@ -96,6 +96,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'OSM 输电线路',
   'layer.hifldLines': 'HIFLD 输电线路',
   'layer.westtec10yr': 'WestTEC 10年规划研究',
+  'layer.ogfPlanned': 'Our Grid Future 规划线路',
   'layer.weccPaths': 'WECC 路径',
   'layer.osmPlants': 'OSM 发电厂',
   'layer.osmPlantPolygons': 'OSM 发电厂区域',
@@ -162,7 +163,7 @@ const locale: LocaleDictionary = {
   'mode.clusters': '聚合点',
   'colorby.status': '状态',
   'colorby.scenario': '情景',
-  'colorby.planauth': '规划机构',
+  'colorby.region': '区域',
   'colorby.dataset': '类型',
 
   // Year Filter

@@ -52,7 +52,7 @@ export function buildLayersPanel() {
   for (const group of groups) {
     const container = document.getElementById(`layer-rows-${group}`);
     if (!container) continue;
-    const entries = LAYERS.filter(l => l.group === group && isLayerInRegion(l, state.regionScope));
+    const entries = LAYERS.filter(l => l.group === group && !l.hidden && isLayerInRegion(l, state.regionScope));
     container.innerHTML = entries.map(layerRowHtml).join("");
   }
 
@@ -231,7 +231,7 @@ function ogfColorByBlockHtml(entry: LayerDef) {
   return `
     <div class="gen-mode">
       <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(label)} by">
-        ${btn("status", t('colorby.status'))}${btn("scenario", t('colorby.scenario'))}${btn("planauth", t('colorby.planauth'))}
+        ${btn("region", t('colorby.region'))}${btn("status", t('colorby.status'))}
       </div>
     </div>`;
 }

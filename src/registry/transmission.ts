@@ -171,20 +171,21 @@ export const transmissionLayers: LayerDef[] = [
       shp: "data/releases/hifld-transmission-lines-shp.zip",
     },
   },
-  /* Commenting out layer while OGF statuses are further compared against WestTEC. 
   {
     id:             "ogf-planned-transmission",
     urlCode:        "OGF",
     label:          "OGF Planned Lines",
+    titleKey:       "layer.ogfPlanned",
     group:          "transmission",
     sourceId:       "ogf",
     swatch:         "#06b6d4",
     defaultOn:      false,
+    hidden:         true,
     ogfStatusLayer: true,
     mapLayerIds:    ["ogf-planned-lines-casing", "ogf-planned-lines"],
+    clickPriority:  { "ogf-planned-lines": 1000 },
     downloads: {},
   },
-  */
   {
     id:                "westtec-10yr",
     urlCode:           "WTC",

@@ -285,8 +285,8 @@ export const RETAIL_TYPE_MAP = Object.fromEntries(
 
 // ─── OGF planned transmission status ─────────────────────────────────────────
 // Lifecycle hue ramp: cool = early, warm = late, green = in service. The layer
-// reads as "planned" via its dash + white casing, so hue is free to encode
-// status (mirrors ourgridfuture.org's own status palette semantics).
+// reads as "planned" via its white casing, so hue is free to encode status
+// (mirrors ourgridfuture.org's own status palette semantics).
 export const OGF_STATUS_BUCKETS = [
   { id: "conceptual",   urlCode: "N", label: "Pre-planning / conceptual", color: "#a78bfa" },
   { id: "planning",     urlCode: "L", label: "Planning",                  color: "#60a5fa" },
@@ -309,63 +309,58 @@ export const OGF_STATUS_MAP = {
   terminated:   ["Terminated"],
 };
 
-// ─── OGF WestTEC study scenario (Portfolio field) ────────────────────────────
-// Matches the scenario filter on ourgridfuture.org; only WestTEC projects
-// carry these Portfolio values. "other" catches every other portfolio + blank.
-export const OGF_SCENARIO_BUCKETS = [
-  { id: "base_case",  urlCode: "B", label: "Base Case Planned Projects",    color: "#0891b2" },
-  { id: "sra",        urlCode: "R", label: "Reliability Assessment (SRA)",  color: "#7c3aed" },
-  { id: "ida",        urlCode: "D", label: "Deliverability Assessment (IDA)", color: "#d97706" },
-  { id: "congestion", urlCode: "C", label: "Congestion Assessment",         color: "#dc2626" },
-  { id: "other",      urlCode: "O", label: "Other / no scenario",           color: "#94a3b8" },
+// ─── OGF region (derived Region field) ──────────────────────────────────────
+// extract_ogf.py sets Region = "WECC" for Western lines (by the WECC boundary,
+// since ISO_RTO records market membership); elsewhere it carries ISO_RTO.
+// Combo values ("MISO, SPP") are listed under each member so checking either
+// region shows the row; the first bucket listed wins the colour.
+export const OGF_REGION_BUCKETS = [
+  { id: "wecc",      urlCode: "W", label: "WECC (West)",         color: "#c026d3" },
+  { id: "ercot",     urlCode: "E", label: "ERCOT",               color: "#ea580c" },
+  { id: "spp",       urlCode: "S", label: "SPP",                 color: "#ca8a04" },
+  { id: "miso",      urlCode: "M", label: "MISO",                color: "#7c3aed" },
+  { id: "pjm",       urlCode: "P", label: "PJM",                 color: "#0d9488" },
+  { id: "nyiso",     urlCode: "N", label: "NYISO",               color: "#2563eb" },
+  { id: "isone",     urlCode: "I", label: "ISO-NE",              color: "#0ea5e9" },
+  { id: "southeast", urlCode: "U", label: "Southeast (non-RTO)", color: "#65a30d" },
+  { id: "other",     urlCode: "O", label: "Other / none",        color: "#94a3b8" },
 ];
-export const OGF_SCENARIO_MAP = {
-  base_case:  ["Base Case"],
-  sra:        ["SRA"],
-  ida:        ["IDA"],
-  congestion: ["Congestion"],
+export const OGF_REGION_MAP = {
+  wecc:      ["WECC"],
+  ercot:     ["ERCOT", "ERCOT, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, ERCOT", "MISO, SPP, ERCOT"],
+  spp:       ["SPP", "MISO, SPP", "SPP, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, SPP, ERCOT"],
+  miso:      ["MISO", "MISO, SPP", "SPP, MISO", "MISO, PJM", "PJM, MISO", "ERCOT, MISO", "MISO, ERCOT", "MISO, SPP, ERCOT"],
+  pjm:       ["PJM", "MISO, PJM", "PJM, MISO", "NYISO, PJM"],
+  nyiso:     ["NYISO", "NYISO, PJM"],
+  isone:     ["ISO-NE"],
+  southeast: ["None (Southeast)"],
 };
 
-// ─── OGF planning authority (PlanAuth field) ─────────────────────────────────
-// Combo values ("MISO, SPP") are listed under each member so checking either
-// authority shows the row.
-export const OGF_PLANAUTH_BUCKETS = [
-  { id: "westtec", urlCode: "W", label: "WestTEC",          color: "#0891b2" },
-  { id: "caiso",   urlCode: "C", label: "CAISO",            color: "#059669" },
-  { id: "bpa",     urlCode: "B", label: "Bonneville (BPA)", color: "#65a30d" },
-  { id: "ercot",   urlCode: "E", label: "ERCOT",            color: "#d97706" },
-  { id: "spp",     urlCode: "S", label: "SPP",              color: "#ca8a04" },
-  { id: "miso",    urlCode: "M", label: "MISO",             color: "#7c3aed" },
-  { id: "pjm",     urlCode: "P", label: "PJM",              color: "#db2777" },
-  { id: "nyiso",   urlCode: "N", label: "NYISO",            color: "#2563eb" },
-  { id: "isone",   urlCode: "I", label: "ISO-NE",           color: "#0ea5e9" },
-  { id: "merchant",urlCode: "H", label: "Merchant",         color: "#dc2626" },
-  { id: "other",   urlCode: "O", label: "Other / none",     color: "#94a3b8" },
+// ─── OGF type of work (derived Work field) ──────────────────────────────────
+// Solid = a new circuit; dashed = rebuild / reconductor / upgrade of an
+// existing line. Applies in every color-by mode.
+export const OGF_WORK_BUCKETS = [
+  { id: "new",      urlCode: "N", label: "New line",                                 color: "#64748b" },
+  { id: "existing", urlCode: "E", label: "Existing line (rebuild, reconductor, upgrade)", color: "#64748b" },
 ];
-export const OGF_PLANAUTH_MAP = {
-  westtec:  ["WestTEC"],
-  caiso:    ["CAISO"],
-  bpa:      ["Bonneville Power Administration"],
-  ercot:    ["ERCOT"],
-  spp:      ["SPP", "MISO, SPP"],
-  miso:     ["MISO", "MISO, SPP"],
-  pjm:      ["PJM"],
-  nyiso:    ["NYISO"],
-  isone:    ["ISO-NE", "ISO-NE, Canada Energy Regulator"],
-  merchant: ["Merchant"],
+export const OGF_WORK_MAP = {
+  new:      ["new"],
+  existing: ["existing"],
 };
+export const OGF_DASH_EXPR = [
+  "match", ["get", "Work"], "existing", ["literal", [2, 1.5]], ["literal", [1, 0]],
+] as unknown as ExpressionSpecification;
 
 // ─── OGF "color by" line-color expressions ────────────────────────────────────
 // Drives ogf-planned-lines paint; selected via state.ogfColorBy.
-export type OgfColorMode = "status" | "scenario" | "planauth";
+export type OgfColorMode = "region" | "status";
 const OGF_COLOR_CFG: Record<OgfColorMode, {
   field: string;
   buckets: { id: string; color: string }[];
   map: Record<string, string[]>;
 }> = {
-  status:   { field: "Status",    buckets: OGF_STATUS_BUCKETS,   map: OGF_STATUS_MAP },
-  scenario: { field: "Portfolio", buckets: OGF_SCENARIO_BUCKETS, map: OGF_SCENARIO_MAP },
-  planauth: { field: "PlanAuth",  buckets: OGF_PLANAUTH_BUCKETS, map: OGF_PLANAUTH_MAP },
+  region: { field: "Region", buckets: OGF_REGION_BUCKETS, map: OGF_REGION_MAP },
+  status: { field: "Status", buckets: OGF_STATUS_BUCKETS, map: OGF_STATUS_MAP },
 };
 
 // Shared ["match", ["get", field], ...] builder for categorical "color by"
