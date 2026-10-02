@@ -1,0 +1,310 @@
+# data_manifest.yaml — hand-written provenance for every tiled layer
+#
+# One entry per `id:` in `scripts/tile_manifest.yaml` (the authoritative list
+# of ids this file must match). This is the input a generated data manifest
+# (a build-time "Data Credits" listing, one row per layer, with a `retrieved`
+# date) is built from — facts a script cannot derive from the data itself:
+# who publishes the layer, where its landing page is, what licence governs
+# redistribution, and which credits-dialog anchor its entry belongs under.
+# `retrieved` is intentionally absent here — the generator stamps it from the
+# built artifact's mtime, not from a hand-typed date that would drift out of
+# sync with the actual build.
+#
+# Fields per entry:
+#   label      human name as it would read on a credits page
+#   source     upstream provider + dataset (one string; several providers if
+#              the layer genuinely blends more than one)
+#   url        the dataset's landing page
+#   licence    the licence as stated by the provider
+#   source_id  the src/registry/sources.ts LAYER_SOURCES key this layer's
+#              credit is grouped under — assets/ui/ui-credits.ts renders one
+#              <li data-source-credit="<source_id>"> per key, several layers
+#              sharing one key by design, so this is what keeps a layer row's
+#              "source" button (openSourceCredit() in ui.ts) landing on the
+#              right entry once the credits list renders from this manifest
+#              instead of index.html's hand-written fallback.
+#
+# Facts here are drawn only from docs/data-sources.md and docs/layers/<id>.md
+# — never from the web or from memory of what a licence "usually" is (source_id
+# is drawn from src/registry/sources.ts and the two docs the same way). Where
+# those docs don't name a field with confidence, the field is the literal
+# string UNKNOWN rather than a guess: a wrong licence on a public credits
+# page is a defect, a blank is a one-minute fix. A layer whose provider has no
+# LAYER_SOURCES entry at all (nothing to guess between) gets source_id:
+# UNKNOWN too — ui-credits.ts skips rendering it rather than emit an anchor
+# that resolves to no element.
+
+layers:
+  eia_generators:
+    label: EIA Generators
+    source: U.S. Energy Information Administration, Form EIA-860
+    url: https://www.eia.gov/electricity/data/eia860/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: eia
+
+  osm_plants_polygons:
+    label: OSM Plants (Polygons)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  osm_plants_points:
+    label: OSM Plants (Points)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  hifld_substations:
+    label: HIFLD Substations
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)
+    url: https://www.arcgis.com/home/item.html?id=ef04dc8231c9491e804a008e5faa7d3a
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-substations
+
+  osm_substations_points:
+    label: OSM Substations (Points)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  osm_substations_polygons:
+    label: OSM Substations (Polygons)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  osm_generators:
+    label: OSM Generators
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  osm_datacenters:
+    label: OSM Data Centers
+    source: OpenStreetMap contributors; IM3 Open Source Data Center Atlas (PNNL/DOE)
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    # index.html anchors the IM3 enrichment credit separately under "im3", but
+    # that id is a fixed extra in registry.test.ts's allowedExtras, not a
+    # src/registry/sources.ts LAYER_SOURCES key — this layer's registry entry
+    # (osm-datacenters) itself declares sourceId "osm".
+    source_id: osm
+
+  railroads:
+    label: Railroads (BTS NARN)
+    source: US DOT Bureau of Transportation Statistics (NTAD); rail geometry from the Federal Railroad Administration (FRA)
+    url: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: bts-narn
+
+  osm_pipelines_points:
+    label: OSM Pipelines (Points)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  osm_pipelines_lines:
+    label: OSM Pipelines (Lines)
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  hifld_natgas_points:
+    label: HIFLD Natural Gas & Petroleum Facility Points
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD); original data from EIA
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-natgas
+
+  # Not documented in docs/data-sources.md or docs/layers/ under this id or
+  # any HIFLD/EIA pipeline doc — no source, url or licence can be confirmed
+  # against the two allowed references.
+  eia_crude_pipelines:
+    label: UNKNOWN
+    source: UNKNOWN
+    url: UNKNOWN
+    licence: UNKNOWN
+    # src/registry/pipelines.ts declares this layer's (commented-out) sourceId
+    # as "eia-atlas" — the anchor is confirmable even though the provenance
+    # text above is not.
+    source_id: eia-atlas
+
+  # Same gap as eia_crude_pipelines above.
+  eia_product_pipelines:
+    label: UNKNOWN
+    source: UNKNOWN
+    url: UNKNOWN
+    licence: UNKNOWN
+    source_id: eia-atlas
+
+  hifld_natgas_lines:
+    label: HIFLD Natural Gas & Petroleum Pipeline Lines
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD); original data from EIA
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-natgas
+
+  countries:
+    label: Countries (geoBoundaries CGAZ)
+    source: geoBoundaries (William & Mary geoLab)
+    url: https://www.geoboundaries.org/
+    licence: CC BY 4.0 (attribution required)
+    source_id: cgaz-adm0
+
+  admin1_boundaries:
+    label: States / Provinces (geoBoundaries CGAZ Admin-1)
+    source: geoBoundaries (William & Mary geoLab)
+    url: https://www.geoboundaries.org/
+    licence: CC BY 4.0 (attribution required)
+    source_id: cgaz-adm1
+
+  us_states:
+    label: Census States
+    source: U.S. Census Bureau, TIGER/Line cartographic boundary files
+    url: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: census-states
+
+  us_zcta:
+    label: US ZIP Codes / ZCTAs (Census)
+    source: U.S. Census Bureau, TIGER/Line cartographic boundary files
+    url: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: census-zcta
+
+  nerc_regions:
+    label: HIFLD NERC Regions
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-nerc
+
+  control_areas:
+    label: HIFLD Control Areas (Balancing Authorities)
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-ba
+
+  eia_ba:
+    label: EIA Balancing Authorities
+    source: U.S. Energy Information Administration (EIA)
+    url: https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: eia-ba
+
+  retail_territories:
+    label: HIFLD Retail Service Territories
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-retail
+
+  tribal_lands:
+    label: Tribal Lands (AIANNH)
+    source: U.S. Census Bureau, TIGER/Line
+    url: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    # LAYER_SOURCES keeps this under the "hifld-tribal" id (a stable id kept
+    # from before the switch to Census TIGER as the actual data source — see
+    # the comment in src/registry/sources.ts).
+    source_id: hifld-tribal
+
+  bia_tribal_lands:
+    label: Tribal Lands (BIA AIAN-LAR)
+    source: Bureau of Indian Affairs (BIA)
+    url: https://onemap-bia-geospatial.hub.arcgis.com/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: bia-bogs
+
+  padus:
+    label: PAD-US Protected & Managed Lands
+    source: USGS Gap Analysis Project
+    url: https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: usgs-padus
+
+  crithab:
+    label: Critical Habitat (ESA)
+    source: US Fish & Wildlife Service — ECOS
+    url: https://ecos.fws.gov/ecp/report/table/critical-habitat.html
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: fws-crithab
+
+  hifld_transmission_lines:
+    label: HIFLD Transmission Lines
+    source: DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)
+    url: https://source.coop/repositories/seerai/hifld/description/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: hifld-power
+
+  osm_transmission_lines:
+    label: OSM Transmission Lines
+    source: OpenStreetMap contributors
+    url: https://www.openstreetmap.org/copyright
+    licence: ODbL 1.0 (attribution + share-alike required)
+    source_id: osm
+
+  county_boundaries:
+    label: County Boundaries
+    source: U.S. Census Bureau, TIGER/Line cartographic boundary files
+    url: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    # Shared join infrastructure (docs/layers/boundaries.md), but the same
+    # Census county boundaries the "Census Counties" layer displays — grouped
+    # under the same anchor as that layer's sourceId, "census-counties".
+    source_id: census-counties
+
+  nws_zones:
+    label: NWS Zones (Forecast / Fire / Marine)
+    source: NOAA National Weather Service (WSOM zone shapefiles)
+    url: https://www.weather.gov/source/gis/Shapefiles/WSOM/
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    # Shared zone/county join infrastructure for live weather alerts
+    # (docs/layers/nws-alerts.md), credited under the same NWS anchor as the
+    # nws-alerts layer's sourceId, "noaa-nws".
+    source_id: noaa-nws
+
+  ogf_planned_transmission:
+    label: OGF Planned Transmission
+    source: Our Grid Future (Horizon Energy Systems)
+    url: https://ourgridfuture.org
+    licence: Custom — free for non-commercial use, attribution required
+    source_id: ogf
+
+  boem_wind_leases:
+    label: Offshore Wind Leases (BOEM)
+    source: Bureau of Ocean Energy Management (BOEM)
+    url: https://www.boem.gov/renewable-energy/mapping-and-data
+    licence: Public domain (US federal work, 17 U.S.C. § 105)
+    source_id: boem
+
+  # Natural Earth has no entry in src/registry/sources.ts — no layer's
+  # registered sourceId names it, and it has no data-source-credit anchor in
+  # index.html either (it is credited only in docs/data-sources.md). There is
+  # no key to confirm this against, so this is UNKNOWN rather than a guess;
+  # ui-credits.ts skips rendering any entry whose source_id is UNKNOWN.
+  admin_lines:
+    label: Natural Earth Admin Lines
+    source: Natural Earth
+    url: https://www.naturalearthdata.com/about/terms-of-use/
+    licence: Public domain
+    source_id: UNKNOWN
+
+  # docs/layers/westtec-10yr.md's Source table carries no License field, and
+  # docs/data-sources.md defers to "See layer doc Caveats" — a Caveats
+  # section the layer doc does not have. The licence cannot be confirmed
+  # against either allowed reference.
+  westtec_10yr:
+    label: WestTEC 10 Yr
+    source: WestTEC, a Western Power Pool initiative
+    url: https://www.westernpowerpool.org/
+    licence: UNKNOWN
+    source_id: westtec

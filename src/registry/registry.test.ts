@@ -58,7 +58,13 @@ describe('LAYERS registry structure', () => {
   });
 });
 
-describe('Data Credits dialog consistency', () => {
+// assets/ui/ui-credits.ts can replace this markup at runtime with entries
+// rendered from the generated manifest, but only once a fetched payload
+// validates — a failed fetch, offline load, or malformed payload always
+// leaves this markup on screen instead. That makes it the credits dialog's
+// permanent no-network fallback, not a one-time placeholder, so it still
+// needs to name every registered source correctly on its own.
+describe('Data Credits dialog fallback markup consistency', () => {
   const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
   const creditsDialogMatch = html.match(/<dialog[^>]*id="creditsDialog"[^>]*>([\s\S]*?)<\/dialog>/);
 

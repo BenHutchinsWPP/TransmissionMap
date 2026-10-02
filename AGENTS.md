@@ -115,6 +115,10 @@ turns public datasets into PMTiles consumed by the frontend.
     - `ui-experiences.ts` — Map Experiences gallery + floating story card; lazy chunk, opened from the File menu
     - `ui-diagnostics.ts` — Diagnostics dialog; lazy chunk, opened from the File menu
     - `ui-settings.ts` — Settings dialog (display units); lazy chunk, opened from the File menu
+    - `ui-credits.ts` — Data Credits dialog; renders `renderDataCredits()` from
+      `DATA.data_manifest` (`data/layers/manifest.json`, built by
+      `scripts/build_data_manifest.py`) over the hand-written `<li>` fallback
+      already shipped in `index.html`; lazy chunk, opened from the info button
   - **`assets/layers/`** — MapLibre layer builders
     - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
@@ -153,6 +157,13 @@ turns public datasets into PMTiles consumed by the frontend.
   `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
+- `scripts/data_manifest.yaml` — hand-written per-layer provenance (label,
+  source, url, licence, `source_id`), one entry per `tile_manifest.yaml` `id`;
+  a field the linked docs don't settle with confidence is the literal string
+  `UNKNOWN` rather than a guess. `scripts/build_data_manifest.py` (`make
+  data-manifest`) merges this with facts measured off each layer's tile-build
+  input into `data/layers/manifest.json`, which `assets/ui/ui-credits.ts`
+  renders as the Data Credits dialog. See `docs/pipeline.md`.
 - `docs/adding-a-layer.md` — **read this before adding any map layer**
 - `docs/map-experiences.md` — curated guided views (`File ▸ Experiences…`, `?exp=`)
 - `docs/pipeline.md` — how the data pipeline fits together
@@ -188,6 +199,8 @@ turns public datasets into PMTiles consumed by the frontend.
 | Layer add order / lazy loading | `assets/layers/layer-init.ts` |
 | Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/wildfire-staleness.ts` |
 | Data source facts (URL, license, columns) | `docs/data-sources.md`, `docs/layers/<layer>.md` |
+| Add/fix a layer's provenance (publisher, landing page, licence) | `scripts/data_manifest.yaml` — sourced only from `docs/data-sources.md` and `docs/layers/<id>.md`; a field those docs don't settle is the literal string `UNKNOWN` |
+| Change what the Data Credits dialog shows | `scripts/data_manifest.yaml` for the facts, `assets/ui/ui-credits.ts` for the rendering; `make data-manifest` rebuilds `data/layers/manifest.json` it fetches |
 | IT/security asks what URLs to whitelist | `docs/network-allowlist.md` |
 | "Things aren't loading" reports / add a diagnostics check | `assets/diagnostics.ts` (`DIAG_CHECKS`), `assets/ui/ui-diagnostics.ts` (silent footgun: host probes duplicate `docs/network-allowlist.md` — update both) |
 | Pipeline / tile build | `docs/pipeline.md`, then named script |
@@ -206,6 +219,7 @@ turns public datasets into PMTiles consumed by the frontend.
 - `make tiles` — build PMTiles from extracted data
 - `make global-tiles` — join the 8 continental OSM builds into one world tileset per layer;
   transmission is re-tiled globally instead and cut into six voltage-class archives
+- `make data-manifest` — build per-layer provenance → `data/layers/manifest.json` (Data Credits dialog); runs cleanly with no `data/` present, emitting null facts rather than failing
 - `make publish-data` — force-push the layers `constants.ts` names + `data/releases` to the orphan `data-static` branch (the prod host)
 - `make validate` — check tile_manifest output matches `assets/constants.ts` (run after wiring a new layer)
 - `npm run dev` — serve site locally (Vite dev server, hot reload)

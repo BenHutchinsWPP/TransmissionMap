@@ -1,7 +1,9 @@
 // ─── UI bootstrap + event wiring ──────────────────────────────────────────────
 // Top-level init() + the delegated event wiring (wireUI). Layer-row HTML lives
 // in ui-layer-rows.js; menubar wiring in ui-menubar.js; My Data tab handlers in
-// ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js.
+// ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
+// Data Credits dialog opens its hand-written index.html markup immediately,
+// then lazily loads ui-credits.js to render it from the generated manifest.
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
@@ -536,6 +538,11 @@ function wireDialogs() {
   document.getElementById("infoButton")?.addEventListener("click", () => {
     clearCreditHighlight();
     credits.showModal();
+    // Lazy chunk (ui-credits.js): fetches the generated manifest and, once it
+    // validates, replaces the hand-written <li> entries in place. On any
+    // failure it leaves them untouched, so the dialog is already showing its
+    // fallback credits the instant showModal() above runs.
+    void import("./ui-credits.js").then(m => m.renderDataCredits());
   });
   credits.addEventListener("close", clearCreditHighlight);
 }

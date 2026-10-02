@@ -54,6 +54,18 @@ security allowlist review), see [network-allowlist.md](network-allowlist.md).
 
 ---
 
+## Generated data manifest
+
+The tables above are the license/attribution reference maintained by hand. The
+app's Data Credits dialog (`File ▸` info button) renders from a generated
+manifest instead: `scripts/data_manifest.yaml` holds the same provenance facts
+per layer, `scripts/build_data_manifest.py` (`make data-manifest`) merges them
+with row counts and coverage measured off each build, and
+`assets/ui/ui-credits.ts` renders the result — so the credits page states what
+the build actually served. See `docs/pipeline.md` for the build step.
+
+---
+
 ## App tooling & basemaps
 
 | Asset | Source | License |

@@ -27,13 +27,46 @@ make tiles
 make global-tiles
 
 # 6. (deploying) Push data/layers/ + data/releases/ to the data-static branch
-#    prod fetches from — local dev reads data/layers/ directly
+#    prod fetches from — local dev reads data/layers/ directly. Rebuilds the
+#    per-layer provenance manifest first (make data-manifest, chained via
+#    `publish-data: data-manifest`) so data/layers/manifest.json ships current.
 make publish-data
 
 # 7. Bump DATA_VERSION in sw.js (commit to main) — the service worker caches
 #    PMTiles byte ranges cache-first; ranges cached from the old file corrupt
 #    reads against a rebuilt one
 ```
+
+### The data manifest (`make data-manifest`)
+
+`scripts/build_data_manifest.py` reads `scripts/data_manifest.yaml` (hand-written
+provenance — publisher, landing page, licence) and, for each `id` in
+`scripts/tile_manifest.yaml`, measures facts off that layer's `src` — the file
+`ogr2ogr`/`tippecanoe` actually consume — writing the merge to
+`data/layers/manifest.json`. That file is what `assets/ui/ui-credits.ts` fetches
+to render the Data Credits dialog.
+
+**`source_rows` counts rows in the layer's tile-build *input*, not features in
+the tiled output.** Tippecanoe dedupes, clips, and drops features per zoom, so a
+count decoded from the built PMTiles/GeoJSON is that zoom's surviving feature
+count, not the dataset's — the two differ by design, and the manifest's own
+`note` field says so for anyone reading the JSON without this doc.
+
+The script runs cleanly with no `data/` present — a fresh clone or CI, where the
+pipeline has never run — emitting null facts for artifacts it can't see rather
+than failing, so `make data-manifest` is always safe to run.
+
+`make data-manifest` is chained into the normal flow rather than a step you run
+by hand: `validate` depends on it (so `data/layers/manifest.json` — one of the
+`assets/constants.ts`-declared outputs `make validate` checks for — is always
+current instead of reported absent) and `publish-data` depends on it too (so the
+manifest that ships is freshly built, built-artifact sizes included once `make
+tiles`/`make global-tiles` have run, rather than stale or missing). Run it
+directly only to inspect `data/layers/manifest.json` on its own.
+
+`data/layers/manifest.json` is picked up by `make publish-data` automatically:
+it's named as a double-quoted `"data/layers/…"` literal in `assets/constants.ts`
+(`DATA.data_manifest`), the same mechanism every other published layer uses.
 
 HIFLD and EIA reference data are auto-downloaded on first run to `data/raw/hifld/` and
 `data/raw/eia/`. Some HIFLD inputs (SeerAI parquet for transmission lines, natural-gas,

@@ -125,6 +125,11 @@ export const DATA = {
   odin_outages: import.meta.env.DEV
     ? DATA_ORIGIN + "data/layers/odin_outages.json"
     : "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data/data/layers/odin_outages.json",
+  // Per-layer provenance (licence, row counts, artifact size, per-field
+  // coverage, retrieval date) the Data Credits page renders from, grouped
+  // under each source's own LAYER_SOURCES label — the manifest's own
+  // `source` field isn't rendered. Built by scripts/build_data_manifest.py.
+  data_manifest: DATA_ORIGIN + "data/layers/manifest.json",
 };
 
 // Live GFS weather mosaic (temperature, wind, humidity, dew point, cloud,

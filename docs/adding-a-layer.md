@@ -418,4 +418,5 @@ Update `docs/data-sources.md`:
 [ ] docs/layers/my-layer.md               — layer documentation
 [ ] docs/layers/README.md                  — add the layer to the index prose
 [ ] docs/data-sources.md                  — summary table + feeds list
+[ ] scripts/data_manifest.yaml            — provenance entry for the new tile_manifest.yaml id (label, source, url, licence, source_id; UNKNOWN where the docs above don't settle a field) — see docs/pipeline.md
 ```

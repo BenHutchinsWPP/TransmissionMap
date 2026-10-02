@@ -28,7 +28,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases publish-data web clean clean-build distclean check
+.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -55,6 +55,7 @@ help:
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
+	@echo "  make data-manifest  build per-layer provenance → data/layers/manifest.json (Data Credits page)"
 	@echo "  make publish-data publish a build: layers constants.ts names → orphan 'data-static' branch, download packs → 'data-latest' GitHub Release (needs public repo + gh)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
@@ -382,7 +383,10 @@ world-boundaries:
 # ── Validate: build inputs + layer outputs ──────────────────────────────────
 # Run after `make pipeline` (checks data/build/ shapefiles) and again after
 # `make tiles` (checks data/layers/ outputs match constants.ts; flags orphans).
-validate:
+# Depends on data-manifest so data/layers/manifest.json — one of the
+# constants.ts-declared outputs the check above looks for — is always
+# current before that check runs, rather than reported absent.
+validate: data-manifest
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/validate_build.py
 
@@ -402,8 +406,20 @@ releases:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/build_releases.py
 
+# ── Data manifest: per-layer provenance → data/layers/manifest.json ────────
+# Reads scripts/tile_manifest.yaml `src` — data/build/ extraction output —
+# so it needs `make pipeline`/`make continental-all` to have run, but not
+# `make tiles`; it degrades to null facts for anything still missing.
+data-manifest:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/build_data_manifest.py
+
 # ── Publish built data to the raw-hosted 'data-static' branch ───────────────
-publish-data:
+# Depends on data-manifest so data/layers/manifest.json — a published layer
+# like any other DATA.* entry — is always freshly built (built-artifact
+# sizes included, once `make tiles`/`make global-tiles` have run) before the
+# push, instead of shipping a stale file or a 404.
+publish-data: data-manifest
 	@bash $(SCRIPTS)/publish_data.sh
 
 # ── Serve static site ──────────────────────────────────────────────────────
