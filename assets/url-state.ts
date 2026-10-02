@@ -1,50 +1,22 @@
 // ─── URL hash state persistence ─────────────────────────────────────────────
 // Side-effectful functions that link global state to the browser URL.
+// Which fields make up a view, and their defaults, live in view-state.ts and
+// url-state-codec.ts, as does the hash layout (camera segment + params); this
+// module reads and writes location.hash, and owns the language and the Map
+// Experience pristine/edited tracking.
 
 import { state, rebaselineExperience } from './state.js';
-import { parseUrlState, formatUrlState, type UrlStateData } from './url-state-codec.js';
+import { parseUrlState, formatUrlState, splitHash, formatCameraSegment, type UrlStateData } from './url-state-codec.js';
 import { getLocale, setLocale, type SupportedLocale } from '../src/i18n/index.js';
 import { on, emit } from './state-bus.js';
+import { seedView, currentView } from './view-state.js';
 
-function _hashParams() {
-  const hash = location.hash.slice(1);
-  const q = hash.indexOf('?');
-  return new URLSearchParams(q >= 0 ? hash.slice(q + 1) : '');
-}
-
+// Cold boot: seeds `state` from the hash before the map exists. Every view
+// field the hash leaves out lands at its default (see view-state.ts).
 export function readUrlState() {
-  const params = _hashParams();
-  const data = parseUrlState(params);
-
-  if (data.layerVisibility) {
-    Object.assign(state.layerVisibility, data.layerVisibility);
-  }
-  if (data.legendFilters) {
-    Object.assign(state.legendFilters, data.legendFilters);
-  }
-  if (data.layerFilters) {
-    Object.assign(state.layerFilters, data.layerFilters);
-  }
-  if (data.mwFilter) state.mwFilter = data.mwFilter;
-  if (data.yearFilter) {
-    state.yearFilter.enabled = data.yearFilter.enabled;
-    state.yearFilter.year = data.yearFilter.year;
-  }
-  if (data.genMode) {
-    Object.assign(state.genMode, data.genMode);
-  }
-  if (data.ogfColorBy) state.ogfColorBy = data.ogfColorBy as typeof state.ogfColorBy;
-  if (data.westtecColorBy) state.westtecColorBy = data.westtecColorBy as typeof state.westtecColorBy;
-  if (data.weatherVar) state.weatherVar = data.weatherVar;
-  if (data.nriHazard) state.nriHazard = data.nriHazard;
-  if (data.smokeOpacity !== undefined) state.smokeOpacity = data.smokeOpacity;
-  if (data.basemap) state.basemap = data.basemap;
-  if (data.projection) state.projection = data.projection;
-  if (data.terrain3d) state.terrain3d = true;
-  if (data.buildings3d) state.buildings3d = true;
-  if (data.hillshade) state.hillshade = true;
+  const data = parseUrlState(splitHash(location.hash).params);
+  seedView(data);
   if (data.lang) setLocale(data.lang as SupportedLocale);
-  if (data.region) state.regionScope = data.region;
   // Only the id is restored here. Applying the preset needs the map, so
   // assets/experiences.ts picks it up once the style has finished loading.
   if (data.experienceId) {
@@ -57,26 +29,7 @@ export function readUrlState() {
 export function writeUrlState() {
   if (!state.mapReady || !state.map) return;
 
-  const data: UrlStateData = {
-    layerVisibility: state.layerVisibility,
-    legendFilters: state.legendFilters,
-    layerFilters: state.layerFilters,
-    mwFilter: state.mwFilter,
-    yearFilter: state.yearFilter,
-    genMode: state.genMode,
-    ogfColorBy: state.ogfColorBy,
-    westtecColorBy: state.westtecColorBy,
-    weatherVar: state.weatherVar,
-    nriHazard: state.nriHazard,
-    smokeOpacity: state.smokeOpacity,
-    basemap: state.basemap,
-    projection: state.projection,
-    terrain3d: state.terrain3d,
-    buildings3d: state.buildings3d,
-    hillshade: state.hillshade,
-    lang: getLocale(),
-    region: state.regionScope,
-  };
+  const data: UrlStateData = { ...currentView(), lang: getLocale() };
 
   // `exp` is the one param the codec can't decide on its own: whether the link
   // still names the experience depends on runtime dirty tracking. So the rest
@@ -100,14 +53,13 @@ export function writeUrlState() {
     ? formatUrlState({ ...data, experienceId: state.experienceId })
     : parts;
   const stateStr = stateParts.length ? '?' + stateParts.join('&') : '';
-  const { lat, lng } = state.map.getCenter();
-  const zoom = state.map.getZoom().toFixed(2);
-  let posStr = zoom + '/' + lat.toFixed(4) + '/' + lng.toFixed(4);
-  // Rotation/tilt are appended only when non-zero, so the common flat/north-up
-  // view keeps today's short "#zoom/lat/lng" link.
-  const bearing = state.map.getBearing().toFixed(1);
-  const pitch = state.map.getPitch().toFixed(1);
-  if (Number(bearing) !== 0 || Number(pitch) !== 0) posStr += '/' + bearing + '/' + pitch;
+  const { lng, lat } = state.map.getCenter();
+  const posStr = formatCameraSegment({
+    center: [lng, lat],
+    zoom: state.map.getZoom(),
+    bearing: state.map.getBearing(),
+    pitch: state.map.getPitch(),
+  });
   // Browsers rate-limit replaceState (Safari: ~100 calls per 30 s) and throw on
   // the excess. Applying a Map Experience issues one write per layer it switches,
   // so a fast run through several stories can reach that ceiling — losing the

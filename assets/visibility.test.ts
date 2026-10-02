@@ -26,6 +26,7 @@ import { writeUrlState } from './url-state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
 import { setLayerVisibility, applyGenMode, applyAllGenModes, refetchZoomGatedLayers } from './visibility.js';
+import { on } from './state-bus.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,25 @@ describe('setLayerVisibility', () => {
     expect(state.layerVisibility).toEqual({ a: false, b: true, c: true });
     expect(document.querySelector<HTMLInputElement>('[data-layer-id="a"]')!.checked).toBe(false);
     expect(state.map!.setLayoutProperty).toHaveBeenCalledWith('a-fill', 'visibility', 'none');
+  });
+
+  it('ticks the panel checkbox and tells subscribers, whoever switched the layer', () => {
+    // The contract weather-live.ts and nws-zone-join.ts rely on: a switch made
+    // in code (Reset, a Map Experience, a stale-feed kill switch) reaches them
+    // the same way a click does.
+    const layer = makeLayer('gen', ['gen-circles']);
+    _mockLayerById.mockReturnValue(layer);
+    state.mapReady = true;
+    state.map = mockMap(['gen-circles']) as unknown as typeof state.map;
+    document.body.innerHTML = '<input type="checkbox" data-layer-id="gen">';
+    const seen: { id: string; visible: boolean }[] = [];
+    on('layer:visibility', e => seen.push(e));
+
+    setLayerVisibility('gen', true);
+    expect(document.querySelector<HTMLInputElement>('[data-layer-id="gen"]')!.checked).toBe(true);
+    setLayerVisibility('gen', false);
+    expect(document.querySelector<HTMLInputElement>('[data-layer-id="gen"]')!.checked).toBe(false);
+    expect(seen).toEqual([{ id: 'gen', visible: true }, { id: 'gen', visible: false }]);
   });
 
   it('does nothing when entry not found', () => {

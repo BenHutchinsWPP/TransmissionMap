@@ -19,7 +19,7 @@
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
-// Deps: state (map, weatherLiveUrl, layerVisibility, rasterLut), raster-probes
+// Deps: state-bus (on 'layer:visibility'), state (map, weatherLiveUrl, layerVisibility, rasterLut), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
@@ -29,8 +29,8 @@
 //       particle animation; never a static import, or the chunk split breaks.
 // Wired from ui/ui.ts init() via initWeatherLive(); setWeatherVar() is called
 // from ui-filters.ts when the dropdown in the layer row changes.
-// syncWeatherLiveVisibility() is also called directly from ui.ts's
-// resetLayersToDefaults() (Reset Layers button) — see its own comment.
+// Follows the layer's visibility through the 'layer:visibility' bus event
+// that visibility.ts's setLayerVisibility() emits.
 
 import type { ImageSource } from 'maplibre-gl';
 import type { ImageCorners } from './state.js';
@@ -39,6 +39,7 @@ import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';
+import { on } from './state-bus.js';
 
 // Variables that animate wind particles: Wind itself, the Temp & Wind
 // combined view (temp wash + particles on top), and Windstream (particles
@@ -544,11 +545,9 @@ function down(): string[] {
 // Applies state.layerVisibility["weather-live"] to particles/timebar/companion
 // probe: pulls a fresh image when shown, or stops particles + hides the slider
 // + clears the companion probe's bubble line when hidden (visibility.ts only
-// clears the main probe's). Called on a real checkbox change (below), and
-// directly by ui.ts's resetLayersToDefaults() — Reset flips
-// state.layerVisibility and the map's layout visibility straight through,
-// without dispatching a change event, so this is the only hook that runs.
-export function syncWeatherLiveVisibility(): void {
+// clears the main probe's). Runs whenever setLayerVisibility() switches the
+// layer, whoever asked — checkbox, Reset, a Map Experience.
+function syncWeatherLiveVisibility(): void {
   if (isVisible()) { void refetch(); return; }
   void syncWindParticles();
   renderTimebar();
@@ -558,14 +557,9 @@ export function syncWeatherLiveVisibility(): void {
 export function initWeatherLive() {
   if (!state.map) return;
 
-  // Enabling the layer's panel checkbox pulls the image immediately — until then
-  // the source is holding the transparent placeholder and nothing has downloaded.
-  document.addEventListener("change", (e) => {
-    const cb = (e.target as Element | null)?.closest<HTMLInputElement>(
-      `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
-    if (!cb) return;
-    syncWeatherLiveVisibility();
-  });
+  // Switching the layer on pulls the image immediately — until then the source
+  // is holding the transparent placeholder and nothing has downloaded.
+  on('layer:visibility', ({ id }) => { if (id === REGISTRY_ID) syncWeatherLiveVisibility(); });
 
   document.getElementById("weatherTimebar")
     ?.querySelector<HTMLInputElement>("input[type=range]")

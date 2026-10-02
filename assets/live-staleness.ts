@@ -18,7 +18,7 @@
 //       liveGeneratedUtc/liveAgeMs, the single reader for a live source's pull
 //       age, used by the gate below and by diagnostics.ts.
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
-//       visibility.ts (setLayerVisibility — which itself writes URL state),
+//       visibility.ts (setLayerVisibility — which also ticks the checkbox and writes URL state),
 //       ui/ui-legends.ts (updateLegends), diag-log.ts (recordDiagEvent — records
 //       refetch failures for the diagnostics panel). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
@@ -121,14 +121,6 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     return layerIds.filter(id => state.layerVisibility[id]);
   }
 
-  // Toggle a layer AND keep its panel checkbox in sync (setLayerVisibility
-  // only touches map + URL state, not the DOM checkbox).
-  function setLayer(id: string, on: boolean) {
-    setLayerVisibility(id, on);
-    const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${id}"]`);
-    if (cb) cb.checked = on;
-  }
-
   function showStaleModal(age: number) {
     const dlg = document.getElementById(dialogId) as HTMLDialogElement | null;
     if (!dlg) return;
@@ -152,7 +144,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     // The reader didn't ask for this, so it must not count as editing their way
     // out of an active Map Experience (see url-state.ts).
     rebaselineExperience();
-    for (const id of on) setLayer(id, false);
+    for (const id of on) setLayerVisibility(id, false);
     updateLegends();
     showStaleModal(age);
   }
@@ -207,7 +199,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   const dlg = document.getElementById(dialogId) as HTMLDialogElement | null;
   document.getElementById(reenableId)?.addEventListener("click", () => {
     acknowledged = true;   // knowingly accept stale data — suppress re-prompts
-    for (const id of disabledForStale) setLayer(id, true);
+    for (const id of disabledForStale) setLayerVisibility(id, true);
     disabledForStale = [];
     updateLegends();
     dlg?.close();

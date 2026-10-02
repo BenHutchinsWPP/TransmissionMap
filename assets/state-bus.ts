@@ -10,6 +10,8 @@ type Events = {
   'filter:layer': { id: string }; // per-layer bucket filter changed
   'filter:all':           void;   // re-apply every filter (used by reset)
   'gen:mode':    { id: string };  // generator display mode changed
+  'layer:visibility': { id: string; visible: boolean }; // setLayerVisibility() switched a layer
+  'view:applied':         void;   // view-state.ts applyView() finished — resync panels + controls
   'ogf:colorby':          void;   // OGF planned-lines color-by mode changed
   'westtec:colorby':      void;   // WestTEC 10-Yr color-by mode changed
   'units:changed':        void;   // display-unit preference changed

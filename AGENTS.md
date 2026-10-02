@@ -70,10 +70,14 @@ turns public datasets into PMTiles consumed by the frontend.
   - **Root** (`assets/`): cross-cutting modules used by multiple subfolders
     - `map.ts` MapLibre init + basemap switching
     - `state.ts` mutable global singleton (`AppState`); re-exports constants
-    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `url:write`; see `Events`); no deps
-    - `visibility.ts` — `setLayerVisibility`, `applyGenMode`, `applyAllGenModes`
+    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`; see `Events`); no deps
+    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`), `applyGenMode`, `applyAllGenModes`
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`
     - `url-state.ts` — `readUrlState`, `writeUrlState` + bus subscription
+    - `view-state.ts` — the one path a whole view takes into the app: `seedView`
+      (cold boot, state only), `applyView` (live map — Reset is `applyView({})`,
+      Map Experiences use it too), `currentView` (for the link); resolves every
+      input over the codec's `defaultView()`
     - `hover.ts` — polygon hover + line click-highlight
     - `map-input.ts` — **the only module allowed to subscribe to MapLibre pointer
       events**; normalises mouse and touch into `onMapTap` / `onMapDoubleTap` /
@@ -82,7 +86,8 @@ turns public datasets into PMTiles consumed by the frontend.
     - `popup.ts` click popups; `popup-format.ts` HTML builder
     - `highlights.ts` search highlights; `measure.ts` distance tool
     - `terrain.ts` — 3D Terrain (raster-dem) + 3D Buildings (OFM fill-extrusion) + Hillshade toggles
-    - `url-state-codec.ts` — URL parse/format (no side effects)
+    - `url-state-codec.ts` — URL parse/format (no side effects), including the
+      `#zoom/lat/lng[/bearing/pitch]` camera segment and `splitHash` (the one hash splitter)
     - `icons.ts` SVG icon loading; `tool-mode.ts` draw/measure mutex
     - `units-store.ts` — load/save display-unit preferences (`localStorage` key
       `tm-units`, validated against `UNIT_OPTIONS` — a trust boundary, see
@@ -99,8 +104,10 @@ turns public datasets into PMTiles consumed by the frontend.
     - `fema-nri.ts` — FEMA National Risk Index county feature-state join (static table; the hazard picker's `setNriHazard`)
     - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)
-    - `experiences.ts` — Map Experiences controller: applies a curated preset
-      (camera/layers/filters/basemap/3D) and tracks the active story; no DOM
+    - `experiences.ts` — Map Experiences controller: renders a curated preset as
+      `UrlStateData` — the shape a shared link parses to — and applies it with
+      `view-state.ts`'s `applyView()`. See
+      `docs/map-experiences.md`; tracks the active story; no DOM
     - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
       is called from the existing catch blocks in `map.ts`, `layers/layer-init.ts`,
       `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
@@ -193,7 +200,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: wire `filter:all` too, and claim a unique URL code — see `docs/url-state.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
-| Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`, and a programmatic layer switch-on has to call `syncWeatherLiveVisibility()` / `syncZoneVisibility()` by hand) |
+| Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`; and a new `MapExperience.state` field must be representable in `assets/url-state-codec.ts` or it never reaches a shared link — `assets/experiences.test.ts` § 1 fails when it isn't) |
 | Anything that reacts to a click/tap/hover on the map | `assets/map-input.ts` — subscribe there, never `map.on("click"\|"mousemove"\|…)` (silent footgun: a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |

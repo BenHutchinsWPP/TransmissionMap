@@ -1,11 +1,17 @@
 // ─── URL State Codec ──────────────────────────────────────────────────────────
-// Pure functions for serializing/deserializing app state to/from URL params.
+// Pure functions for serializing/deserializing app state to/from URL params,
+// the camera segment in front of them (splitHash, parseCameraSegment,
+// formatCameraSegment), plus defaultView(): the value of every view field when
+// a link omits it.
+// formatUrlState() drops a field that equals its default, and view-state.ts
+// resolves a parsed link over the same defaults, so the two can't disagree.
 // Does NOT touch global state or location/history.
 
 import { LAYERS } from '../src/registry/index.js';
 import { WEATHER_VARIABLES, NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
 import { MW_SLIDER_MAX } from './constants.js';
+import { YEAR_FILTER_DEFAULT } from '../src/colors/ramps.js';
 import { isValidLocale } from '../src/i18n/index.js';
 import type { LayerScope } from '../src/types.js';
 
@@ -81,6 +87,95 @@ export interface UrlStateData {
   // pristine/edited question first: an edited view passes null so the link
   // stops claiming to be the curated one.
   experienceId?: string | null;
+}
+
+// ─── Hash layout ──────────────────────────────────────────────────────────────
+// A link's hash is `#<camera>?<params>`: the camera segment first, then the
+// URLSearchParams that parseUrlState()/formatUrlState() read and write.
+export function splitHash(hash: string): { camera: string; params: URLSearchParams } {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  const q = raw.indexOf('?');
+  return q >= 0
+    ? { camera: raw.slice(0, q), params: new URLSearchParams(raw.slice(q + 1)) }
+    : { camera: raw, params: new URLSearchParams() };
+}
+
+export interface CameraView {
+  center: [number, number];   // [lng, lat]
+  zoom: number;
+  bearing: number;
+  pitch: number;
+}
+
+// Camera segment is "zoom/lat/lng" or, when the view is rotated/tilted,
+// "zoom/lat/lng/bearing/pitch" (same field order as MapLibre's own `hash: true`
+// control). bearing/pitch are appended only when either is non-zero, so a
+// 3-segment hash means "flat, north-up" — callers must treat it as bearing and
+// pitch 0, not "leave whatever the map currently has". Returns null for an
+// empty or malformed segment.
+export function parseCameraSegment(segment: string): CameraView | null {
+  const parts = segment.split('/');
+  if (parts.length !== 3 && parts.length !== 5) return null;
+  const [zoom, lat, lng] = parts.slice(0, 3).map(parseFloat);
+  if ([zoom, lat, lng].some(isNaN)) return null;
+  if (zoom < 0 || zoom > 22)   return null;
+  if (lat < -90 || lat > 90)   return null;
+  if (lng < -180 || lng > 180) return null;
+  let bearing = 0;
+  let pitch = 0;
+  if (parts.length === 5) {
+    bearing = parseFloat(parts[3]);
+    pitch   = parseFloat(parts[4]);
+    if ([bearing, pitch].some(isNaN)) return null;
+    if (pitch < 0 || pitch > 85)      return null;
+  }
+  return { center: [lng, lat], zoom, bearing, pitch };
+}
+
+export function formatCameraSegment(v: CameraView): string {
+  const [lng, lat] = v.center;
+  const segment = v.zoom.toFixed(2) + '/' + lat.toFixed(4) + '/' + lng.toFixed(4);
+  const bearing = v.bearing.toFixed(1);
+  const pitch = v.pitch.toFixed(1);
+  return Number(bearing) !== 0 || Number(pitch) !== 0
+    ? segment + '/' + bearing + '/' + pitch
+    : segment;
+}
+
+// The view a link with no params shows — also what the Reset button restores.
+// Returns fresh objects each call, so callers may mutate the result.
+export function defaultView(): UrlStateData {
+  const layerVisibility: Record<string, boolean> = {};
+  const layerFilters: Record<string, Set<string>> = {};
+  const genMode: Record<string, string> = {};
+  for (const entry of LAYERS) {
+    layerVisibility[entry.id] = !!entry.defaultOn;
+    if (entry.filterBuckets) {
+      layerFilters[entry.id] = new Set(entry.filterBuckets.filter(b => b.default !== false).map(b => b.id));
+    }
+    if (entry.heatLayerId || entry.modes) genMode[entry.id] = entry.defaultMode || 'icons';
+  }
+  const legendFilters: Record<string, Set<string>> = {};
+  for (const cfg of LEGEND_FILTERS) legendFilters[cfg.key] = new Set(cfg.defaultActive ?? legendAllIds(cfg));
+  return {
+    layerVisibility,
+    legendFilters,
+    layerFilters,
+    mwFilter: { min: 0, max: MW_SLIDER_MAX },
+    yearFilter: { enabled: false, year: YEAR_FILTER_DEFAULT },
+    genMode,
+    ogfColorBy: 'status',
+    westtecColorBy: 'scenario',
+    weatherVar: WEATHER_VARIABLES[0].id,
+    nriHazard: DEFAULT_NRI_HAZARD,
+    smokeOpacity: 1,
+    basemap: 'light',
+    projection: 'mercator',
+    terrain3d: false,
+    buildings3d: false,
+    hillshade: false,
+    region: 'usa',
+  };
 }
 
 export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
@@ -202,14 +297,14 @@ export function parseUrlState(params: URLSearchParams): Partial<UrlStateData> {
 
 export function formatUrlState(data: UrlStateData): string[] {
   const parts: string[] = [];
+  const dv = defaultView();
 
   // Layer visibility
   const lDelta: string[] = [];
   for (const entry of LAYERS) {
     if (!entry.urlCode) continue;
     const cur = !!data.layerVisibility[entry.id];
-    const def = !!entry.defaultOn;
-    if (cur !== def) lDelta.push((cur ? '' : '-') + entry.urlCode);
+    if (cur !== dv.layerVisibility[entry.id]) lDelta.push((cur ? '' : '-') + entry.urlCode);
   }
   if (lDelta.length) parts.push('l=' + lDelta.join('.'));
 
@@ -218,8 +313,7 @@ export function formatUrlState(data: UrlStateData): string[] {
     if (!cfg.groupCode) continue;
     const cur = data.legendFilters[cfg.key];
     if (!cur) continue;
-    const def = new Set(cfg.defaultActive ?? legendAllIds(cfg));
-    if (_setsEqual(cur, def)) continue;
+    if (_setsEqual(cur, dv.legendFilters[cfg.key])) continue;
     const codes: string[] = [];
     for (const b of cfg.buckets) {
       if (b.urlCode && cur.has(b.id)) codes.push(b.urlCode);
@@ -231,8 +325,7 @@ export function formatUrlState(data: UrlStateData): string[] {
   for (const [gc, { entry }] of Object.entries(_LAYER_BUCKET_CODE_MAP)) {
     const cur = data.layerFilters[entry.id];
     if (!cur || !entry.filterBuckets) continue;
-    const def = new Set(entry.filterBuckets.filter(b => b.default !== false).map(b => b.id));
-    if (_setsEqual(cur, def)) continue;
+    if (_setsEqual(cur, dv.layerFilters[entry.id])) continue;
     const codes = entry.filterBuckets
       .filter(b => b.urlCode && cur.has(b.id))
       .map(b => b.urlCode);
@@ -241,45 +334,45 @@ export function formatUrlState(data: UrlStateData): string[] {
 
   // MW and Year filters
   const { min, max } = data.mwFilter;
-  if (min !== 0 || max !== MW_SLIDER_MAX) parts.push('mw=' + min + '-' + max);
+  if (min !== dv.mwFilter.min || max !== dv.mwFilter.max) parts.push('mw=' + min + '-' + max);
   if (data.yearFilter && data.yearFilter.enabled) parts.push('y=' + data.yearFilter.year);
 
   // Gen mode
   const gmTokens: string[] = [];
   for (const e of LAYERS) {
     if (!e.genModeCode) continue;
-    const def = e.defaultMode || "icons";
+    const def = dv.genMode[e.id] || 'icons';
     const mode = data.genMode[e.id] || def;
     if (mode !== def) gmTokens.push(e.genModeCode + GM_MODE_TO_CHAR[mode]);
   }
   if (gmTokens.length) parts.push('gm=' + gmTokens.join('.'));
 
-  // OGF color-by (default "status" omitted)
-  if (data.ogfColorBy && data.ogfColorBy !== 'status' && OC_MODE_TO_CHAR[data.ogfColorBy]) {
+  // OGF color-by (default omitted)
+  if (data.ogfColorBy && data.ogfColorBy !== dv.ogfColorBy && OC_MODE_TO_CHAR[data.ogfColorBy]) {
     parts.push('oc=' + OC_MODE_TO_CHAR[data.ogfColorBy]);
   }
 
-  // WestTEC color-by (default "scenario" omitted)
-  if (data.westtecColorBy && data.westtecColorBy !== 'scenario' && WC_MODE_TO_CHAR[data.westtecColorBy]) {
+  // WestTEC color-by (default omitted)
+  if (data.westtecColorBy && data.westtecColorBy !== dv.westtecColorBy && WC_MODE_TO_CHAR[data.westtecColorBy]) {
     parts.push('wc=' + WC_MODE_TO_CHAR[data.westtecColorBy]);
   }
 
-  // Weather Forecast variable (default "tempwind" omitted)
-  if (data.weatherVar && data.weatherVar !== 'tempwind' && WV_ID_TO_CODE[data.weatherVar]) {
+  // Weather Forecast variable (default omitted)
+  if (data.weatherVar && data.weatherVar !== dv.weatherVar && WV_ID_TO_CODE[data.weatherVar]) {
     parts.push('wv=' + WV_ID_TO_CODE[data.weatherVar]);
   }
 
   // FEMA NRI hazard (default composite omitted)
-  if (data.nriHazard && data.nriHazard !== DEFAULT_NRI_HAZARD) {
+  if (data.nriHazard && data.nriHazard !== dv.nriHazard) {
     parts.push('nr=' + data.nriHazard.toLowerCase());
   }
 
   // Smoke opacity (default 100% omitted)
   const smokePercent = Math.round(data.smokeOpacity * 100);
-  if (smokePercent !== 100) parts.push('so=' + smokePercent);
+  if (smokePercent !== Math.round(dv.smokeOpacity * 100)) parts.push('so=' + smokePercent);
 
-  // Basemap ('light' is the app default; must match state.ts)
-  if (data.basemap !== 'light') {
+  // Basemap (default omitted)
+  if (data.basemap !== dv.basemap) {
     const code = BM_TYPE_TO_CODE[data.basemap];
     if (code) parts.push('bm=' + code);
   }
@@ -297,9 +390,8 @@ export function formatUrlState(data: UrlStateData): string[] {
   // Language (default 'en' omitted)
   if (data.lang && data.lang !== 'en') parts.push(`lang=${encodeURIComponent(data.lang)}`);
 
-  // Region (default 'global' omitted)
-  // 'usa' is the default scope, so it stays out of the URL.
-  if (data.region && data.region !== 'usa' && VALID_REGIONS.has(data.region)) {
+  // Region (default omitted)
+  if (data.region && data.region !== dv.region && VALID_REGIONS.has(data.region)) {
     parts.push(`region=${encodeURIComponent(data.region)}`);
   }
   // Map Experience — always last, so url-state.ts can diff the parts above it

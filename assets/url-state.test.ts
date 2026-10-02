@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { state } from './state.js';
 import { readUrlState, writeUrlState } from './url-state.js';
+import { splitHash, parseCameraSegment, formatCameraSegment } from './url-state-codec.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
@@ -70,12 +71,12 @@ describe('readUrlState – basic params', () => {
   });
 
   it.each(['-1', '101', '50.5', '50px', '', 'NaN', 'Infinity'])(
-    'ignores invalid smoke opacity so=%s',
+    'falls back to the default for invalid smoke opacity so=%s',
     value => {
       state.smokeOpacity = 0.4;
       setHash('so=' + value);
       readUrlState();
-      expect(state.smokeOpacity).toBe(0.4);
+      expect(state.smokeOpacity).toBe(1);
     }
   );
 
@@ -459,6 +460,40 @@ describe('writeUrlState – bearing/pitch (rotation/tilt)', () => {
     writeUrlState();
     const posStr = location.hash.slice(1).split('?')[0];
     expect(posStr.split('/')).toHaveLength(3);
+  });
+});
+
+describe('camera segment – codec round trip', () => {
+  it('round-trips the 3-segment flat, north-up view', () => {
+    const view = { center: [-98.35, 39.5] as [number, number], zoom: 5, bearing: 0, pitch: 0 };
+    const seg = formatCameraSegment(view);
+    expect(seg).toBe('5.00/39.5000/-98.3500');
+    expect(parseCameraSegment(seg)).toEqual(view);
+  });
+
+  it('round-trips the 5-segment rotated/tilted view', () => {
+    const view = { center: [-122.4194, 37.7749] as [number, number], zoom: 12.25, bearing: -34.5, pitch: 52 };
+    const seg = formatCameraSegment(view);
+    expect(seg).toBe('12.25/37.7749/-122.4194/-34.5/52.0');
+    expect(parseCameraSegment(seg)).toEqual(view);
+  });
+
+  it('reads a 3-segment hash as bearing 0, pitch 0', () => {
+    expect(parseCameraSegment('4/10/20')).toEqual({ center: [20, 10], zoom: 4, bearing: 0, pitch: 0 });
+  });
+
+  it.each(['', '5/39.5', '5/39.5/-98/10', '5/91/0', '5/0/181', '23/0/0', 'a/0/0', '5/0/0/0/90'])(
+    'rejects malformed segment %j', seg => {
+      expect(parseCameraSegment(seg)).toBeNull();
+    });
+
+  it('splits the camera segment from the params, with or without a leading #', () => {
+    const a = splitHash('#5.00/39.5000/-98.3500?l=abc&lang=es');
+    expect(a.camera).toBe('5.00/39.5000/-98.3500');
+    expect(a.params.get('lang')).toBe('es');
+    expect(splitHash('5/1/2').camera).toBe('5/1/2');
+    expect([...splitHash('5/1/2').params]).toEqual([]);
+    expect(splitHash('').camera).toBe('');
   });
 });
 

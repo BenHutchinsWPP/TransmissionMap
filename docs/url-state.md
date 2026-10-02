@@ -26,9 +26,22 @@ Two files, split by side effects:
 
 - **`assets/url-state-codec.ts`** — pure parse/format. No globals, no
   `location`/`history`. `parseUrlState(params)` → partial state object;
-  `formatUrlState(state)` → array of `key=val` strings.
-- **`assets/url-state.ts`** — side-effectful glue. `readUrlState()` reads the
-  hash into `state`; `writeUrlState()` writes `state` back to the hash via
+  `formatUrlState(state)` → array of `key=val` strings. This codec is also the
+  serialisation format a Map Experience preset must fit
+  (`assets/experiences.test.ts` round-trips every preset through
+  `formatUrlState`/`parseUrlState`) — so a param's parse/format behaviour is
+  load-bearing for stories as well as for shared links. See
+  [map-experiences.md](map-experiences.md). `defaultView()` here is the value
+  of every field when a link omits it. The camera segment lives here too:
+  `splitHash(hash)` → `{ camera, params }` (the one place the hash is split —
+  `map.ts`, `url-state.ts` and `ui.ts` all call it), and
+  `parseCameraSegment`/`formatCameraSegment` read and write `zoom/lat/lng[/bearing/pitch]`.
+- **`assets/view-state.ts`** — how a view gets into the app: `seedView()` on
+  cold boot, `applyView()` on a live map (Reset, Map Experiences),
+  `currentView()` for writing the link. Both entry points resolve their input
+  over `defaultView()`.
+- **`assets/url-state.ts`** — side-effectful glue. `readUrlState()` parses the
+  hash and hands it to `seedView()`; `writeUrlState()` writes `currentView()` back to the hash via
   `history.replaceState`. Subscribes to the `url:write` bus event — anything
   that changes shareable state emits `url:write` and the URL updates.
 
@@ -121,8 +134,8 @@ the story — and a shared `exp` link opens at the story's camera, not the hash'
 
 The "omit the default" rule is what keeps links short. It also means **both
 sides must agree on the default** — `formatUrlState` skips a value when it
-equals the default, `parseUrlState` leaves state untouched when the param is
-absent. If they disagree, a freshly-shared link drifts from what the sharer saw.
+equals the default, and a missing param resolves to the default. Both read it
+from `defaultView()`, so there is one place to change it.
 
 ---
 
@@ -131,8 +144,10 @@ absent. If they disagree, a freshly-shared link drifts from what the sharer saw.
 ```
 [ ] Pick an unused key char (see reserved table above)
 [ ] url-state-codec.ts: parse it in parseUrlState()  (params.get → state)
-[ ] url-state-codec.ts: emit it in formatUrlState()  (state → key=val), skipping the default
-[ ] url-state.ts: copy it in readUrlState() and writeUrlState() if it's a new state field
+[ ] url-state-codec.ts: give it a default in defaultView(), and emit it in formatUrlState()
+    (state → key=val) only when it differs from that default
+[ ] view-state.ts: if it's a new state field, merge it in resolve(), write it in
+    writeState() (or through its setter in applyView()), read it in currentView()
 [ ] Emit 'url:write' wherever the value changes (usually assets/ui/ui-*.ts)
 [ ] Add the char to the reserved table in this doc
 ```

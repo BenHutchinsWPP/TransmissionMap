@@ -1,24 +1,22 @@
 // ─── UI bootstrap + event wiring ──────────────────────────────────────────────
-// Top-level init() + the delegated event wiring (wireUI). Layer-row HTML lives
+// Top-level init() + the delegated event wiring (wireUI). The Reset button is
+// view-state.ts's applyView({}); the 'view:applied' subscriber below mirrors
+// any applied view onto the panels and controls. Layer-row HTML lives
 // in ui-layer-rows.js; menubar wiring in ui-menubar.js; My Data tab handlers in
 // ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
 // Data Credits dialog opens its hand-written index.html markup immediately,
 // then lazily loads ui-credits.js to render it from the generated manifest.
 
 import { state } from '../state.js';
-import { LAYERS, LAYER_SOURCES } from '../../src/registry/index.js';
+import { LAYER_SOURCES } from '../../src/registry/index.js';
 import type { LayerScope } from '../../src/types.js';
-import { YEAR_FILTER_MIN, YEAR_FILTER_MAX, YEAR_FILTER_DEFAULT } from '../../src/colors/ramps.js';
-import { MW_SLIDER_MAX, mwToPos } from '../filters.js';
-import { setLayerVisibility, applyAllGenModes } from '../visibility.js';
-import { ensureLayerData } from '../layers/layer-init.js';
+import { YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../../src/colors/ramps.js';
+import { mwToPos } from '../filters.js';
+import { setLayerVisibility } from '../visibility.js';
 import { initMap, switchBasemap, switchProjection, setBasemapLabels } from '../map.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from '../terrain.js';
 import { maybeShowRotateHint } from '../terrain-hint.js';
-import {
-  LEGEND_FILTERS, legendAllIds,
-  buildLegends, updateLegends,
-} from './ui-legends.js';
+import { buildLegends, updateLegends } from './ui-legends.js';
 import {
   wireLayerFilterPanels, wireLegendFilters, wireMwFilter, wireSmokeOpacity,
   wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireNriHazardSelect, wireYearFilter,
@@ -29,6 +27,8 @@ import { wireFeatureSearch } from './ui-search.js';
 import { wireGeocoder } from './ui-geocoder.js';
 import { wireOpenWith } from './ui-openwith.js';
 import { readUrlState } from '../url-state.js';
+import { splitHash } from '../url-state-codec.js';
+import { applyView } from '../view-state.js';
 import { emit, on } from '../state-bus.js';
 import { loadUnits } from '../units-store.js';
 import { loadLanguage } from '../i18n-store.js';
@@ -43,46 +43,23 @@ import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
-import { initFemaNri, setNriHazard } from '../fema-nri.js';
-import { DEFAULT_NRI_HAZARD } from '../../src/registry/conditions.js';
-import { initWeatherLive, syncWeatherLiveVisibility } from '../weather-live.js';
-import { initNwsZoneJoin, syncZoneVisibility } from '../nws-zone-join.js';
+import { initFemaNri } from '../fema-nri.js';
+import { initWeatherLive } from '../weather-live.js';
+import { initNwsZoneJoin } from '../nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
-import { RASTER_PROBES, updateRasterArrow } from '../raster-probes.js';
 // Static import is deliberate: diag-log.js is a zero-import leaf module (just
 // an array), so reading it here costs nothing. ui-diagnostics.js and
 // diagnostics.js are NOT imported here — pulling either in statically would
 // defeat their lazy-chunk split (see ui-menubar.ts).
 import { getDiagLog, DIAG_EVENT, recordDiagEvent } from '../diag-log.js';
-import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
-
-function resetLayerState() {
-  for (const entry of LAYERS) {
-    state.layerVisibility[entry.id] = entry.defaultOn;
-    if (entry.filterBuckets) {
-      state.layerFilters[entry.id] = new Set(
-        entry.filterBuckets.filter(b => b.default !== false).map(b => b.id)
-      );
-    }
-    if (entry.heatLayerId) state.genMode[entry.id] = "icons";
-  }
-  for (const cfg of LEGEND_FILTERS) {
-    state.legendFilters[cfg.key] = new Set(cfg.defaultActive ?? legendAllIds(cfg));
-  }
-}
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 export async function init() {
-  const hash = location.hash;
-  const q = hash.indexOf('?');
-  const params = new URLSearchParams(q >= 0 ? hash.slice(q + 1) : '');
-  await loadLanguage(params.get('lang'));
+  await loadLanguage(splitHash(location.hash).params.get('lang'));
   updateDomTranslations();
   loadUnits();
-  resetLayerState();
   state.yearFilter.min  = YEAR_FILTER_MIN;
   state.yearFilter.max  = YEAR_FILTER_MAX;
-  state.yearFilter.year = YEAR_FILTER_DEFAULT;
 
   readUrlState();
 
@@ -148,62 +125,29 @@ export async function init() {
   };
 }
 
-// ─── Reset all layer settings to defaults ────────────────────────────────────
-// Exported for assets/experiences.ts: a Map Experience starts from the same
-// clean slate the Reset button produces, so the two can never drift apart.
-export function resetLayersToDefaults() {
-  resetLayerState();
-  state.mwFilter = { min: 0, max: MW_SLIDER_MAX };
-  state.smokeOpacity = 1;
-  applySmokeOpacity();
-  stopYearPlayback();
-  state.yearFilter.enabled = false;
-  state.yearFilter.year = YEAR_FILTER_DEFAULT;
-
-  for (const entry of LAYERS) {
-    const vis = entry.defaultOn ? "visible" : "none";
-    if (entry.defaultOn) ensureLayerData(entry.id);
-    for (const mlId of entry.mapLayerIds) {
-      if (state.map?.getLayer(mlId)) state.map.setLayoutProperty(mlId, "visibility", vis);
-    }
-    // setLayerVisibility() clears a hidden layer's hover-probe bubble line;
-    // this loop bypasses that, so do it by hand or a parked cursor keeps
-    // showing a stale reading for a probe that's now off.
-    if (vis === "none" && RASTER_PROBES[entry.id]) updateRasterArrow(entry.id, null);
+// ─── Controls that mirror the view ───────────────────────────────────────────
+// These fire on user input only, so a view applied in code (Reset, a Map
+// Experience — view-state.ts's applyView()) has to be mirrored onto them.
+function syncBasemapControls() {
+  const basemap = document.querySelector<HTMLInputElement>(`input[type=radio][name=basemap][value="${state.basemap}"]`);
+  if (basemap) basemap.checked = true;
+  const projection = document.querySelector<HTMLInputElement>(`input[type=radio][name=projection][value="${state.projection}"]`);
+  if (projection) projection.checked = true;
+  for (const [elId, on] of [
+    ['terrain3dToggle', state.terrain3d],
+    ['buildings3dToggle', state.buildings3d],
+    ['hillshadeToggle', state.hillshade],
+  ] as const) {
+    const el = document.getElementById(elId) as HTMLInputElement | null;
+    if (el) el.checked = on;
   }
-  // This loop flips map visibility directly rather than through
-  // setLayerVisibility(), so weather-live.ts's and nws-zone-join.ts's
-  // checkbox-change listeners never fire — sync their own hidden state by
-  // hand or a Reset leaves wind particles animating / alert zones painted.
-  syncWeatherLiveVisibility();
-  syncZoneVisibility();
+}
 
-  emit('filter:all');
-
-  if (state.basemap !== "light") switchBasemap("light");
-  const lightRadio = document.querySelector<HTMLInputElement>('input[type=radio][name=basemap][value="light"]');
-  if (lightRadio) lightRadio.checked = true;
-
-  if (state.projection !== "mercator") switchProjection("mercator");
-  const flatRadio = document.querySelector<HTMLInputElement>('input[type=radio][name=projection][value="mercator"]');
-  if (flatRadio) flatRadio.checked = true;
-
-  if (state.terrain3d) setTerrain3d(false);
-  if (state.buildings3d) setBuildings3d(false);
-  if (state.hillshade) setHillshade(false);
-  const terrainToggle = document.getElementById("terrain3dToggle") as HTMLInputElement | null;
-  if (terrainToggle) terrainToggle.checked = false;
-  const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
-  if (buildingsToggle) buildingsToggle.checked = false;
-  const hillshadeToggle = document.getElementById("hillshadeToggle") as HTMLInputElement | null;
-  if (hillshadeToggle) hillshadeToggle.checked = false;
-
-  state.regionScope = 'usa';
-  setNriHazard(DEFAULT_NRI_HAZARD);
+on('view:applied', () => {
+  stopYearPlayback();
+  syncBasemapControls();
   buildLayersPanel();
   buildLegends();
-  applyAllGenModes();
-
   const mwMin = document.getElementById("mwSliderMin") as HTMLInputElement | null;
   const mwMax = document.getElementById("mwSliderMax") as HTMLInputElement | null;
   if (mwMin) mwMin.value = String(mwToPos(state.mwFilter.min));
@@ -212,9 +156,7 @@ export function resetLayersToDefaults() {
   updateSmokeOpacityUI();
   updateYearSliderUI();
   updateYearPlayBtn();
-
-  emit('url:write');
-}
+});
 
 // ─── Data-credits source focus helpers ───────────────────────────────────────
 let creditHighlightTimer: number | null = null;
@@ -430,25 +372,14 @@ function wireResetLayers() {
   if (!btn) return;
   btn.addEventListener("click", () => {
     if (window.confirm("Reset all layers, filters and basemap to their defaults?\n(Your imported and drawn data is kept.)")) {
-      resetLayersToDefaults();
+      applyView({});
     }
   });
 }
 
 function wireBasemap() {
-  const active = document.querySelector<HTMLInputElement>(`input[type=radio][name=basemap][value="${state.basemap}"]`);
-  if (active) active.checked = true;
-  const activeProj = document.querySelector<HTMLInputElement>(`input[type=radio][name=projection][value="${state.projection}"]`);
-  if (activeProj) activeProj.checked = true;
-  // URL restore (readUrlState) runs before this wiring, so the checkboxes need
-  // an explicit initial sync — unlike the radios above, there's no shared
-  // `name` to select an "active" one from.
-  const terrainToggle = document.getElementById("terrain3dToggle") as HTMLInputElement | null;
-  if (terrainToggle) terrainToggle.checked = state.terrain3d;
-  const buildingsToggle = document.getElementById("buildings3dToggle") as HTMLInputElement | null;
-  if (buildingsToggle) buildingsToggle.checked = state.buildings3d;
-  const hillshadeToggle = document.getElementById("hillshadeToggle") as HTMLInputElement | null;
-  if (hillshadeToggle) hillshadeToggle.checked = state.hillshade;
+  // URL restore (readUrlState) runs before this wiring.
+  syncBasemapControls();
 
   document.addEventListener("change", (e) => {
     const el = e.target as Element;

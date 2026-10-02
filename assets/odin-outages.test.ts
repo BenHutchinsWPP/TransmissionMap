@@ -8,10 +8,13 @@ vi.mock('./layers/layer-init.js', () => ({
 }));
 // The gate reaches visibility.js -> url-state.js -> url-state-codec.js, which
 // reads LEGEND_FILTERS at module load; mock both ends so the chain stays out.
+// The double keeps setLayerVisibility()'s contract: state plus panel checkbox.
 vi.mock('./visibility.js', () => ({
   setLayerVisibility: vi.fn(async (id: string, on: boolean) => {
     const { state } = await import('./state.js');
     state.layerVisibility[id] = on;
+    const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${id}"]`);
+    if (cb) cb.checked = on;
   }),
 }));
 vi.mock('./ui/ui-legends.js', () => ({ updateLegends: vi.fn(), LEGEND_FILTERS: [] }));

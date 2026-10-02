@@ -5,7 +5,7 @@
 // Deps: state.js, registry/index.js (LAYERS, LAYER_SOURCES), colors/ramps.js
 // (HEAT_RAMP), ui-legends.js (rampLegendHtml), utils.js (escapeHtml),
 // src/i18n/index.js (t).
-// Consumed by ui.ts (init + resetLayersToDefaults + wireLangChanged).
+// Consumed by ui.ts (init + the view:applied resync + wireLangChanged).
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES, REGION_CODE_MAP } from '../../src/registry/index.js';

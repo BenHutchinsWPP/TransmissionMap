@@ -1,7 +1,11 @@
 // ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
-// A layer with an `exclusiveGroup` switches the rest of its group off when it
-// is switched on (and unticks their panel checkboxes).
-// Imported by: ui.ts (setLayerVisibility, applyAllGenModes),
+// setLayerVisibility() is the one way to switch a layer: it updates state, the
+// map, the panel checkbox and the URL, then emits 'layer:visibility' so modules
+// with their own per-layer machinery (weather-live.ts, nws-zone-join.ts) follow
+// along. A layer with an `exclusiveGroup` switches the rest of its group off
+// when it is switched on.
+// Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
+//              view-state.ts (setLayerVisibility + the appliers),
 //              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
 // Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
 // every zoom settle, via a 'zoomend' listener attached once the map emits
@@ -14,6 +18,7 @@ import { writeUrlState } from './url-state.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
+import { on, emit } from './state-bus.js';
 
 export function setLayerVisibility(registryId: string, visible: boolean) {
   const entry = layerById(registryId);
@@ -23,8 +28,6 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
       if (other.id === registryId || other.exclusiveGroup !== entry.exclusiveGroup) continue;
       if (!state.layerVisibility[other.id]) continue;
       setLayerVisibility(other.id, false);
-      const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${other.id}"]`);
-      if (cb) cb.checked = false;
     }
   }
   state.layerVisibility[registryId] = visible;
@@ -40,7 +43,10 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
     }
   }
   if (entry.heatLayerId || entry.modes) applyGenMode(registryId);
+  const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${registryId}"]`);
+  if (cb) cb.checked = visible;
   writeUrlState();
+  emit('layer:visibility', { id: registryId, visible });
 
   if (visible && TRIBAL_LAYER_IDS.includes(registryId)) showTribalDisclaimer();
 }
@@ -131,7 +137,6 @@ export function refetchZoomGatedLayers() {
 }
 
 // ─── Bus subscription ─────────────────────────────────────────────────────────
-import { on } from './state-bus.js';
 on('gen:mode', ({ id }) => applyGenMode(id));
 on('ogf:colorby', applyOGFColorBy);
 on('westtec:colorby', applyWestTECColorBy);

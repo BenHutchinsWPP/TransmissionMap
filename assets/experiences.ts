@@ -4,53 +4,38 @@
 //       is active. Owns no DOM: the gallery and the floating story card live in
 //       ui/ui-experiences.ts, which is the only module that imports this one.
 //
-// Applying a preset always starts from ui.ts's resetLayersToDefaults(), the same
-// clean slate the Reset button produces: layers back to their registry defaults,
-// filters and 3D toggles cleared, wind particles stopped and alert zones
-// unpainted. Reusing it means a story can never inherit the leftovers of the
-// last one. Note it hides a live layer rather than shutting its feed down — a
-// poller keeps running for the rest of the session once its source exists
-// (live-staleness.ts gates refetch on the source, not on visibility).
+// A preset reaches the map in the shape a shared link parses to:
+// experienceUrlState() renders it as UrlStateData and view-state.ts's
+// applyView() puts that on the live map — the same path Reset and a link take,
+// so a story starts from the defaults and never inherits the last one's
+// leftovers. A field a preset wants therefore has to be representable in
+// url-state-codec.ts — experiences.test.ts round-trips every catalogue entry
+// through the codec to keep the two shapes in step. Note applyView() hides a
+// live layer rather than shutting its feed down — a poller keeps running for
+// the rest of the session once its source exists (live-staleness.ts gates
+// refetch on the source, not on visibility).
 //
 // The pristine/edited split lives in url-state.ts: this module records the id
 // and clears the snapshot, and the next writeUrlState() decides whether the link
 // still names the story. See docs/url-state.md.
 //
-// Deps: state.js, visibility.js (setLayerVisibility, applyAllGenModes,
-//       applyOGFColorBy, applyWestTECColorBy), map.js (switchBasemap,
-//       switchProjection), terrain.js (setTerrain3d, setHillshade),
-//       weather-live.js (setWeatherVar, syncWeatherLiveVisibility),
-//       fema-nri.js (setNriHazard),
-//       nws-zone-join.js (syncZoneVisibility),
-//       layers/map-layers-conditions.js (applySmokeOpacity),
-//       ui/ui.js (resetLayersToDefaults), ui/ui-layer-rows.js (buildLayersPanel),
-//       ui/ui-legends.js (buildLegends), url-state.js, state-bus.js,
-//       registry/experiences.js (the catalogue), registry/conditions.js
-//       (WEATHER_VARIABLES, DEFAULT_NRI_HAZARD), registry/index.js (LAYERS, for the gallery badges).
+// Deps: state.js, view-state.js (applyView, CameraMode), url-state.js
+//       (writeUrlState), url-state-codec.js (defaultView, UrlStateData),
+//       state-bus.js, registry/experiences.js (the catalogue),
+//       registry/index.js (LAYERS, for the gallery badges).
 
 import { state } from './state.js';
 import {
   EXPERIENCES, experienceById, AERIAL_MAX_ZOOM,
   type MapExperience, type ExperienceHighlight,
 } from '../src/registry/experiences.js';
-import { WEATHER_VARIABLES, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { LAYERS } from '../src/registry/index.js';
-import { setLayerVisibility, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
-import { switchBasemap } from './map.js';
-import { setTerrain3d, setHillshade } from './terrain.js';
-import { setWeatherVar, syncWeatherLiveVisibility } from './weather-live.js';
-import { setNriHazard } from './fema-nri.js';
-import { syncZoneVisibility } from './nws-zone-join.js';
-import { applySmokeOpacity } from './layers/map-layers-conditions.js';
-import { resetLayersToDefaults } from './ui/ui.js';
-import { buildLayersPanel } from './ui/ui-layer-rows.js';
-import { buildLegends } from './ui/ui-legends.js';
+import { applyView, type CameraMode } from './view-state.js';
 import { writeUrlState } from './url-state.js';
+import { defaultView, type UrlStateData } from './url-state-codec.js';
 import { emit } from './state-bus.js';
 
-const DEFAULT_WEATHER_VAR = WEATHER_VARIABLES[0].id;
-
-export type CameraMode = 'fly' | 'jump';
+export type { CameraMode };
 
 export function activeExperience(): MapExperience | null {
   return state.experienceId ? experienceById(state.experienceId) : null;
@@ -80,6 +65,27 @@ export function experienceTags(exp: MapExperience): string[] {
   return tags;
 }
 
+// Renders a curated preset in the shape a shared link carries, so the same
+// values reach the map whether they came from the catalogue or from a hash.
+// Fields a preset never speaks for keep their defaults, and drop out of the
+// formatted link.
+export function experienceUrlState(preset: MapExperience['state']): UrlStateData {
+  const view = defaultView();
+  for (const layerId of preset.layersOff ?? []) view.layerVisibility[layerId] = false;
+  for (const layerId of preset.layersOn ?? []) view.layerVisibility[layerId] = true;
+  for (const [key, ids] of Object.entries(preset.legendFilters ?? {})) view.legendFilters[key] = new Set(ids);
+  for (const [layerId, ids] of Object.entries(preset.layerFilters ?? {})) view.layerFilters[layerId] = new Set(ids);
+  Object.assign(view.genMode, preset.genMode);
+  if (preset.ogfColorBy) view.ogfColorBy = preset.ogfColorBy;
+  if (preset.westtecColorBy) view.westtecColorBy = preset.westtecColorBy;
+  if (preset.weatherVar) view.weatherVar = preset.weatherVar;
+  if (preset.smokeOpacity !== undefined) view.smokeOpacity = preset.smokeOpacity;
+  if (preset.basemap) view.basemap = preset.basemap;
+  view.terrain3d = !!preset.terrain3d;
+  view.hillshade = !!preset.hillshade;
+  return view;
+}
+
 export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExperience | null {
   const exp = experienceById(id);
   // A link can name a story that has since been retired or renamed — the codec
@@ -90,11 +96,10 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
     return null;
   }
   if (!state.mapReady || !state.map) return null;
-  const map = state.map;
 
   // Halt whatever the last flyTo is still doing before anything else touches
   // the camera, or its easing keeps running over the new view.
-  map.stop();
+  state.map.stop();
 
   // Cleared up front so the reset's own url:write can't be read as the user
   // editing their way out of the story that is being replaced.
@@ -102,57 +107,9 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
   state.experienceDirty = false;
   state.experiencePristine = null;
 
-  resetLayersToDefaults();
-
   const preset = exp.state;
-
-  // Terrain and the globe fight over the same vertex pipeline. No guard is
-  // needed here: resetLayersToDefaults() above has already pinned the
-  // projection back to mercator, which is what a 3D story requires.
-  switchBasemap(preset.basemap ?? 'light');
-
-  for (const [key, ids] of Object.entries(preset.legendFilters ?? {})) {
-    state.legendFilters[key] = new Set(ids);
-  }
-  for (const [layerId, ids] of Object.entries(preset.layerFilters ?? {})) {
-    state.layerFilters[layerId] = new Set(ids);
-  }
-  Object.assign(state.genMode, preset.genMode ?? {});
-  // Assigned unconditionally, not `if (preset.x)`: resetLayersToDefaults() does
-  // not touch the two colour-by modes, so a conditional would let the last
-  // story's choice — and its `oc`/`wc` URL param — ride into the next one.
-  state.ogfColorBy = preset.ogfColorBy ?? 'status';
-  state.westtecColorBy = preset.westtecColorBy ?? 'scenario';
-  if (preset.smokeOpacity !== undefined) state.smokeOpacity = preset.smokeOpacity;
-  // Set before the panel is rebuilt below, so the variable dropdown renders on
-  // the value the story asked for.
-  setWeatherVar(preset.weatherVar ?? DEFAULT_WEATHER_VAR);
-  setNriHazard(DEFAULT_NRI_HAZARD);
-
-  for (const layerId of preset.layersOff ?? []) setLayerVisibility(layerId, false);
-  for (const layerId of preset.layersOn ?? []) setLayerVisibility(layerId, true);
-
-  if (preset.terrain3d) setTerrain3d(true);
-  if (preset.hillshade) setHillshade(true);
-
-  // setLayerVisibility() flips map layout visibility without dispatching the
-  // checkbox `change` event these two listen for, so they get told by hand —
-  // the same reason resetLayersToDefaults() calls them.
-  syncWeatherLiveVisibility();
-  syncZoneVisibility();
-
-  applySmokeOpacity();
-  emit('filter:all');
-  applyAllGenModes();
-  applyOGFColorBy();
-  applyWestTECColorBy();
-
-  buildLayersPanel();
-  buildLegends();
-  syncViewControls();
-
   const { center, zoom, pitch = 0, bearing = 0 } = exp.camera;
-  const view = {
+  applyView(experienceUrlState(preset), {
     center,
     // Aerial imagery thins out past this, and the story would land on blank
     // tiles. Clamped here as well as in the catalogue so a later edit to either
@@ -160,9 +117,8 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
     zoom: preset.basemap === 'aerial' ? Math.min(zoom, AERIAL_MAX_ZOOM) : zoom,
     pitch,
     bearing,
-  };
-  if (camera === 'jump') map.jumpTo(view);
-  else map.flyTo({ ...view, speed: 0.8, curve: 1.4, essential: true });
+    mode: camera,
+  });
 
   state.experienceId = exp.id;
   state.experienceDirty = false;
@@ -189,23 +145,4 @@ export function restoreExperience(): MapExperience | null {
 
 export function flyToHighlight(h: ExperienceHighlight) {
   state.map?.flyTo({ center: h.coordinates, zoom: 11, speed: 0.9, essential: true });
-}
-
-// Mirrors the preset onto the basemap radios and 3D checkboxes, which are wired
-// to fire only on user input and would otherwise still show the reset defaults.
-function syncViewControls() {
-  const basemap = document.querySelector<HTMLInputElement>(
-    `input[type=radio][name=basemap][value="${state.basemap}"]`);
-  if (basemap) basemap.checked = true;
-  const projection = document.querySelector<HTMLInputElement>(
-    `input[type=radio][name=projection][value="${state.projection}"]`);
-  if (projection) projection.checked = true;
-  for (const [elId, on] of [
-    ['terrain3dToggle', state.terrain3d],
-    ['buildings3dToggle', state.buildings3d],
-    ['hillshadeToggle', state.hillshade],
-  ] as const) {
-    const el = document.getElementById(elId) as HTMLInputElement | null;
-    if (el) el.checked = on;
-  }
 }

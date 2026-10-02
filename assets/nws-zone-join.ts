@@ -30,7 +30,7 @@
 //       never disappears); features with no matching alert are unpainted.
 //       `nws_multi` feature-state flags >1 matching alert and thickens the
 //       outline.
-// Deps: state (map, DATA, layerVisibility), layers/layer-init.ts
+// Deps: state-bus (on 'layer:visibility'), state (map, DATA, layerVisibility), layers/layer-init.ts
 //       (ensureCountyBoundaries, COUNTY_SRC/COUNTY_SRC_LAYER, pmtilesUrl,
 //       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
@@ -43,8 +43,8 @@
 //       state.sourcesData, so it isn't available from that path). This is a
 //       small redundant fetch on the same ~5 min cadence; the shared
 //       live-staleness.ts/layer-init.ts fetch paths are left untouched.
-//       syncZoneVisibility() is also called directly from ui.ts's
-//       resetLayersToDefaults() (Reset Layers button) — see its own comment.
+//       Zone visibility follows the nws-alerts layer through the
+//       'layer:visibility' bus event visibility.ts's setLayerVisibility() emits.
 // Staleness wiring (in nws-staleness.ts): the kill-switch watches
 //       #nwsStaleDialog's `open` attribute via MutationObserver and calls
 //       clearZoneAlerts() the moment the modal opens (no callback hook exists
@@ -60,6 +60,7 @@ import {
   ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, pmtilesUrl, initialVisibility,
 } from './layers/layer-init.js';
 import { NWS_GROUP_BUCKETS } from '../src/colors/buckets.js';
+import { on } from './state-bus.js';
 
 export const ZONE_SRC = "nws_zones";
 export const ZONE_SRC_LAYER = "nws_zones";
@@ -202,11 +203,7 @@ function ensureZoneLayers() {
   }
 }
 
-// Exported for ui.ts's resetLayersToDefaults() (Reset Layers button), which
-// flips state.layerVisibility and the nws-alerts registry layers' MapLibre
-// visibility directly, without dispatching a change event — so the checkbox
-// listener below never fires and this needs a direct call instead.
-export function syncZoneVisibility() {
+function syncZoneVisibility() {
   if (!state.map) return;
   const vis = initialVisibility("nws-alerts");
   for (const id of [...ZONE_FILL_LAYERS, ...ZONE_LINE_LAYERS]) {
@@ -424,11 +421,7 @@ export function initNwsZoneJoin() {
     if (ev.sourceId === ZONE_SRC || ev.sourceId === COUNTY_SRC) repaint();
   });
 
-  // Keep the zone fill/line layers' visibility synced to the nws-alerts
-  // checkbox instantly, rather than waiting on the next data refresh.
-  document.addEventListener("change", (e) => {
-    const cb = (e.target as Element | null)?.closest<HTMLInputElement>(
-      `input[type=checkbox][data-layer-id="nws-alerts"]`);
-    if (cb) syncZoneVisibility();
-  });
+  // Keep the zone fill/line layers' visibility synced to the nws-alerts layer
+  // instantly, rather than waiting on the next data refresh.
+  on('layer:visibility', ({ id }) => { if (id === "nws-alerts") syncZoneVisibility(); });
 }

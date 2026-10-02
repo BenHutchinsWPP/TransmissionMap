@@ -4,6 +4,8 @@
 // alongside the existing console logging.
 // addOfmBasemaps() clones a roads/places/boundaries overlay for Aerial via
 // basemap-overlay.ts's pure aerialOverlayLayer() selector/restyler.
+// The starting camera, and any camera-only hashchange, is read from the hash's
+// camera segment via url-state-codec.ts (splitHash, parseCameraSegment).
 
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -22,6 +24,7 @@ import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibi
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
 import { writeUrlState } from './url-state.js';
+import { splitHash, parseCameraSegment } from './url-state-codec.js';
 import { emit, on } from './state-bus.js';
 import { getLocale, type SupportedLocale } from '../src/i18n/index.js';
 import { loadUserData } from './user-data/user-data.js';
@@ -37,7 +40,7 @@ export function initMap() {
   const protocol = new pmtiles.Protocol();
   maplibregl.addProtocol("pmtiles", protocol.tile.bind(protocol));
 
-  const hashView = parseLocationHash();
+  const hashView = parseCameraSegment(splitHash(location.hash).camera);
 
   // MapLibre requires WebGL2. If the browser/GPU can't provide a context
   // (hardware acceleration off, driver blocklisted, webgl disabled), the Map
@@ -141,7 +144,7 @@ export function initMap() {
       // current session's state back over the link. Our own writeUrlState()
       // uses history.replaceState, which does not fire hashchange.
       if (location.hash.includes('?')) { location.reload(); return; }
-      const loc = parseLocationHash();
+      const loc = parseCameraSegment(splitHash(location.hash).camera);
       if (loc) state.map!.jumpTo({ center: loc.center, zoom: loc.zoom, bearing: loc.bearing, pitch: loc.pitch });
     });
   });
@@ -631,38 +634,4 @@ function showWebglError() {
       </div>
     </div>`;
   (document.getElementById('map') ?? document.body).appendChild(el);
-}
-
-// ─── URL hash parsing ─────────────────────────────────────────────────────────
-// Position segment is "zoom/lat/lng" or, when the view is rotated/tilted,
-// "zoom/lat/lng/bearing/pitch" (same field order as MapLibre's own `hash: true`
-// control). bearing/pitch are omitted by writeUrlState() when both are zero, so
-// a 3-segment hash means "flat, north-up" — callers must treat missing
-// bearing/pitch as 0, not "leave whatever the map currently has".
-function parseLocationHash() {
-  try {
-    const raw   = window.location.hash.slice(1);
-    const posStr = raw.includes('?') ? raw.slice(0, raw.indexOf('?')) : raw;
-    const parts = posStr.split("/");
-    if (parts.length !== 3 && parts.length !== 5) return null;
-    const zoom = parseFloat(parts[0]);
-    const lat  = parseFloat(parts[1]);
-    const lon  = parseFloat(parts[2]);
-    if ([zoom, lat, lon].some(isNaN)) return null;
-    if (zoom < 0 || zoom > 22)         return null;
-    if (lat < -90  || lat > 90)        return null;
-    if (lon < -180 || lon > 180)       return null;
-    let bearing = 0;
-    let pitch = 0;
-    if (parts.length === 5) {
-      bearing = parseFloat(parts[3]);
-      pitch   = parseFloat(parts[4]);
-      if ([bearing, pitch].some(isNaN)) return null;
-      if (pitch < 0 || pitch > 85)       return null;
-    }
-    return { zoom, center: [lon, lat] as [number, number], bearing, pitch };
-  } catch {
-    console.warn("Malformed URL hash; using default map view.");
-    return null;
-  }
 }

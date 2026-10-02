@@ -275,20 +275,13 @@ function isVisible(): boolean {
 // ── Stale-data gate ───────────────────────────────────────────────────────────
 // Past MAX_AGE_MS the layer is turned off and the reader is told why, rather
 // than left with an empty choropleth that looks like a broken layer.
-function setOdinLayer(on: boolean) {
-  setLayerVisibility(REGISTRY_ID, on);
-  const cb = document.querySelector<HTMLInputElement>(
-    `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
-  if (cb) cb.checked = on;
-}
-
 function enterStale(age: number) {
   staleBlocked = true;
   if (acknowledged || !isVisible()) return;   // nothing on screen → nothing unsafe
   // The reader did not ask for this, so it must not read as editing their way
   // out of an active Map Experience (see url-state.ts).
   rebaselineExperience();
-  setOdinLayer(false);
+  setLayerVisibility(REGISTRY_ID, false);
   disabledForStale = true;
   updateLegends();
   const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
@@ -306,7 +299,7 @@ function wireStaleDialog() {
   const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
   document.getElementById("odinStaleReenable")?.addEventListener("click", () => {
     acknowledged = true;
-    if (disabledForStale) { setOdinLayer(true); disabledForStale = false; }
+    if (disabledForStale) { setLayerVisibility(REGISTRY_ID, true); disabledForStale = false; }
     applyJoin();
     appliedFips = new Set(Object.keys(snapshot));
     updateLegends();
