@@ -15,7 +15,8 @@
 //       records refetch failures for the diagnostics panel). Legend age chip
 //       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
-//       (addOdinOutages); the click popup reads numbers from odinSnapshot().
+//       (addOdinOutages); the click popup reads numbers from odinSnapshot(), and
+//       click-resolve.ts hit-tests with outageFeatureLit().
 //       Also owns the popup's incident-report ‹ › pager: the per-outage records
 //       ride in the SAME snapshot (`records` map, keyed by FIPS), derived
 //       server-side from the same fetch as the county aggregates, so the cards
@@ -93,6 +94,14 @@ function applyJoin() {
       { odin_out: v[0], odin_n: v[1], odin_utils: v[2] ?? null },
     );
   }
+}
+
+// A county is painted only once applyJoin() has written `odin_out` for it; the
+// fill (layers/map-layers-conditions.ts addOdinOutages) leaves a null
+// `odin_out` transparent. click-resolve.ts uses this to drop hit-test matches
+// on transparent counties.
+export function outageFeatureLit(featureState: Record<string, unknown> | undefined): boolean {
+  return featureState?.odin_out != null;
 }
 
 // Drop only OUR keys — the county's feature-state bag is shared with any other

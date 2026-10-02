@@ -233,7 +233,7 @@ export function setZoneGroupFilter(active: string[] | null): void {
 
 // True when a zone/county feature is actually painted (non-zero opacity):
 // repaint() only writes nws_group for features with a filter-matching alert,
-// so a null check suffices. Used by popup.ts to drop hit-test matches on
+// so a null check suffices. Used by click-resolve.ts to drop hit-test matches on
 // transparent features.
 export function zoneFeatureLit(featureState: Record<string, unknown> | undefined): boolean {
   return featureState?.nws_group != null;

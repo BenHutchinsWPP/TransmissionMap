@@ -84,6 +84,9 @@ turns public datasets into PMTiles consumed by the frontend.
       `onMapPoint` / `onMapHover` / `onMapContextMenu` (ESLint enforces the seam)
     - `raster-probes.ts` — `RASTER_PROBES`, `ensureRasterLut`, `updateRasterArrow`
     - `popup.ts` click popups; `popup-format.ts` HTML builder
+    - `click-resolve.ts` — `resolveHits`: the pure click decision (painted-feature
+      filter via each choropleth owner's `*FeatureLit` predicate, tile-duplicate
+      dedupe, single vs picker, edit-mode copy rules); `popup.ts` renders its result
     - `highlights.ts` search highlights; `measure.ts` distance tool
     - `terrain.ts` — 3D Terrain (raster-dem) + 3D Buildings (OFM fill-extrusion) + Hillshade toggles
     - `url-state-codec.ts` — URL parse/format (no side effects), including the

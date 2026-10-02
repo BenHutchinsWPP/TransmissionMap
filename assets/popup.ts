@@ -1,4 +1,12 @@
 // ─── Popup system ─────────────────────────────────────────────────────────────
+// Role: map-click popups. Owns click priority (CLICKABLE_LAYERS, pinned by
+//       src/registry/registry.test.ts), the hover cursor, and rendering: the
+//       feature popup, the disambiguation picker and edit mode's copy popups.
+//       Which of those a click gets is decided by click-resolve.ts's pure
+//       resolveHits(); the HTML body comes from popup-format.ts.
+// Deps: state, src/registry (LAYERS — clickPriority), click-resolve.ts,
+//       popup-format.ts, map-input.ts (onMapTap/onMapHover), hover.ts,
+//       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts.
 
 import * as maplibregl from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
@@ -10,7 +18,7 @@ import { highlightUserFeature, clearUserHighlight, copyFeatureToMyData } from '.
 import { clearFeatureInfo } from './user-data/user-data-geom.js';
 import { buildPopupHtml } from './popup-format.js';
 import { clearWeccHighlight } from './layers/map-layers-wecc.js';
-import { zoneFeatureLit } from './nws-zone-join.js';
+import { resolveHits, hitLit } from './click-resolve.js';
 import { ICON_SVG } from './icons.js';
 import { escapeHtml } from './utils/utils.js';
 import { t } from '../src/i18n/index.js';
@@ -105,22 +113,6 @@ function activeClickableLayers() {
     state.map!.getLayer(id) && state.map!.getLayoutProperty(id, "visibility") !== "none");
 }
 
-// Feature-state-joined choropleths (ODIN outages, FEMA NRI, NWS zone/county) draw EVERY
-// county/zone from the shared boundary tiles and paint unlit ones transparent
-// (setFilter can't read feature-state), but queryRenderedFeatures still
-// hit-tests transparent fills — so invisible polygons were selectable. Each
-// predicate mirrors its layer's opacity paint expression; a feature is a valid
-// hit only when it's actually painted.
-const HIT_LIT: Record<string, (f: MapGeoJSONFeature) => boolean> = {
-  "odin-outages-fill": f => f.state?.odin_out != null,
-  "fema-nri-fill":     f => f.state?.nri_r != null,
-  "nws-zone-fill":     f => zoneFeatureLit(f.state),
-  "nws-county-fill":   f => zoneFeatureLit(f.state),
-};
-function hitLit(f: MapGeoJSONFeature): boolean {
-  return HIT_LIT[f.layer.id]?.(f) ?? true;
-}
-
 function tryHighlightLine(feature: MapGeoJSONFeature) {
   return !feature.layer.id.startsWith("user-") &&
          highlightLine(feature.layer.id, feature.properties || {});
@@ -151,40 +143,21 @@ function onMapClick(e: MapPointerEvent) {
     // copy — the copy popup would otherwise pop up on top of the in-progress shape.
     const drawMode = state.draw?.getMode();
     if (drawMode && drawMode !== 'simple_select' && drawMode !== 'static') return;
-    const cands = state.map.queryRenderedFeatures(box, { layers: activeLayers }).filter(hitLit);
-    // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
-    // borders, so copies would be truncated — only allow GeoJSON-backed features.
-    const copyable = cands.filter(ft => !ft.sourceLayer);
-    if (copyable.length > 1) {
-      showEditPicker(e.lngLat, copyable);
-    } else if (copyable.length === 1) {
-      showCopyPopup(e.lngLat, copyable[0]);
-    } else if (cands.length) {
-      showNotCopyablePopup(e.lngLat);
-    } else {
+  }
+
+  const hit = resolveHits(
+    state.map.queryRenderedFeatures(box, { layers: activeLayers }),
+    state.editMode === 'edit' ? 'edit' : 'view');
+  switch (hit.kind) {
+    case 'copy-picker':  showEditPicker(e.lngLat, hit.features); return;
+    case 'copy':         showCopyPopup(e.lngLat, hit.feature); return;
+    case 'not-copyable': showNotCopyablePopup(e.lngLat); return;
+    case 'picker':       showFeaturePicker(e.lngLat, hit.features); return;
+    case 'single':       renderFeature(e.lngLat, hit.feature); return;
+    case 'none':
       state.popup.remove();
-    }
-    return;
+      if (state.editMode !== 'edit') { clearUserHighlight(); clearLineHighlight(); clearWeccHighlight(); }
   }
-
-  const features = state.map.queryRenderedFeatures(box, { layers: activeLayers }).filter(hitLit);
-  if (!features.length) {
-    state.popup.remove(); clearUserHighlight(); clearLineHighlight(); clearWeccHighlight(); return;
-  }
-
-  // Dedupe tile-boundary duplicates: queryRenderedFeatures repeats a tiled feature
-  // once per tile it straddles. Tiled features always carry ft.id; GeoJSON features
-  // without explicit IDs do not — so only dedup when ft.id is present.
-  const uniq: MapGeoJSONFeature[] = [];
-  const seen = new Set<string>();
-  for (const ft of features) {
-    if (ft.id == null) { uniq.push(ft); continue; }
-    const key = ft.layer.id + '|' + String(ft.id);
-    if (!seen.has(key)) { seen.add(key); uniq.push(ft); }
-  }
-  if (uniq.length > 1) { showFeaturePicker(e.lngLat, uniq); return; }
-
-  renderFeature(e.lngLat, features[0]);
 }
 
 // Common title-ish fields across our layers; first non-empty wins. "NAME" is
@@ -326,7 +299,7 @@ export function initPopups() {
   // Querying everything together (rather than trusting the layer the delegate
   // fired for) is also what makes feature-state-joined layers behave: they
   // hit-test their transparent unlit features too, so with e.g. ODIN on, an
-  // unlit county covers the whole map. hitLit() decides, and a lit feature
+  // unlit county covers the whole map. hitLit() (click-resolve.ts) decides, and a lit feature
   // underneath an unlit polygon still gets the pointer.
   //
   // The hit-test is also skipped while the camera is in motion. A query costs

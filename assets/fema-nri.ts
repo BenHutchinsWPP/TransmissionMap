@@ -18,7 +18,8 @@
 //       diag-log.ts (recordDiagEvent). The source/layers are built by
 //       layers/map-layers-conditions.ts (addFemaNri); the picker is rendered by
 //       ui/ui-layer-rows.ts and wired by ui/ui-filters.ts (setNriHazard); the
-//       popup (popup-format.ts) reads the merged feature-state and nriVersion().
+//       popup (popup-format.ts) reads the merged feature-state and nriVersion();
+//       click-resolve.ts hit-tests with nriFeatureLit().
 // Wired from ui/ui.ts init() via initFemaNri().
 
 import { state } from './state.js';
@@ -63,13 +64,21 @@ function applyJoin() {
   for (const fips in table.counties) {
     const v = table.counties[fips];
     // Rating code 0 = not applicable → null, which the paint leaves transparent
-    // and popup.ts's hit test treats as unlit.
+    // and nriFeatureLit() treats as unlit.
     state.map.setFeatureState(
       { source: SRC, sourceLayer: SRC_LAYER, id: fips },
       { nri_r: v[2 * hi + 1] || null, nri_s: v[2 * hi], nri_cr: v[2 * ci + 1] || null, nri_cs: v[2 * ci] },
     );
   }
   dirty = false;
+}
+
+// A county is painted only when applyJoin() gave it a rating code; the fill
+// (layers/map-layers-conditions.ts addFemaNri) leaves a null `nri_r`
+// transparent. click-resolve.ts uses this to drop hit-test matches on
+// transparent counties.
+export function nriFeatureLit(featureState: Record<string, unknown> | undefined): boolean {
+  return featureState?.nri_r != null;
 }
 
 function ensureLoaded(): Promise<void> {
