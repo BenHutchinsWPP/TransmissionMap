@@ -63,8 +63,8 @@ import {
 import { NWS_GROUP_BUCKETS } from '../src/colors/buckets.js';
 import { on } from './state-bus.js';
 
-export const ZONE_SRC = "nws_zones";
-export const ZONE_SRC_LAYER = "nws_zones";
+const ZONE_SRC = "nws_zones";
+const ZONE_SRC_LAYER = "nws_zones";
 
 export interface ZoneAlertEntry {
   zones: [string, string][];   // [type, ugc] (e.g., "forecast", "fire", "marine")
@@ -343,7 +343,7 @@ function repaint() {
 }
 
 // ── Main entry point: apply a freshly-fetched alerts FeatureCollection ─────
-export function applyZoneAlerts(fc: { zone_alerts?: ZoneAlertEntry[] } | null | undefined) {
+function applyZoneAlerts(fc: { zone_alerts?: ZoneAlertEntry[] } | null | undefined) {
   if (!state.map) return;
   const entries = fc?.zone_alerts ?? [];
   if (!entries.length) { clearZoneAlerts(); return; }

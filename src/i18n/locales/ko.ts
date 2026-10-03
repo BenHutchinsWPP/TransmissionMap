@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': '영향을 받은 총 수용가 수',
   'popup.viewIncidentReports': '사고 보고서 보기 ▸',
   'popup.odinFooter': 'ORNL ODIN 데이터 — 전력회사 자체 보고; 일부 지역만 포함됩니다.',
+  'popup.nriPercentile': '{rating} (전국 백분위 {score})',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · FEMA의 보증을 받지 않음 · 계획 용도로만 사용',
   'popup.weatherZone': '기상 구역',
   'popup.fireWeatherZone': '산불 기상 구역',
   'popup.marineZone': '해상 기상 구역',

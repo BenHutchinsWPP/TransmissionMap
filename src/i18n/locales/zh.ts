@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': '受影响用户总数',
   'popup.viewIncidentReports': '查看火情报告 ▸',
   'popup.odinFooter': '数据来源于 ORNL ODIN — 由电力公司自行上报；仅覆盖部分区域。',
+  'popup.nriPercentile': '{rating}（全国百分位 {score}）',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · 未经 FEMA 认可 · 仅供规划使用',
   'popup.weatherZone': '气象分区',
   'popup.fireWeatherZone': '火险气象分区',
   'popup.marineZone': '海事分区',

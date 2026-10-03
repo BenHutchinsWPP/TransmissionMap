@@ -5,10 +5,21 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderDataCredits } from './ui-credits.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 
+// Mirrors the shapes index.html ships: top-level anchored entries, an
+// umbrella entry whose anchors sit on nested <span>s, an entry carrying a
+// display note, and an anchorless entry.
 const FALLBACK_HTML = `
   <li data-source-credit="osm"><a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a></li>
-  <li data-source-credit="eia"><a href="https://www.eia.gov/">EIA</a></li>
+  <li><a href="https://www.eia.gov/">EIA</a> — public domain: <span data-source-credit="eia"><a href="https://www.eia.gov/electricity/data/eia860/">Form 860</a></span>; <span data-source-credit="eia-ba">Balancing Authorities</span>.</li>
+  <li data-source-credit="hifld-tribal">Census TIGER/Line — <strong>Display note:</strong> Administrative boundaries only.</li>
+  <li>Tooling: <a href="https://maplibre.org/">MapLibre GL JS</a> / <a href="https://www.arcgis.com/">Esri World Imagery</a></li>
 `;
+const FALLBACK_TEXTS = [
+  'OpenStreetMap contributors',
+  'EIA — public domain: Form 860; Balancing Authorities.',
+  'Display note: Administrative boundaries only.',
+  'Tooling: MapLibre GL JS / Esri World Imagery',
+];
 
 function setupDialog() {
   document.body.innerHTML = `
@@ -67,41 +78,79 @@ afterEach(() => {
 });
 
 describe('renderDataCredits', () => {
-  it('renders one <li> per source_id group, replacing the fallback list', async () => {
+  it('appends each group\'s layer detail to the <li> holding its anchor', async () => {
     stubFetchOk(VALID_MANIFEST);
 
     await renderDataCredits();
 
     const ul = document.querySelector('#creditsDialog ul')!;
-    const groups = ul.querySelectorAll('li[data-source-credit]');
-    expect(groups.length).toBe(2);
+    expect(ul.querySelectorAll(':scope > li').length).toBe(4);
 
-    const eiaGroup = ul.querySelector('[data-source-credit="eia"]')!;
-    expect(eiaGroup.querySelector('strong')?.textContent).toBe(LAYER_SOURCES.eia.label);
-    expect(eiaGroup.innerHTML).toContain('EIA Generators');
-    expect(eiaGroup.innerHTML).toContain('14,806 rows');
-    expect(eiaGroup.querySelector('a')?.getAttribute('href')).toBe('https://www.eia.gov/electricity/data/eia860/');
+    // eia's anchor is a nested <span>; its detail lands in the umbrella <li>.
+    const eiaHost = ul.querySelector('[data-source-credit="eia"]')!.closest('li')!;
+    const eiaDetail = eiaHost.querySelector('.credits-group-layers')!;
+    expect(eiaDetail.textContent).toContain('EIA Generators');
+    expect(eiaDetail.textContent).toContain('14,806 rows');
+    expect(eiaDetail.querySelector('a')?.getAttribute('href')).toBe('https://www.eia.gov/electricity/data/eia860/');
 
     // url is UNKNOWN — rendered as plain text, no link, and the word
     // "UNKNOWN" itself never reaches the DOM.
-    const osmGroup = ul.querySelector('[data-source-credit="osm"]')!;
-    expect(osmGroup.querySelector('strong')?.textContent).toBe(LAYER_SOURCES.osm.label);
-    expect(osmGroup.querySelector('a')).toBeNull();
-    expect(osmGroup.innerHTML).not.toContain('UNKNOWN');
-    expect(osmGroup.innerHTML).toContain('OSM Plants (Polygons)');
+    const osmDetail = ul.querySelector('[data-source-credit="osm"] .credits-group-layers')!;
+    expect(osmDetail.querySelector('a')).toBeNull();
+    expect(osmDetail.innerHTML).not.toContain('UNKNOWN');
+    expect(osmDetail.textContent).toContain('OSM Plants (Polygons)');
   });
 
-  it('keeps a shipped entry whose source has no manifest layer (live feeds, joined tables)', async () => {
-    document.querySelector('#creditsDialog ul')!.insertAdjacentHTML('beforeend',
-      '<li data-source-credit="fema-nri">FEMA National Risk Index — not endorsed by FEMA.</li>');
-    stubFetchOk(VALID_MANIFEST);
+  it('keeps every hand-written credit, nested-span umbrella, display note and anchorless entry', async () => {
+    stubFetchOk({
+      ...VALID_MANIFEST,
+      layers: {
+        ...VALID_MANIFEST.layers,
+        tribal: { ...VALID_MANIFEST.layers.eia_generators, label: 'Tribal Lands', source_id: 'hifld-tribal' },
+        ba: { ...VALID_MANIFEST.layers.eia_generators, label: 'EIA BAs', source_id: 'eia-ba' },
+      },
+    });
 
     await renderDataCredits();
 
     const ul = document.querySelector('#creditsDialog ul')!;
-    expect(ul.querySelectorAll('li[data-source-credit]').length).toBe(3);
-    expect(ul.querySelector('[data-source-credit="fema-nri"]')?.textContent).toContain('not endorsed by FEMA');
-    expect(ul.querySelector('[data-source-credit="eia"]')?.innerHTML).toContain('14,806 rows');
+    for (const text of FALLBACK_TEXTS) expect(ul.textContent).toContain(text);
+    expect(ul.querySelector('[data-source-credit="hifld-tribal"]')!.textContent).toContain('Tribal Lands');
+    expect(ul.querySelector('[data-source-credit="eia-ba"]')!.closest('li')!.textContent).toContain('EIA BAs');
+  });
+
+  it('adds a new anchored <li> for a group with no hand-written entry', async () => {
+    stubFetchOk({
+      ...VALID_MANIFEST,
+      layers: { pop: { ...VALID_MANIFEST.layers.eia_generators, label: 'Population', source_id: 'worldpop' } },
+    });
+
+    await renderDataCredits();
+
+    const ul = document.querySelector('#creditsDialog ul')!;
+    const added = ul.querySelector(':scope > li[data-source-credit="worldpop"]')!;
+    expect(added.querySelector('strong')?.textContent).toBe(LAYER_SOURCES.worldpop.label);
+    expect(added.textContent).toContain('Population');
+    for (const text of FALLBACK_TEXTS) expect(ul.textContent).toContain(text);
+  });
+
+  it('links a layer label only for an http(s) url', async () => {
+    const base = VALID_MANIFEST.layers.eia_generators;
+    stubFetchOk({
+      ...VALID_MANIFEST,
+      layers: {
+        js: { ...base, label: 'JS', url: 'javascript:alert(1)' },
+        tab: { ...base, label: 'Tab', url: 'java\tscript:alert(1)' },
+        data: { ...base, label: 'Data', url: 'data:text/html,<script>alert(1)</script>' },
+      },
+    });
+
+    await renderDataCredits();
+
+    const detail = document.querySelector('[data-source-credit="eia"]')!.closest('li')!.querySelector('.credits-group-layers')!;
+    expect(detail.textContent).toContain('JS');
+    expect(detail.textContent).toContain('Tab');
+    expect(detail.querySelector('a')).toBeNull();
   });
 
   it('groups several layers under one shared source_id anchor', async () => {
@@ -125,9 +174,7 @@ describe('renderDataCredits', () => {
     await renderDataCredits();
 
     const ul = document.querySelector('#creditsDialog ul')!;
-    // One osm group, plus the shipped eia entry this manifest has no layer for.
-    expect(Array.from(ul.querySelectorAll('li[data-source-credit]'), li => li.getAttribute('data-source-credit')))
-      .toEqual(['eia', 'osm']);
+    expect(ul.querySelectorAll(':scope > li').length).toBe(4);
     const osmGroup = ul.querySelector('[data-source-credit="osm"]')!;
     expect(osmGroup.querySelectorAll('.credits-group-layers > li').length).toBe(2);
     expect(osmGroup.innerHTML).toContain('OSM Plants (Points)');
@@ -271,8 +318,7 @@ describe('renderDataCredits', () => {
     expect(ul.querySelector('script')).toBeNull();
     expect(ul.innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;');
 
-    const osmGroup = ul.querySelector('[data-source-credit="osm"]')!;
-    const link = osmGroup.querySelector('a')!;
+    const link = ul.querySelector('[data-source-credit="osm"] .credits-group-layers a')!;
     expect(link.getAttribute('href')).toBe('https://example.com/"><script>alert(3)</script>');
     // The href value is attacker-controlled but was written through
     // escapeHtml, so it cannot break out of the attribute or open a new tag.
@@ -296,7 +342,7 @@ describe('renderDataCredits', () => {
     await renderDataCredits();
 
     const ul = document.querySelector('#creditsDialog ul')!;
-    const eiaGroup = ul.querySelector('[data-source-credit="eia"]')!;
+    const eiaGroup = ul.querySelector('[data-source-credit="eia"]')!.closest('li')!;
     // `state` has full coverage (14,806 === source_rows) and is dropped;
     // the rest are sorted by count descending.
     expect(eiaGroup.innerHTML).not.toContain('with state');
@@ -345,7 +391,7 @@ describe('renderDataCredits', () => {
 
     await renderDataCredits();
 
-    const eiaGroup = document.querySelector('[data-source-credit="eia"]')!;
+    const eiaGroup = document.querySelector('[data-source-credit="eia"]')!.closest('li')!;
     expect(eiaGroup.innerHTML).toContain('900 with a');
     expect(eiaGroup.innerHTML).toContain('500 with e');
     expect(eiaGroup.innerHTML).not.toContain('with f');
@@ -387,30 +433,26 @@ describe('renderDataCredits', () => {
 
     await renderDataCredits();
 
-    const eiaGroup = document.querySelector('[data-source-credit="eia"]')!;
+    const eiaGroup = document.querySelector('[data-source-credit="eia"]')!.closest('li')!;
     expect(eiaGroup.innerHTML).toContain('2,048 rows');
     expect(eiaGroup.innerHTML).toContain('2.3 MB');
   });
 
-  // Pins the fix for a real regression: replacing the credits list from the
-  // manifest must not orphan the per-layer "source" button (ui-layer-rows.ts
-  // -> openSourceCredit() in ui.ts), which scrolls to a data-source-credit
-  // anchor by its LAYER_SOURCES key. Reads the real index.html fallback and
-  // the real LAYER_SOURCES registry, so it fails if a future change makes
-  // rendering drop or rename an anchor those callers depend on.
-  it('every fallback data-source-credit anchor still resolves after a manifest render', async () => {
+  // Runs the render over the real index.html credits list and the real
+  // LAYER_SOURCES registry, with a manifest layer for every anchor it carries:
+  // every hand-written entry's text (notes, disclaimers, anchorless entries)
+  // must survive, and every anchor the per-layer "source" button
+  // (ui-layer-rows.ts -> openSourceCredit() in ui.ts) scrolls to must resolve.
+  it('keeps every index.html credit and anchor after a manifest render', async () => {
     const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
-    const dialogMatch = html.match(/<dialog[^>]*id="creditsDialog"[^>]*>([\s\S]*?)<\/dialog>/);
+    const dialogMatch = html.match(/<dialog[^>]*id="creditsDialog"[^>]*>[\s\S]*?<ul>([\s\S]*?)<\/ul>\s*<p class="credits-support">/);
     expect(dialogMatch).not.toBeNull();
+    const list = document.querySelector('#creditsDialog ul')!;
+    list.innerHTML = dialogMatch![1];
 
-    const fallbackIds = new Set(
-      Array.from(dialogMatch![1].matchAll(/data-source-credit="([^"]+)"/g)).map(m => m[1]),
-    );
-    // Anchors that are real LAYER_SOURCES keys — the only ones openSourceCredit()
-    // and the per-layer "source" button can navigate to (the fallback also
-    // carries a couple of fixed extras, e.g. "im3", that aren't LAYER_SOURCES
-    // keys and have no source button pointed at them).
-    const anchoredSourceIds = Array.from(fallbackIds).filter(id => id in LAYER_SOURCES);
+    const fallbackTexts = Array.from(list.querySelectorAll(':scope > li'), li => li.textContent!.trim());
+    const anchoredSourceIds = Array.from(list.querySelectorAll<HTMLElement>('[data-source-credit]'),
+      el => el.dataset.sourceCredit!).filter(id => Object.hasOwn(LAYER_SOURCES, id));
     expect(anchoredSourceIds.length).toBeGreaterThan(0);
 
     const layers: Record<string, unknown> = {};
@@ -424,9 +466,13 @@ describe('renderDataCredits', () => {
 
     await renderDataCredits();
 
-    const ul = document.querySelector('#creditsDialog ul')!;
+    expect(list.querySelectorAll('.credits-group-layers').length).toBe(anchoredSourceIds.length);
+    const after = list.textContent!;
+    for (const text of fallbackTexts) expect(after).toContain(text);
+    expect(after).toContain('ZCTAs approximate ZIP code service areas');
+    expect(after).toContain('Esri World Imagery');
     const renderedIds = new Set(
-      Array.from(ul.querySelectorAll('[data-source-credit]')).map(el => el.getAttribute('data-source-credit')),
+      Array.from(list.querySelectorAll('[data-source-credit]')).map(el => el.getAttribute('data-source-credit')),
     );
     for (const sourceId of anchoredSourceIds) {
       expect(renderedIds.has(sourceId), `missing data-source-credit for "${sourceId}" after manifest render`).toBe(true);

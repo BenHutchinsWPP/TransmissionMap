@@ -3,8 +3,8 @@
 
 Emits, per variable, into the output DIRECTORY (-o):
 
-  <var>.webp   baked-color display raster. Cropped to lon -170..-50, lat
-               15..75, upsampled 4x (cubic; 0.25 deg native is blocky —
+  <var>.webp   baked-color display raster. Cropped to lon -180..180, lat
+               -85..85, upsampled 2x (cubic; 0.25 deg native is blocky —
                smooth the image only, not the LUT), then warped to Web
                Mercator rows so the lon/lat-cornered image source registers.
   <var>.i16.gz flat Int16 grid of value x scale at NATIVE 0.25 deg on the

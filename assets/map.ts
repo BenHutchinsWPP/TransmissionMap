@@ -412,7 +412,7 @@ async function addOfmBasemaps() {
   setMapLabelLanguage(map, getLocale());
 }
 
-export function setMapLabelLanguage(map: maplibregl.Map, locale: SupportedLocale): void {
+function setMapLabelLanguage(map: maplibregl.Map, locale: SupportedLocale): void {
   const expr = locale === 'en'
     ? ['coalesce', ['get', 'name:en'], ['get', 'name']]
     : ['coalesce', ['get', `name:${locale}`], ['get', 'name:en'], ['get', 'name']];
@@ -520,7 +520,7 @@ export function switchBasemap(type: string) {
 const ATMOSPHERE_STEP = 0.05;
 let atmosphereBlend = -1;
 
-export function syncAtmosphere() {
+function syncAtmosphere() {
   if (!state.map) return;
   const fade = 1 - state.map.getPitch() / ATMOSPHERE_FADE_PITCH;
   const wanted = state.projection === 'globe'

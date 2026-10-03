@@ -26,7 +26,7 @@ import { DATA } from './constants.js';
 import { initLiveStaleness } from './live-staleness.js';
 import { pruneExpiredZoneAlerts, clearZoneAlerts, refetchZoneAlerts } from './nws-zone-join.js';
 
-export const NWS_REFRESH_MS = 5 * 60_000;        // 5 minutes (feed cadence ~10 min)
+const NWS_REFRESH_MS = 5 * 60_000;        // 5 minutes (feed cadence ~10 min)
 export const NWS_MAX_AGE_MS = 3 * 60 * 60_000;   // 3 hours = many missed cycles
 
 function pruneExpiredAlerts(features: GeoJSON.Feature[]): GeoJSON.Feature[] {

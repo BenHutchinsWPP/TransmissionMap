@@ -17,12 +17,12 @@
 #   url        the dataset's landing page
 #   licence    the licence as stated by the provider
 #   source_id  the src/registry/sources.ts LAYER_SOURCES key this layer's
-#              credit is grouped under — assets/ui/ui-credits.ts renders one
-#              <li data-source-credit="<source_id>"> per key, several layers
+#              credit is grouped under — assets/ui/ui-credits.ts appends each
+#              key's layer detail to the entry carrying
+#              data-source-credit="<source_id>" (or adds one), several layers
 #              sharing one key by design, so this is what keeps a layer row's
 #              "source" button (openSourceCredit() in ui.ts) landing on the
-#              right entry once the credits list renders from this manifest
-#              instead of index.html's hand-written fallback.
+#              entry that carries this layer's detail.
 #
 # Facts here are drawn only from docs/data-sources.md and docs/layers/<id>.md
 # — never from the web or from memory of what a licence "usually" is (source_id

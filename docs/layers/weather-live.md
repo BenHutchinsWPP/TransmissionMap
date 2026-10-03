@@ -39,14 +39,16 @@ within the hour. GFS is freely accessible via AWS Open Data at
   0.25° grid, with nodata set to **−32768**. Saved as gzipped `.i16.gz` binary —
   the browser fetches the grid whole, with no range-request path as the tiles have.
   (Scaling by 10 keeps single-decimal precision for hover readout without floats.)
-- **Display image:** The 0.25° field is upsampled **2× with cubic resampling** on the
-  native lat/lon grid (~0.0625°, ~7 km), then colorized using the per-variable `RAMP` in the
-  script, which **must stay identical to the matching ramp in `src/colors/ramps.ts`**
-  (each file carries a comment pointing at the other). Saved as lossy WEBP (q85),
-  ~40–60 KB per variable, served as MapLibre **`image` sources**.
-- **Wind particle animation:** For u/v winds, additionally exports `wind_uv.png`
-  (u/v offset-encoded as `[u+40, v+40]` clamped to [0,255] for the range [−40, 40] m/s)
-  feeding `assets/weather-particles.ts` lazy-load particle trajectories.
+- **Display image:** The global field, cropped to −85…85° latitude, is upsampled **2× with
+  cubic resampling** on the native lat/lon grid (~0.125°, ~14 km), then colorized using the
+  per-variable `RAMP` in the script, which **must stay identical to the matching ramp in
+  `src/colors/ramps.ts`** (each file carries a comment pointing at the other). The
+  colorized rows are then resampled to Web Mercator spacing so the lon/lat-cornered image
+  registers on the map. Saved as lossy WEBP (q85), served as MapLibre **`image` sources**.
+- **Wind particle animation:** For u/v winds, additionally exports `wind_uv.png` at native
+  0.25° — u in R, v in G, each clamped to [−40, 40] m/s and linearly scaled onto 0…255
+  (`uv_min`/`uv_max` in `meta.json`); alpha 0 marks nodata. It feeds the lazy-loaded
+  particle animation in `assets/weather-particles.ts`.
 - **Metadata sidecar:** A shared `meta.json` carries:
   - `run_utc` / `step` (forecast cycle and output step)
   - `valid_utc` (the time the forecast describes)

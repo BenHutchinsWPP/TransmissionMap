@@ -102,6 +102,15 @@ describe('readUrlState – layer visibility', () => {
     expect(state.layerVisibility['osm-transmission-lines']).toBe(true);
     expect(state.layerVisibility['hifld-transmission-lines']).toBe(false);
   });
+
+  it('boots a link naming two members of an exclusive group with one of them on', () => {
+    // odin-outages and fema-nri share 'county-choropleth'; the later one wins,
+    // as it does when applyView() switches them on in registry order.
+    setHash('l=OUT.NRI');
+    readUrlState();
+    expect(state.layerVisibility['odin-outages']).toBe(false);
+    expect(state.layerVisibility['fema-nri']).toBe(true);
+  });
 });
 
 describe('readUrlState – legend filters', () => {

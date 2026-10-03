@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': '影響を受けた総需要家数',
   'popup.viewIncidentReports': 'インシデント詳細を表示 ▸',
   'popup.odinFooter': 'ORNL ODIN 提供データ — 各電力会社の自己申告に基づくため一部地域のみ対象',
+  'popup.nriPercentile': '{rating}（全国パーセンタイル {score}）',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · FEMA による承認を受けたものではありません · 計画目的でのみ使用',
   'popup.weatherZone': '気象警報区域',
   'popup.fireWeatherZone': '火災気象区域',
   'popup.marineZone': '海上警報区域',

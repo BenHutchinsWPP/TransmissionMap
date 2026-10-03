@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': 'Clienti totali interessati',
   'popup.viewIncidentReports': 'Visualizza rapporti incidenti ▸',
   'popup.odinFooter': 'Dati da ORNL ODIN — auto-segnalati dalle utility; la copertura è parziale.',
+  'popup.nriPercentile': '{rating} (percentile nazionale {score})',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · non approvato dalla FEMA · solo per uso di pianificazione',
   'popup.weatherZone': 'Zona meteorologica',
   'popup.fireWeatherZone': 'zona meteo incendi',
   'popup.marineZone': 'zona marina',

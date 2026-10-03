@@ -76,9 +76,9 @@ vi.mock('./visibility.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./visibility.js')>();
   return {
     ...actual,
-    setLayerVisibility: vi.fn((id: string, on: boolean) => {
+    setLayerVisibility: vi.fn((id: string, on: boolean, writeUrl?: boolean) => {
       visibilityCalls.push([id, on]);
-      actual.setLayerVisibility(id, on);
+      actual.setLayerVisibility(id, on, writeUrl);
     }),
   };
 });
@@ -102,6 +102,7 @@ import { formatUrlState, parseUrlState, type UrlStateData } from './url-state-co
 import { EXPERIENCES, type MapExperience } from '../src/registry/experiences.js';
 import { experienceUrlState, applyExperience } from './experiences.js';
 import { applyView, seedView } from './view-state.js';
+import { on } from './state-bus.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -292,6 +293,30 @@ describe('applying one view after another', () => {
       applyPreset(presetOf(PLAIN));
       expect(snapshot(), `"${exp.id}" leaked into the next story`).toEqual(clean);
     }
+  });
+});
+
+// ─── 2b. One view, one URL write ──────────────────────────────────────────────
+
+describe('applyView', () => {
+  it('writes the URL once, however many layers it switches', () => {
+    let writes = 0;
+    const count = () => { writes++; };
+    on('url:write', count);
+    applyPreset({ layersOn: ['ogf-planned-transmission', 'westtec-10yr', 'wildfire-smoke', 'eia-generators'] });
+    expect(visibilityCalls.length).toBeGreaterThan(1);
+    expect(writes + writeUrlStateCalls.length).toBe(1);
+  });
+
+  it('lands a view naming two members of an exclusive group the way seedView does', () => {
+    const data = parseUrlState(new URLSearchParams('l=OUT.NRI'));
+    seedView(data);
+    const seeded = { ...state.layerVisibility };
+    seedView({});
+    applyView(data);
+    expect(state.layerVisibility).toEqual(seeded);
+    expect(seeded['odin-outages']).toBe(false);
+    expect(seeded['fema-nri']).toBe(true);
   });
 });
 

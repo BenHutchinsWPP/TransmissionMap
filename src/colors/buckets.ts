@@ -367,7 +367,7 @@ const OGF_COLOR_CFG: Record<OgfColorMode, {
 // expressions. First bucket wins combo values (e.g. "MISO, SPP" listed under
 // both spp and miso for filtering) — match branches must be unique. Falls
 // back to the "other" bucket's color if present.
-export function bucketMatchExpr(
+function bucketMatchExpr(
   field: string,
   buckets: { id: string; color: string }[],
   map: Record<string, string[]>

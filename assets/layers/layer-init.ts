@@ -139,9 +139,10 @@ export function initialVisibility(registryId: string): "visible" | "none" {
 }
 
 // ─── Shared county-boundary source (data-join infra) ──────────────────────────
-// Census TIGER county polygons, added ONCE and reused by every county-keyed data
-// layer (ODIN outages today; risk indices etc. later). Those layers ship no
-// geometry — only FIPS→value — and paint via MapLibre feature-state.
+// Census TIGER county polygons, added ONCE and reused by every county layer:
+// the US Counties outlines and the county-keyed data layers (ODIN outages,
+// FEMA NRI, NWS county alerts). The data layers ship no geometry — only
+// FIPS→value — and paint via MapLibre feature-state.
 // `promoteId` makes each feature's id its GEOID, which is what setFeatureState
 // addresses. GEOID is a zero-padded 5-digit string ("08123") — never parseInt it.
 // Consumers MUST namespace their feature-state keys (e.g. `odin_out`), since all
@@ -156,14 +157,13 @@ export function ensureCountyBoundaries() {
     url: pmtilesUrl(DATA.county_boundaries),
     promoteId: { [COUNTY_SRC_LAYER]: "GEOID" },
     // MapLibre attributes SOURCES, not layers, and only while a layer using the
-    // source is visible — so this string must credit the geometry (Census) AND
-    // whatever data is painted on it. ODIN is the sole consumer today. When a
-    // second county-keyed layer lands, this over-credits ODIN whenever that
-    // other layer is on alone: move each layer's credit out to the credits panel
-    // (a new registry `creditId` field) and leave only Census here.
+    // source is visible — so this one string credits the geometry (Census) and
+    // every dataset painted on it (ODIN outages, FEMA NRI), whichever of those
+    // layers is on.
     attribution:
       '<a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas.html">US Census TIGER</a>' +
-      ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>',
+      ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>' +
+      ' | <a href="https://www.arcgis.com/home/item.html?id=39485e8035d446a5bff03259508ae355">FEMA NRI</a>',
   });
 }
 

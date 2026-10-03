@@ -262,6 +262,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': 'إجمالي المشتركين المتأثرين',
   'popup.viewIncidentReports': 'عرض تقارير الحوادث ▸',
   'popup.odinFooter': 'بيانات ORNL ODIN — مأخوذة من إفصاحات شركات المرافق؛ التغطية جزئية.',
+  'popup.nriPercentile': '{rating} (المئين الوطني {score})',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · غير معتمد من FEMA · للاستخدام في التخطيط فقط',
   'popup.weatherZone': 'منطقة أرصاد جوية',
   'popup.fireWeatherZone': 'منطقة أرصاد حرائق الغابات',
   'popup.marineZone': 'منطقة بحرية',

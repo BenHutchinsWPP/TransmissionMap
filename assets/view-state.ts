@@ -5,12 +5,14 @@
 //                          only; map.ts's load handler paints it.
 //         applyView(data)  live map: drives the map to the view, then emits
 //                          'view:applied' (ui.ts resyncs panels and controls)
-//                          and 'url:write'.
+//                          and 'url:write' — the apply's one URL write.
 //         currentView()    the live view in the codec's shape, for the link.
 //       Both entry points resolve `data` over the codec's defaultView() first,
 //       so a field the data leaves out (the codec omits defaults) lands at its
 //       default instead of keeping the last view's value — a story, a link or
-//       Reset never inherits leftovers. Reset is applyView({}).
+//       Reset never inherits leftovers. Reset is applyView({}). Resolving also
+//       settles each exclusive layer group on one member, so a link that names
+//       two boots and applies to the same single layer.
 //
 // Adding a view field: a UrlStateData field with its param and default in
 // url-state-codec.ts, then its write in writeState() and its map call in
@@ -19,17 +21,17 @@
 // Camera stays outside the view: map.ts owns the hash's position segment, and
 // applyView() takes it as a separate argument.
 //
-// Deps: state.js, url-state-codec.js (defaultView, UrlStateData),
-//       visibility.js (setLayerVisibility + the gen-mode/colour-by appliers),
+// Deps: state.js, url-state-codec.js (defaultView, UrlStateData, CameraView),
+//       visibility.js (setLayerVisibility, exclusiveRivals + the gen-mode/colour-by appliers),
 //       map.js (switchBasemap, switchProjection),
 //       terrain.js (setTerrain3d, setBuildings3d, setHillshade),
 //       weather-live.js (setWeatherVar), fema-nri.js (setNriHazard),
 //       layers/map-layers-conditions.js (applySmokeOpacity), state-bus.js.
 
 import { state } from './state.js';
-import { defaultView, type UrlStateData } from './url-state-codec.js';
+import { defaultView, type UrlStateData, type CameraView } from './url-state-codec.js';
 import {
-  setLayerVisibility, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy,
+  setLayerVisibility, exclusiveRivals, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy,
 } from './visibility.js';
 import { switchBasemap, switchProjection } from './map.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from './terrain.js';
@@ -43,14 +45,6 @@ export type View = Omit<UrlStateData, 'lang' | 'experienceId'>;
 
 export type CameraMode = 'fly' | 'jump';
 
-export interface CameraView {
-  center: [number, number];
-  zoom: number;
-  pitch?: number;
-  bearing?: number;
-  mode?: CameraMode;
-}
-
 function resolve(data: Partial<UrlStateData>): View {
   const v = defaultView();
   // Keyed fields merge per key: a link lists only the layers and filters that
@@ -59,6 +53,11 @@ function resolve(data: Partial<UrlStateData>): View {
   Object.assign(v.legendFilters, data.legendFilters);
   Object.assign(v.layerFilters, data.layerFilters);
   Object.assign(v.genMode, data.genMode);
+  // The layer furthest down the registry wins its exclusive group, as it would
+  // switching the group's members on in registry order.
+  for (const id of Object.keys(v.layerVisibility).reverse()) {
+    if (v.layerVisibility[id]) for (const r of exclusiveRivals(id)) v.layerVisibility[r] = false;
+  }
   for (const k of [
     'mwFilter', 'yearFilter', 'ogfColorBy', 'westtecColorBy', 'weatherVar', 'nriHazard',
     'smokeOpacity', 'basemap', 'projection', 'terrain3d', 'buildings3d', 'hillshade', 'region',
@@ -98,7 +97,7 @@ export function seedView(data: Partial<UrlStateData>) {
   state.hillshade = v.hillshade;
 }
 
-export function applyView(data: Partial<UrlStateData>, camera?: CameraView) {
+export function applyView(data: Partial<UrlStateData>, camera?: CameraView & { mode?: CameraMode }) {
   if (!state.mapReady || !state.map) return;
   const map = state.map;
   const v = resolve(data);
@@ -115,10 +114,10 @@ export function applyView(data: Partial<UrlStateData>, camera?: CameraView) {
   // the view turns off gives up its map layers before the ones it turns on
   // claim theirs (and an exclusive group never switches its new member off).
   for (const [id, on] of Object.entries(v.layerVisibility)) {
-    if (!on && state.layerVisibility[id]) setLayerVisibility(id, false);
+    if (!on && state.layerVisibility[id]) setLayerVisibility(id, false, false);
   }
   for (const [id, on] of Object.entries(v.layerVisibility)) {
-    if (on && !state.layerVisibility[id]) setLayerVisibility(id, true);
+    if (on && !state.layerVisibility[id]) setLayerVisibility(id, true, false);
   }
 
   if (state.terrain3d !== v.terrain3d) setTerrain3d(v.terrain3d);
@@ -135,8 +134,7 @@ export function applyView(data: Partial<UrlStateData>, camera?: CameraView) {
   emit('url:write');
 
   if (!camera) return;
-  const { center, zoom, pitch = 0, bearing = 0, mode = 'fly' } = camera;
-  const view = { center, zoom, pitch, bearing };
+  const { mode = 'fly', ...view } = camera;
   if (mode === 'jump') map.jumpTo(view);
   else map.flyTo({ ...view, speed: 0.8, curve: 1.4, essential: true });
 }

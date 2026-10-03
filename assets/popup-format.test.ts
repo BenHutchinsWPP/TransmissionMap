@@ -75,6 +75,11 @@ describe('websiteRow', () => {
     expect(websiteRow('java\nscript:alert(1)')).toBe('');
     expect(websiteRow(' JavaScript:alert(1)')).toBe('');
   });
+
+  it('links only http(s) URLs', () => {
+    expect(websiteRow('data:text/html,<script>alert(1)</script>')).toBe('');
+    expect(websiteRow('HTTP://example.com')).toContain('href="HTTP://example.com"');
+  });
 });
 
 // ─── title() ─────────────────────────────────────────────────────────────────
@@ -549,6 +554,24 @@ describe('fema-nri-fill renderer', () => {
   it('does not repeat the composite row when the composite is selected', () => {
     const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 3, nri_s: 50, nri_cr: 3, nri_cs: 50 });
     expect(out?.match(/Overall Risk/g)).toHaveLength(1);
+  });
+
+  it('shows no percentile beside an Insufficient Data rating', () => {
+    const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 6, nri_s: 12.3, nri_cr: 6, nri_cs: 12.3 });
+    expect(out).toContain('Insufficient Data');
+    expect(out).not.toContain('12.3');
+  });
+
+  it('localises the percentile and footer', async () => {
+    await loadDictionary('es');
+    setLocale('es');
+    try {
+      const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 5, nri_s: 99.71, nri_cr: 5, nri_cs: 99.71 });
+      expect(out).toContain('Very High (percentil nacional 99.7)');
+      expect(out).toContain('sin el respaldo de FEMA');
+    } finally {
+      setLocale('en');
+    }
   });
 
   it('renders nothing for an unlit county (hazard not applicable)', () => {

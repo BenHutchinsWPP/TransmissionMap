@@ -32,7 +32,7 @@
 
 import { SUBSTANCE_MAP, NERC_MAP, RETAIL_TYPE_MAP, SECTOR_MAP } from '../colors/buckets.js';
 
-export type FieldType = 'string' | 'number' | 'boolean';
+type FieldType = 'string' | 'number' | 'boolean';
 export type FieldOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'not_in' | 'contains' | 'has';
 
 export interface FieldDef {

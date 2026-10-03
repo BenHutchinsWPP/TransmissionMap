@@ -15,7 +15,7 @@
 //       records refetch failures for the diagnostics panel). Legend age chip
 //       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
-//       (addOdinOutages); the click popup reads numbers from odinSnapshot(), and
+//       (addOdinOutages); the click popup reads numbers from the feature-state set here, and
 //       click-resolve.ts hit-tests with outageFeatureLit().
 //       Also owns the popup's incident-report ‹ › pager: the per-outage records
 //       ride in the SAME snapshot (`records` map, keyed by FIPS), derived
@@ -66,12 +66,6 @@ let inflight = false;
 let acknowledged = false;      // reader accepted stale data — do not re-prompt
 let staleBlocked = false;      // snapshot is past MAX_AGE_MS and unacknowledged
 let disabledForStale = false;  // we turned the layer off, so re-enable restores it
-
-// Popup (popup-format.ts) reads the numbers for a clicked county from here as a
-// fallback; the primary path merges feature-state in popup.ts.
-export function odinSnapshot(): Record<string, [number, number, OdinUtil[]?]> {
-  return snapshot;
-}
 
 // Age of the painted snapshot and the cutoff it is judged against, for the
 // diagnostics panel (diagnostics.ts). Reads the same generatedUtc and

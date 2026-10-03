@@ -29,8 +29,8 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 // Paths stay double-quoted data/layers/… string literals after the origin:
 // scripts/validate_build.py scrapes them to decide what to check and publish.
 const RAW_REPO = "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/";
-export const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
-export const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
+const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
+const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
 
 // Download packs are plain navigations, never fetch() or PMTiles range reads, so
 // they need no CORS header — which frees them from the branch and its 100 MiB
@@ -282,12 +282,6 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 // Noto Sans array.
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
-// Fog over 3D terrain, as a fraction of the distance from map center (0) to
-// horizon (1): the wash begins at this point, so the value doubles as its own
-// off switch. At 1 — the spec maximum, and what MapLibre itself uses for a
-// style that declares no sky — distant ridgelines stay as crisp as the near
-// ground at every pitch.
-//
 // Where the horizon haze begins, as a fraction of the distance from map centre
 // (0) to horizon (1). 0.95 keeps it to a strip at the skyline, leaving the near
 // and middle ground — where the map is read — clear. 1 switches fog off
@@ -296,16 +290,16 @@ export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{rang
 // The colour stays the opaque default. A translucent fog colour reads as the
 // gentler setting and behaves as the opposite: the shader squares the blend
 // factor, so a translucent wash lands under a 2% luminance shift across most of
-// the band, while the same alpha runs through `linearToGamma` on the spurious
-// per-stack pass and comes back amplified. Opacity buys visible haze per unit
-// of side effect.
+// the band, while the same alpha runs through the shader's linear-to-gamma
+// conversion on the extra per-stack pass and comes back amplified. Opacity
+// buys visible haze per unit of side effect.
 //
 // The side effect worth knowing: MapLibre applies this fog once per
 // render-to-texture drape stack, and the stack count follows which
 // symbol/circle/fill-extrusion layers are visible, so the strip does thicken as
 // layers are switched on. A narrow band keeps that to the skyline.
 // Fog only takes effect while 3D Terrain is on, above pitch 60 (see terrain.ts).
-export const SKY_FOG_GROUND_BLEND = 0.95;
+const SKY_FOG_GROUND_BLEND = 0.95;
 
 // MapLibre requires a style object even when we control all sources ourselves.
 export const BLANK_STYLE = {

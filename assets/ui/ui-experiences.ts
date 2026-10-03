@@ -93,7 +93,7 @@ function galleryCardHtml(exp: MapExperience): string {
 
 // ─── Floating story card ──────────────────────────────────────────────────────
 
-export function startExperience(id: string) {
+function startExperience(id: string) {
   wire();
   if (!applyExperience(id)) return;
   (document.getElementById('experiencesDialog') as HTMLDialogElement | null)?.close();

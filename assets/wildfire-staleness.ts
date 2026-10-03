@@ -12,7 +12,7 @@ import { initLiveStaleness } from './live-staleness.js';
 
 // Re-fetch the feed this often. The GitHub-Actions feed updates ~hourly, so a
 // 15-minute poll picks up a new pull within a quarter-hour without hammering it.
-export const WILDFIRE_REFRESH_MS = 15 * 60_000;   // 15 minutes
+const WILDFIRE_REFRESH_MS = 15 * 60_000;   // 15 minutes
 // Hard cutoff: above this pull age the data is treated as unsafe and the layers
 // are force-disabled. 6h = several missed hourly cycles.
 export const WILDFIRE_MAX_AGE_MS = 6 * 60 * 60_000; // 6 hours

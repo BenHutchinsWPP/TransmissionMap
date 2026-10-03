@@ -17,7 +17,7 @@ import type { LayerScope } from '../src/types.js';
 
 // Layer-list scopes only. Continental download packs are picked per-download in
 // the layer menu, so they never reach the URL.
-export const VALID_REGIONS = new Set<string>(['usa', 'global']);
+const VALID_REGIONS = new Set<string>(['usa', 'global']);
 
 // Build lookup maps once for fast urlCode ↔ id resolution.
 const _URLCODE_TO_ID = Object.fromEntries(
@@ -174,6 +174,7 @@ export function defaultView(): UrlStateData {
     terrain3d: false,
     buildings3d: false,
     hillshade: false,
+    lang: 'en',
     region: 'usa',
   };
 }
@@ -377,18 +378,19 @@ export function formatUrlState(data: UrlStateData): string[] {
     if (code) parts.push('bm=' + code);
   }
 
-  // Projection
-  if (data.projection === 'globe') parts.push('pj=g');
+  // Projection (default omitted; globe is the one other value)
+  if (data.projection !== dv.projection) parts.push('pj=g');
 
-  // 3D terrain / buildings (both off by default, omitted)
-  const td = (data.terrain3d ? 't' : '') + (data.buildings3d ? 'b' : '');
-  if (td) parts.push('3d=' + td);
+  // 3D terrain / buildings (default omitted)
+  if (data.terrain3d !== dv.terrain3d || data.buildings3d !== dv.buildings3d) {
+    parts.push('3d=' + (data.terrain3d ? 't' : '') + (data.buildings3d ? 'b' : ''));
+  }
 
-  // Hillshade (off by default, omitted)
-  if (data.hillshade) parts.push('hs=1');
+  // Hillshade (default omitted)
+  if (data.hillshade !== dv.hillshade) parts.push('hs=1');
 
-  // Language (default 'en' omitted)
-  if (data.lang && data.lang !== 'en') parts.push(`lang=${encodeURIComponent(data.lang)}`);
+  // Language (default omitted)
+  if (data.lang && data.lang !== dv.lang) parts.push(`lang=${encodeURIComponent(data.lang)}`);
 
   // Region (default omitted)
   if (data.region && data.region !== dv.region && VALID_REGIONS.has(data.region)) {

@@ -1,5 +1,5 @@
 // ─── Pure formatting logic for popups ────────────────────────────────────────
-// Deps: utils/utils.js (escapeHtml), src/colors/buckets.js (label maps),
+// Deps: utils/utils.js (escapeHtml, isHttpUrl), src/colors/buckets.js (label maps),
 // nws-zone-join.js (alert lookups), fema-nri.js (selected hazard, data version),
 // src/units.js (every quantity with a unit
 // goes through a fmt* helper so it follows the File ▸ Settings… preference —
@@ -7,7 +7,7 @@
 // "Acres") because the rendered value changes with that preference.
 // src/i18n/index.js (t).
 
-import { escapeHtml } from './utils/utils.js';
+import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
@@ -31,12 +31,7 @@ export function row(key: string, val: unknown) {
 }
 
 export function websiteRow(url: string) {
-  if (!url) return "";
-  // Browsers strip ASCII control chars/whitespace when parsing a URL scheme,
-  // so "java\tscript:alert(1)" navigates as javascript: — strip the same
-  // range before checking or the guard is bypassable.
-  // eslint-disable-next-line no-control-regex -- control chars are the point: strip what browsers strip
-  if (url.replace(/[\u0000-\u0020]/g, '').toLowerCase().startsWith('javascript:')) return "";
+  if (!url || !isHttpUrl(url)) return "";
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(t('popup.website'))}</a></div>`;
 }
 
@@ -46,7 +41,7 @@ export function websiteRow(url: string) {
 // substations are overwhelmingly ways (route relations are rare).
 // ponytail: relation-backed substation polygons mislink; add osm_type to the
 // pipeline if that ever matters.
-export function osmLink(osmType: "node" | "way" | "relation", id: unknown) {
+function osmLink(osmType: "node" | "way" | "relation", id: unknown) {
   if (id == null || id === "") return "";
   return `<div class="popup-row"><span class="popup-key">OSM ID</span> ` +
     `<span class="popup-val"><a href="https://www.openstreetmap.org/${osmType}/${encodeURIComponent(String(id))}" ` +
@@ -57,7 +52,7 @@ export function title(text: string) {
   return `<div class="popup-title truncate">${escapeHtml(text)}</div>`;
 }
 
-export function plantRenderer(defaultTitle: string) {
+function plantRenderer(defaultTitle: string) {
   return (p: Record<string, unknown>) => title((p.name as string) || defaultTitle) +
     row("popup.fuel", p.source) +
     row("popup.capacity", p.output_mw ? p.output_mw + " MW" : null) +
@@ -131,7 +126,7 @@ export function renderGeoHydroPts(p: Record<string, unknown>) {
     row("popup.source", p.reference);
 }
 
-export function renderWeccPath(p: Record<string, unknown>) {
+function renderWeccPath(p: Record<string, unknown>) {
   // MapLibre serialises array/object GeoJSON properties to JSON strings.
   let lines: string[] = [];
   if (Array.isArray(p.lines)) lines = p.lines as string[];
@@ -175,7 +170,7 @@ export function renderBa(p: Record<string, unknown>) {
 
 // OSM substations come in two map layers: node points and way/relation polygons.
 // Same fields, different OSM object type for the ID link.
-export function substationRenderer(osmType: "node" | "way") {
+function substationRenderer(osmType: "node" | "way") {
   return (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.substation")) +
     row("popup.voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
@@ -195,7 +190,7 @@ export function renderRetail(p: Record<string, unknown>) {
     websiteRow(p.website as string);
 }
 
-export const POPUP_RENDERERS: Record<string, (p: Record<string, unknown>) => string> = {};
+const POPUP_RENDERERS: Record<string, (p: Record<string, unknown>) => string> = {};
 
 // ── Joined zone/county alert-list popups (nws-zone-fill / nws-county-fill) ──
 // Several alerts can name one zone/county; list all of them (not just the
@@ -469,7 +464,10 @@ const _defs = [
     const rating = (code: unknown, score: unknown) => {
       const label = NRI_RATINGS.find(r => r.code === code)?.label;
       if (!label) return null;
-      return typeof score === "number" ? `${label} (${score.toFixed(1)} national percentile)` : label;
+      // Codes 1–5 are ratings; 6 ("Insufficient Data") carries no percentile.
+      return typeof score === "number" && Number(code) <= 5
+        ? t("popup.nriPercentile", { rating: label, score: score.toFixed(1) })
+        : label;
     };
     const nriRow = (label: string, val: string | null) => val
       ? `<div class="popup-row"><span class="popup-key">${escapeHtml(label)}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`
@@ -480,7 +478,7 @@ const _defs = [
       nriRow(nriHazardLabel(hazard), rating(p.nri_r, p.nri_s)) +
       (hazard === DEFAULT_NRI_HAZARD ? "" : nriRow(nriHazardLabel(DEFAULT_NRI_HAZARD), rating(p.nri_cr, p.nri_cs))) +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(
-        `FEMA National Risk Index${version ? ` (${version})` : ""} · not endorsed by FEMA · planning use only`)}</div>`;
+        t("popup.nriFooter", { version: version ? ` (${version})` : "" }))}</div>`;
   }],
   [["nws-zone-fill"], (p: Record<string, unknown>) => {
     // nws_group comes from the feature-state join (merged into p by popup.ts).

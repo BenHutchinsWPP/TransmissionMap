@@ -1,11 +1,13 @@
 // ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
 // setLayerVisibility() is the one way to switch a layer: it updates state, the
-// map, the panel checkbox and the URL, then emits 'layer:visibility' so modules
-// with their own per-layer machinery (weather-live.ts, nws-zone-join.ts) follow
-// along. A layer with an `exclusiveGroup` switches the rest of its group off
-// when it is switched on.
+// map, the panel checkbox and the URL (unless `writeUrl` is false — a caller
+// switching many layers writes the URL once itself), then emits
+// 'layer:visibility' so modules with their own per-layer machinery
+// (weather-live.ts, nws-zone-join.ts) follow along. A layer with an
+// `exclusiveGroup` switches the rest of its group off when it is switched on;
+// exclusiveRivals() names that rest, for view-state.ts to resolve a whole view.
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
-//              view-state.ts (setLayerVisibility + the appliers),
+//              view-state.ts (setLayerVisibility, exclusiveRivals + the appliers),
 //              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
 // Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
 // every zoom settle, via a 'zoomend' listener attached once the map emits
@@ -20,14 +22,17 @@ import { ensureLayerData } from './layers/layer-init.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 import { on, emit } from './state-bus.js';
 
-export function setLayerVisibility(registryId: string, visible: boolean) {
+export function exclusiveRivals(registryId: string): string[] {
+  const group = layerById(registryId)?.exclusiveGroup;
+  return group ? LAYERS.filter(l => l.exclusiveGroup === group && l.id !== registryId).map(l => l.id) : [];
+}
+
+export function setLayerVisibility(registryId: string, visible: boolean, writeUrl = true) {
   const entry = layerById(registryId);
   if (!entry || !state.mapReady || !state.map) return;
-  if (visible && entry.exclusiveGroup) {
-    for (const other of LAYERS) {
-      if (other.id === registryId || other.exclusiveGroup !== entry.exclusiveGroup) continue;
-      if (!state.layerVisibility[other.id]) continue;
-      setLayerVisibility(other.id, false);
+  if (visible) {
+    for (const id of exclusiveRivals(registryId)) {
+      if (state.layerVisibility[id]) setLayerVisibility(id, false, false);
     }
   }
   state.layerVisibility[registryId] = visible;
@@ -45,7 +50,7 @@ export function setLayerVisibility(registryId: string, visible: boolean) {
   if (entry.heatLayerId || entry.modes) applyGenMode(registryId);
   const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${registryId}"]`);
   if (cb) cb.checked = visible;
-  writeUrlState();
+  if (writeUrl) writeUrlState();
   emit('layer:visibility', { id: registryId, visible });
 
   if (visible && TRIBAL_LAYER_IDS.includes(registryId)) showTribalDisclaimer();

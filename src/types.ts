@@ -2,7 +2,7 @@
 import type { Map as MaplibreMap, Popup } from 'maplibre-gl';
 import type MapboxDraw from '@mapbox/mapbox-gl-draw';
 
-export interface Downloads {
+interface Downloads {
   csv?: string | null;      // point layers — CSV-only pack
   geojson?: string | null;  // line/polygon layers — GeoJSON pack (also holds CSV)
   shp?: string | null;      // line/polygon layers — Shapefile pack (also holds CSV)
@@ -114,9 +114,9 @@ export interface LayerSourceDef {
 }
 
 // State sub-objects
-export interface MwFilter { min: number; max: number; }
-export interface YearFilter { enabled: boolean; year: number; min: number; max: number; }
-export interface YearPlayback { active: boolean; interval: ReturnType<typeof setInterval> | null; speedMs: number; }
+interface MwFilter { min: number; max: number; }
+interface YearFilter { enabled: boolean; year: number; min: number; max: number; }
+interface YearPlayback { active: boolean; interval: ReturnType<typeof setInterval> | null; speedMs: number; }
 
 
 export interface UserLayer {

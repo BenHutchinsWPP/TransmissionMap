@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': 'Tổng số khách hàng bị ảnh hưởng',
   'popup.viewIncidentReports': 'Xem báo cáo sự cố ▸',
   'popup.odinFooter': 'Dữ liệu từ ORNL ODIN — các công ty điện lực tự báo cáo; phạm vi bảo đảm là một phần.',
+  'popup.nriPercentile': '{rating} (phân vị toàn quốc {score})',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · không được FEMA xác nhận · chỉ dùng cho mục đích lập kế hoạch',
   'popup.weatherZone': 'Khu vực thời tiết',
   'popup.fireWeatherZone': 'khu vực thời tiết nguy cơ cháy',
   'popup.marineZone': 'khu vực hàng hải',

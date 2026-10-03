@@ -37,7 +37,7 @@ export type DiagGroup = 'capability' | 'required' | 'optional' | 'live';
 
 // What a check body returns. runDiagnostics stamps id/label/group onto it to
 // make a DiagResult, so no check has to carry its own identity around.
-export interface DiagOutcome {
+interface DiagOutcome {
   status: DiagStatus;
   detail: string;
 }

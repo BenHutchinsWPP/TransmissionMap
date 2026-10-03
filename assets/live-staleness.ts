@@ -70,7 +70,7 @@ export function feedIssue(feed: string, status: string, lastOk?: string | null):
 // Pull timestamp of a live source: the first feature's `generated_utc`, falling
 // back to the FeatureCollection-level value stashed in state.liveFcMeta (needed
 // when `features` is empty).
-export function liveGeneratedUtc(sourceKey: string): string | undefined {
+function liveGeneratedUtc(sourceKey: string): string | undefined {
   const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
   return (f?.properties?.generated_utc as string | undefined)
     ?? state.liveFcMeta[sourceKey]?.generated_utc;

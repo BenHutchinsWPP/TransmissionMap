@@ -261,6 +261,8 @@ const locale: LocaleDictionary = {
   'popup.totalCustomersAffected': 'Kabuuang mga kostumer na naapektuhan',
   'popup.viewIncidentReports': 'Tingnan ang mga ulat ng insidente ▸',
   'popup.odinFooter': 'Data mula sa ORNL ODIN — sariling ulat ng mga utility; bahagya lamang ang saklaw.',
+  'popup.nriPercentile': '{rating} (pambansang percentile {score})',
+  'popup.nriFooter': 'FEMA National Risk Index{version} · hindi ineendorso ng FEMA · para sa pagpaplano lamang',
   'popup.weatherZone': 'Sona ng Panahon',
   'popup.fireWeatherZone': 'sona ng panahon ng sunog',
   'popup.marineZone': 'sona sa dagat',

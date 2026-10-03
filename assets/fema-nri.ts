@@ -57,17 +57,29 @@ export function nriVersion(): string | null {
   return table?.version ?? null;
 }
 
+let reportedMissing: string | null = null;
+
 function applyJoin() {
   if (!state.map || !table || !state.map.getSource(SRC)) return;
-  const hi = Math.max(0, table.hazards.indexOf(state.nriHazard));
-  const ci = Math.max(0, table.hazards.indexOf(DEFAULT_NRI_HAZARD));
+  // A hazard absent from the table (index -1) writes null for its keys, so
+  // every county is left unpainted, and is reported once to the diag log.
+  const hi = table.hazards.indexOf(state.nriHazard);
+  const ci = table.hazards.indexOf(DEFAULT_NRI_HAZARD);
+  for (const id of [state.nriHazard, DEFAULT_NRI_HAZARD]) {
+    if (!table.hazards.includes(id) && reportedMissing !== id) {
+      reportedMissing = id;
+      recordDiagEvent('layer', `fema-nri: hazard ${id} missing from table`);
+    }
+  }
   for (const fips in table.counties) {
     const v = table.counties[fips];
     // Rating code 0 = not applicable → null, which the paint leaves transparent
     // and nriFeatureLit() treats as unlit.
+    const rating = (i: number) => (i < 0 ? null : v[2 * i + 1] || null);
+    const score = (i: number) => (i < 0 ? null : v[2 * i] ?? null);
     state.map.setFeatureState(
       { source: SRC, sourceLayer: SRC_LAYER, id: fips },
-      { nri_r: v[2 * hi + 1] || null, nri_s: v[2 * hi], nri_cr: v[2 * ci + 1] || null, nri_cs: v[2 * ci] },
+      { nri_r: rating(hi), nri_s: score(hi), nri_cr: rating(ci), nri_cs: score(ci) },
     );
   }
   dirty = false;

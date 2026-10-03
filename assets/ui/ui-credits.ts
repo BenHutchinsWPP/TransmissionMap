@@ -1,37 +1,35 @@
 // ─── Data Credits dialog — manifest-driven rendering ──────────────────────────
 // Role: fetches the per-layer provenance manifest (DATA.data_manifest, built by
-//       scripts/build_data_manifest.py) and, once it validates, replaces the
-//       Data Credits dialog's <ul> with one <li data-source-credit="<id>"> per
-//       LAYER_SOURCES group — the same anchor id space index.html's hand-written
-//       entries use and assets/ui/ui-layer-rows.ts's per-layer "source" button
-//       (openSourceCredit() in ui.ts) scrolls to. Layers are grouped by their
-//       manifest `source_id` (several tile-manifest layers legitimately share
-//       one LAYER_SOURCES key), and each group's <li> lists its member layers'
-//       label/coverage/retrieved-date detail; an entry whose source_id is
-//       UNKNOWN, missing, or not a real LAYER_SOURCES key is left out of the
-//       render rather than emitted as a dead anchor. A hand-written entry whose
-//       source has no manifest layer (live feeds, the FEMA NRI table joined onto
-//       shared county tiles) is kept as shipped. The hand-written entries
-//       shipped in index.html are the dialog's markup already, so this module
-//       only ever overwrites them after a fetched payload passes its shape
-//       check — a failed fetch, a non-JSON response, or a malformed payload all
-//       leave that markup exactly as shipped, and the page keeps crediting its
-//       sources with no network at all. Each member layer's line carries its
-//       label, licence, row count (with the built artifact's size alongside
-//       when known), retrieval date, and a short per-field join-quality
-//       summary ("14,806 with state, 13,427 with county") — the top few
-//       fields by count, skipping any field with full coverage. Lazy chunk:
-//       loaded only when the info button opens the dialog (see ui.ts),
-//       matching the ui-diagnostics.ts / ui-settings.ts pattern.
+//       scripts/build_data_manifest.py) and, once it validates, adds the
+//       measured per-layer detail to the Data Credits dialog's hand-written
+//       entries from index.html. Layers are grouped by their manifest
+//       `source_id` (a LAYER_SOURCES key; several tile-manifest layers share
+//       one), and each group's detail list is appended to the <li> holding
+//       the matching data-source-credit anchor — the anchor itself may sit on
+//       a nested <span> of an umbrella entry. A group with no hand-written
+//       anchor gets a new <li data-source-credit="<id>"> at the end of the
+//       list, so assets/ui/ui-layer-rows.ts's per-layer "source" button
+//       (openSourceCredit() in ui.ts) can land on it. Every hand-written entry,
+//       note and disclaimer stays in the dialog as shipped. An entry whose
+//       source_id is UNKNOWN, missing, or not a real LAYER_SOURCES key is left
+//       out. A failed fetch, a non-JSON response, or a malformed payload leave
+//       the markup untouched. Each member layer's line carries its label
+//       (linked only for an http(s) url), licence, row count (with the built
+//       artifact's size alongside when known), retrieval date, and a short
+//       per-field join-quality summary ("14,806 with state, 13,427 with
+//       county") — the top few fields by count, skipping any field with full
+//       coverage. Lazy chunk: loaded when the info button first opens the
+//       dialog (see ui.ts), matching the ui-diagnostics.ts / ui-settings.ts
+//       pattern.
 // Deps: constants.js (DATA.data_manifest), ../../src/registry/index.js
 //       (LAYER_SOURCES — the anchor id space and group display labels),
-//       utils/utils.js (escapeHtml — every manifest-derived string is
-//       untrusted input and is escaped before it reaches the DOM; this module
-//       treats the fetched JSON as hostile).
+//       utils/utils.js (escapeHtml, isHttpUrl — every manifest-derived string
+//       is untrusted input and is escaped before it reaches the DOM; this
+//       module treats the fetched JSON as hostile).
 
 import { DATA } from '../constants.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
-import { escapeHtml } from '../utils/utils.js';
+import { escapeHtml, isHttpUrl } from '../utils/utils.js';
 
 interface ManifestLayerEntry {
   label: string;
@@ -134,12 +132,12 @@ function renderCoverage(entry: ManifestLayerEntry): string {
 }
 
 // One member layer's line inside its source group's <li> — label (linked when
-// a url is known), licence, row count (with built-artifact size alongside,
+// the url is http(s)), licence, row count (with built-artifact size alongside,
 // when known), retrieval date, per-field coverage summary. Omits any bit
 // whose field is UNKNOWN or null rather than printing the sentinel to a user.
 function renderLayerDetail(id: string, entry: ManifestLayerEntry): string {
   const label = entry.label !== UNKNOWN ? entry.label : id;
-  const labelHtml = entry.url !== UNKNOWN
+  const labelHtml = isHttpUrl(entry.url)
     ? `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`
     : escapeHtml(label);
 
@@ -162,24 +160,20 @@ function layerSortKey(id: string, entry: ManifestLayerEntry): string {
   return entry.label !== UNKNOWN ? entry.label : id;
 }
 
-// One LAYER_SOURCES group's <li> — the anchor openSourceCredit() (ui.ts) and
-// the per-layer "source" button (ui-layer-rows.ts) look up by this sourceId,
-// so it must exactly match the id LAYER_SOURCES registers it under.
-function renderGroup(sourceId: string, groupLabel: string, layers: { id: string; entry: ManifestLayerEntry }[]): string {
+// One source group's nested list of member-layer lines, sorted by label.
+function renderGroupLayers(layers: { id: string; entry: ManifestLayerEntry }[]): string {
   const items = layers
     .slice()
     .sort((a, b) => layerSortKey(a.id, a.entry).localeCompare(layerSortKey(b.id, b.entry)))
     .map(({ id, entry }) => renderLayerDetail(id, entry))
     .join('');
-  return `<li data-source-credit="${escapeHtml(sourceId)}"><strong>${escapeHtml(groupLabel)}</strong>` +
-    `<ul class="credits-group-layers">${items}</ul></li>`;
+  return `<ul class="credits-group-layers">${items}</ul>`;
 }
 
-// Fetches and validates the manifest, then swaps the dialog's <ul> content in
-// place. Called from ui.ts each time the Data Credits dialog opens; on any
-// failure it returns without touching the DOM, leaving the fallback markup
-// already in the dialog (from index.html, or from a previous successful
-// render) exactly as it was.
+// Fetches and validates the manifest, then adds each source group's layer
+// detail to the dialog's <ul>. ui.ts calls it once per page load, the first
+// time the Data Credits dialog opens; on any failure it returns without
+// touching the DOM.
 export async function renderDataCredits(): Promise<void> {
   const dialog = document.getElementById('creditsDialog') as HTMLDialogElement | null;
   const list = dialog?.querySelector('ul');
@@ -191,7 +185,7 @@ export async function renderDataCredits(): Promise<void> {
     if (!resp.ok) return;
     payload = await resp.json();
   } catch {
-    return; // offline, blocked, or non-JSON — keep the shipped fallback list
+    return; // offline, blocked, or non-JSON — keep the shipped list
   }
 
   if (!isDataManifest(payload)) return;
@@ -199,8 +193,7 @@ export async function renderDataCredits(): Promise<void> {
   // Group by source_id, the LAYER_SOURCES key the layer's credit belongs
   // under. An entry whose source_id is UNKNOWN, absent, or not a real
   // LAYER_SOURCES key is left out — rendering it would emit a
-  // data-source-credit anchor nothing looks up, or a fabricated one no
-  // "source" button can ever land on.
+  // data-source-credit anchor nothing looks up.
   const groups = new Map<string, { id: string; entry: ManifestLayerEntry }[]>();
   for (const [id, entry] of Object.entries(payload.layers)) {
     const sourceId = entry.source_id;
@@ -212,22 +205,13 @@ export async function renderDataCredits(): Promise<void> {
     if (bucket) bucket.push({ id, entry });
     else groups.set(sourceId, [{ id, entry }]);
   }
-  if (groups.size === 0) return; // nothing resolved to a known anchor — keep the fallback
 
-  // The manifest describes tiled layers only. A source with none — a live feed,
-  // a table joined onto shared tiles — keeps the <li> already in the list, so
-  // its credit (and any citation wording its terms require) stays in the dialog.
-  const rendered: [string, string][] = Array.from(groups.entries())
-    .map(([sourceId, layers]) => [LAYER_SOURCES[sourceId].label, renderGroup(sourceId, LAYER_SOURCES[sourceId].label, layers)]);
-  for (const li of Array.from(list.querySelectorAll<HTMLLIElement>(':scope > li[data-source-credit]'))) {
-    const sourceId = li.dataset.sourceCredit ?? '';
-    if (groups.has(sourceId)) continue;
-    const label = Object.hasOwn(LAYER_SOURCES, sourceId) ? LAYER_SOURCES[sourceId].label : li.textContent ?? '';
-    rendered.push([label, li.outerHTML]);
+  const anchors = Array.from(list.querySelectorAll<HTMLElement>('[data-source-credit]'));
+  for (const [sourceId, layers] of groups) {
+    const details = renderGroupLayers(layers);
+    const host = anchors.find(el => el.dataset.sourceCredit === sourceId)?.closest('li');
+    if (host) host.insertAdjacentHTML('beforeend', details);
+    else list.insertAdjacentHTML('beforeend',
+      `<li data-source-credit="${escapeHtml(sourceId)}"><strong>${escapeHtml(LAYER_SOURCES[sourceId].label)}</strong>${details}</li>`);
   }
-
-  list.innerHTML = rendered
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, html]) => html)
-    .join('');
 }

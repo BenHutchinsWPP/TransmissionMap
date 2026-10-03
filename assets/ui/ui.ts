@@ -5,7 +5,7 @@
 // in ui-layer-rows.js; menubar wiring in ui-menubar.js; My Data tab handlers in
 // ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
 // Data Credits dialog opens its hand-written index.html markup immediately,
-// then lazily loads ui-credits.js to render it from the generated manifest.
+// then lazily loads ui-credits.js once to add the generated manifest's detail.
 
 import { state } from '../state.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
@@ -170,14 +170,29 @@ function clearCreditHighlight() {
     .forEach(node => node.classList.remove("credit-highlight"));
 }
 
-function openSourceCredit(sourceId: string) {
+let creditsRender: Promise<void> | null = null;
+
+// Lazy chunk (ui-credits.js), loaded and rendered once per page load by
+// whichever credits entry point opens first: adds the generated manifest's
+// per-layer detail to the hand-written entries the dialog is already showing.
+// A chunk that fails to load is recorded in the diagnostics log and the
+// hand-written entries stay as shipped.
+function renderCredits(): Promise<void> {
+  return creditsRender ??= import("./ui-credits.js")
+    .then(m => m.renderDataCredits())
+    .catch(err => recordDiagEvent('layer', `credits chunk: ${err}`));
+}
+
+async function openSourceCredit(sourceId: string) {
   const source = LAYER_SOURCES[sourceId];
   const creditsDialog = document.getElementById("creditsDialog") as HTMLDialogElement | null;
   if (!source || !creditsDialog) return;
 
-  const target = document.querySelector(`[data-source-credit="${sourceId}"]`);
   clearCreditHighlight();
   if (!creditsDialog.open) creditsDialog.showModal();
+  // The render may add this source's entry, so look it up afterwards.
+  await renderCredits();
+  const target = document.querySelector(`[data-source-credit="${sourceId}"]`);
   if (!target) return;
 
   window.requestAnimationFrame(() => {
@@ -405,7 +420,7 @@ function wireSourceButtons() {
     const btn = (e.target as Element)?.closest<HTMLElement>(".source-btn[data-source-id]");
     if (!btn) return;
     e.preventDefault();
-    openSourceCredit(btn.dataset.sourceId!);
+    void openSourceCredit(btn.dataset.sourceId!);
   });
 }
 
@@ -474,11 +489,7 @@ function wireDialogs() {
   document.getElementById("infoButton")?.addEventListener("click", () => {
     clearCreditHighlight();
     credits.showModal();
-    // Lazy chunk (ui-credits.js): fetches the generated manifest and, once it
-    // validates, replaces the hand-written <li> entries in place. On any
-    // failure it leaves them untouched, so the dialog is already showing its
-    // fallback credits the instant showModal() above runs.
-    void import("./ui-credits.js").then(m => m.renderDataCredits());
+    void renderCredits();
   });
   credits.addEventListener("close", clearCreditHighlight);
 }

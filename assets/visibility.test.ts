@@ -25,7 +25,7 @@ import { state } from './state.js';
 import { writeUrlState } from './url-state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
-import { setLayerVisibility, applyGenMode, applyAllGenModes, refetchZoomGatedLayers } from './visibility.js';
+import { setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes, refetchZoomGatedLayers } from './visibility.js';
 import { on } from './state-bus.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,6 +58,23 @@ beforeEach(() => {
   for (const k of Object.keys(RASTER_PROBES)) delete (RASTER_PROBES as Record<string, unknown>)[k];
 });
 
+// ─── exclusiveRivals ──────────────────────────────────────────────────────────
+
+describe('exclusiveRivals', () => {
+  it('names the other members of a layer\'s exclusive group, and none for an ungrouped layer', () => {
+    _mockLayers.push(
+      { ...makeLayer('a', []), exclusiveGroup: 'g' },
+      { ...makeLayer('b', []), exclusiveGroup: 'g' },
+      { ...makeLayer('c', []), exclusiveGroup: 'h' },
+      makeLayer('d', []),
+    );
+    _mockLayerById.mockImplementation(id => _mockLayers.find(l => l.id === id));
+    expect(exclusiveRivals('a')).toEqual(['b']);
+    expect(exclusiveRivals('c')).toEqual([]);
+    expect(exclusiveRivals('d')).toEqual([]);
+  });
+});
+
 // ─── setLayerVisibility ───────────────────────────────────────────────────────
 
 describe('setLayerVisibility', () => {
@@ -77,6 +94,22 @@ describe('setLayerVisibility', () => {
     expect(state.layerVisibility).toEqual({ a: false, b: true, c: true });
     expect(document.querySelector<HTMLInputElement>('[data-layer-id="a"]')!.checked).toBe(false);
     expect(state.map!.setLayoutProperty).toHaveBeenCalledWith('a-fill', 'visibility', 'none');
+  });
+
+  it('writes the URL once when switching on a layer turns its group rivals off', () => {
+    const a = { ...makeLayer('a', ['a-fill']), exclusiveGroup: 'g' };
+    const b = { ...makeLayer('b', ['b-fill']), exclusiveGroup: 'g' };
+    _mockLayers.push(a, b);
+    _mockLayerById.mockImplementation(id => _mockLayers.find(l => l.id === id));
+    state.mapReady = true;
+    state.map = mockMap(['a-fill', 'b-fill']) as unknown as typeof state.map;
+    state.layerVisibility = { a: true };
+
+    setLayerVisibility('b', true);
+    expect(writeUrlState).toHaveBeenCalledTimes(1);
+    setLayerVisibility('a', true, false);
+    expect(writeUrlState).toHaveBeenCalledTimes(1);
+    expect(state.layerVisibility).toEqual({ a: true, b: false });
   });
 
   it('ticks the panel checkbox and tells subscribers, whoever switched the layer', () => {

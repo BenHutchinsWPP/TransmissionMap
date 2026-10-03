@@ -61,9 +61,9 @@ export function writeUrlState() {
     pitch: state.map.getPitch(),
   });
   // Browsers rate-limit replaceState (Safari: ~100 calls per 30 s) and throw on
-  // the excess. Applying a Map Experience issues one write per layer it switches,
-  // so a fast run through several stories can reach that ceiling — losing the
-  // link update is survivable, throwing out of the middle of an apply is not.
+  // the excess. Every map move and panel click writes, so a busy session can
+  // reach that ceiling — losing the link update is survivable, throwing out of
+  // the middle of an apply is not.
   try {
     history.replaceState(null, '', location.pathname + '#' + posStr + stateStr);
   } catch (err) {
