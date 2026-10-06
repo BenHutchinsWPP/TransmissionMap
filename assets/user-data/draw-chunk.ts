@@ -4,3 +4,4 @@
 export { initDraw, setMode, startDraw, applyColorPick } from './user-data-draw.js';
 export { handleFileOpen } from './user-data-import.js';
 export { saveGeoJSON, saveKML } from './user-data-export.js';
+export { saveView } from './view-file.js';

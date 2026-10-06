@@ -31,16 +31,23 @@ user clicks control  (assets/ui/ui-filters.ts)
    → updates state.legendFilters / state.layerFilters / state.mwFilter
    → calls cfg.apply() directly, then emit('url:write')   (state-bus.ts)
    → applyXFilter()    (assets/filters.ts) builds a MapLibre filter expr
-   → map.setFilter(layerId, combineFilters(baseFilter, bucketExpr))
+   → map.setFilter(layerId, effectiveFilter(layerId))
 ```
 
 (Generator controls are the exception: they emit `filter:generators` on the
 bus instead of calling the apply function directly, because several controls —
 MW, fuel, status, year — share one apply.)
 
-`combineFilters` always re-applies the layer's **base filter** (registered via
-`registerBaseFilter` at layer-add time) so a user filter never clobbers a
-structural one (e.g. "HV lines only").
+`effectiveFilter(layerId)` is the one filter a layer carries: its **base
+filter** (registered via `registerBaseFilter` at layer-add time) ∧ the
+expression your apply function last built ∧ the view's `where` conditions for
+the registry layer that owns it (`setWhere`, layers with a `dataset` only). So
+a user filter never clobbers a structural one (e.g. "HV lines only"), and a
+`where` change re-filters just that layer without re-running the appliers.
+Write through `setBucketFilter` / `applyBucketFilterToLayers` — never call
+`map.setFilter` yourself (`assets/filters-where.test.ts` allowlists every call
+site), and register any inline `filter:` in an `addLayer` spec as its base
+(`assets/layers/base-filters.test.ts` checks every layer).
 
 ---
 

@@ -54,7 +54,7 @@ export function addWeccPaths() {
       "line-blur": 4,
     },
   } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-corridors", null);
+  registerBaseFilter("wecc-path-corridors", IS_CORRIDOR);
 
   // Corridor outline
   state.map.addLayer({
@@ -67,7 +67,7 @@ export function addWeccPaths() {
       "line-opacity": 0.4,
     },
   } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-corridors-outline", null);
+  registerBaseFilter("wecc-path-corridors-outline", IS_CORRIDOR);
 
   // ── Catalog path markers (point geometries, isCorridor != true) ────────────
 
@@ -83,7 +83,7 @@ export function addWeccPaths() {
       "line-blur": 0.5,
     },
   } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-lines-highlight", null);
+  registerBaseFilter("wecc-path-lines-highlight", NONE_FILTER);
 
   // Path number circles
   state.map.addLayer({
@@ -100,7 +100,7 @@ export function addWeccPaths() {
       "circle-opacity": 0.9,
     },
   } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-paths-circles", null);
+  registerBaseFilter("wecc-paths-circles", NOT_CORRIDOR);
 
   // Path number label
   state.map.addLayer({
@@ -122,7 +122,7 @@ export function addWeccPaths() {
       "text-halo-width": 0.6,
     },
   } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-paths-label", null);
+  registerBaseFilter("wecc-paths-label", NOT_CORRIDOR);
 
   // Clicking a path marker highlights that path's matched lines (lazy-loads them once).
   onMapTap("wecc-paths-circles", (_e, features) => {

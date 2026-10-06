@@ -142,6 +142,7 @@ turns public datasets into PMTiles consumed by the frontend.
     - `user-data.ts` — core (add/remove/save/render); `user-data-draw.ts` draw mode
     - `user-data-import.ts` GeoJSON/KML/KMZ import; `user-data-export.ts` export
     - `user-data-csv.ts` CSV point import + column picker; `csv-parse.ts` pure CSV parser (unit-tested)
+    - `view-file.ts` — `*.tmview.json` view files: Save view… / Open… of a view's hash through the link codec
     - `user-data-geom.ts` geometry utils; `user-data-colors.ts` color picker
     - `draw-chunk.ts` — **lazy chunk boundary**: re-exports draw/import/export; loaded on first toolbar interaction (keeps MapboxDraw/toGeoJSON/jszip out of the initial bundle)
   - **`assets/utils/`** — pure utilities
@@ -165,6 +166,9 @@ turns public datasets into PMTiles consumed by the frontend.
     compiles a `{field, op, value}` condition array checked against
     `field-schema.ts` into a MapLibre filter expression;
     consumed by `assets/filters.ts`'s `compileBucketExpr()`
+  - `view-validate.ts` — map-free `validateWhere`/`validateStyleOverride`: the
+    trust-boundary checks for a view's `where`/`style` (share-link decode,
+    `setWhere`, `setStyle`)
 - `scripts/build_global_tiles.py` — joins the 8 continental OSM builds into one
   planet-wide artifact per layer (what the map reads), capping any archive over the
   host's 100 MiB per-file ceiling. Transmission is re-tiled from the GeoPackages in

@@ -6,6 +6,9 @@
 // basemap-overlay.ts's pure aerialOverlayLayer() selector/restyler.
 // The starting camera, and any camera-only hashchange, is read from the hash's
 // camera segment via url-state-codec.ts (splitHash, parseCameraSegment).
+// The load handler runs view-state.ts's repaintView() (filters, modes,
+// colour-bys, styles) via url-state.ts's paintLinkedView(), once every layer
+// is on the map.
 
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -21,10 +24,9 @@ import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initMapInput } from './map-input.js';
 import { initRasterProbes } from './raster-probes.js';
-import { applyAllGenModes, applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
 import { initPopups } from './popup.js';
 import { initMeasure } from './measure.js';
-import { writeUrlState } from './url-state.js';
+import { writeUrlState, paintLinkedView } from './url-state.js';
 import { splitHash, parseCameraSegment } from './url-state-codec.js';
 import { emit, on } from './state-bus.js';
 import { getLocale, type SupportedLocale } from '../src/i18n/index.js';
@@ -109,14 +111,19 @@ export function initMap() {
     // otherwise skip addAllLayers() and blank every layer. Degrade to no-icon.
     await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons(), loadFireIcons()]
       .map(p => p.catch(err => console.warn('[TransmissionMap] icon load failed', err))));
-    try { addAllLayers(); } finally {
-      // Applies every registered filter (voltage/generators/pipeline/land/
-      // natgas/OGF/mines/NWS/per-layer legend chips) in one shot — same path
-      // as the Reset button, so initial load and reset can never drift apart.
-      emit('filter:all');
-      applyAllGenModes();
-      applyOGFColorBy();
-      applyWestTECColorBy();
+    let built = false;
+    try { addAllLayers(); built = true; } finally {
+      // The same repaint as applyView() and the Reset button (repaintView):
+      // applies every registered filter, gen mode, colour-by and the link's
+      // style overrides in one shot. A failed layer build is recorded instead,
+      // so the link is not blamed for it; the build error still propagates.
+      if (!built) recordDiagEvent('map', 'layer build failed; the link view was not painted');
+      else {
+        try { paintLinkedView(); } catch (err) {
+          console.error('[TransmissionMap] view paint failed', err);
+          recordDiagEvent('map', `view paint failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
     }
     apply3dFromState(); // restores terrain/buildings toggles (e.g. from the URL)
     initPolygonHover();

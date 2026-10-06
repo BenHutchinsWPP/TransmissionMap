@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { LAYERS, LAYER_SOURCES, layerById } from './index.js';
+import { FIELD_SCHEMA } from './field-schema.js';
 import { CLICKABLE_LAYERS, UNOWNED_CLICKABLE } from '../../assets/popup.js';
 
 describe('layerById', () => {
@@ -178,3 +179,18 @@ describe('Data Credits dialog fallback markup consistency', () => {
   });
 });
 
+
+describe('LayerDef.dataset', () => {
+  it('names a FIELD_SCHEMA key', () => {
+    for (const layer of LAYERS) {
+      if (layer.dataset) expect(FIELD_SCHEMA[layer.dataset], `layer "${layer.id}" names unknown dataset "${layer.dataset}"`).toBeDefined();
+    }
+  });
+
+  it('every FIELD_SCHEMA key is named by at least one layer', () => {
+    const named = new Set(LAYERS.map(l => l.dataset));
+    for (const key of Object.keys(FIELD_SCHEMA)) {
+      expect(named.has(key), `no registry layer carries dataset "${key}"`).toBe(true);
+    }
+  });
+});

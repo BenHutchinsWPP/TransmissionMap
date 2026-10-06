@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Open…',
   'menu.saveGeoJson': 'Save as GeoJSON…',
   'menu.saveKml': 'Save as KML…',
+  'menu.saveView': 'Save view…',
+  'viewFile.invalid': 'This is not a valid map view file.',
+  'viewFile.version': 'This view file is from a newer version and cannot be opened.',
+  'viewFile.notReady': 'The map is still loading — try again in a moment.',
   'menu.experiences': 'Experiences…',
   'menu.hideLegends': 'Hide legends',
   'menu.showLegends': 'Show legends',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Right-click and drag (or Ctrl + drag) to rotate and tilt the map. On touch, use two fingers. Click the compass icon to reset north.',
+  'toast.linkDropped': 'Some settings in this link weren’t recognised and were skipped ({count}).',
+  'toast.linkTooLarge': 'This view is too large to share as a link. Use File ▸ Save view… to share it as a file.',
   'info.dataCredits': 'Data Credits',
 };
 

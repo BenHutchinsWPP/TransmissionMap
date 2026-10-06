@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Áłtsʼíísígo ąą átʼįįh…',
   'menu.saveGeoJson': 'GeoJSON bee ahyiłtsóós…',
   'menu.saveKml': 'KML bee ahyiłtsóós…',
+  'menu.saveView': 'Save view…',
+  'viewFile.invalid': 'This is not a valid map view file.',
+  'viewFile.version': 'This view file is from a newer version and cannot be opened.',
+  'viewFile.notReady': 'The map is still loading — try again in a moment.',
   'menu.experiences': 'Beeʼadinídíín bee ałʼąą ályaa…',
   'menu.hideLegends': 'Bikʼehgo naashchʼąąʼígíí nanilkaad',
   'menu.showLegends': 'Bikʼehgo naashchʼąąʼígíí ííshjání ółsin',
@@ -461,6 +465,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Right-click and drag (doodaiiʼ Ctrl + drag) bee naashchʼąąʼígíí náhásdlį́į́ʼ. Compass icon bikʼi dídíilchił.',
+  'toast.linkDropped': 'Some settings in this link weren’t recognised and were skipped ({count}).',
+  'toast.linkTooLarge': 'This view is too large to share as a link. Use File ▸ Save view… to share it as a file.',
   'info.dataCredits': 'Haneʼ Baa Ahééh Nisin',
 };
 

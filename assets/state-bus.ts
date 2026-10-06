@@ -14,6 +14,7 @@ type Events = {
   'view:applied':         void;   // view-state.ts applyView() finished — resync panels + controls
   'ogf:colorby':          void;   // OGF planned-lines color-by mode changed
   'westtec:colorby':      void;   // WestTEC 10-Yr color-by mode changed
+  'style:weather':        void;   // the weather wash's opacity override changed (style-overrides.ts)
   'units:changed':        void;   // display-unit preference changed
   'lang:changed': { locale: SupportedLocale }; // language preference changed
   'region:changed': { region: LayerScope }; // layer-list scope changed

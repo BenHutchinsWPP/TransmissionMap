@@ -1,16 +1,25 @@
 // ─── File import (GeoJSON / KML / KMZ) ───────────────────────────────────────
-// Deps: togeojson, jszip, state, utils, user-data (no url-state)
+// A .json that is a view file (view-file.ts) is applied as a view first.
+// Deps: togeojson, jszip, state, utils, user-data, view-file
 
 import * as toGeoJSON from '@tmcw/togeojson';
 import JSZip from 'jszip';
 import { state } from '../state.js';
 import { ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
 import { renderMyDataTab, addUserLayer } from './user-data.js';
+import { openViewFile } from './view-file.js';
 
 export function handleFileOpen(file: File) {
   const ext = (file.name.split('.').pop() ?? '').toLowerCase();
   if (ext === 'geojson' || ext === 'json') {
-    file.text().then((text: string) => loadGeoJSON(JSON.parse(text), file.name))
+    file.text().then((text: string) => {
+      let json: unknown;
+      let parseErr: unknown;
+      try { json = JSON.parse(text); } catch (e) { parseErr = e; }
+      if (openViewFile(json, file.name)) return;
+      if (parseErr) throw parseErr;
+      loadGeoJSON(json as GeoJSON.GeoJSON, file.name);
+    })
       .catch(err => alert(`Could not import ${file.name}: ${(err as Error).message}`));
   } else if (ext === 'kml') {
     file.text().then((text: string) => loadKML(text, file.name))

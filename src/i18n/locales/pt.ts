@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Abrir…',
   'menu.saveGeoJson': 'Salvar como GeoJSON…',
   'menu.saveKml': 'Salvar como KML…',
+  'menu.saveView': 'Salvar visualização…',
+  'viewFile.invalid': 'Este não é um arquivo de visualização de mapa válido.',
+  'viewFile.version': 'Este arquivo de visualização é de uma versão mais recente e não pode ser aberto.',
+  'viewFile.notReady': 'O mapa ainda está carregando; tente novamente em instantes.',
   'menu.experiences': 'Experiências…',
   'menu.hideLegends': 'Ocultar legendas',
   'menu.showLegends': 'Mostrar legendas',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Clique com o botão direito e arraste (ou Ctrl + arrastar) para girar e inclinar o mapa. No toque, use dois dedos. Clique na bússola para redefinir o norte.',
+  'toast.linkDropped': 'Algumas configurações deste link não foram reconhecidas e foram ignoradas ({count}).',
+  'toast.linkTooLarge': 'Esta visualização é grande demais para ser compartilhada como link. Use Arquivo ▸ Salvar visualização… para compartilhá-la como arquivo.',
   'info.dataCredits': 'Créditos dos dados',
 };
 

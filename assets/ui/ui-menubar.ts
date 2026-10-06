@@ -120,6 +120,7 @@ async function onMenubarClick(e: MouseEvent) {
       case 'file-open':    document.getElementById('fileOpenInput')?.click(); break;
       case 'save-geojson': d.saveGeoJSON(); break;
       case 'save-kml':     d.saveKML(); break;
+      case 'save-view':    d.saveView(); break;
       case 'add-point':    d.startDraw('draw_point'); break;
       case 'add-line':     d.startDraw('draw_line_string'); break;
       case 'add-polygon':  d.startDraw('draw_polygon'); break;

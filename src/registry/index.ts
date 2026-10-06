@@ -1,4 +1,5 @@
-// Assembles the full LAYERS array from per-group registry files.
+// Assembles the full LAYERS array from per-group registry files; layerById()
+// looks a layer up and displayModes() lists the display modes it offers.
 // >>> ADD-LAYER: layer-registry — see docs/adding-a-layer.md §5
 import { transmissionLayers } from './transmission.js';
 import { generatorLayers }    from './generators.js';
@@ -27,4 +28,10 @@ const _layerMap: Map<string, LayerDef> = new Map(LAYERS.map(l => [l.id, l]));
 
 export function layerById(id: string): LayerDef | null {
   return _layerMap.get(id) ?? null;
+}
+
+// The display modes a layer offers: its `modes` ids, else icons/heat/both for a
+// layer with a heat layer, else none.
+export function displayModes(entry: LayerDef): string[] {
+  return entry.modes ? entry.modes.map(m => m.id) : entry.heatLayerId ? ['icons', 'heat', 'both'] : [];
 }

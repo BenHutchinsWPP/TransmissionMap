@@ -8,7 +8,9 @@
 // exclusiveRivals() names that rest, for view-state.ts to resolve a whole view.
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
 //              view-state.ts (setLayerVisibility, exclusiveRivals + the appliers),
-//              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy)
+//              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy),
+//              style-overrides.ts (applyOGFColorBy, applyWestTECColorBy)
+// Deps: style-overrides.ts (effectiveOverride; cyclic, call-time only)
 // Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
 // every zoom settle, via a 'zoomend' listener attached once the map emits
 // 'map:ready' — see refetchZoomGatedLayers below.
@@ -21,6 +23,7 @@ import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-prob
 import { ensureLayerData } from './layers/layer-init.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 import { on, emit } from './state-bus.js';
+import { effectiveOverride } from './style-overrides.js';
 
 export function exclusiveRivals(registryId: string): string[] {
   const group = layerById(registryId)?.exclusiveGroup;
@@ -92,6 +95,8 @@ export function applyAllGenModes() {
 // ─── OGF planned-lines color-by ───────────────────────────────────────────────
 // Repaints the lines for the selected mode and dims the swatches of the two
 // OGF legend that is NOT driving color (it remains a filter, not a color key).
+// A view's color override (state.styleOverrides) wins over the colour-by
+// expression; style-overrides.ts re-runs this when that override is cleared.
 const OGF_LEGEND_MODES = {
   ogfRegionLegend: "region",
   ogfStatusLegend: "status",
@@ -102,7 +107,8 @@ export function applyOGFColorBy() {
     document.getElementById(elId)?.classList.toggle("legend--not-color-key", mode !== state.ogfColorBy);
   }
   if (!state.mapReady || !state.map?.getLayer("ogf-planned-lines")) return;
-  state.map.setPaintProperty("ogf-planned-lines", "line-color", ogfColorExpr(state.ogfColorBy));
+  state.map.setPaintProperty("ogf-planned-lines", "line-color",
+    effectiveOverride("ogf-planned-transmission").color ?? ogfColorExpr(state.ogfColorBy));
 }
 
 // ─── WestTEC 10-Yr color-by ───────────────────────────────────────────────────
@@ -117,7 +123,8 @@ export function applyWestTECColorBy() {
     document.getElementById(elId)?.classList.toggle("legend--not-color-key", mode !== state.westtecColorBy);
   }
   if (!state.mapReady || !state.map?.getLayer("westtec-lines")) return;
-  state.map.setPaintProperty("westtec-lines", "line-color", westtecColorExpr(state.westtecColorBy));
+  state.map.setPaintProperty("westtec-lines", "line-color",
+    effectiveOverride("westtec-10yr").color ?? westtecColorExpr(state.westtecColorBy));
 }
 
 // ─── fromZoom fetch gate: re-run on zoom settle ────────────────────────────────

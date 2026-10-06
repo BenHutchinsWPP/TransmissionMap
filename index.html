@@ -27,6 +27,7 @@
             <button class="menu-item" data-action="file-open" type="button" data-i18n="menu.fileOpen">Open…</button>
             <button class="menu-item" data-action="save-geojson" type="button" data-i18n="menu.saveGeoJson">Save as GeoJSON…</button>
             <button class="menu-item" data-action="save-kml" type="button" data-i18n="menu.saveKml">Save as KML…</button>
+            <button class="menu-item" data-action="save-view" type="button" data-i18n="menu.saveView">Save view…</button>
             <!-- Map Experiences is built and tested but not yet surfaced: uncomment
                  to list it. The gallery, story card, catalogue and ?exp= deep links
                  all remain in place behind this one entry point. -->
@@ -64,7 +65,7 @@
       <div class="feature-info" id="featureInfo" hidden></div>
 
       <!-- Hidden file input for File > Open -->
-      <input type="file" id="fileOpenInput" accept=".geojson,.kml,.kmz,.csv" hidden>
+      <input type="file" id="fileOpenInput" accept=".geojson,.json,.kml,.kmz,.csv" hidden>
 
       <div class="header-actions">
 

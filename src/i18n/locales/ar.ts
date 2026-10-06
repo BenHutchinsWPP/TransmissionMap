@@ -11,6 +11,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'فتح…',
   'menu.saveGeoJson': 'حفظ كـ GeoJSON…',
   'menu.saveKml': 'حفظ كـ KML…',
+  'menu.saveView': 'حفظ العرض…',
+  'viewFile.invalid': 'هذا ليس ملف عرض خريطة صالحًا.',
+  'viewFile.version': 'ملف العرض هذا من إصدار أحدث ولا يمكن فتحه.',
+  'viewFile.notReady': 'الخريطة قيد التحميل، حاول مرة أخرى بعد لحظات.',
   'menu.experiences': 'تجارب الخريطة…',
   'menu.hideLegends': 'إخفاء وسيلة الإيضاح',
   'menu.showLegends': 'إظهار وسيلة الإيضاح',
@@ -472,6 +476,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'انقر بزر الماوس الأيمن مع السحب (أو اضغط Ctrl مع السحب) لتدوير الخريطة وإمالتها. على الشاشات التي تعمل باللمس، استخدم إصبعين. انقر فوق رمز البوصلة لإعادة ضبط اتجاه الشمال.',
+  'toast.linkDropped': 'تعذّر التعرّف على بعض الإعدادات في هذا الرابط فتم تخطيها ({count}).',
+  'toast.linkTooLarge': 'هذا العرض كبير جدًا لمشاركته كرابط. استخدم ملف ▸ حفظ العرض… لمشاركته كملف.',
   'info.dataCredits': 'مصادر البيانات',
 };
 

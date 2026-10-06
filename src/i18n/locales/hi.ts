@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'खोलें…',
   'menu.saveGeoJson': 'GeoJSON के रूप में सहेजें…',
   'menu.saveKml': 'KML के रूप में सहेजें…',
+  'menu.saveView': 'दृश्य सहेजें…',
+  'viewFile.invalid': 'यह मान्य मानचित्र दृश्य फ़ाइल नहीं है।',
+  'viewFile.version': 'यह दृश्य फ़ाइल नए संस्करण की है और खोली नहीं जा सकती।',
+  'viewFile.notReady': 'मानचित्र अभी लोड हो रहा है — कृपया थोड़ी देर बाद पुनः प्रयास करें।',
   'menu.experiences': 'अनुभव…',
   'menu.hideLegends': 'संकेत छिपाएँ',
   'menu.showLegends': 'संकेत दिखाएँ',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'मानचित्र को घुमाने और झुकाने के लिए राइट-क्लिक करके खींचें (या Ctrl + खींचें)। टच पर दो उंगलियों का उपयोग करें। उत्तर दिशा को रीसेट करने के लिए कंपास आइकन पर क्लिक करें।',
+  'toast.linkDropped': 'इस लिंक की कुछ सेटिंग्स पहचानी नहीं गईं और छोड़ दी गईं ({count})।',
+  'toast.linkTooLarge': 'यह दृश्य लिंक के रूप में साझा करने के लिए बहुत बड़ा है। इसे फ़ाइल के रूप में साझा करने के लिए फ़ाइल ▸ दृश्य सहेजें… का उपयोग करें।',
   'info.dataCredits': 'डेटा साभार',
 };
 

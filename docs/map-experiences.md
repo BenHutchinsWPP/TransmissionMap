@@ -34,7 +34,8 @@ and a pasted link restore a view identically:
    `applyView()` is the one path a whole view takes onto a **live** map — the
    Reset button is `applyView({})`. A cold boot is the other path: `ui.ts`
    calls `readUrlState()` (`assets/url-state.ts`), which hands the parsed hash
-   to `seedView()` before the map is built, and `initMap()` renders from it.
+   to `seedView()` before the map is built, and `initMap()` renders from it —
+   its load handler paints the link's `where`/`style` with `paintLinkedView()`.
 
 > **The silent footgun: a new field on `MapExperience.state` has to be
 > representable in `assets/url-state-codec.ts`.** A preset that can't be written
@@ -46,6 +47,11 @@ and a pasted link restore a view identically:
 > `MapExperience.state`. `experiences.test.ts` § 1 pins this: it round-trips
 > every catalogue entry through the codec and fails on a field the codec can't
 > carry.
+
+A preset may also carry `where` (field conditions) and `style` (opacity / size /
+colour overrides), both keyed by registry layer id — the link's `vx` param (see
+[url-state.md](url-state.md)). Like every other field they are replaced
+wholesale, so the next story or Reset clears them.
 
 `applyView(data, camera)`, in order:
 
@@ -62,8 +68,13 @@ and a pasted link restore a view identically:
    `layer:visibility`, which `weather-live.ts` and `nws-zone-join.ts` follow,
    so a programmatic switch reaches them the same way a click does.
 4. `setTerrain3d()` / `setBuildings3d()` / `setHillshade()` where they change.
-5. `applySmokeOpacity()`, `emit('filter:all')`, `applyAllGenModes()`, the
-   colour-by appliers.
+5. `repaintView()`: `applySmokeOpacity()`, `emit('filter:all')` (which also
+   applies the view's `where` conditions), `applyAllGenModes()`, the colour-by
+   appliers, then the `style` overrides. Cold boot runs the same function from
+   `map.ts`'s load handler via `paintLinkedView()`. A style key the map cannot
+   take (colour on an icon layer) is removed from the view and recorded in the
+   Diagnostics log; on cold boot it is also counted in the link's
+   dropped-settings notice.
 6. `emit('view:applied')` — `ui.ts` rebuilds the layer panel and legends and
    mirrors the view onto the basemap radios, 3D checkboxes and sliders — then
    `emit('url:write')`.

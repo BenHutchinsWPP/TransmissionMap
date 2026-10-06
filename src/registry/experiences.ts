@@ -10,7 +10,11 @@
 // id — experiences.test.ts checks all three against the live registry, so a
 // renamed layer fails the suite instead of silently drawing an empty map.
 //
-// Deps: none (types only).
+// Deps: none at runtime; types from condition-compile.ts (Condition) and
+// src/types.ts (StyleOverride).
+
+import type { Condition } from './condition-compile.js';
+import type { StyleOverride } from '../types.js';
 
 export type ExperienceCategory =
   | 'generation'
@@ -66,6 +70,8 @@ export interface MapExperience {
     smokeOpacity?: number;      // 0–1
     terrain3d?: boolean;        // forces mercator — terrain and globe don't mix
     hillshade?: boolean;
+    where?: Record<string, Condition[]>;      // registry id → field conditions (the link's vx)
+    style?: Record<string, StyleOverride>;    // registry id → opacity/size/colour (the link's vx)
   };
   highlights?: ExperienceHighlight[];
 }

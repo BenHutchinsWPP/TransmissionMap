@@ -36,6 +36,8 @@ Two files, split by side effects:
   `splitHash(hash)` → `{ camera, params }` (the one place the hash is split —
   `map.ts`, `url-state.ts` and `ui.ts` all call it), and
   `parseCameraSegment`/`formatCameraSegment` read and write `zoom/lat/lng[/bearing/pitch]`.
+  `parseUrlState` also returns `dropped` — what an untrusted `vx` carried that
+  failed validation.
 - **`assets/view-state.ts`** — how a view gets into the app: `seedView()` on
   cold boot, `applyView()` on a live map (Reset, Map Experiences),
   `currentView()` for writing the link. Both entry points resolve their input
@@ -74,8 +76,10 @@ filter never saved or restored, silently. No error — just broken state.
 | `pj` | projection (`g` = globe) | codec |
 | `3d` | 3D terrain/buildings (`t`=terrain, `b`=buildings, `tb`=both) | codec |
 | `hs` | hillshade (2D shaded relief) | codec |
+| `lb` | basemap labels (`0` = off; on is the default and is omitted) | codec |
 | `lang` | Language selection (`es`, `fr`, `de`, `zh`, etc.) | codec, `formatUrlState` |
 | `region` | Layer-list scope (`global` only; `usa` is the default and is omitted) | codec, `VALID_REGIONS` |
+| `vx` | View `where` + `style` sections, one compact encoded value (see below) | codec, `encodeVx`/`decodeVx` |
 | `exp` | Active Map Experience slug (`columbia-hydro`, …) | codec (parse) + `url-state.ts` (pristine check); catalogue in `registry/experiences.ts` |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
 | `v f p h j t n r c e g u b m k d i o q x z a` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
@@ -119,8 +123,45 @@ top-level param keys must be globally unique.
 | Fire smoke opacity | `so` | `100` |
 | 3D terrain/buildings | `3d` | both off |
 | Hillshade | `hs` | off |
+| Basemap labels | `lb` | on |
 | Language | `lang` | `en` |
+| Feature conditions + style overrides | `vx` | both `where` and `style` empty |
 | Map Experience | `exp` | no experience active, **or** the view edited away from one |
+
+### `vx` — the compact param
+
+`where` (registry id → `Condition[]`) and `style` (registry id →
+`StyleOverride`) are nested, so they share one param rather than extending the
+flat codec. A link without either section has no `vx`, so older links are
+byte-identical.
+
+- **Value** = one marker char + base64url (no padding) of the UTF-8 JSON
+  `{"s":{…},"v":1,"w":{…}}`. Marker `j`: the JSON bytes as they are; `z`: raw
+  deflate (`fflate` `deflateSync`), chosen only when it is shorter — which is
+  almost always. `w`/`s` are left out when empty.
+- **Keys are sorted at every level**, so the same view always formats to the
+  same string — the `exp` pristine check below is a plain string compare.
+  `vx` is formatted just before `exp`. The encoded string is cached against
+  its JSON, since the link is rewritten on every `moveend`.
+- **Versioning:** `v` is 1. Any other value drops the whole param; there is no
+  migration code until a v2 ships with its own.
+- **Decoding is a trust boundary** (`decodeVx`): the param is capped at 8,192
+  chars before anything else (a view file's hash may run to 16 KB, so view files
+  open with a 16,384-char cap through `parseUrlState(params, { vxMaxChars })`);
+  deflate is inflated with `fflate`'s streaming
+  `Inflate` in 64-byte pushes and abandoned once the output passes 64 KB; base64
+  and `JSON.parse` failures are caught. Each `w` entry must be a list of
+  literal-valued `{field, op, value}` conditions passing `validateWhere()`; each `s` entry must pass `validateStyleOverride()`
+  (both in `src/registry/view-validate.ts`). A bad entry drops only itself, a bad payload drops
+  only `vx`, and the rest of the link applies.
+- **What was dropped** comes back as `parseUrlState()`'s `dropped` list;
+  `readUrlState()` holds it, and `paintLinkedView()` (called from `map.ts`'s
+  load handler) adds the style keys the map could not take, then shows one
+  non-blocking notice (`toast.linkDropped`) and logs the reasons to the console.
+- Size: a view with three `where` layers and five style entries encodes to
+  ~340 chars, well inside the 2,000-char link target. A view whose `vx` passes
+  8,192 chars is still written, with one notice per session
+  (`toast.linkTooLarge`) pointing to File ▸ Save view…; the view file carries it.
 
 ### `exp` carries a runtime condition
 
@@ -136,6 +177,22 @@ The "omit the default" rule is what keeps links short. It also means **both
 sides must agree on the default** — `formatUrlState` skips a value when it
 equals the default, and a missing param resolves to the default. Both read it
 from `defaultView()`, so there is one place to change it.
+
+---
+
+## View files
+
+File ▸ Save view… downloads `map-view.tmview.json`:
+`{"format":"tmview","v":1,"title":…,"note":…,"hash":…}`, where `hash` is exactly
+the address-bar hash (`url-state.ts`'s `currentHash()`). File ▸ Open… treats a
+`.json` as a view file when its `format` is `tmview` (or its name ends in
+`.tmview.json`); anything else goes to the GeoJSON importer as before. A view
+file is untrusted input: `v` must be 1, `hash` a string of at most 16 KB, and
+the hash runs through the same codec as a link (`splitHash`, `parseUrlState`,
+`parseCameraSegment`) before `applyView()`. Dropped settings show the one
+link notice. A hash naming a known `exp` restores that story; any other file ends
+the active story first. `lang` in the file is ignored: language is the viewer's
+choice once the app is open. Code: `assets/user-data/view-file.ts`.
 
 ---
 

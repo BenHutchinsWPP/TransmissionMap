@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': '開く…',
   'menu.saveGeoJson': 'GeoJSONとして保存…',
   'menu.saveKml': 'KMLとして保存…',
+  'menu.saveView': 'ビューを保存…',
+  'viewFile.invalid': '有効な地図ビューファイルではありません。',
+  'viewFile.version': 'このビューファイルは新しいバージョンで作成されたため開けません。',
+  'viewFile.notReady': '地図を読み込み中です。しばらくしてからもう一度お試しください。',
   'menu.experiences': 'マップ体験…',
   'menu.hideLegends': '凡例を非表示',
   'menu.showLegends': '凡例を表示',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': '右ドラッグ（または Ctrl + ドラッグ）でマップを回転・傾斜できます。タッチ操作の場合は2本指を使用してください。コンパスアイコンをクリックすると北向きにリセットされます。',
+  'toast.linkDropped': 'このリンクの一部の設定は認識できなかったため、スキップしました（{count}）。',
+  'toast.linkTooLarge': 'このビューは大きすぎてリンクで共有できません。ファイル ▸ ビューを保存… でファイルとして共有してください。',
   'info.dataCredits': 'データクレジット',
 };
 

@@ -3,12 +3,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { state } from './state.js';
 import { readUrlState, writeUrlState } from './url-state.js';
-import { splitHash, parseCameraSegment, formatCameraSegment } from './url-state-codec.js';
+import { splitHash, parseCameraSegment, formatCameraSegment, parseUrlState } from './url-state-codec.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'so', '3d', 'hs', 'lang', 'region', 'exp']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'so', '3d', 'hs', 'lb', 'lang', 'region', 'vx', 'exp']);
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -39,6 +39,7 @@ beforeEach(() => {
   state.terrain3d       = false;
   state.buildings3d     = false;
   state.hillshade       = false;
+  state.basemapLabels   = true;
   state.yearFilter      = { enabled: false, year: 2025, min: 1900, max: 2031 };
   state.regionScope     = 'usa';
   state.mapReady        = false;
@@ -369,6 +370,27 @@ describe('round-trip serialization', () => {
     expect(state.hillshade).toBe(true);
   });
 
+  it('omits lb when basemap labels are on (the default)', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('lb=');
+  });
+
+  it('round-trips labels-off through lb=0', () => {
+    state.basemapLabels = false;
+    writeUrlState();
+    expect(location.hash).toContain('lb=0');
+    state.basemapLabels = true;
+    readUrlState();
+    expect(state.basemapLabels).toBe(false);
+  });
+
+  it('a link without lb seeds labels on over a labels-off state', () => {
+    state.basemapLabels = false;
+    setHash('bm=d');
+    readUrlState();
+    expect(state.basemapLabels).toBe(true);
+  });
+
   it('hs and 3d coexist: both formatted and parsed together', () => {
     state.hillshade = true;
     state.terrain3d = true;
@@ -496,6 +518,11 @@ describe('camera segment – codec round trip', () => {
       expect(parseCameraSegment(seg)).toBeNull();
     });
 
+  it.each(['Infinity/0/0', '5/Infinity/0', '5/0/-Infinity', '5/0/0/Infinity/0', '5/0/0/0/Infinity'])(
+    'rejects non-finite segment %j', seg => {
+      expect(parseCameraSegment(seg)).toBeNull();
+    });
+
   it('splits the camera segment from the params, with or without a leading #', () => {
     const a = splitHash('#5.00/39.5000/-98.3500?l=abc&lang=es');
     expect(a.camera).toBe('5.00/39.5000/-98.3500');
@@ -503,6 +530,58 @@ describe('camera segment – codec round trip', () => {
     expect(splitHash('5/1/2').camera).toBe('5/1/2');
     expect([...splitHash('5/1/2').params]).toEqual([]);
     expect(splitHash('').camera).toBe('');
+  });
+});
+
+describe('camera segment – strict numbers and wrapped longitude', () => {
+  it.each(['3abc/10x/20y', '5/10/20px', '5//20', '5/10/ ', '5/0/0/10deg/0', '5/0/0/0/'])(
+    'rejects segment with junk or an empty field %j', seg => {
+      expect(parseCameraSegment(seg)).toBeNull();
+    });
+
+  it.each([[190, -170], [-200, 160], [540, -180]])(
+    'wraps longitude %d to %d so the link reopens', (lng, wrapped) => {
+      const seg = formatCameraSegment({ center: [lng, 10], zoom: 4, bearing: 0, pitch: 0 });
+      expect(parseCameraSegment(seg)?.center).toEqual([wrapped, 10]);
+    });
+});
+
+describe('parseUrlState – invalid values are dropped', () => {
+  const parse = (qs: string) => parseUrlState(new URLSearchParams(qs));
+
+  it('resolves only listed codes, never Object.prototype keys', () => {
+    const data = parse('bm=constructor&wv=toString&oc=valueOf&wc=hasOwnProperty&l=__proto__.constructor.-toString');
+    expect(data.basemap).toBeUndefined();
+    expect(data.weatherVar).toBeUndefined();
+    expect(data.ogfColorBy).toBeUndefined();
+    expect(data.westtecColorBy).toBeUndefined();
+    expect(data.layerVisibility).toEqual({});
+  });
+
+  it('keeps a gen mode only when that layer offers it', () => {
+    // e = eia-generators (icons/heat/both), d = osm-datacenters (icons/clusters/heat)
+    expect(parse('gm=ec').genMode).toEqual({});
+    expect(parse('gm=db').genMode).toEqual({});
+    expect(parse('gm=ec.dc.eb').genMode).toEqual({ 'osm-datacenters': 'clusters', 'eia-generators': 'both' });
+  });
+
+  it.each(['5-', '-5', '1e999-5', '9-3', '1e-5', 'Infinity-5', '5-10-20', ' 5-10'])(
+    'drops mw=%s', mw => {
+      expect(parse('mw=' + encodeURIComponent(mw)).mwFilter).toBeUndefined();
+    });
+
+  it('keeps a plain mw range, including an equal min and max', () => {
+    expect(parse('mw=0-' + MW_SLIDER_MAX).mwFilter).toEqual({ min: 0, max: MW_SLIDER_MAX });
+    expect(parse('mw=7.5-7.5').mwFilter).toEqual({ min: 7.5, max: 7.5 });
+  });
+
+  it('clamps an mw range past the slider to its maximum, as the slider does', () => {
+    expect(parse('mw=500-' + (MW_SLIDER_MAX + 1)).mwFilter).toEqual({ min: 500, max: MW_SLIDER_MAX });
+    expect(parse(`mw=${MW_SLIDER_MAX + 5}-${MW_SLIDER_MAX + 9}`).mwFilter).toEqual({ min: MW_SLIDER_MAX, max: MW_SLIDER_MAX });
+  });
+
+  it.each(['2020abc', '99999', '1899', '2032', '2020.5', '', '-2020'])('drops y=%s', y => {
+    expect(parse('y=' + y).yearFilter).toBeUndefined();
   });
 });
 

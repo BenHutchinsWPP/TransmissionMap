@@ -1042,6 +1042,13 @@ header h1 {
   padding: 2px 4px;
 }
 .rotate-hint-toast button:hover { color: var(--text); }
+/* Same toast, top centre: the link-settings-dropped notice (url-state.ts). */
+.rotate-hint-toast--top {
+  bottom: auto;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
 
 /* ── Geocoder (address / place search) — top left ────────────────────────── */
 .geocoder {

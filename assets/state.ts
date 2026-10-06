@@ -17,6 +17,8 @@ export const state: AppState = {
   popup: null,
   layerVisibility: {},  // registryId → boolean (initialised from LAYERS[].defaultOn)
   layerFilters: {},     // registryId → Set<bucketId> (non-generator layers only)
+  where: {},            // registryId → Condition[] — the view's field conditions
+  styleOverrides: {},   // registryId → StyleOverride — the view's per-layer look
   userLayers: [],       // Array<UserLayer> — drawn + loaded file layers
   userLayerCounter: 0,  // monotonic id counter
   editMode: 'view',     // 'view' | 'edit'

@@ -19,7 +19,9 @@
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
-// Deps: state-bus (on 'layer:visibility'), state (map, layerVisibility, rasterLut), constants (weatherLiveUrl), raster-probes
+// Deps: state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, rasterLut),
+//       constants (weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS), style-overrides (effectiveOverride; call-time
+//       only, the import is cyclic), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
@@ -29,6 +31,11 @@
 //       particle animation; never a static import, or the chunk split breaks.
 // Wired from ui/ui.ts init() via initWeatherLive(); setWeatherVar() is called
 // from ui-filters.ts when the dropdown in the layer row changes.
+// The wash opacity folds in the view's opacity override
+// (state.styleOverrides["weather-live"]); style-overrides.ts emits
+// 'style:weather' when it changes (it never calls this module), and
+// initWeatherLive() subscribes. The wash's border-line layers are faded by
+// style-overrides.ts itself.
 // Follows the layer's visibility through the 'layer:visibility' bus event
 // that visibility.ts's setLayerVisibility() emits.
 
@@ -40,6 +47,7 @@ import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';
 import { on } from './state-bus.js';
+import { effectiveOverride } from './style-overrides.js';
 
 // Variables that animate wind particles: Wind itself, the Temp & Wind
 // combined view (temp wash + particles on top), and Windstream (particles
@@ -196,12 +204,14 @@ function nearestStepIdx(t: number): number {
 const B_ID = "weather-live-b";
 let frontIsB = false;
 let paintSeq = 0;
+let fading = false;   // a crossfade is in flight: it owns both layers' opacity
 
-async function paintImage(url: string, coords?: ImageCorners): Promise<void> {
+const pair = () => frontIsB ? { frontId: B_ID, backId: REGISTRY_ID } : { frontId: REGISTRY_ID, backId: B_ID };
+
+export async function paintImage(url: string, coords?: ImageCorners): Promise<void> {
   const map = state.map;
   if (!map) return;
-  const backId = frontIsB ? REGISTRY_ID : B_ID;
-  const frontId = frontIsB ? B_ID : REGISTRY_ID;
+  const { frontId, backId } = pair();
   const back = map.getSource(backId) as ImageSource | undefined;
   if (!back || !map.getLayer(frontId)) return;
   const seq = ++paintSeq;
@@ -215,21 +225,50 @@ async function paintImage(url: string, coords?: ImageCorners): Promise<void> {
   back.updateImage({ url, ...(coords ? { coordinates: coords } : {}) });
   frontIsB = !frontIsB;
 
-  const W = WEATHER_WASH_OPACITY;
   const start = performance.now();
+  fading = true;
   const fade = (now: number) => {
-    if (seq !== paintSeq || !state.map?.getLayer(backId)) return;
+    if (seq !== paintSeq) return;
+    if (!state.map?.getLayer(backId)) { fading = false; return; }
     // Clamped at both ends: a rAF callback can carry a timestamp a few ms
     // earlier than the performance.now() taken just before scheduling it (the
     // timestamp is the frame's start), which would otherwise drive the opacity
     // slightly negative and MapLibre rejects the paint value.
     const t = Math.max(0, Math.min(1, (now - start) / WEATHER_FADE_MS));
-    const a = W * t;
+    const [a, b] = crossfadeOpacities(t);
     state.map.setPaintProperty(backId, "raster-opacity", a);
-    state.map.setPaintProperty(frontId, "raster-opacity", Math.max(0, 1 - (1 - W) / (1 - a)));
+    state.map.setPaintProperty(frontId, "raster-opacity", b);
     if (t < 1) requestAnimationFrame(fade);
+    else fading = false;
   };
   requestAnimationFrame(fade);
+}
+
+// The wash's combined opacity W: the base value times the view's opacity
+// override (style-overrides.ts), cached and refreshed on 'style:weather' so
+// every fade frame reads it for free.
+let washW = WEATHER_WASH_OPACITY;
+function refreshWashOpacity() {
+  washW = WEATHER_WASH_OPACITY * (effectiveOverride(REGISTRY_ID).opacity ?? 1);
+}
+
+/** One crossfade frame at progress t ∈ [0,1]: [incoming, outgoing] opacity,
+ *  combined coverage 1−(1−a)(1−b) = W throughout. */
+export function crossfadeOpacities(t: number): [number, number] {
+  const W = washW;
+  const a = W * t;
+  return [a, Math.max(0, 1 - (1 - W) / (1 - a))];
+}
+
+/** Repaint the settled A/B pair at the current W. Runs on 'style:weather'
+ *  (style-overrides.ts emits it when the override changes) and at init; a
+ *  running fade picks W up on its next frame, so it is skipped then. */
+function applyWeatherOpacity() {
+  const map = state.map;
+  const { frontId, backId } = pair();
+  if (fading || !map?.getLayer(frontId) || !map.getLayer(backId)) return;
+  map.setPaintProperty(frontId, "raster-opacity", washW);
+  map.setPaintProperty(backId, "raster-opacity", 0);
 }
 
 // Warms the HTTP cache for a step's assets (webp + wind field when a particle
@@ -556,6 +595,10 @@ function syncWeatherLiveVisibility(): void {
 
 export function initWeatherLive() {
   if (!state.map) return;
+
+  on('style:weather', () => { refreshWashOpacity(); applyWeatherOpacity(); });
+  refreshWashOpacity();
+  applyWeatherOpacity();
 
   // Switching the layer on pulls the image immediately — until then the source
   // is holding the transparent placeholder and nothing has downloaded.

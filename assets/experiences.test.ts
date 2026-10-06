@@ -98,18 +98,20 @@ vi.mock('./url-state.js', async () => {
 
 import { state } from './state.js';
 import { YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
-import { formatUrlState, parseUrlState, type UrlStateData } from './url-state-codec.js';
+import { formatUrlState, parseUrlState, defaultView, type UrlStateData } from './url-state-codec.js';
 import { EXPERIENCES, type MapExperience } from '../src/registry/experiences.js';
 import { experienceUrlState, applyExperience } from './experiences.js';
-import { applyView, seedView } from './view-state.js';
+import { applyView, seedView, currentView } from './view-state.js';
 import { on } from './state-bus.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function mockMap(): MaplibreMap {
   return {
-    getLayer: vi.fn(() => undefined),
+    getLayer: vi.fn(() => ({ type: 'line' })),
     getSource: vi.fn(() => undefined),
+    getPaintProperty: vi.fn(() => undefined),
+    getLayoutProperty: vi.fn(() => undefined),
     setLayoutProperty: vi.fn(),
     setPaintProperty: vi.fn(),
     setFilter: vi.fn(),
@@ -154,7 +156,10 @@ function snapshot() {
     terrain3d: state.terrain3d,
     buildings3d: state.buildings3d,
     hillshade: state.hillshade,
+    basemapLabels: state.basemapLabels,
     regionScope: state.regionScope,
+    where: structuredClone(state.where),
+    style: structuredClone(state.styleOverrides),
   };
 }
 
@@ -211,6 +216,20 @@ describe('every preset survives formatUrlState → parseUrlState', () => {
       expect(snapshot()).toEqual(direct);
     });
   }
+
+  // No catalogue entry carries where/style yet; this one stands in for the first.
+  it('a preset carrying where and style is carried whole by the link format', () => {
+    const data = experienceUrlState({
+      where: { 'osm-substations-points': [{ field: 'nominal_kv', op: '>=', value: 345 }] },
+      style: { railroads: { opacity: 0.5, size: 2, color: '#ff0000' } },
+    });
+    applyView(data);
+    const direct = snapshot();
+    expect(Object.keys(direct.where)).toHaveLength(1);
+    expect(Object.keys(direct.style)).toHaveLength(1);
+    applyView(roundTrip(data));
+    expect(snapshot()).toEqual(direct);
+  });
 
   it('switches layers off before it switches any on', () => {
     // columbia-hydro clears the transmission network and brings generators up —
@@ -306,6 +325,39 @@ describe('applyView', () => {
     applyPreset({ layersOn: ['ogf-planned-transmission', 'westtec-10yr', 'wildfire-smoke', 'eia-generators'] });
     expect(visibilityCalls.length).toBeGreaterThan(1);
     expect(writes + writeUrlStateCalls.length).toBe(1);
+  });
+
+  it('carries basemap labels: lb=0 turns them off, and Reset (applyView({})) turns them back on', () => {
+    applyView(parseUrlState(new URLSearchParams('lb=0')));
+    expect(state.basemapLabels).toBe(false);
+    expect(formatUrlState(currentView()).join('&')).toContain('lb=0');
+    applyView({});
+    expect(state.basemapLabels).toBe(true);
+    expect(formatUrlState(currentView()).join('&')).not.toContain('lb=');
+  });
+
+  it('where and style are replaced wholesale: a following {} leaves both empty, in state and in currentView()', () => {
+    const data = {
+      where: { 'eia-generators': [{ field: 'sector_name', op: 'in' as const, value: ['Electric Utility'] }] },
+      style: { 'osm-generators': { opacity: 0.5 } },
+    };
+    applyView(data);
+    expect(state.where).toEqual(data.where);
+    expect(state.styleOverrides).toEqual(data.style);
+    expect(state.where).not.toBe(data.where);
+    expect(currentView().style).toEqual(data.style);
+    expect(currentView().style).not.toBe(state.styleOverrides);
+    applyView({ where: undefined });
+    expect(state.where).toEqual({});
+    expect(state.styleOverrides).toEqual({});
+    expect(currentView().where).toEqual({});
+    expect(currentView().style).toEqual({});
+  });
+
+  it('where and style reach the link only as vx, and only when non-empty', () => {
+    expect(formatUrlState(defaultView())).toEqual(formatUrlState({ ...defaultView(), where: {}, style: {} }));
+    const parts = formatUrlState({ ...defaultView(), where: { x: [{ field: 'f', op: 'has' }] }, style: { x: { opacity: 0.5 } } });
+    expect(parts.map(p => p.split('=')[0])).toEqual(['vx']);
   });
 
   it('lands a view naming two members of an exclusive group the way seedView does', () => {

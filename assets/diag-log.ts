@@ -4,7 +4,7 @@
 // dependency graph. recordDiagEvent must never throw — it runs inside catch
 // blocks and error listeners, where a throw would mask the original error.
 
-export type DiagSource = 'map' | 'layer' | 'basemap' | 'live';
+export type DiagSource = 'map' | 'layer' | 'basemap' | 'live' | 'link';
 
 export type DiagEntry = {
   ts: number;

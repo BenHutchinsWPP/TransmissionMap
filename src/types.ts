@@ -1,6 +1,10 @@
 // Central shared type definitions for src/ modules.
 import type { Map as MaplibreMap, Popup } from 'maplibre-gl';
 import type MapboxDraw from '@mapbox/mapbox-gl-draw';
+import type { Condition } from './registry/condition-compile.js';
+
+// Per-layer look override in a view: opacity and size are multipliers on the layer's own values, color a literal.
+export interface StyleOverride { opacity?: number; size?: number; color?: string }
 
 interface Downloads {
   csv?: string | null;      // point layers — CSV-only pack
@@ -67,6 +71,8 @@ export interface LayerDef {
   titleKey: string;
   group: string;
   sourceId: string;
+  // FIELD_SCHEMA key (src/registry/field-schema.ts) naming the fields this layer's features carry.
+  dataset?: string;
   swatch: string;
   live?: boolean;
   defaultOn: boolean;
@@ -152,6 +158,8 @@ export interface AppState {
   popup: Popup | null;
   layerVisibility: Record<string, boolean>;
   layerFilters: Record<string, Set<string>>;
+  where: Record<string, Condition[]>;                // registry id → field conditions (a view section)
+  styleOverrides: Record<string, StyleOverride>;     // registry id → look override (a view section)
   userLayers: UserLayer[];
   userLayerCounter: number;
   editMode: string;

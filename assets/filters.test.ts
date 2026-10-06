@@ -80,7 +80,7 @@ describe('buildKvFilterExpr', () => {
 describe('filter:all drift guard', () => {
   const src = readFileSync(fileURLToPath(new URL('./filters.ts', import.meta.url)), 'utf8');
 
-  const exportedApplyFns = [...src.matchAll(/^export function (apply\w+)/gm)].map(m => m[1]);
+  const exportedApplyFns = [...src.matchAll(/^export function (apply\w*Filters?)\b/gm)].map(m => m[1]);
 
   const handlerMatch = src.match(/on\('filter:all',\s*\(\) => \{([\s\S]*?)\n\}\);/);
   if (!handlerMatch) throw new Error("could not locate the 'filter:all' handler body in filters.ts");

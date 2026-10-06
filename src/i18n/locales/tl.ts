@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Buksan…',
   'menu.saveGeoJson': 'I-save bilang GeoJSON…',
   'menu.saveKml': 'I-save bilang KML…',
+  'menu.saveView': 'I-save ang view…',
+  'viewFile.invalid': 'Hindi ito wastong file ng view ng mapa.',
+  'viewFile.version': 'Ang view file na ito ay mula sa mas bagong bersyon at hindi mabubuksan.',
+  'viewFile.notReady': 'Naglo-load pa ang mapa — subukan muli sa ilang sandali.',
   'menu.experiences': 'Mga Karanasan…',
   'menu.hideLegends': 'Itago ang mga legend',
   'menu.showLegends': 'Ipakita ang mga legend',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Mag-right-click at mag-drag (o Ctrl + drag) upang paikutin at ikiling ang mapa. Sa touch screen, gumamit ng dalawang daliri. I-click ang icon ng compass upang i-reset sa hilaga.',
+  'toast.linkDropped': 'May ilang setting sa link na ito na hindi nakilala at nilaktawan ({count}).',
+  'toast.linkTooLarge': 'Masyadong malaki ang view na ito para i-share bilang link. Gamitin ang File ▸ I-save ang view… para i-share ito bilang file.',
   'info.dataCredits': 'Mga Kredito ng Data',
 };
 

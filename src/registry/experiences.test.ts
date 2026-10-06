@@ -7,7 +7,7 @@ import {
   EXPERIENCES, EXPERIENCE_CATEGORY_LABELS, EXPERIENCE_CATEGORY_ORDER,
   AERIAL_MAX_ZOOM, experienceById, type ExperienceCategory,
 } from './experiences.js';
-import { LAYERS, layerById } from './index.js';
+import { LAYERS, layerById, displayModes } from './index.js';
 import { WEATHER_VARIABLES } from './conditions.js';
 // ui-legends.ts sits in an import cycle with url-state-codec.ts, and the codec
 // reads LEGEND_FILTERS at module scope. Pulling the codec in first lets
@@ -160,9 +160,7 @@ describe('EXPERIENCES state presets', () => {
       for (const [layerId, mode] of Object.entries(exp.state.genMode ?? {})) {
         const entry = layerById(layerId);
         expect(entry, `"${exp.id}" names unknown layer "${layerId}"`).not.toBeNull();
-        const modes = entry?.modes
-          ? entry.modes.map(m => m.id)
-          : entry?.heatLayerId ? ['icons', 'heat', 'both'] : [];
+        const modes = entry ? displayModes(entry) : [];
         expect(modes, `"${exp.id}" layer "${layerId}" has no display modes`).not.toHaveLength(0);
         expect(modes, `"${exp.id}" layer "${layerId}" mode "${mode}"`).toContain(mode);
       }

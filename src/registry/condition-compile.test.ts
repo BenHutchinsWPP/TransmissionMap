@@ -56,6 +56,36 @@ describe('validateConditions', () => {
     expect(validateConditions('eia_generators', [{ field: 'nameplate_mw', op: '>=', value: 250 }])).toBeNull();
   });
 
+  it('rejects a literal of the wrong type for the field', () => {
+    const bad: unknown[] = [
+      { field: 'nameplate_mw', op: '>=', value: '345' },
+      { field: 'nameplate_mw', op: '=', value: true },
+      { field: 'energy_source', op: '=', value: false },
+      { field: 'energy_source', op: 'in', value: ['WND', 5] },
+    ];
+    for (const c of bad) expect(validateConditions('eia_generators', [c])?.reason, JSON.stringify(c)).toBe('value-type');
+  });
+
+  it('rejects a non-literal shape as malformed', () => {
+    const bad: unknown[] = [
+      null, 'x', [], { field: 'nameplate_mw', op: '>=', value: 1, extra: 1 },
+      { field: 'nameplate_mw', op: '>=', value: ['get', 'x'] },
+      { field: 'nameplate_mw', op: '>=', value: Infinity },
+      { field: 'energy_source', op: 'in', value: 'WND' },
+      { field: 'energy_source', op: 'has', value: 'x' },
+      { field: 1, op: '=' },
+    ];
+    for (const c of bad) expect(validateConditions('eia_generators', [c])?.reason, JSON.stringify(c)).toBe('malformed-condition');
+    expect(validateConditions('eia_generators', 'x')?.reason).toBe('malformed-condition');
+  });
+
+  it('returns, never throws, for prototype keys as dataset or field', () => {
+    for (const k of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      expect(validateConditions(k, [])?.reason, k).toBe('unknown-dataset');
+      expect(validateConditions('eia_generators', [{ field: k, op: '=', value: 1 }])?.reason, k).toBe('unknown-field');
+    }
+  });
+
   it('is thrown, not returned, by toMapLibreFilter', () => {
     const bad: Condition[] = [{ field: 'nope', op: '=', value: 'x' }];
     expect(() => toMapLibreFilter('eia_generators', bad)).toThrow(ConditionError);
@@ -74,7 +104,7 @@ describe('toMapLibreFilter shape', () => {
       { field: 'nameplate_mw', op: '>', value: 100 },
     ])).toEqual(['all',
       ['==', ['get', 'gen_status'], 'existing'],
-      ['>', ['get', 'nameplate_mw'], 100],
+      ['>', ['to-number', ['get', 'nameplate_mw']], 100],
     ]);
   });
 });

@@ -3,7 +3,7 @@
 import { state } from '../state.js';
 import { escapeHtml } from '../utils/utils.js';
 
-function downloadFile(text: string, filename: string, mime: string) {
+export function downloadFile(text: string, filename: string, mime: string) {
   const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

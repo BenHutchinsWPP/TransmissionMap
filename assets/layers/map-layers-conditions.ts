@@ -6,7 +6,8 @@
 //       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
 //       and the FEMA National Risk Index county choropleth (same shared-source
 //       feature-state pattern; the join lives in ../fema-nri.ts).
-// Deps: layer-init.ts (pmtilesUrl, initialVisibility), state, constants (DATA),
+// Deps: layer-init.ts (pmtilesUrl, initialVisibility, registerBaseFilter — every
+//       inline style-layer filter is registered as its base), state, constants (DATA),
 //       src/colors/buckets.ts (NRI_RATINGS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
@@ -33,14 +34,14 @@
 // coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
 // -snow) added underneath and toggled by the same registry row.
 
-import type { LayerSpecification, ExpressionSpecification, RasterTileSource } from "maplibre-gl";
+import type { LayerSpecification, ExpressionSpecification, FilterSpecification, RasterTileSource } from "maplibre-gl";
 import { state } from '../state.js';
 import {
   DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
   GEOMET_RADAR_TILE_TEMPLATE, WEATHER_IMAGE_COORDS, TRANSPARENT_PNG,
   WEATHER_WASH_OPACITY,
 } from '../constants.js';
-import { initialVisibility, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
+import { initialVisibility, registerBaseFilter, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
 import { NRI_RATINGS } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
@@ -66,6 +67,9 @@ export function applySmokeOpacity() {
 // Split into two builders so add-all-layers.ts can slot the polygon half
 // (smoke + perimeters) below infra vectors and the point half (hotspots +
 // incidents) above them — all area fills under all lines/points.
+// Every wildfire-live style layer selects one `_type` from the shared source.
+const wildfireType = (t: string) => ["==", ["get", "_type"], t] as FilterSpecification;
+
 export function addWildfireLiveAreas() {
   if (!state.map || state.map.getSource("wildfire-live")) return;
 
@@ -82,7 +86,7 @@ export function addWildfireLiveAreas() {
     id: "wildfire-smoke-fill",
     type: "fill",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "smoke"],
+    filter: wildfireType("smoke"),
     layout: { visibility: smokeVis },
     paint: {
       "fill-color": [
@@ -95,12 +99,13 @@ export function addWildfireLiveAreas() {
       "fill-opacity": smokeFillOpacity(state.smokeOpacity),
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-smoke-fill", wildfireType("smoke"));
 
   state.map.addLayer({
     id: "wildfire-smoke-line",
     type: "line",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "smoke"],
+    filter: wildfireType("smoke"),
     layout: { visibility: smokeVis },
     paint: {
       "line-color": [
@@ -114,26 +119,28 @@ export function addWildfireLiveAreas() {
       "line-opacity": 0.5 * state.smokeOpacity,
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-smoke-line", wildfireType("smoke"));
 
   // ── Fire perimeter fill — thin so basemap terrain reads through ────────────
   state.map.addLayer({
     id: "wildfire-perimeters-fill",
     type: "fill",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "perimeter"],
+    filter: wildfireType("perimeter"),
     layout: { visibility: wildfireVis },
     paint: {
       "fill-color": "#ff6600",
       "fill-opacity": 0.12,
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-perimeters-fill", wildfireType("perimeter"));
 
   // ── Perimeter outline — colored by % contained (red→orange→green) ──────────
   state.map.addLayer({
     id: "wildfire-perimeters-line",
     type: "line",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "perimeter"],
+    filter: wildfireType("perimeter"),
     layout: { visibility: wildfireVis },
     paint: {
       "line-color": [
@@ -147,6 +154,7 @@ export function addWildfireLiveAreas() {
       "line-opacity": 0.9,
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-perimeters-line", wildfireType("perimeter"));
 
 }
 
@@ -168,7 +176,7 @@ export function addWildfireLivePoints() {
     id: "wildfire-hotspots-heat",
     type: "heatmap",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "hotspot"],
+    filter: wildfireType("hotspot"),
     maxzoom: 9,
     layout: { visibility: wildfireVis },
     paint: {
@@ -201,13 +209,14 @@ export function addWildfireLivePoints() {
       "heatmap-opacity": 0.85,
     },
   } as LayerSpecification, heatBefore);
+  registerBaseFilter("wildfire-hotspots-heat", wildfireType("hotspot"));
 
   // ── Hotspot circles — individual dots at high zoom, colored by confidence ──
   state.map.addLayer({
     id: "wildfire-hotspots-circle",
     type: "circle",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "hotspot"],
+    filter: wildfireType("hotspot"),
     minzoom: 8,
     layout: { visibility: wildfireVis },
     paint: {
@@ -226,13 +235,14 @@ export function addWildfireLivePoints() {
       "circle-opacity": 0.9,
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-hotspots-circle", wildfireType("hotspot"));
 
   // ── Named incident points — human-reported; always visible, above hotspots ─
   state.map.addLayer({
     id: "wildfire-incidents-circle",
     type: "symbol",
     source: "wildfire-live",
-    filter: ["==", ["get", "_type"], "incident"],
+    filter: wildfireType("incident"),
     layout: {
       visibility: incidentVis,
       "icon-image": [
@@ -265,6 +275,7 @@ export function addWildfireLivePoints() {
       "text-halo-blur": 0.5,
     },
   } as LayerSpecification);
+  registerBaseFilter("wildfire-incidents-circle", wildfireType("incident"));
 }
 
 // ─── NWS active weather alerts (live) ──────────────────────────────────────
@@ -510,6 +521,11 @@ export function addFemaNri() {
 // so visitors who never enable the layer never fetch; ../weather-live.ts
 // calls updateImage() on first enable and on every ~3-hourly refresh, and also
 // owns the age chip and the hover-LUT reload.
+// weather-admin-lines `level`: 1 = state borders; 0 = country borders and
+// 2 = coastline, which both get the prominent style.
+const ADMIN_STATE_LINES   = ["==", ["get", "level"], 1] as FilterSpecification;
+const ADMIN_COUNTRY_LINES = ["!=", ["get", "level"], 1] as FilterSpecification;
+
 export function addWeatherLive() {
   if (!state.map || state.map.getSource("weather-live")) return;
   // MapLibre's image-source spec has no `attribution` field (unlike raster/geojson),
@@ -552,19 +568,20 @@ export function addWeatherLive() {
     id: "weather-admin-lines-states",
     type: "line",
     source: "weather-admin-lines",
-    filter: ["==", ["get", "level"], 1],
+    filter: ADMIN_STATE_LINES,
     layout: { visibility: initialVisibility("weather-live") },
     paint: { "line-color": "#ffffff", "line-width": 0.8, "line-opacity": 0.45 },
   });
+  registerBaseFilter("weather-admin-lines-states", ADMIN_STATE_LINES);
   state.map.addLayer({
     id: "weather-admin-lines-countries",
     type: "line",
     source: "weather-admin-lines",
-    // level 0 = country borders, 2 = coastline — both get the prominent style
-    filter: ["!=", ["get", "level"], 1],
+    filter: ADMIN_COUNTRY_LINES,
     layout: { visibility: initialVisibility("weather-live") },
     paint: { "line-color": "#ffffff", "line-width": 1.4, "line-opacity": 0.7 },
   });
+  registerBaseFilter("weather-admin-lines-countries", ADMIN_COUNTRY_LINES);
 }
 
 export const addWildfireHazard = () => addRasterLayer("usfs-wildfire-potential", DATA.usfs_wildfire_potential,

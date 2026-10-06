@@ -1,11 +1,18 @@
 // ─── Polygon hover highlight + vector line click-highlight ───────────────────
 // Imported by: map.ts (init calls), popup.ts (highlightLine/clearLineHighlight,
 // hoverFillIds for its shared cursor hit-test)
+// Highlight widths follow the base layer's size override each time one is
+// shown (style-overrides.ts's scaleBy over state.styleOverrides).
 
 import { state } from './state.js';
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, StyleLayer } from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
 import { onMapTap, tapBox } from './map-input.js';
+import { scaleBy, effectiveOverride } from './style-overrides.js';
+
+function sizeK(registryId: string): number {
+  return effectiveOverride(registryId).size ?? 1;
+}
 
 // ─── Polygon hover ────────────────────────────────────────────────────────────
 // Config is driven by LayerDef.hoverField; fill/source/source-layer are derived
@@ -51,13 +58,14 @@ export function initPolygonHover() {
     const hl    = layer.id + "-hl";
     const field = layer.hoverField;
 
+    const width = ["interpolate", ["linear"], ["zoom"], 2, 1.5, 5, 2.5, 10, 3.5] as ExpressionSpecification;
     const def: LayerSpecification = {
       id: hl, type: "line", source: src, minzoom: 2,
       layout: { visibility: "none" },
       filter: ["==", ["get", field], "\x00"] as FilterSpecification,
       paint: {
         "line-color": "#ffffff",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 2, 1.5, 5, 2.5, 10, 3.5] as ExpressionSpecification,
+        "line-width": width,
         "line-opacity": 0.90,
       },
     };
@@ -79,6 +87,7 @@ export function initPolygonHover() {
         activeHl  = hl;
         activeVal = String(val);
         state.map!.setFilter(hl, ["==", ["to-string", ["get", field]], activeVal]);
+        state.map!.setPaintProperty(hl, "line-width", scaleBy(width, sizeK(layer.id)));
         state.map!.setLayoutProperty(hl, "visibility", "visible");
       }
     });
@@ -91,7 +100,10 @@ export function initPolygonHover() {
 // several sources, so `hl` holds one highlight layer per source and they are
 // driven together — one filter, one visibility flip, however many sources.
 
-interface LineHlCfg { key: string[]; hl: string[] }
+interface LineHlCfg { key: string[]; hl: string[]; registryId: string }
+
+const LINE_HL_GAP = ["interpolate", ["linear"], ["zoom"], 4, 1.5, 12, 4] as ExpressionSpecification;
+const LINE_HL_WIDTH = 2.5;
 
 const NEVER_MATCH = ["==", ["get", "\x00"], "\x00\x01"];
 const LINE_HL_BY_LAYER: Record<string, LineHlCfg> = {};
@@ -121,8 +133,8 @@ export function initLineHighlight() {
         filter: NEVER_MATCH as FilterSpecification,
         paint: {
           "line-color": "#3b82f6",
-          "line-gap-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 12, 4] as ExpressionSpecification,
-          "line-width": 2.5,
+          "line-gap-width": LINE_HL_GAP,
+          "line-width": LINE_HL_WIDTH,
           "line-opacity": 0.95,
         },
       };
@@ -131,7 +143,7 @@ export function initLineHighlight() {
       hlIds.push(hlId);
     }
 
-    const cfg: LineHlCfg = { key: layer.lineHighlightKeys, hl: hlIds };
+    const cfg: LineHlCfg = { key: layer.lineHighlightKeys, hl: hlIds, registryId: layer.id };
     for (const lyr of styleLayers) {
       const src = (lyr as { source?: string }).source;
       if (src && srcs.has(src) && lyr.type === "line" && !hlIds.includes(lyr.id))
@@ -146,8 +158,11 @@ export function highlightLine(layerId: string, props: Record<string, unknown>): 
   if (cfg.key.some(f => props[f] == null || props[f] === "")) return false;
   const conds = cfg.key.map(f => ["==", ["to-string", ["get", f]], String(props[f])]);
   clearLineHighlight();
+  const k = sizeK(cfg.registryId);
   for (const hl of cfg.hl) {
     state.map.setFilter(hl, ["all", ...conds] as FilterSpecification);
+    state.map.setPaintProperty(hl, "line-gap-width", scaleBy(LINE_HL_GAP, k));
+    state.map.setPaintProperty(hl, "line-width", scaleBy(LINE_HL_WIDTH, k));
     state.map.setLayoutProperty(hl, "visibility", "visible");
   }
   activeLineHl = cfg.hl;

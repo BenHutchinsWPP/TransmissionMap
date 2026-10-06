@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Öffnen…',
   'menu.saveGeoJson': 'Als GeoJSON speichern…',
   'menu.saveKml': 'Als KML speichern…',
+  'menu.saveView': 'Ansicht speichern…',
+  'viewFile.invalid': 'Dies ist keine gültige Kartenansichtsdatei.',
+  'viewFile.version': 'Diese Ansichtsdatei stammt aus einer neueren Version und kann nicht geöffnet werden.',
+  'viewFile.notReady': 'Die Karte lädt noch – bitte gleich noch einmal versuchen.',
   'menu.experiences': 'Erlebnisse…',
   'menu.hideLegends': 'Legenden ausblenden',
   'menu.showLegends': 'Legenden anzeigen',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Rechtsklick und ziehen (oder Strg + ziehen), um die Karte zu drehen und zu neigen. Auf Touchscreens zwei Finger verwenden. Auf das Kompass-Symbol klicken, um Norden wieder auszurichten.',
+  'toast.linkDropped': 'Einige Einstellungen in diesem Link wurden nicht erkannt und übersprungen ({count}).',
+  'toast.linkTooLarge': 'Diese Ansicht ist zu groß, um sie als Link zu teilen. Teilen Sie sie über Datei ▸ Ansicht speichern… als Datei.',
   'info.dataCredits': 'Datenquellen',
 };
 

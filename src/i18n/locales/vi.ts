@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': 'Mở…',
   'menu.saveGeoJson': 'Lưu dưới dạng GeoJSON…',
   'menu.saveKml': 'Lưu dưới dạng KML…',
+  'menu.saveView': 'Lưu chế độ xem…',
+  'viewFile.invalid': 'Đây không phải là tệp chế độ xem bản đồ hợp lệ.',
+  'viewFile.version': 'Tệp chế độ xem này thuộc phiên bản mới hơn và không thể mở.',
+  'viewFile.notReady': 'Bản đồ vẫn đang tải — vui lòng thử lại sau giây lát.',
   'menu.experiences': 'Trải nghiệm…',
   'menu.hideLegends': 'Ẩn chú giải',
   'menu.showLegends': 'Hiện chú giải',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': 'Nhấp chuột phải và kéo (hoặc Ctrl + kéo) để xoay và nghiêng bản đồ. Trên màn hình cảm ứng, hãy dùng hai ngón tay. Nhấp vào biểu tượng la bàn để quay lại hướng Bắc.',
+  'toast.linkDropped': 'Một số cài đặt trong liên kết này không được nhận dạng và đã bị bỏ qua ({count}).',
+  'toast.linkTooLarge': 'Chế độ xem này quá lớn để chia sẻ dưới dạng liên kết. Hãy dùng Tệp ▸ Lưu chế độ xem… để chia sẻ dưới dạng tệp.',
   'info.dataCredits': 'Nguồn dữ liệu & Ghi nhận',
 };
 

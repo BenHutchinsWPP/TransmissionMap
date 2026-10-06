@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': '打开…',
   'menu.saveGeoJson': '保存为 GeoJSON…',
   'menu.saveKml': '保存为 KML…',
+  'menu.saveView': '保存视图…',
+  'viewFile.invalid': '这不是有效的地图视图文件。',
+  'viewFile.version': '此视图文件来自较新版本，无法打开。',
+  'viewFile.notReady': '地图仍在加载，请稍后再试。',
   'menu.experiences': '地图导览…',
   'menu.hideLegends': '隐藏图例',
   'menu.showLegends': '显示图例',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': '右键拖动（或 Ctrl + 拖动）旋转和倾斜地图。触摸屏使用双指操作。点击指南针图标重置正北。',
+  'toast.linkDropped': '此链接中的部分设置无法识别，已跳过（{count}）。',
+  'toast.linkTooLarge': '此视图过大，无法通过链接分享。请使用 文件 ▸ 保存视图… 以文件形式分享。',
   'info.dataCredits': '数据来源与鸣谢',
 };
 

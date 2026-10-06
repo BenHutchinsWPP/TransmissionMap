@@ -1,3 +1,23 @@
+// ─── Feature filters: legend/range appliers + view `where` conditions ────────
+// Every MapLibre filter this module writes is effectiveFilter(mlId) =
+// base ∧ applier part ∧ where, written by writeFilter()/refilter() — the one
+// setFilter call site here (filters.test.ts enforces it):
+//   base    — the layer's own inline filter, registered by its builder through
+//             registerBaseFilter() (map-layers-*.ts, layer-init.ts);
+//   applier — the legend/range expression last computed by an applyXFilter()
+//             for that map layer, remembered per map layer so a `where` change
+//             re-filters one registry layer without re-running the appliers;
+//   where   — state.where[registryId] for the registry layer (LayerDef.dataset
+//             set) owning the map layer, compiled by toMapLibreFilter().
+// setWhere() validates (view-validate.ts's validateWhere(), the pure check
+// share links reuse) and applies one layer's conditions; applyAllWhere() re-filters every
+// where-capable map layer from state. Whole-view applies and Reset need neither:
+// their `filter:all` re-filters every where-owned layer (view-state-paint.test.ts).
+// Appliers also run off the bus (`filter:*`, bottom of file).
+// Deps: state.ts, registry (LAYERS, layerById), src/colors/*, condition-compile.ts,
+// view-validate.ts,
+// nws-zone-join.ts (NWS feature-state half), diag-log.ts, constants.ts.
+
 // ─── Filter value maps (bucket id → array of feature property values) ────────
 
 import { state } from './state.js';
@@ -28,8 +48,9 @@ import {
   MINES_STATUS_BUCKETS, MINES_STATUS_MAP,
 } from '../src/colors/minerals.js';
 import { setZoneGroupFilter } from './nws-zone-join.js';
-import { toMapLibreFilter, ConditionError } from '../src/registry/condition-compile.js';
+import { toMapLibreFilter, ConditionError, type Condition } from '../src/registry/condition-compile.js';
 import { recordDiagEvent } from './diag-log.js';
+import { validateWhere } from '../src/registry/view-validate.js';
 
 export const OSM_FUEL_MAP = {
   wind:       ["wind"],
@@ -154,10 +175,7 @@ function combineFilters(...exprs: (FilterSpecification | null)[]) {
 
 function setBucketFilter(mapLayerIds: string[], bucketExpr: FilterSpecification | null) {
   if (!state.map) return;
-  for (const mlId of mapLayerIds) {
-    if (!state.map.getLayer(mlId)) continue;
-    state.map.setFilter(mlId, combineFilters(BASE_LAYER_FILTERS[mlId] ?? null, bucketExpr));
-  }
+  for (const mlId of mapLayerIds) writeFilter(mlId, [bucketExpr]);
 }
 
 function applyBucketFilterToLayers(layerIds: string[], field: string, activeSet: Set<string>, buckets: BucketDef[], valueMap: Record<string, string[]>) {
@@ -370,11 +388,9 @@ export function applyGeneratorFilters() {
     }
 
     for (const mlId of entry.mapLayerIds) {
-      if (!state.map.getLayer(mlId)) continue;
-      const base    = BASE_LAYER_FILTERS[mlId] ?? null;
       const mwField = GEN_MW_FIELDS[mlId];
       const mwExpr  = mwField ? buildMwFilterExpr(mwField, state.mwFilter.min, state.mwFilter.max) : null;
-      state.map.setFilter(mlId, combineFilters(base, fuelExpr, mwExpr, statusExpr, yearExpr, sectorExpr));
+      writeFilter(mlId, [fuelExpr, mwExpr, statusExpr, yearExpr, sectorExpr]);
     }
   }
 }
@@ -387,6 +403,106 @@ const BASE_LAYER_FILTERS: Record<string, FilterSpecification | null> = {};
 // filter/visibility system — every add*Layer() call must register here.
 export function registerBaseFilter(layerId: string, filter: FilterSpecification | null) {
   BASE_LAYER_FILTERS[layerId] = filter ?? null;
+}
+
+// ─── Effective filter: base ∧ applier part ∧ where ────────────────────────────
+// Last applier part per map layer, kept as the applier's list of parts so the
+// combined expression stays flat (["all", base, fuel, mw, …]) exactly as the
+// appliers built it before `where` existed.
+const APPLIER_PARTS: Record<string, (FilterSpecification | null)[]> = {};
+
+// Map layers that never obey a registry layer's `where`, with the reason.
+// Clustered-source layers draw cluster aggregates, not features, so a
+// per-feature filter cannot change what a cluster counts (the plain twin,
+// osm-dc-points, stays filterable); highlight twins carry a selection filter
+// that a refilter must not overwrite.
+const WHERE_EXCLUDED_MAP_LAYERS: Record<string, string> = {
+  "osm-dc-clusters":          "cluster aggregate",
+  "osm-dc-cluster-count":     "cluster aggregate",
+  "wecc-path-lines-highlight": "click-selection highlight twin",
+};
+
+/** Map layer id → the registry layer whose `where` it obeys: every map layer
+ *  of a layer with a `dataset`, including its labels, heat and DC overlays
+ *  (the same reach the legend filters have), minus WHERE_EXCLUDED_MAP_LAYERS. */
+export function whereOwnership(
+  layers: readonly { id: string; dataset?: string; mapLayerIds: readonly string[] }[],
+): Record<string, string> {
+  const owner: Record<string, string> = {};
+  for (const entry of layers) {
+    if (!entry.dataset) continue;
+    for (const mlId of entry.mapLayerIds) {
+      if (!WHERE_EXCLUDED_MAP_LAYERS[mlId]) owner[mlId] = entry.id;
+    }
+  }
+  return owner;
+}
+
+const WHERE_OWNER = whereOwnership(LAYERS);
+
+// Bad entries already recorded, so a refilter of ~30 map layers logs one event.
+const REPORTED_BAD_WHERE = new Set<string>();
+
+function whereExpr(mlId: string): FilterSpecification | null {
+  const owner = WHERE_OWNER[mlId];
+  const conds = owner ? state.where[owner] : undefined;
+  if (!conds?.length) return null;
+  // setWhere validates before writing; this guards a state.where seeded by
+  // another path, so an invalid entry is recorded and skipped rather than
+  // thrown into the middle of a filter:all sequence.
+  try {
+    return toMapLibreFilter(layerById(owner)!.dataset!, conds) as unknown as FilterSpecification;
+  } catch (err) {
+    if (!(err instanceof ConditionError)) throw err;
+    const key = `${owner}|${JSON.stringify(conds)}`;
+    if (!REPORTED_BAD_WHERE.has(key)) {
+      REPORTED_BAD_WHERE.add(key);
+      recordDiagEvent('layer', `where ${owner}: ${err.message}`);
+    }
+    return null;
+  }
+}
+
+/** The filter a map layer should carry now: base ∧ last applier part ∧ where. */
+export function effectiveFilter(mlId: string): FilterSpecification | null {
+  return combineFilters(BASE_LAYER_FILTERS[mlId] ?? null, ...(APPLIER_PARTS[mlId] ?? []), whereExpr(mlId));
+}
+
+function refilter(mlId: string) {
+  if (!state.map?.getLayer(mlId)) return;
+  state.map.setFilter(mlId, effectiveFilter(mlId));
+}
+
+function writeFilter(mlId: string, parts: (FilterSpecification | null)[]) {
+  APPLIER_PARTS[mlId] = parts;
+  refilter(mlId);
+}
+
+/** Set (or, with an empty list, clear) one registry layer's view conditions
+ *  and re-filter only that layer's map layers. Returns why the conditions were
+ *  refused — and changes nothing — or null on success. */
+export function setWhere(registryId: string, conditions: Condition[]): string | null {
+  const err = validateWhere(registryId, conditions);
+  if (err) return err;
+  const entry = layerById(registryId)!;
+
+  const where = { ...state.where };
+  if (conditions.length) where[registryId] = [...conditions];
+  else delete where[registryId];
+  state.where = where;
+
+  if (state.mapReady) {
+    for (const mlId of entry.mapLayerIds) if (WHERE_OWNER[mlId] === registryId) refilter(mlId);
+  }
+  return null;
+}
+
+/** Re-filter every where-capable map layer from state, for a state.where
+ *  write that no `filter:all` follows. A layer whose conditions vanished from
+ *  state.where returns to base ∧ applier part. */
+export function applyAllWhere() {
+  if (!state.mapReady) return;
+  for (const mlId of Object.keys(WHERE_OWNER)) refilter(mlId);
 }
 
 // ─── Filter expression builders ───────────────────────────────────────────────

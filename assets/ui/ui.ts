@@ -137,6 +137,7 @@ function syncBasemapControls() {
     ['terrain3dToggle', state.terrain3d],
     ['buildings3dToggle', state.buildings3d],
     ['hillshadeToggle', state.hillshade],
+    ['basemapLabelsToggle', state.basemapLabels],
   ] as const) {
     const el = document.getElementById(elId) as HTMLInputElement | null;
     if (el) el.checked = on;
@@ -403,7 +404,7 @@ function wireBasemap() {
     const proj = el?.closest<HTMLInputElement>("input[type=radio][name=projection]");
     if (proj) { switchProjection(proj.value); emit('url:write'); return; }
     const labelsToggle = el?.closest<HTMLInputElement>("input[id=basemapLabelsToggle]");
-    if (labelsToggle) { setBasemapLabels(labelsToggle.checked); return; }
+    if (labelsToggle) { setBasemapLabels(labelsToggle.checked); emit('url:write'); return; }
     const dataToggle = el?.closest<HTMLInputElement>("input[id=dataCounterToggle]");
     if (dataToggle) { updateLegends(); return; }
     const terrain = el?.closest<HTMLInputElement>("input[id=terrain3dToggle]");

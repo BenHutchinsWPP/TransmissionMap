@@ -10,6 +10,10 @@ const locale: LocaleDictionary = {
   'menu.fileOpen': '열기…',
   'menu.saveGeoJson': 'GeoJSON으로 저장…',
   'menu.saveKml': 'KML로 저장…',
+  'menu.saveView': '보기 저장…',
+  'viewFile.invalid': '유효한 지도 보기 파일이 아닙니다.',
+  'viewFile.version': '이 보기 파일은 최신 버전에서 만들어져 열 수 없습니다.',
+  'viewFile.notReady': '지도를 아직 불러오는 중입니다. 잠시 후 다시 시도하세요.',
   'menu.experiences': '맵 스토리…',
   'menu.hideLegends': '범례 숨기기',
   'menu.showLegends': '범례 표시',
@@ -471,6 +475,8 @@ const locale: LocaleDictionary = {
 
   // Toast & Info
   'toast.rotate3d': '우클릭 후 드래그(또는 Ctrl + 드래그)하여 지도를 회전하고 기울일 수 있습니다. 터치 화면에서는 두 손가락을 사용하세요. 나침반 아이콘을 클릭하면 북쪽으로 재설정됩니다.',
+  'toast.linkDropped': '이 링크의 일부 설정을 인식할 수 없어 건너뛰었습니다({count}).',
+  'toast.linkTooLarge': '이 보기는 너무 커서 링크로 공유할 수 없습니다. 파일 ▸ 보기 저장…을 사용해 파일로 공유하세요.',
   'info.dataCredits': '데이터 출처 및 크레딧',
 };
 
