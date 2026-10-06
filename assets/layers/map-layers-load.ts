@@ -1,10 +1,15 @@
 // ─── Load context layers ──────────────────────────────────────────────────────
+// Data center moratoriums: one GeoJSON source (`dc-moratoriums`) drawn at two
+// z-levels — addDcMoratoriumAreas() with the context fills, addDcMoratoriumPoints()
+// with the infrastructure markers. Colours from DCM_CLASSES (src/colors/buckets.ts);
+// popups in popup-format.ts.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
+import { DCM_CLASSES } from '../../src/colors/buckets.js';
 import { onMapTap } from '../map-input.js';
 
 export const addPopDensity = () => addRasterLayer("worldpop-pop-density", DATA.worldpop_pop_density,
@@ -146,4 +151,87 @@ export function addOsmDataCenters() {
     },
   } as unknown as LayerSpecification, "osm-dc-circles");
   registerBaseFilter("osm-dc-heat", null);
+}
+
+// ─── Data center moratoriums ──────────────────────────────────────────────────
+const DCM_COLOR = [
+  "match", ["get", "cls"],
+  ...DCM_CLASSES.flatMap(c => [c.id, c.color]),
+  "#9ca3af",
+] as unknown as ExpressionSpecification;
+
+// "Changed recently": the newest dated event on the feature falls inside the
+// last 30 days. ISO dates compare as strings; the cutoff is fixed at load.
+const DCM_RECENT_DAYS = 30;
+const dcmRecent = (): ExpressionSpecification => [">=", ["get", "last_event"],
+  new Date(Date.now() - DCM_RECENT_DAYS * 864e5).toISOString().slice(0, 10)] as ExpressionSpecification;
+
+export function addDcMoratoriumAreas() {
+  if (!state.map || state.map.getSource("dc-moratoriums")) return;
+  state.map.addSource("dc-moratoriums", {
+    type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["dc-moratoriums"],
+  });
+  const vis = initialVisibility("dc-moratoriums");
+  // States are a light wash under a heavy dashed edge, so the county fills and
+  // points inside them stay readable.
+  state.map.addLayer({
+    id: "dcm-state-fill", type: "fill", source: "dc-moratoriums",
+    filter: ["==", ["get", "kind"], "state"],
+    layout: { visibility: vis },
+    paint: { "fill-color": DCM_COLOR, "fill-opacity": 0.12 },
+  } as LayerSpecification);
+  state.map.addLayer({
+    id: "dcm-state-line", type: "line", source: "dc-moratoriums",
+    filter: ["==", ["get", "kind"], "state"],
+    layout: { visibility: vis },
+    paint: { "line-color": DCM_COLOR, "line-width": 2.5, "line-dasharray": [3, 2], "line-opacity": 0.8 },
+  } as LayerSpecification);
+  state.map.addLayer({
+    id: "dcm-county-fill", type: "fill", source: "dc-moratoriums",
+    filter: ["==", ["get", "kind"], "county"],
+    layout: { visibility: vis },
+    paint: {
+      "fill-color": DCM_COLOR,
+      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 8, 0.45, 11, 0.3],
+    },
+  } as LayerSpecification);
+  state.map.addLayer({
+    id: "dcm-county-line", type: "line", source: "dc-moratoriums",
+    filter: ["==", ["get", "kind"], "county"],
+    layout: { visibility: vis },
+    paint: {
+      "line-color": ["case", dcmRecent(), "#1d4ed8", DCM_COLOR],
+      "line-width": ["case", dcmRecent(), 2.5, 0.8],
+    },
+  } as LayerSpecification);
+}
+
+export function addDcMoratoriumPoints() {
+  if (!state.map || state.map.getLayer("dcm-points")) return;
+  const vis = initialVisibility("dc-moratoriums");
+  const isPoint = ["==", ["get", "kind"], "point"] as ExpressionSpecification;
+  // A blue ring marks a point that changed in the last DCM_RECENT_DAYS.
+  state.map.addLayer({
+    id: "dcm-points-recent", type: "circle", source: "dc-moratoriums",
+    filter: ["all", isPoint, dcmRecent()],
+    layout: { visibility: vis },
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 6, 8, 10, 12, 14],
+      "circle-color": "rgba(0,0,0,0)",
+      "circle-stroke-color": "#1d4ed8",
+      "circle-stroke-width": 2,
+    },
+  } as LayerSpecification);
+  state.map.addLayer({
+    id: "dcm-points", type: "circle", source: "dc-moratoriums",
+    filter: isPoint,
+    layout: { visibility: vis },
+    paint: {
+      "circle-color": DCM_COLOR,
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 6, 12, 9],
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 1,
+      "circle-opacity": 0.9,
+    },
+  } as LayerSpecification);
 }

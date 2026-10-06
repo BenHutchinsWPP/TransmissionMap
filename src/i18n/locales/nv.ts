@@ -116,6 +116,7 @@ const locale: LocaleDictionary = {
   'layer.mines': '✂️ Haʼaatsʼeedgóó nitsaaígíí (MSHA)',
   'layer.crithab': 'Naaldlooshii bighan baa áháyą́ (ESA)',
   'layer.osmDatacenters': 'OSM Haneʼ nitsaaí bighan',
+  'layer.dcMoratoriums': 'Data Center Moratoriums',
   'layer.popDensity': 'Diné kéédahatʼínígi ánéelą́ąʼgo',
   'layer.nercRegions': 'HIFLD NERC Kéyah',
   'layer.controlAreas': 'HIFLD Atsingeeł yikʼi déezʼį́į́ʼ',

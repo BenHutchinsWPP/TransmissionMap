@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import {
   row, websiteRow, title,
   renderEiaGen, renderOgfPlanned, renderHifldNatgasPts, renderGeoHydroPts,
-  renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml,
+  renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml, withRelativeDate,
 } from './popup-format.js';
 import { setUnits, DEFAULT_UNITS } from '../src/units.js';
 import { state } from './state.js';
@@ -576,5 +576,58 @@ describe('fema-nri-fill renderer', () => {
 
   it('renders nothing for an unlit county (hazard not applicable)', () => {
     expect(buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: null })).toBe('');
+  });
+});
+
+// ─── data center moratoriums ─────────────────────────────────────────────────
+
+describe('dc-moratoriums popup', () => {
+  const items = JSON.stringify([
+    { name: 'Mesa County', type: 'temporary moratorium', status: 'active', cls: 'active',
+      adopted: '2026-09-30', expires: '2027-09-30', summary: '<b>1-year</b> pause',
+      src: ['https://example.org/a', 'javascript:alert(1)'], verify: true },
+  ]);
+  const history = JSON.stringify([{ date: '2026-09-30', event: 'adopted', name: 'Mesa County' }]);
+
+  it('lists each measure with dates, escaped summary and only http(s) sources', () => {
+    state.liveFcMeta['dc-moratoriums'] = { generated_utc: '2026-10-04' };
+    const html = buildPopupHtml('dcm-county-fill', { name: 'Mesa County, CO', items, history });
+    expect(html).toContain('Mesa County, CO');
+    expect(html).toContain('2027-09-30');
+    expect(html).toContain('&lt;b&gt;1-year&lt;/b&gt;');
+    expect(html).toContain('https://example.org/a');
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('unconfirmed');
+    expect(html).toContain('as of 2026-10-04');
+  });
+
+  it('renders the same for points and states, and survives malformed JSON', () => {
+    expect(buildPopupHtml('dcm-points', { name: 'X', items, history })).toContain('Recent changes');
+    expect(buildPopupHtml('dcm-state-fill', { name: 'Texas', items: '{bad', history: null })).toContain('Texas');
+  });
+});
+
+describe('withRelativeDate', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 6, 15, 0)); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('counts days, then months, then years from today', () => {
+    expect(withRelativeDate('2026-09-30')).toBe('2026-09-30 (6 days ago)');
+    expect(withRelativeDate('2026-10-06')).toBe('2026-10-06 (today)');
+    expect(withRelativeDate('2026-10-07')).toBe('2026-10-07 (tomorrow)');
+    expect(withRelativeDate('2027-09-30')).toBe('2027-09-30 (in 12 months)');
+    expect(withRelativeDate('2024-01-15')).toBe('2024-01-15 (3 years ago)');
+  });
+
+  it('passes through missing or non-ISO values', () => {
+    expect(withRelativeDate(undefined)).toBeUndefined();
+    expect(withRelativeDate('2026')).toBe('2026');
+  });
+
+  it('shows both offsets in the moratorium popup', () => {
+    const items = JSON.stringify([{ name: 'X', cls: 'active', adopted: '2026-09-30', expires: '2027-09-30' }]);
+    const html = buildPopupHtml('dcm-points', { name: 'X', items, history: '[]' });
+    expect(html).toContain('6 days ago');
+    expect(html).toContain('in 12 months');
   });
 });

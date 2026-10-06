@@ -31,6 +31,11 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 const RAW_REPO = "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/";
 const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
 const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
+// Data center moratoriums keep their own orphan branch, appended to and never
+// force-pushed, so its commit history is the record of how they changed. Dev
+// reads the local working copy of that branch. Not a data/layers/ path, so
+// validate_build.py and publish_data.sh leave it alone.
+const MORATORIUM_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-moratoriums/" : "_private/moratoriums/dataset/";
 
 // Download packs are plain navigations, never fetch() or PMTiles range reads, so
 // they need no CORS header — which frees them from the branch and its 100 MiB
@@ -125,6 +130,9 @@ export const DATA = {
   // FIPS→[customers_out,incident_count] snapshot joined onto county_boundaries
   // via MapLibre feature-state (see odin-outages.ts).
   odin_outages: LIVE_ORIGIN + "data/layers/odin_outages.json",
+  // One feature per jurisdiction: state/county polygons, points for the rest
+  // (built from moratoriums.csv + events.csv on the data-moratoriums branch).
+  dc_moratoriums: MORATORIUM_ORIGIN + "dc_moratoriums.geojson",
   // Per-layer provenance (licence, row counts, artifact size, per-field
   // coverage, retrieval date) the Data Credits page renders from, grouped
   // under each source's own LAYER_SOURCES label — the manifest's own
@@ -204,6 +212,7 @@ export const SOURCE_ATTRIB: Record<string, string> = {
   // OSM_ATTRIB prefix stays byte-identical so MapLibre substring-dedup still
   // collapses it with the basemap credit; IM3 rides behind it.
   "osm-datacenters":          OSM_ATTRIB + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>",
+  "dc-moratoriums":           "<a href='https://mjbommar.github.io/moratorium-data-2026/'>Moratorium Nation</a> (CC BY 4.0)",
   "wecc-paths":               '<a href="https://www.wecc.org/">WECC</a>',
   "bia-tribal-lands":         '<a href="https://biamaps.geoplatform.gov/biatracts/">Bureau of Indian Affairs</a>',
   "mines":                    '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>',

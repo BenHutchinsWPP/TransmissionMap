@@ -17,6 +17,7 @@ interface SearchResult {
 // >>> ADD-LAYER: search-sources — see docs/adding-a-layer.md §8
 const SEARCH_SOURCES = [
   { sourceId: "eia-generators",  sourceLayer: null,             label: "EIA Plant",          fields: ["plant_name", "technology", "state", "ba_code"] },
+  { sourceId: "dc-moratoriums",   sourceLayer: null,             label: "Data Center Moratorium", fields: ["name", "state"] },
   { sourceId: "osm-datacenters",  sourceLayer: null,             label: "Data Center",        fields: ["name", "operator", "addr_city", "addr_state"] },
   { sourceId: "osm-substations-points", sourceLayer: "osm_substations_points", label: "OSM Substation",     fields: ["name", "operator"] },
   { sourceId: "hifld-substations",      sourceLayer: null,             label: "HIFLD Substation",   fields: ["name"] },

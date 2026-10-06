@@ -5,16 +5,18 @@
 // goes through a fmt* helper so it follows the File ▸ Settings… preference —
 // see docs/settings.md). Row labels must stay unit-neutral ("Area", not
 // "Acres") because the rendered value changes with that preference.
-// src/i18n/index.js (t).
+// src/i18n/index.js (t), state.js (liveFcMeta — the moratorium file's as-of date).
 
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
-import { t } from '../src/i18n/index.js';
+import { t, getLocale } from '../src/i18n/index.js';
 import { nriHazard, nriHazardLabel, nriVersion } from './fema-nri.js';
 import { DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
+import { DCM_CLASSES } from '../src/colors/buckets.js';
+import { state } from './state.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -223,6 +225,63 @@ function renderZoneAlertBlock(e: ZoneAlertEntry): string {
 }
 function renderZoneAlertList(entries: ZoneAlertEntry[]): string {
   return sortZoneAlerts(entries).map(renderZoneAlertBlock).join("");
+}
+
+// Data center moratoriums: every measure adopted by this jurisdiction (newest
+// first), then its most recent changes. `items`/`history` arrive as JSON
+// strings — MapLibre flattens nested GeoJSON properties.
+interface DcmItem {
+  name: string; type?: string; status?: string; cls?: string; adopted?: string;
+  expires?: string; scope?: string; summary?: string; src?: string[]; verify?: boolean;
+}
+interface DcmEvent { date: string; event: string; name: string; new?: string }
+const DCM_COLOR_BY_ID = Object.fromEntries(DCM_CLASSES.map(c => [c.id, c.color]));
+
+function parseJsonList<T>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  try { return typeof v === "string" ? JSON.parse(v) as T[] : []; } catch { return []; }
+}
+
+// "2026-09-30" → "2026-09-30 (6 days ago)" / "2027-09-30 (in 12 months)",
+// counted from today's date when the popup opens, in the active locale.
+export function withRelativeDate(iso: string | undefined): string | undefined {
+  const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const now = new Date();
+  const days = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) -
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+  const abs = Math.abs(days);
+  const [n, unit]: [number, Intl.RelativeTimeFormatUnit] =
+    abs < 45 ? [days, "day"] : abs < 730 ? [Math.round(days / 30.44), "month"] : [Math.round(days / 365.25), "year"];
+  return `${iso} (${new Intl.RelativeTimeFormat(getLocale(), { numeric: "auto" }).format(n, unit)})`;
+}
+
+export function renderDcMoratorium(p: Record<string, unknown>) {
+  const items = parseJsonList<DcmItem>(p.items);
+  const history = parseJsonList<DcmEvent>(p.history);
+  const small = (s: string) => `<span style="opacity:0.7;font-size:0.85em">${s}</span>`;
+  const list = items.map(it => {
+    const dot = `<span class="legend-swatch" style="background:${DCM_COLOR_BY_ID[it.cls ?? ""] ?? "#9ca3af"};display:inline-block;margin-right:4px"></span>`;
+    const head = [it.type, it.status].filter(Boolean).map(s => escapeHtml(s)).join(" · ");
+    const links = (it.src ?? []).filter(isHttpUrl).map((u, i) =>
+      `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">[${i + 1}]</a>`).join(" ");
+    return `<div class="popup-row" style="border-top:1px solid rgba(128,128,128,0.25);padding-top:4px">` +
+      `${dot}<b>${escapeHtml(it.name)}</b>` +
+      (it.verify ? ` ${small(`(${escapeHtml(t("popup.dcmUnconfirmed"))})`)}` : "") +
+      `<br>${small(head)}</div>` +
+      row("popup.dcmAdopted", withRelativeDate(it.adopted)) +
+      row("popup.dcmExpires", withRelativeDate(it.expires)) +
+      (it.summary ? `<div class="popup-row" style="font-size:0.85em">${escapeHtml(it.summary)}</div>` : "") +
+      (links ? `<div class="popup-row" style="font-size:0.85em">${links}</div>` : "");
+  }).join("");
+  const recent = history.slice(0, 5).map(h =>
+    `<div style="font-size:0.85em">${escapeHtml(h.date || "—")} · ${escapeHtml(h.event)}` +
+    (items.length > 1 ? ` · ${escapeHtml(h.name)}` : "") + `</div>`).join("");
+  const asOf = state.liveFcMeta["dc-moratoriums"]?.generated_utc ?? "—";
+  return title(String(p.name ?? "")) +
+    `<div style="max-height:260px;overflow-y:auto">${list}</div>` +
+    (recent ? `<div class="popup-row" style="margin-top:4px"><span class="popup-key">${escapeHtml(t("popup.dcmRecent"))}</span>${recent}</div>` : "") +
+    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.dcmFooter", { date: asOf }))}</div>`;
 }
 
 // >>> ADD-LAYER: popup-renderers — see docs/adding-a-layer.md §10. Add a
@@ -455,6 +514,7 @@ const _defs = [
       rawUi +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.odinFooter"))}</div>`;
   }],
+  [["dcm-points", "dcm-county-fill", "dcm-state-fill"], renderDcMoratorium],
   [["fema-nri-fill"], (p: Record<string, unknown>) => {
     // Rating/score come from the feature-state join (merged into p by popup.ts);
     // county NAME/STATE_NAME from the county_boundaries tile properties.

@@ -445,3 +445,13 @@ export const NRI_RATINGS: { code: number; label: string; color: string }[] = [
   { code: 5, label: "Very High",           color: "#980043" },
   { code: 6, label: "Insufficient Data",   color: "#9ca3af" },
 ];
+
+// Data center moratorium classes — the `cls` property baked by the
+// moratorium build (strongest measure in a jurisdiction wins, in this order).
+// Swatches mirror the #dcMoratoriumLegend block in index.html.
+export const DCM_CLASSES: { id: string; label: string; color: string }[] = [
+  { id: "ban",     label: "Permanent ban",              color: "#7f1d1d" },
+  { id: "active",  label: "Moratorium in effect",       color: "#dc2626" },
+  { id: "pending", label: "Proposed",                   color: "#f59e0b" },
+  { id: "ended",   label: "Expired, lifted or replaced", color: "#9ca3af" },
+];

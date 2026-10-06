@@ -1,5 +1,6 @@
 // Layer registry entries — regions, load context, and test layers.
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
+import { DCM_CLASSES } from '../colors/buckets.js';
 import type { LayerDef } from '../types.js';
 import { convDensity, densityLabel } from '../units.js';export const regionLayers: LayerDef[] = [
   // ── Load context ─────────────────────────────────────────────────────────────
@@ -26,6 +27,23 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     downloads: {
       csv: "data/releases/osm-datacenters.zip",
     },
+  },
+  {
+    // A measure is drawn on the geometry of whoever adopted it: state-level
+    // measures paint the state, county ordinances the county, and everything
+    // smaller (city/town/township/village/tribal/utility) is a point.
+    id:            "dc-moratoriums",
+    urlCode:       "DCM",
+    label:         "Data Center Moratoriums",
+    titleKey:      "layer.dcMoratoriums",
+    group:         "load",
+    sourceId:      "moratorium-nation",
+    swatch:        DCM_CLASSES[1].color,
+    defaultOn:     false,
+    mapLayerIds:   ["dcm-state-fill", "dcm-state-line", "dcm-county-fill", "dcm-county-line", "dcm-points-recent", "dcm-points"],
+    clickPriority: { "dcm-points": 845, "dcm-county-fill": 457, "dcm-state-fill": 445 },
+    regions:       ["usa"],
+    downloads:     {},
   },
   {
     id:            "worldpop-pop-density",

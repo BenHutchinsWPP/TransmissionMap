@@ -161,6 +161,10 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     label: "geoBoundaries CGAZ",
     tooltip: "Source: geoBoundaries Comprehensive Global Administrative Zones — state/province boundaries",
   },
+  "moratorium-nation": {
+    label: "Moratorium Nation",
+    tooltip: "Source: Moratorium Nation (Bommarito, Alea Institute) — CC BY 4.0, plus TransmissionMap research",
+  },
   "census-states": {
     label: "Census Cartographic Boundaries",
     tooltip: "Source: U.S. Census Bureau — cartographic boundary files, state boundaries",

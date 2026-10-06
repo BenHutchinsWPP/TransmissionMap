@@ -499,6 +499,20 @@
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Unshaded: hazard not applicable. FEMA NRI, county level — for planning, not a local risk assessment.</div>
           </div>
         </div>
+        <!-- Data center moratoriums — swatches mirror DCM_CLASSES in
+             src/colors/buckets.ts; the blue ring mirrors DCM_RECENT_DAYS in
+             assets/layers/map-layers-load.ts. -->
+        <div class="legend collapsed" id="dcMoratoriumLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Data Center Moratoriums</span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><span class="legend-swatch" style="background:#7f1d1d"></span><span>Permanent ban</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#dc2626"></span><span>Moratorium in effect</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f59e0b"></span><span>Proposed</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span><span>Expired, lifted or replaced</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:2px solid #1d4ed8;border-radius:50%"></span><span>Changed in the last 30 days</span></div>
+            <div class="legend-item" style="opacity:0.55;font-size:0.75em">Dashed outline: statewide measure. Filled county: county ordinance. Dot: city, town, township or tribal measure. Strongest measure wins. Informational only.</div>
+          </div>
+        </div>
         <!-- Live weather — baked-color mosaic; carries the selected variable's
              color scale (refreshWeatherRampBlock), the age pill and provenance. -->
         <div class="legend collapsed" id="weatherLegend" hidden data-collapsible>
@@ -718,6 +732,7 @@
         <li><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html" target="_blank" rel="noopener">US Census Bureau</a> — cartographic boundary files: <span data-source-credit="census-states">state boundaries</span>; <span data-source-credit="census-counties">county boundaries</span>; <span data-source-credit="census-zcta">ZIP Code Tabulation Areas (ZCTA)</span> — public domain. <strong>Display note:</strong> ZCTAs approximate ZIP code service areas but are not the same as ZIP codes.</li>
         <li data-source-credit="hifld-tribal"><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">Census TIGER/Line 2025</a> — AIANNH — public domain. <strong>Display note:</strong> Administrative boundaries only; not for consultation or determining historical extent.</li>
         <li data-source-credit="bia-bogs"><a href="https://onemap-bia-geospatial.hub.arcgis.com/" target="_blank" rel="noopener">Bureau of Indian Affairs (BIA)</a> — AIAN-LAR (American Indian and Alaska Native Land Area Representation) — Jul 2026 — public domain. <strong>Display note:</strong> Boundary for illustrative purposes. Does not constitute legal jurisdiction or land title.</li>
+        <li data-source-credit="moratorium-nation"><a href="https://mjbommar.github.io/moratorium-data-2026/" target="_blank" rel="noopener">Moratorium Nation</a> (Michael Bommarito, Alea Institute) — local data center moratorium inventory — CC BY 4.0; extended with TransmissionMap research. <strong>Display note:</strong> Informational only; confirm status with the adopting jurisdiction.</li>
         <li data-source-credit="ogf"><a href="https://ourgridfuture.org" target="_blank" rel="noopener">Our Grid Future</a> / Horizon Energy Systems — August 2026 — non-commercial use</li>
         <li data-source-credit="westtec"><a href="https://www.westernpowerpool.org/" target="_blank" rel="noopener">WestTEC — West-Wide Transmission Study</a> — 10-Year Horizon Report (February 2026). Western Transmission Expansion Coalition, a Western Power Pool initiative. Planned projects &amp; WestTEC-identified upgrades.</li>
         <li data-source-credit="msha-mines"><a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp" target="_blank" rel="noopener">MSHA Mine Data Retrieval System</a> — large mines only (peak quarterly employment ≥ 50); filtered subset, not the full dataset. Public domain (US DOL).</li>

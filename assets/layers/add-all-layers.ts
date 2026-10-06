@@ -18,7 +18,7 @@ import {
 } from './map-layers-hifld.js';
 import { addWindResource, addSolarResource, addGeoResource, addGeoHydroPts, addBoemWindLeases } from './map-layers-renewable.js';
 import { addEiaGenerators, addEiaBalancingAuthorities } from './map-layers-eia.js';
-import { addPopDensity, addOsmDataCenters } from './map-layers-load.js';
+import { addPopDensity, addOsmDataCenters, addDcMoratoriumAreas, addDcMoratoriumPoints } from './map-layers-load.js';
 import { addRailroads } from './map-layers-rail.js';
 import { addWeccPaths } from './map-layers-wecc.js';
 import { addPetroleumPipelines } from './map-layers-petroleum.js';
@@ -60,6 +60,7 @@ export function addAllLayers() {
   addBiaTribalLands();
   addCritHab();
   addBoemWindLeases();
+  addDcMoratoriumAreas();  // state/county moratorium fills — with the static context fills
 
   // Live-conditions fills sit above static context fills (land/regions):
   // "what's happening now" beats "what's always there".
@@ -98,6 +99,7 @@ export function addAllLayers() {
   addEiaGenerators();
   addOsmGenerators();
   addOsmDataCenters();
+  addDcMoratoriumPoints(); // city/town/township moratorium points, above the data centers
 
   addMines();           // above lines + substations
 
