@@ -8,7 +8,8 @@ HANDOFF.md
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/orchestrate/
-.claude/
+/.claude/*
+!/.claude/skills/
 
 # Intermediate tile-building files (large, regenerable)
 *.geojsonl

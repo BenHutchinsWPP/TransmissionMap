@@ -9,6 +9,7 @@ Where each asset class is hosted, and how the world transmission archive is cut.
 | `data/layers` — every built layer | orphan `data-static` branch, via `raw.githubusercontent.com` (`DATA_ORIGIN` in `assets/constants.ts`) |
 | `data/releases` — download packs | rolling GitHub Release `data-latest`, via `github.com/.../releases/download/` |
 | live feeds | orphan `data` branch, same host (`LIVE_ORIGIN`; [layers/wildfire-live.md](layers/wildfire-live.md)) |
+| data center moratoriums | orphan `data-moratoriums` branch, same host (`MORATORIUM_ORIGIN`); appended to and never force-pushed, so its history is the change record ([layers/dc-moratoriums.md](layers/dc-moratoriums.md)) |
 
 `raw.githubusercontent.com` answers ranged `GET`s with `HTTP 206` and
 `access-control-allow-origin: *`, which is what PMTiles needs, and caps responses

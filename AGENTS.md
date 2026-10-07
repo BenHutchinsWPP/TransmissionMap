@@ -72,12 +72,17 @@ turns public datasets into PMTiles consumed by the frontend.
     - `state.ts` mutable global singleton (`AppState`); constants live in `constants.ts` — import them from there
     - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`; see `Events`); no deps
     - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`), `applyGenMode`, `applyAllGenModes`
-    - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`
+    - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`;
+      `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
+      filter each map layer carries, and `setWhere()` sets a layer's field conditions
+    - `style-overrides.ts` — a view's per-layer `style` (opacity/size multipliers,
+      colour): `setStyle`, `clearStyle`, `applyAllStyles`; baselines restored exactly
     - `url-state.ts` — `readUrlState`, `writeUrlState` + bus subscription
     - `view-state.ts` — the one path a whole view takes into the app: `seedView`
       (cold boot, state only), `applyView` (live map — Reset is `applyView({})`,
       Map Experiences use it too), `currentView` (for the link); resolves every
-      input over the codec's `defaultView()`
+      input over the codec's `defaultView()`. `repaintView` is the one repaint both
+      paths run (filters incl. `where`, colour-bys, `style` overrides)
     - `hover.ts` — polygon hover + line click-highlight
     - `map-input.ts` — **the only module allowed to subscribe to MapLibre pointer
       events**; normalises mouse and touch into `onMapTap` / `onMapDoubleTap` /
@@ -212,6 +217,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
 | Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`; and a new `MapExperience.state` field must be representable in `assets/url-state-codec.ts` or it never reaches a shared link — `assets/experiences.test.ts` § 1 fails when it isn't) |
 | Anything that reacts to a click/tap/hover on the map | `assets/map-input.ts` — subscribe there, never `map.on("click"\|"mousemove"\|…)` (silent footgun: a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas) |
+| Check a change in the real app / verify by screenshots | `.claude/skills/drive-app/SKILL.md` — headless Chromium against the dev server, with scenarios for links, `vx`, Reset, view files and style overrides (silent footgun: Reset's `window.confirm` is dismissed headless unless dialogs are accepted, and a screenshot taken before MapLibre's `idle` shows a half-drawn map while every check passes) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
 | Fix voltage colors | `src/colors/voltage.ts` |
@@ -264,12 +270,14 @@ turns public datasets into PMTiles consumed by the frontend.
 ## Working style
 
 - **Orient with `git log --oneline -15` *and* `git branch -r` before the first
-  edit.** `main` is a rewritten 34-commit history that shares no ancestor with
-  the topic branches, so `git log main..origin/<branch>` has no merge base and
-  reports the branch's whole 88–115 commits as "ahead" — that count means
-  nothing here. Check by content instead — `grep` the symbol on `main` — rather
-  than trusting a commit count. `origin/data` and `origin/data-static` are
-  orphan data branches; never diff them against code.
+  edit.** `main` is a rewritten history that shares no ancestor with the older
+  topic branches, so `git log main..origin/<branch>` has no merge base and
+  reports the branch's whole history as "ahead" — that count means nothing
+  here. Check by content instead — `grep` the symbol on `main` — rather than
+  trusting a commit count. `origin/data`, `origin/data-static` and
+  `origin/data-moratoriums` are orphan data branches; never diff them against
+  code. Before saying anything is or isn't published, check the remote
+  (`git fetch` then `git branch -r --contains <sha>`), not the docs.
 - Cite/edit exact files; layer questions → check `docs/layers/` first
   instead of grepping code.
 - Prefer greppable anchors over reading whole files. Insertion points are
@@ -299,9 +307,12 @@ turns public datasets into PMTiles consumed by the frontend.
   log path — the first error is the cause and the rest is cascade, and a slice
   quoted without its path is a silent drop. Grep the log for the layer or error
   you care about when you need more; don't `cat` it.
-- **You do not visually verify the map — the user does.** Don't start a dev
-  server and don't claim a rendering change "works." Run the gates below, then
-  say what you changed and what the user should look at.
+- **Visual checks are the user's call.** By default, run the gates below,
+  then say what you changed and what the user should look at. When the user
+  asks for screenshot verification, drive the real app with
+  [`.claude/skills/drive-app`](.claude/skills/drive-app/SKILL.md) and report
+  what the screenshots show. A rendering change is never shown to work by
+  tests alone.
 - **Definition of done:** when a task has a doc in the routing table, its
   end-of-doc checklist IS the contract — close out every box, don't stop
   partway. Before claiming a code change is complete, run `npm run typecheck`

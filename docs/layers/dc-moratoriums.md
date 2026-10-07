@@ -2,8 +2,8 @@
 
 US data center moratoriums, permanent bans and statewide permit pauses, in the
 **Load** panel group next to OSM Data Centers. Registry id `dc-moratoriums`,
-`urlCode` `DCM`. **Draft:** the data is not published yet. Dev reads it from
-the local working copy of the future `data-moratoriums` branch.
+`urlCode` `DCM`. Served from the orphan `data-moratoriums` branch; dev reads
+the local working copy in `_private/moratoriums/dataset/`.
 
 Each measure is drawn on the geometry of the body that adopted it:
 
