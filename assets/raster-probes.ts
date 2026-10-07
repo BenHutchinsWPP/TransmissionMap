@@ -2,14 +2,26 @@
 // Imported by: layer-init.ts (ensureRasterLut in addAllLayers),
 //              visibility.ts (setLayerVisibility, updateRasterArrow)
 // Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
+// Exports the RasterMeta type (state.rasterLut[id].meta); state.ts imports it type-only.
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
 import { state } from './state.js';
 import { DATA, weatherLiveUrl } from './constants.js';
-import type { RasterMeta } from '../src/types.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { fmtSpeed, fmtDensity } from '../src/units.js';
 import { onMapPoint, onMapPointLeave } from './map-input.js';
+
+// Georeferencing + decoding for a hover LUT grid (state.rasterLut[id].meta).
+export interface RasterMeta {
+  west: number;
+  north: number;
+  dx: number;
+  dy: number;
+  width: number;
+  height: number;
+  nodata: number;
+  scale: number;
+}
 
 // Currently-selected weather variable's display config (ramp + formatter).
 // Falls back to the first entry if state.weatherVar is ever unset/unknown,

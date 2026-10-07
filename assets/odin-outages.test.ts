@@ -17,7 +17,6 @@ vi.mock('./visibility.js', () => ({
     if (cb) cb.checked = on;
   }),
 }));
-vi.mock('./ui/ui-legends.js', () => ({ updateLegends: vi.fn(), LEGEND_FILTERS: [] }));
 
 // jsdom's HTMLDialogElement has no showModal/close.
 if (!HTMLDialogElement.prototype.showModal) {

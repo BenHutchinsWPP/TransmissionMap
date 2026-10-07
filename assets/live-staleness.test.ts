@@ -8,9 +8,6 @@ import { state } from './state.js';
 vi.mock('./visibility.js', () => ({
   setLayerVisibility: vi.fn((id: string, on: boolean) => { state.layerVisibility[id] = on; }),
 }));
-vi.mock('./ui/ui-legends.js', () => ({
-  updateLegends: vi.fn(),
-}));
 
 // jsdom's HTMLDialogElement doesn't implement showModal/close — stub them.
 if (!HTMLDialogElement.prototype.showModal) {

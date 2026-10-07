@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { state } from './state.js';
+import { beginExperience, endExperienceLink, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { readUrlState, writeUrlState } from './url-state.js';
 import { splitHash, parseCameraSegment, formatCameraSegment, parseUrlState } from './url-state-codec.js';
 import { MW_SLIDER_MAX } from './filters.js';
@@ -9,6 +10,15 @@ import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 
 const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'so', '3d', 'hs', 'lb', 'lang', 'region', 'vx', 'exp']);
+
+// readUrlState() runs once, before initMap() builds the map: hide the fixture's
+// map for the read, as a cold boot would, then hand it back for the writes.
+function coldBoot() {
+  const { map, mapReady } = state;
+  state.map = null;
+  state.mapReady = false;
+  try { readUrlState(); } finally { state.map = map; state.mapReady = mapReady; }
+}
 
 function setHash(qs: string) {
   history.replaceState(null, '', '#10/39.5/-98' + (qs ? '?' + qs : ''));
@@ -44,9 +54,7 @@ beforeEach(() => {
   state.regionScope     = 'usa';
   state.mapReady        = false;
   state.map             = null;
-  state.experienceId       = null;
-  state.experienceDirty    = false;
-  state.experiencePristine = null;
+  endExperienceLink();
   setLocale('en');
   history.replaceState(null, '', '#');
 });
@@ -54,19 +62,19 @@ beforeEach(() => {
 describe('readUrlState – basic params', () => {
   it('parses mw=100-500 into state.mwFilter', () => {
     setHash('mw=100-500');
-    readUrlState();
+    coldBoot();
     expect(state.mwFilter).toEqual({ min: 100, max: 500 });
   });
 
   it('bm=d → dark basemap', () => {
     setHash('bm=d');
-    readUrlState();
+    coldBoot();
     expect(state.basemap).toBe('dark');
   });
 
   it('y=2020 enables yearFilter', () => {
     setHash('y=2020');
-    readUrlState();
+    coldBoot();
     expect(state.yearFilter.enabled).toBe(true);
     expect(state.yearFilter.year).toBe(2020);
   });
@@ -76,21 +84,21 @@ describe('readUrlState – basic params', () => {
     value => {
       state.smokeOpacity = 0.4;
       setHash('so=' + value);
-      readUrlState();
+      coldBoot();
       expect(state.smokeOpacity).toBe(1);
     }
   );
 
   it('parses lang=es into active locale', () => {
     setHash('lang=es');
-    readUrlState();
+    coldBoot();
     expect(getLocale()).toBe('es');
   });
 
   it('ignores invalid lang parameter and preserves current locale', () => {
     setLocale('en');
     setHash('lang=invalid_locale');
-    readUrlState();
+    coldBoot();
     expect(getLocale()).toBe('en');
   });
 });
@@ -99,7 +107,7 @@ describe('readUrlState – layer visibility', () => {
   it('parses l=OTL.-HTL (OTL on, HTL off)', () => {
     // OTL is osm-transmission-lines (default on), HTL is hifld-transmission-lines (default off)
     setHash('l=OTL.-HTL');
-    readUrlState();
+    coldBoot();
     expect(state.layerVisibility['osm-transmission-lines']).toBe(true);
     expect(state.layerVisibility['hifld-transmission-lines']).toBe(false);
   });
@@ -108,7 +116,7 @@ describe('readUrlState – layer visibility', () => {
     // odin-outages and fema-nri share 'county-choropleth'; the later one wins,
     // as it does when applyView() switches them on in registry order.
     setHash('l=OUT.NRI');
-    readUrlState();
+    coldBoot();
     expect(state.layerVisibility['odin-outages']).toBe(false);
     expect(state.layerVisibility['fema-nri']).toBe(true);
   });
@@ -119,7 +127,7 @@ describe('readUrlState – legend filters', () => {
     // v is voltage (kv) groupCode
     // H: 550+, F: 500-549, G: 300-499
     setHash('v=HFG');
-    readUrlState();
+    coldBoot();
     const kv = state.legendFilters['kv'];
     expect(kv.has('550+')).toBe(true);
     expect(kv.has('500-549')).toBe(true);
@@ -129,7 +137,7 @@ describe('readUrlState – legend filters', () => {
 
   it('parses f=ws (fuel buckets: wind, solar)', () => {
     setHash('f=ws');
-    readUrlState();
+    coldBoot();
     const fuel = state.legendFilters['fuel'];
     expect(fuel.has('wind')).toBe(true);
     expect(fuel.has('solar')).toBe(true);
@@ -142,7 +150,7 @@ describe('readUrlState – layer bucket filters', () => {
     // s is EIA status groupCode
     // e: existing, r: retirement
     setHash('s=er');
-    readUrlState();
+    coldBoot();
     const eia = state.layerFilters['eia-generators'];
     expect(eia.has('existing')).toBe(true);
     expect(eia.has('retirement')).toBe(true);
@@ -155,7 +163,7 @@ describe('readUrlState – gen mode', () => {
     // o is osm-plants-points, e is eia-generators
     // h is heat, b is both
     setHash('gm=oh.eb');
-    readUrlState();
+    coldBoot();
     expect(state.genMode['osm-plants-points']).toBe('heat');
     expect(state.genMode['eia-generators']).toBe('both');
   });
@@ -171,7 +179,7 @@ describe('round-trip serialization', () => {
     state.basemap = 'street';
     writeUrlState();
     state.basemap = 'light';
-    readUrlState();
+    coldBoot();
     expect(state.basemap).toBe('street');
   });
 
@@ -196,7 +204,7 @@ describe('round-trip serialization', () => {
     state.genMode = {};
     state.ogfColorBy = 'region';
 
-    readUrlState();
+    coldBoot();
 
     expect(state.basemap).toBe('dark');
     expect(state.mwFilter).toEqual({ min: 50, max: 500 });
@@ -220,7 +228,7 @@ describe('round-trip serialization', () => {
     expect(location.hash).toContain('wc=d');
 
     state.westtecColorBy = 'scenario';
-    readUrlState();
+    coldBoot();
     expect(state.westtecColorBy).toBe('dataset');
   });
 
@@ -231,7 +239,7 @@ describe('round-trip serialization', () => {
 
   it('leaves westtecColorBy at its default when wc is unknown', () => {
     setHash('wc=zzz');
-    readUrlState();
+    coldBoot();
     expect(state.westtecColorBy).toBe('scenario');
   });
 
@@ -245,13 +253,13 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('nr=wfir');
     state.nriHazard = 'RISK';
-    readUrlState();
+    coldBoot();
     expect(state.nriHazard).toBe('WFIR');
   });
 
   it('leaves the NRI hazard at its default when nr is unknown', () => {
     setHash('nr=zzzz');
-    readUrlState();
+    coldBoot();
     expect(state.nriHazard).toBe('RISK');
   });
 
@@ -262,13 +270,13 @@ describe('round-trip serialization', () => {
 
   it('parses wv=t into weatherVar "temp"', () => {
     setHash('wv=t');
-    readUrlState();
+    coldBoot();
     expect(state.weatherVar).toBe('temp');
   });
 
   it('leaves weatherVar at its default when wv is unknown', () => {
     setHash('wv=zzz');
-    readUrlState();
+    coldBoot();
     expect(state.weatherVar).toBe('tempwind');
   });
 
@@ -277,7 +285,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('wv=w');
     state.weatherVar = 'tempwind';
-    readUrlState();
+    coldBoot();
     expect(state.weatherVar).toBe('wind');
   });
 
@@ -286,7 +294,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('wv=t');
     state.weatherVar = 'tempwind';
-    readUrlState();
+    coldBoot();
     expect(state.weatherVar).toBe('temp');
   });
 
@@ -295,7 +303,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('so=43');
     state.smokeOpacity = 1;
-    readUrlState();
+    coldBoot();
     expect(state.smokeOpacity).toBe(0.43);
     writeUrlState();
     expect(location.hash).toContain('so=43');
@@ -303,7 +311,7 @@ describe('round-trip serialization', () => {
 
   it('restores zero smoke opacity', () => {
     setHash('so=0');
-    readUrlState();
+    coldBoot();
     expect(state.smokeOpacity).toBe(0);
   });
 
@@ -315,7 +323,7 @@ describe('round-trip serialization', () => {
   it('parses explicit 100% smoke opacity', () => {
     state.smokeOpacity = 0.4;
     setHash('so=100');
-    readUrlState();
+    coldBoot();
     expect(state.smokeOpacity).toBe(1);
   });
 
@@ -329,7 +337,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('3d=t');
     state.terrain3d = false;
-    readUrlState();
+    coldBoot();
     expect(state.terrain3d).toBe(true);
     expect(state.buildings3d).toBe(false);
   });
@@ -339,7 +347,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('3d=b');
     state.buildings3d = false;
-    readUrlState();
+    coldBoot();
     expect(state.buildings3d).toBe(true);
     expect(state.terrain3d).toBe(false);
   });
@@ -351,7 +359,7 @@ describe('round-trip serialization', () => {
     expect(location.hash).toContain('3d=tb');
     state.terrain3d = false;
     state.buildings3d = false;
-    readUrlState();
+    coldBoot();
     expect(state.terrain3d).toBe(true);
     expect(state.buildings3d).toBe(true);
   });
@@ -366,7 +374,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('hs=1');
     state.hillshade = false;
-    readUrlState();
+    coldBoot();
     expect(state.hillshade).toBe(true);
   });
 
@@ -380,14 +388,14 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('lb=0');
     state.basemapLabels = true;
-    readUrlState();
+    coldBoot();
     expect(state.basemapLabels).toBe(false);
   });
 
   it('a link without lb seeds labels on over a labels-off state', () => {
     state.basemapLabels = false;
     setHash('bm=d');
-    readUrlState();
+    coldBoot();
     expect(state.basemapLabels).toBe(true);
   });
 
@@ -399,7 +407,7 @@ describe('round-trip serialization', () => {
     expect(location.hash).toContain('hs=1');
     state.hillshade = false;
     state.terrain3d = false;
-    readUrlState();
+    coldBoot();
     expect(state.terrain3d).toBe(true);
     expect(state.hillshade).toBe(true);
   });
@@ -415,7 +423,7 @@ describe('round-trip serialization', () => {
     writeUrlState();
     expect(location.hash).toContain('lang=es');
     setLocale('en');
-    readUrlState();
+    coldBoot();
     expect(getLocale()).toBe('es');
   });
 
@@ -431,7 +439,7 @@ describe('round-trip serialization', () => {
     state.basemap = 'light';
     state.terrain3d = false;
     setLocale('en');
-    readUrlState();
+    coldBoot();
     expect(state.basemap).toBe('dark');
     expect(state.terrain3d).toBe(true);
     expect(getLocale()).toBe('zh');
@@ -443,7 +451,7 @@ describe('round-trip serialization', () => {
     expect(location.hash).toContain('region=global');
 
     state.regionScope = 'usa';
-    readUrlState();
+    coldBoot();
     expect(state.regionScope).toBe('global');
 
     // Default 'usa' is omitted from URL
@@ -455,7 +463,7 @@ describe('round-trip serialization', () => {
   it('ignores a continent left in an old shared link', () => {
     location.hash = '#region=europe';
     state.regionScope = 'usa';
-    readUrlState();
+    coldBoot();
     expect(state.regionScope).toBe('usa');
   });
 });
@@ -593,8 +601,8 @@ describe('map experiences – exp param', () => {
 
   it('parses a known experience slug into state', () => {
     setHash('exp=columbia-hydro');
-    readUrlState();
-    expect(state.experienceId).toBe('columbia-hydro');
+    coldBoot();
+    expect(activeExperienceId()).toBe('columbia-hydro');
   });
 
   // Existence is checked by assets/experiences.ts, not the codec — resolving it
@@ -602,52 +610,52 @@ describe('map experiences – exp param', () => {
   // guards the shape.
   it('accepts any well-formed slug', () => {
     setHash('exp=not-a-story-yet');
-    readUrlState();
-    expect(state.experienceId).toBe('not-a-story-yet');
+    coldBoot();
+    expect(activeExperienceId()).toBe('not-a-story-yet');
   });
 
   it('rejects a malformed slug', () => {
     setHash('exp=' + encodeURIComponent('<script>'));
-    readUrlState();
-    expect(state.experienceId).toBeNull();
+    coldBoot();
+    expect(activeExperienceId()).toBeNull();
   });
 
   it('writes exp while the view still matches the snapshot the story left', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();                       // records the pristine snapshot
     expect(location.hash).toContain('exp=columbia-hydro');
     writeUrlState();                       // nothing changed — still the story
     expect(location.hash).toContain('exp=columbia-hydro');
-    expect(state.experienceDirty).toBe(false);
+    expect(experienceIsDirty()).toBe(false);
   });
 
   it('keeps exp across camera moves — the camera is not part of the snapshot', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();
     state.map = mockMap({ bearing: 30, pitch: 40 });
     writeUrlState();
     expect(location.hash).toContain('exp=columbia-hydro');
-    expect(state.experienceDirty).toBe(false);
+    expect(experienceIsDirty()).toBe(false);
   });
 
   it('drops exp once the user edits a param the story owns', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();
     state.basemap = 'dark';
     writeUrlState();
-    expect(state.experienceDirty).toBe(true);
+    expect(experienceIsDirty()).toBe(true);
     expect(location.hash).not.toContain('exp=');
     expect(location.hash).toContain('bm=d');
   });
 
   it('stays dirty once edited, even if the view is put back by hand', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();
     state.basemap = 'dark';
     writeUrlState();
     state.basemap = 'light';
     writeUrlState();
-    expect(state.experienceDirty).toBe(true);
+    expect(experienceIsDirty()).toBe(true);
     expect(location.hash).not.toContain('exp=');
   });
 });

@@ -60,18 +60,23 @@ turns public datasets into PMTiles consumed by the frontend.
 
 - `index.html` — single page; Vite entry via `<script type="module" src="/src/main.ts">`
 - `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts`
-- `src/types.ts` — shared `LayerDef` interface and other types (includes the
-  optional `clickPriority` — map-layer id → click hit-test priority — and
-  `fromZoom` — minimum zoom to fetch the layer's data — fields)
+- `src/types.ts` — shared `LayerDef` interface and the registry/view types it
+  carries (includes the optional `clickPriority` — map-layer id → click
+  hit-test priority — and `fromZoom` — minimum zoom to fetch the layer's data —
+  fields). Single-owner types live beside their owner: `AppState` in
+  `assets/state.ts`, `UserLayer` in `assets/user-data/user-data.ts`,
+  `RasterMeta` in `assets/raster-probes.ts`
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
   as ambient module state; SI-in/display-string-out formatters + raw converters; imports nothing
 - `sw.js` — service worker (network-first app shell with offline fallback; map data is cross-origin and bypasses it)
 - `assets/` — frontend modules (all TypeScript), split into subfolders:
   - **Root** (`assets/`): cross-cutting modules used by multiple subfolders
-    - `map.ts` MapLibre init + basemap switching
-    - `state.ts` mutable global singleton (`AppState`); constants live in `constants.ts` — import them from there
+    - `map.ts` MapLibre init: Map constructor, controls, load handler, camera hashchange, WebGL banner
+    - `basemap.ts` — raster + OpenFreeMap basemaps, Map Labels, Esri → USGS aerial fallback,
+      projection/atmosphere; `basemapVisibility` is the pure basemap × labels × fallback matrix
+    - `state.ts` mutable global singleton and its `AppState` interface (type-only imports); constants live in `constants.ts` — import them from there. The Map Experience link (story id, dirty flag) is not on it — read it through `experience-link.ts`'s `activeExperienceId()` / `experienceIsDirty()`
     - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`; see `Events`); no deps
-    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`), `applyGenMode`, `applyAllGenModes`
+    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`, which also refreshes the legends), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility) and `settleExclusiveGroups` (one member per exclusive group, for a whole view)
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`;
       `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
       filter each map layer carries, and `setWhere()` sets a layer's field conditions
@@ -116,8 +121,13 @@ turns public datasets into PMTiles consumed by the frontend.
       `UrlStateData` — the shape a shared link parses to — and applies it with
       `view-state.ts`'s `applyView()`. See
       `docs/map-experiences.md`; tracks the active story; no DOM
+    - `experience-link.ts` — whether the link still names the active story:
+      `beginExperience`/`endExperienceLink`, `noteUrlWrite` (the pristine/dirty
+      diff `writeUrlState()` runs, emits `exp:dirty`), `rebaselineExperience`,
+      and the readers `activeExperienceId`/`experienceIsDirty`; the story id,
+      snapshot and dirty flag are private module state; deps `state-bus.ts` only
     - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
-      is called from the existing catch blocks in `map.ts`, `layers/layer-init.ts`,
+      is called from the existing catch blocks in `map.ts`, `basemap.ts`, `layers/layer-init.ts`,
       `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
     - `diagnostics.ts` — check catalogue behind the Diagnostics panel (browser
       capabilities, host probes, live-feed freshness, report builder); no DOM
@@ -196,6 +206,7 @@ turns public datasets into PMTiles consumed by the frontend.
   data-manifest`) merges this with facts measured off each layer's tile-build
   input into `data/layers/manifest.json`, which `assets/ui/ui-credits.ts`
   renders as the Data Credits dialog. See `docs/pipeline.md`.
+- `docs/adr/` — architecture decisions; read before proposing a refactor of the modules an ADR names
 - `docs/adding-a-layer.md` — **read this before adding any map layer**
 - `docs/map-experiences.md` — curated guided views (`File ▸ Experiences…`, `?exp=`)
 - `docs/pipeline.md` — how the data pipeline fits together

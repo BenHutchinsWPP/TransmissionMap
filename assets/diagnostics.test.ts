@@ -11,7 +11,6 @@ import { recordDiagEvent, clearDiagLog } from './diag-log.js';
 // registry and layer-init chains behind them; the diagnostics logic needs
 // neither at runtime.
 vi.mock('./visibility.js', () => ({ setLayerVisibility: vi.fn() }));
-vi.mock('./ui/ui-legends.js', () => ({ updateLegends: vi.fn() }));
 vi.mock('./nws-zone-join.js', () => ({
   pruneExpiredZoneAlerts: vi.fn(),
   clearZoneAlerts: vi.fn(),

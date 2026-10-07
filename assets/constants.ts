@@ -180,7 +180,7 @@ export const TRANSPARENT_PNG =
 // would appear twice whenever an OSM-derived basemap is active. Sources with
 // bespoke attribution set inline (wind/solar/geo/worldpop/hazards rasters +
 // basemaps) are intentionally omitted here. `&copy;` = ©.
-// MUST stay byte-identical to the osm-tiles basemap attribution in map.ts so
+// MUST stay byte-identical to the osm-tiles basemap attribution in basemap.ts so
 // MapLibre's substring-dedup collapses them into one credit.
 const OSM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
 export const SOURCE_ATTRIB: Record<string, string> = {
@@ -235,7 +235,7 @@ export const USGS_AERIAL_TILE_URL =
   "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
 // OpenFreeMap vector basemaps (keyless, unlimited, commercial-OK). The style
 // JSONs are fetched at runtime and their sources/layers merged under the app's
-// overlay layers — see addOfmBasemaps() in map.ts. "light" (Positron) doubles
+// overlay layers — see addOfmBasemaps() in basemap.ts. "light" (Positron) doubles
 // as the ground under the hydro overlay.
 export const OFM_STYLE_URLS = {
   light: "https://tiles.openfreemap.org/styles/positron",
@@ -244,7 +244,7 @@ export const OFM_STYLE_URLS = {
 export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
 // National Hydrography Dataset, cached as a TRANSPARENT overlay — streams, lakes,
 // dams, no land or labels. It is not a standalone basemap: the "hydro" basemap
-// stacks it over the OFM light basemap in map.ts. Cache tops out at tile z16
+// stacks it over the OFM light basemap in basemap.ts. Cache tops out at tile z16
 // (z17 is a 404), same ceiling as USGSTopo.
 export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
 
@@ -320,7 +320,7 @@ export const BLANK_STYLE = {
 // flat sky layer out entirely, so this atmosphere shader IS the sky there —
 // there is no sky-color/horizon-color fallback behind it. Its wash deepens with
 // the distance a view ray travels through the shell, which for a tilted camera
-// is the whole viewport rather than a rim, so map.ts fades it out with pitch
+// is the whole viewport rather than a rim, so basemap.ts fades it out with pitch
 // (see syncAtmosphere) and starts it at 0 above. Mercator never pays for it.
 export const ATMOSPHERE_BLEND = 0.8;
 // Pitch at which the halo has faded out completely.

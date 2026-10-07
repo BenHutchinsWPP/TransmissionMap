@@ -1,15 +1,20 @@
-// ─── Layer visibility toggle + generator display mode + OGF color-by ─────────
+// ─── Layer visibility toggle + generator display mode + colour-by ────────────
 // setLayerVisibility() is the one way to switch a layer: it updates state, the
 // map, the panel checkbox and the URL (unless `writeUrl` is false — a caller
 // switching many layers writes the URL once itself), then emits
 // 'layer:visibility' so modules with their own per-layer machinery
-// (weather-live.ts, nws-zone-join.ts) follow along. A layer with an
-// `exclusiveGroup` switches the rest of its group off when it is switched on;
-// exclusiveRivals() names that rest, for view-state.ts to resolve a whole view.
+// (weather-live.ts, nws-zone-join.ts) and the legends (ui-legends.ts's
+// updateLegends) follow along. A layer with an `exclusiveGroup` switches the
+// rest of its group off when it is switched on; settleExclusiveGroups() is the
+// same rule over a whole view's visibility map, for view-state.ts before the
+// map exists. wantedLayout() is the pure layer → map-layer visibility rule
+// (plain, `modes` and heat/icons layers) that setLayerVisibility() and
+// applyGenMode() both apply.
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
-//              view-state.ts (setLayerVisibility, exclusiveRivals + the appliers),
-//              ui-filters.ts (applyGenMode), map.ts (applyAllGenModes, applyOGFColorBy),
-//              style-overrides.ts (applyOGFColorBy, applyWestTECColorBy)
+//              view-state.ts (setLayerVisibility, settleExclusiveGroups + the appliers),
+//              style-overrides.ts (applyOGFColorBy, applyWestTECColorBy);
+//              ui-filters.ts reaches applyGenMode and the colour-bys over the bus
+//              ('gen:mode', 'ogf:colorby', 'westtec:colorby').
 // Deps: style-overrides.ts (effectiveOverride; cyclic, call-time only)
 // Also re-runs the fromZoom fetch gate (layer-init.ts's ensureLayerData) on
 // every zoom settle, via a 'zoomend' listener attached once the map emits
@@ -24,10 +29,49 @@ import { ensureLayerData } from './layers/layer-init.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 import { on, emit } from './state-bus.js';
 import { effectiveOverride } from './style-overrides.js';
+import type { LayerDef } from '../src/types.js';
+import type { ExpressionSpecification } from 'maplibre-gl';
 
 export function exclusiveRivals(registryId: string): string[] {
   const group = layerById(registryId)?.exclusiveGroup;
   return group ? LAYERS.filter(l => l.exclusiveGroup === group && l.id !== registryId).map(l => l.id) : [];
+}
+
+/** Settle each exclusive group on one member, in place: the layer furthest
+ *  down `vis` (registry order) wins, as it would switching the group's members
+ *  on one by one. The pre-map form of setLayerVisibility's rival switch-off. */
+export function settleExclusiveGroups(vis: Record<string, boolean>): void {
+  for (const id of Object.keys(vis).reverse()) {
+    if (vis[id]) for (const r of exclusiveRivals(id)) vis[r] = false;
+  }
+}
+
+function modeOf(entry: LayerDef): string {
+  return state.genMode[entry.id] || entry.defaultMode || "icons";
+}
+
+/** The visibility each of a layer's map layers should have: all of them for a
+ *  plain layer; the active mode's set for a `modes` layer (an unknown mode
+ *  falls back to the first); heat and/or icons for a `heatLayerId` layer. */
+export function wantedLayout(entry: LayerDef, on: boolean, mode: string): Record<string, 'visible' | 'none'> {
+  let wanted: (mlId: string) => boolean;
+  if (entry.modes) {
+    const active = entry.modes.find(m => m.id === mode) || entry.modes[0];
+    wanted = mlId => active.layers.includes(mlId);
+  } else if (entry.heatLayerId) {
+    const showHeat  = mode === "heat"  || mode === "both";
+    const showIcons = mode === "icons" || mode === "both";
+    wanted = mlId => mlId === entry.heatLayerId ? showHeat : showIcons;
+  } else {
+    wanted = () => true;
+  }
+  return Object.fromEntries(entry.mapLayerIds.map(mlId => [mlId, on && wanted(mlId) ? "visible" : "none"]));
+}
+
+function applyLayout(layout: Record<string, 'visible' | 'none'>) {
+  for (const [mlId, v] of Object.entries(layout)) {
+    if (state.map?.getLayer(mlId)) state.map.setLayoutProperty(mlId, "visibility", v);
+  }
 }
 
 export function setLayerVisibility(registryId: string, visible: boolean, writeUrl = true) {
@@ -44,13 +88,8 @@ export function setLayerVisibility(registryId: string, visible: boolean, writeUr
     if (visible) ensureRasterLut(registryId);
     else updateRasterArrow(registryId, null);
   }
-  const v = visible ? "visible" : "none";
-  for (const mlId of entry.mapLayerIds) {
-    if (state.map.getLayer(mlId)) {
-      state.map.setLayoutProperty(mlId, "visibility", v);
-    }
-  }
   if (entry.heatLayerId || entry.modes) applyGenMode(registryId);
+  else applyLayout(wantedLayout(entry, visible, modeOf(entry)));
   const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${registryId}"]`);
   if (cb) cb.checked = visible;
   if (writeUrl) writeUrlState();
@@ -63,68 +102,58 @@ export function applyGenMode(registryId: string) {
   const entry = layerById(registryId);
   if (!entry || !(entry.heatLayerId || entry.modes) || !state.mapReady || !state.map) return;
   const on   = !!state.layerVisibility[registryId];
-  const mode = state.genMode[registryId] || entry.defaultMode || "icons";
+  const mode = modeOf(entry);
+  applyLayout(wantedLayout(entry, on, mode));
 
+  // The heat ramp shows while the heat layer is drawn. A `modes` layer draws it
+  // only when the active mode lists it; a heat/icons layer in heat or both.
+  let heatShown: boolean;
   if (entry.modes) {
     const active = entry.modes.find(m => m.id === mode) || entry.modes[0];
-    for (const mlId of entry.mapLayerIds) {
-      if (!state.map.getLayer(mlId)) continue;
-      const wanted = on && active.layers.includes(mlId);
-      state.map.setLayoutProperty(mlId, "visibility", wanted ? "visible" : "none");
-    }
-    const rampEl = document.getElementById(`${registryId}-heat-ramp`);
-    if (rampEl) rampEl.hidden = !(on && !!entry.heatLayerId && active.layers.includes(entry.heatLayerId));
-    return;
-  }
-
-  const showHeat  = on && (mode === "heat"  || mode === "both");
-  const showIcons = on && (mode === "icons" || mode === "both");
-  for (const mlId of entry.mapLayerIds) {
-    if (!state.map.getLayer(mlId)) continue;
-    const wanted = (mlId === entry.heatLayerId) ? showHeat : showIcons;
-    state.map.setLayoutProperty(mlId, "visibility", wanted ? "visible" : "none");
+    heatShown = !!entry.heatLayerId && active.layers.includes(entry.heatLayerId);
+  } else {
+    heatShown = mode === "heat" || mode === "both";
   }
   const rampEl = document.getElementById(`${registryId}-heat-ramp`);
-  if (rampEl) rampEl.hidden = !showHeat;
+  if (rampEl) rampEl.hidden = !(on && heatShown);
 }
 
 export function applyAllGenModes() {
   for (const entry of LAYERS) if (entry.heatLayerId || entry.modes) applyGenMode(entry.id);
 }
 
-// ─── OGF planned-lines color-by ───────────────────────────────────────────────
-// Repaints the lines for the selected mode and dims the swatches of the two
-// OGF legend that is NOT driving color (it remains a filter, not a color key).
+// ─── Colour-by: OGF planned lines and WestTEC 10-Yr ───────────────────────────
+// Repaints the lines for the selected mode and dims the swatches of the
+// legend that is NOT driving color (it remains a filter, not a color key).
 // A view's color override (state.styleOverrides) wins over the colour-by
-// expression; style-overrides.ts re-runs this when that override is cleared.
+// expression; style-overrides.ts re-runs these when that override is cleared.
+function applyColorBy(legendModes: Record<string, string>, mode: string,
+                      mapLayerId: string, registryId: string, expr: () => ExpressionSpecification) {
+  for (const [elId, m] of Object.entries(legendModes)) {
+    document.getElementById(elId)?.classList.toggle("legend--not-color-key", m !== mode);
+  }
+  if (!state.mapReady || !state.map?.getLayer(mapLayerId)) return;
+  state.map.setPaintProperty(mapLayerId, "line-color", effectiveOverride(registryId).color ?? expr());
+}
+
 const OGF_LEGEND_MODES = {
   ogfRegionLegend: "region",
   ogfStatusLegend: "status",
 } as const;
 
 export function applyOGFColorBy() {
-  for (const [elId, mode] of Object.entries(OGF_LEGEND_MODES)) {
-    document.getElementById(elId)?.classList.toggle("legend--not-color-key", mode !== state.ogfColorBy);
-  }
-  if (!state.mapReady || !state.map?.getLayer("ogf-planned-lines")) return;
-  state.map.setPaintProperty("ogf-planned-lines", "line-color",
-    effectiveOverride("ogf-planned-transmission").color ?? ogfColorExpr(state.ogfColorBy));
+  applyColorBy(OGF_LEGEND_MODES, state.ogfColorBy, "ogf-planned-lines", "ogf-planned-transmission",
+    () => ogfColorExpr(state.ogfColorBy));
 }
 
-// ─── WestTEC 10-Yr color-by ───────────────────────────────────────────────────
-// Same pattern as applyOGFColorBy() above, over its own two legends/mode set.
 const WESTTEC_LEGEND_MODES = {
   westtecScenarioLegend: "scenario",
   westtecDatasetLegend:  "dataset",
 } as const;
 
 export function applyWestTECColorBy() {
-  for (const [elId, mode] of Object.entries(WESTTEC_LEGEND_MODES)) {
-    document.getElementById(elId)?.classList.toggle("legend--not-color-key", mode !== state.westtecColorBy);
-  }
-  if (!state.mapReady || !state.map?.getLayer("westtec-lines")) return;
-  state.map.setPaintProperty("westtec-lines", "line-color",
-    effectiveOverride("westtec-10yr").color ?? westtecColorExpr(state.westtecColorBy));
+  applyColorBy(WESTTEC_LEGEND_MODES, state.westtecColorBy, "westtec-lines", "westtec-10yr",
+    () => westtecColorExpr(state.westtecColorBy));
 }
 
 // ─── fromZoom fetch gate: re-run on zoom settle ────────────────────────────────

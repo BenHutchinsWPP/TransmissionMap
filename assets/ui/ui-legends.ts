@@ -331,6 +331,8 @@ export function buildLegends() {
 }
 
 on('lang:changed', () => { buildLegends(); });
+// Every layer switch (visibility.ts's setLayerVisibility) re-runs the show/hide pass.
+on('layer:visibility', () => updateLegends());
 
 const LEGEND_VISIBILITY = [
   { el: "voltageLegend",    show: () => LAYERS.some(l => l.voltageLayer  && state.layerVisibility[l.id]) },

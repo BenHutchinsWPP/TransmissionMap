@@ -20,6 +20,7 @@ vi.mock('../url-state.js', async orig => ({ ...(await orig<object>()), showDropp
 vi.mock('./user-data-export.js', () => ({ downloadFile: vi.fn() }));
 
 import { state } from '../state.js';
+import { beginExperience, endExperienceLink, activeExperienceId } from '../experience-link.js';
 import { buildViewFile, readViewFile, openViewFile } from './view-file.js';
 import { handleFileOpen } from './user-data-import.js';
 import { splitHash, parseUrlState, formatUrlState, formatCameraSegment, defaultView } from '../url-state-codec.js';
@@ -38,7 +39,7 @@ beforeEach(() => {
   for (const m of [applyView, notice, endExperience, restoreFromUrl, addUserLayer]) m.mockClear();
   vi.stubGlobal('alert', vi.fn());
   state.mapReady = true;
-  state.experienceId = null;
+  endExperienceLink();
 });
 
 describe('view file', () => {
@@ -111,14 +112,14 @@ describe('view file', () => {
     const h = hash + '&exp=columbia-hydro';
     open(file(h), 'x.tmview.json');
     await flush();
-    expect(state.experienceId).toBe('columbia-hydro');
+    expect(activeExperienceId()).toBe('columbia-hydro');
     expect(restoreFromUrl).toHaveBeenCalledOnce();
     expect(applyView).not.toHaveBeenCalled();
     expect(endExperience).not.toHaveBeenCalled();
   });
 
   it('ends the active story before applying a file without exp', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     open(file(hash), 'x.tmview.json');
     expect(endExperience).toHaveBeenCalledOnce();
     expect(applyView).toHaveBeenCalledOnce();

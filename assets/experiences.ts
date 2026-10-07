@@ -15,12 +15,13 @@
 // the rest of the session once its source exists (live-staleness.ts gates
 // refetch on the source, not on visibility).
 //
-// The pristine/edited split lives in url-state.ts: this module records the id
-// and clears the snapshot, and the next writeUrlState() decides whether the link
+// The pristine/edited split lives in experience-link.ts: this module begins and
+// ends the story there, and the next writeUrlState() decides whether the link
 // still names the story. See docs/url-state.md.
 //
-// Deps: state.js, view-state.js (applyView, CameraMode), url-state.js
-//       (writeUrlState), url-state-codec.js (defaultView, UrlStateData),
+// Deps: state.js (map, mapReady), experience-link.js (beginExperience,
+//       endExperienceLink, activeExperienceId), view-state.js (applyView,
+//       CameraMode), url-state.js (writeUrlState), url-state-codec.js (defaultView, UrlStateData),
 //       state-bus.js, registry/experiences.js (the catalogue),
 //       registry/index.js (LAYERS, for the gallery badges).
 
@@ -34,11 +35,13 @@ import { applyView, type CameraMode } from './view-state.js';
 import { writeUrlState } from './url-state.js';
 import { defaultView, type UrlStateData } from './url-state-codec.js';
 import { emit } from './state-bus.js';
+import { beginExperience, endExperienceLink, activeExperienceId } from './experience-link.js';
 
 export type { CameraMode };
 
 export function activeExperience(): MapExperience | null {
-  return state.experienceId ? experienceById(state.experienceId) : null;
+  const id = activeExperienceId();
+  return id ? experienceById(id) : null;
 }
 
 export function experienceIndex(id: string): number {
@@ -94,7 +97,7 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
   // validates the slug's shape, not its existence. Drop it off the link rather
   // than leaving a dead id in the URL.
   if (!exp) {
-    if (state.experienceId === id) endExperience();
+    if (activeExperienceId() === id) endExperience();
     return null;
   }
   if (!state.mapReady || !state.map) return null;
@@ -105,9 +108,7 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
 
   // Cleared up front so the reset's own url:write can't be read as the user
   // editing their way out of the story that is being replaced.
-  state.experienceId = null;
-  state.experienceDirty = false;
-  state.experiencePristine = null;
+  endExperienceLink();
 
   const preset = exp.state;
   const { center, zoom, pitch = 0, bearing = 0 } = exp.camera;
@@ -122,9 +123,7 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
     mode: camera,
   });
 
-  state.experienceId = exp.id;
-  state.experienceDirty = false;
-  state.experiencePristine = null; // the write below records the fresh snapshot
+  beginExperience(exp.id); // the write below records the fresh snapshot
   writeUrlState();
   return exp;
 }
@@ -132,17 +131,16 @@ export function applyExperience(id: string, camera: CameraMode = 'fly'): MapExpe
 // Dismisses the story without disturbing the map — "Explore Freely". The view
 // stays exactly as the story left it; only the card and the `exp` link go.
 export function endExperience() {
-  if (!state.experienceId) return;
-  state.experienceId = null;
-  state.experienceDirty = false;
-  state.experiencePristine = null;
+  if (!activeExperienceId()) return;
+  endExperienceLink();
   writeUrlState();
   emit('exp:ended');
 }
 
 // Re-applies the active story after the user has edited their way out of it.
 export function restoreExperience(): MapExperience | null {
-  return state.experienceId ? applyExperience(state.experienceId) : null;
+  const id = activeExperienceId();
+  return id ? applyExperience(id) : null;
 }
 
 export function flyToHighlight(h: ExperienceHighlight) {

@@ -8,9 +8,10 @@
 //       controller stay out of the initial bundle, matching ui-diagnostics.ts
 //       and ui-settings.ts.
 // Deps: experiences.js (the controller — all map/state mutation goes there),
-//       registry/experiences.js (catalogue + category labels), state.js,
-//       state-bus.js (exp:dirty / exp:ended / lang:changed), utils/utils.js
-//       (escapeHtml — every catalogue string is injected as HTML),
+//       registry/experiences.js (catalogue + category labels), state.js (map),
+//       experience-link.js (active story id, dirty flag), state-bus.js
+//       (exp:dirty / exp:ended / lang:changed), utils/utils.js (escapeHtml —
+//       every catalogue string is injected as HTML),
 //       src/i18n/index.js (t — the chrome is translated; the catalogue's own
 //       narratives stay in English).
 // Consumed by ui-menubar.ts (openExperiences) and ui.ts (restoreFromUrl).
@@ -24,6 +25,7 @@ import {
   applyExperience, activeExperience, endExperience, restoreExperience,
   neighbourExperience, experienceIndex, experienceTags, flyToHighlight,
 } from '../experiences.js';
+import { activeExperienceId, experienceIsDirty } from '../experience-link.js';
 import { on } from '../state-bus.js';
 import { escapeHtml } from '../utils/utils.js';
 import { t } from '../../src/i18n/index.js';
@@ -81,7 +83,7 @@ function renderGallery(query: string) {
 function galleryCardHtml(exp: MapExperience): string {
   const tags = experienceTags(exp)
     .map(tag => `<span class="exp-tag">${escapeHtml(tag)}</span>`).join('');
-  const active = state.experienceId === exp.id ? ' exp-card--active' : '';
+  const active = activeExperienceId() === exp.id ? ' exp-card--active' : '';
   return `
     <article class="exp-card${active}">
       <h4 class="exp-card-title">${escapeHtml(exp.title)}</h4>
@@ -110,7 +112,7 @@ function startsCollapsed(): boolean {
 // Called by ui.ts once the map is ready and the hash named a story. The camera
 // jumps rather than flies: there is nothing to fly from on a cold load.
 export function restoreFromUrl() {
-  const id = state.experienceId;
+  const id = activeExperienceId();
   if (!id) return;
   wire();
   if (!applyExperience(id, 'jump')) return;
@@ -150,7 +152,7 @@ function renderCard() {
       </div>
     </div>`;
 
-  const dirty = state.experienceDirty
+  const dirty = experienceIsDirty()
     ? `<button class="story-dirty" type="button" data-story-action="restore">${escapeHtml(t('story.modified'))}</button>`
     : '';
 
@@ -250,7 +252,7 @@ function wireMapAutoMinimize() {
   mapWired = true;
   for (const evt of ['dragstart', 'zoomstart', 'rotatestart'] as const) {
     state.map.on(evt, (e: { originalEvent?: unknown }) => {
-      if (!e.originalEvent || minimized || !state.experienceId) return;
+      if (!e.originalEvent || minimized || !activeExperienceId()) return;
       minimized = true;
       renderCard();
     });

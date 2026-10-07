@@ -2,15 +2,17 @@
 // Side-effectful functions that link global state to the browser URL.
 // Which fields make up a view, and their defaults, live in view-state.ts and
 // url-state-codec.ts, as does the hash layout (camera segment + params); this
-// module reads and writes location.hash, and owns the language, the Map
-// Experience pristine/edited tracking, the one notice a write shows when the
-// view's vx is too large for a link, and the one notice a cold boot shows
-// when the link carried settings that were dropped — by the codec, or by the
-// map when paintLinkedView() repaints the view (view-state.ts's repaintView()).
+// module reads and writes location.hash, and owns the language, feeding each
+// write to experience-link.ts (which decides whether `exp` stays on the link),
+// the one notice a write shows when the view's vx is too large for a link, and
+// the one notice a cold boot shows when the link carried settings that were
+// dropped — by the codec, or by the map when paintLinkedView() repaints the
+// view (view-state.ts's repaintView()).
 // currentHash() is the one builder of the hash, shared with view files.
 
 import { recordDiagEvent } from './diag-log.js';
-import { state, rebaselineExperience } from './state.js';
+import { state } from './state.js';
+import { beginExperience, noteUrlWrite, rebaselineExperience, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { parseUrlState, formatUrlState, VX_LINK_MAX_CHARS, splitHash, formatCameraSegment, type UrlStateData } from './url-state-codec.js';
 import { getLocale, setLocale, t, type SupportedLocale } from '../src/i18n/index.js';
 import { on, emit } from './state-bus.js';
@@ -25,11 +27,7 @@ export function readUrlState() {
   linkDropped = dropped ?? [];
   // Only the id is restored here. Applying the preset needs the map, so
   // assets/experiences.ts picks it up once the style has finished loading.
-  if (data.experienceId) {
-    state.experienceId = data.experienceId;
-    state.experienceDirty = false;
-    state.experiencePristine = null;
-  }
+  if (data.experienceId) beginExperience(data.experienceId);
 }
 
 // Decode drops, held until paintLinkedView() adds the map's and shows one notice.
@@ -42,7 +40,7 @@ export function paintLinkedView() {
   for (const d of styles) recordDiagEvent('link', `link style ${d.id}.${d.key}: ${d.reason}`);
   const dropped = [...linkDropped, ...styles.map(d => `vx.s.${d.id}.${d.key}: ${d.reason}`)];
   linkDropped = [];
-  if (dropped.length && !state.experienceId) showDroppedNotice(dropped);
+  if (dropped.length && !activeExperienceId()) showDroppedNotice(dropped);
 }
 
 const DROPPED_NOTICE_MS = 8000;
@@ -68,7 +66,7 @@ function showTopToast(text: string) {
 // Null before the map is ready.
 export function currentHash(): string | null {
   const live = liveParts();
-  return live && hashOf(live, !!state.experienceId && !state.experienceDirty);
+  return live && hashOf(live, !!activeExperienceId() && !experienceIsDirty());
 }
 
 function liveParts() {
@@ -78,7 +76,7 @@ function liveParts() {
 }
 
 function hashOf({ data, parts }: NonNullable<ReturnType<typeof liveParts>>, named: boolean): string {
-  const stateParts = named ? formatUrlState({ ...data, experienceId: state.experienceId! }) : parts;
+  const stateParts = named ? formatUrlState({ ...data, experienceId: activeExperienceId()! }) : parts;
   const stateStr = stateParts.length ? '?' + stateParts.join('&') : '';
   const { lng, lat } = state.map!.getCenter();
   const posStr = formatCameraSegment({
@@ -108,16 +106,9 @@ export function writeUrlState() {
   // Pristine-vs-edited: an experience owns every param here, but not the camera
   // — panning and zooming inside a story keeps the link on the story. The first
   // write after a preset lands records the snapshot; any later write that
-  // differs is the user's own edit, and `exp` drops off the link.
-  if (state.experienceId && !state.experienceDirty) {
-    const snapshot = live.parts.join('&');
-    if (state.experiencePristine === null) state.experiencePristine = snapshot;
-    else if (snapshot !== state.experiencePristine) {
-      state.experienceDirty = true;
-      emit('exp:dirty');
-    }
-  }
-  const hash = hashOf(live, !!state.experienceId && !state.experienceDirty);
+  // differs is the user's own edit, and `exp` drops off the link. That
+  // bookkeeping lives in experience-link.ts's noteUrlWrite().
+  const hash = hashOf(live, noteUrlWrite(live.parts.join('&')));
   // Browsers rate-limit replaceState (Safari: ~100 calls per 30 s) and throw on
   // the excess. Every map move and panel click writes, so a busy session can
   // reach that ceiling — losing the link update is survivable, throwing out of

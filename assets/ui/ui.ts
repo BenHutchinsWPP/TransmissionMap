@@ -8,12 +8,14 @@
 // then lazily loads ui-credits.js once to add the generated manifest's detail.
 
 import { state } from '../state.js';
+import { activeExperienceId, endExperienceLink } from '../experience-link.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 import type { LayerScope } from '../../src/types.js';
 import { YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../../src/colors/ramps.js';
 import { mwToPos } from '../filters.js';
 import { setLayerVisibility } from '../visibility.js';
-import { initMap, switchBasemap, switchProjection, setBasemapLabels } from '../map.js';
+import { initMap } from '../map.js';
+import { switchBasemap, switchProjection, setBasemapLabels } from '../basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from '../terrain.js';
 import { maybeShowRotateHint } from '../terrain-hint.js';
 import { buildLegends, updateLegends } from './ui-legends.js';
@@ -339,11 +341,11 @@ function wireRegionSelect() {
 }
 
 // A hash carrying `exp=<id>` restores a curated story. readUrlState() has
-// already parked the id in state; applying it needs a finished map, and the
-// catalogue plus the story controller live in the ui-experiences lazy chunk —
+// already named the story (experience-link.ts); applying it needs a finished
+// map, and the catalogue plus the story controller live in the ui-experiences lazy chunk —
 // so this is the one place besides the File menu that pulls that chunk in.
 function wireExperienceDeepLink() {
-  if (!state.experienceId) return;
+  if (!activeExperienceId()) return;
   on('map:ready', async () => {
     try {
       const m = await import('./ui-experiences.js');
@@ -353,7 +355,7 @@ function wireExperienceDeepLink() {
       // every later write would keep claiming a story the map isn't showing.
       console.warn('[TransmissionMap] Map Experiences chunk failed to load:', err);
       recordDiagEvent('layer', `experiences chunk: ${err}`);
-      state.experienceId = null;
+      endExperienceLink();
       emit('url:write');
     }
   });
@@ -379,7 +381,6 @@ function wireLayerVisibility() {
     if (!cb) return;
     const id = cb.dataset.layerId!;
     setLayerVisibility(id, cb.checked);
-    updateLegends();
   });
 }
 

@@ -82,10 +82,11 @@ wholesale, so the next story or Reset clears them.
    to fly from).
 
 `applyExperience()` wraps this with story bookkeeping: `map.stop()` (cancels
-whatever the last `flyTo` is still easing), clearing `state.experienceId` up
+whatever the last `flyTo` is still easing), `endExperienceLink()` up
 front so the apply's own `url:write` can't be read as the reader editing their
-way out of the story being replaced, then the steps above, then setting
-`state.experienceId`/pristine snapshot once the view is live.
+way out of the story being replaced, then the steps above, then
+`beginExperience(id)` once the view is live, so the next write records the
+pristine snapshot. Both live in `assets/experience-link.ts`.
 
 It **hides** a live layer rather than shutting its feed down: `live-staleness.ts`
 gates its refetch on the source existing, not on visibility, so once a story has
@@ -93,19 +94,19 @@ switched a live layer on that poller runs for the rest of the session.
 
 ## Pristine vs. edited
 
-The active story's id lives in `state.experienceId`. `writeUrlState()` compares
-the param string it is about to write against `state.experiencePristine` — the
-snapshot the preset left behind. Matching means the view is still the story, and
+The active story's id is `activeExperienceId()` (`assets/experience-link.ts`).
+`writeUrlState()` hands the param string it is about to write to `noteUrlWrite()`,
+which compares it against the pristine snapshot the preset left behind. Matching means the view is still the story, and
 `exp` goes on the link. Differing means the reader has edited it: the story card
 swaps in a *Modified view — click to restore* badge and `exp` drops off the link.
 The camera is outside that comparison, so panning inside a story keeps the link
 on the story. See [url-state.md](url-state.md).
 
 Anything that changes a shared param *without the reader asking for it* must call
-`rebaselineExperience()` (`assets/state.ts`) first, or the diff reads it as an
-edit and the story is falsely marked modified. Two callers today: the stale-feed
-kill switch in `live-staleness.ts`, and the `lang:changed` subscription in
-`url-state.ts`.
+`rebaselineExperience()` (`assets/experience-link.ts`) first, or the diff reads it as an
+edit and the story is falsely marked modified. Callers today: the stale-feed
+kill switches in `live-staleness.ts` and `odin-outages.ts`, and the
+`lang:changed` and `region:changed` subscriptions in `url-state.ts`.
 
 ## Adding an experience — checklist
 

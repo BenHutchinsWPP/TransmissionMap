@@ -3,14 +3,14 @@
 // builders: a story carrying both leaves nothing behind for the next view or
 // Reset (F3), a cold boot from a `vx` link paints both (F10), a cold boot shows
 // one notice for decode and apply drops together, and a story with both
-// sections stays pristine across writes (F11).
+// sections stays pristine across writes (F11), and a cold-boot seed leaves the
+// same state a live apply of the same view does.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LayerSpecification } from 'maplibre-gl';
 
-vi.mock('./map.js', async () => {
+vi.mock('./basemap.js', async () => {
   const { state } = await import('./state.js');
   return {
-    initMap: vi.fn(),
     switchBasemap: vi.fn((b: string) => { state.basemap = b; }),
     switchProjection: vi.fn((p: string) => { state.projection = p; }),
     setBasemapLabels: vi.fn(),
@@ -26,6 +26,7 @@ vi.mock('./terrain.js', async () => {
 });
 
 import { state } from './state.js';
+import { endExperienceLink, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { whereOwnership } from './filters.js';
 import { LAYERS } from '../src/registry/index.js';
@@ -36,6 +37,7 @@ import { emit } from './state-bus.js';
 import { formatUrlState, defaultView } from './url-state-codec.js';
 import { readUrlState, paintLinkedView, writeUrlState } from './url-state.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
+import { NRI_HAZARDS, WEATHER_VARIABLES } from '../src/registry/conditions.js';
 
 type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Record<string, unknown>; filter?: unknown };
 
@@ -105,16 +107,39 @@ const LEAKY: MapExperience['state'] = {
 const PLAIN = EXPERIENCES.find(e => e.id === 'interconnections-dc-seams')!.state;
 
 beforeEach(() => {
+  // Cold boot: seedView() runs before initMap() builds the map.
+  state.map = null;
+  state.mapReady = false;
   state.layerVisibility = {};
   state.legendFilters = {};
   state.layerFilters = {};
   state.genMode = {};
   seedView({});
-  state.experienceId = null;
-  state.experienceDirty = false;
-  state.experiencePristine = null;
+  endExperienceLink();
   clearDiagLog();
   document.body.innerHTML = '';
+});
+
+describe('seedView', () => {
+  it('leaves state equal to what applyView sets for the same data', () => {
+    const data = {
+      ...experienceUrlState(LEAKY),
+      basemap: 'dark', projection: 'globe',
+      terrain3d: true, buildings3d: true, hillshade: true,
+      weatherVar: WEATHER_VARIABLES[1].id, nriHazard: NRI_HAZARDS[1].id,
+    };
+    seedView(data);
+    const seeded = structuredClone(currentView());
+    expect(seeded).toMatchObject({
+      basemap: 'dark', projection: 'globe', terrain3d: true, buildings3d: true, hillshade: true,
+      weatherVar: WEATHER_VARIABLES[1].id, nriHazard: NRI_HAZARDS[1].id,
+    });
+
+    seedView({});
+    recordingMap();
+    applyView(data);
+    expect(currentView()).toEqual(seeded);
+  });
 });
 
 // repaintView() leaves `where` to filter:all, which it emits first.
@@ -196,7 +221,7 @@ describe('cold boot from a vx link', () => {
     paintLinkedView();
     expect(document.querySelector('[role=status]')).toBeNull();
     applyExperience('interconnections-dc-seams', 'jump');
-    expect(state.experienceId).toBe('interconnections-dc-seams');
+    expect(activeExperienceId()).toBe('interconnections-dc-seams');
     expect(state.styleOverrides).toEqual({});
   });
 
@@ -243,11 +268,11 @@ describe('§ 1 for where and style', () => {
       applyExperience(exp.id, 'jump');
       writeUrlState();
       writeUrlState();
-      expect(state.experienceDirty).toBe(false);
+      expect(experienceIsDirty()).toBe(false);
       expect(location.hash).toMatch(/vx=[jz][\w-]+&exp=test-where-style$/);
       state.styleOverrides = { railroads: { opacity: 0.9 } };
       writeUrlState();
-      expect(state.experienceDirty).toBe(true);
+      expect(experienceIsDirty()).toBe(true);
     } finally {
       EXPERIENCES.pop();
     }

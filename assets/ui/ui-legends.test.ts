@@ -93,3 +93,17 @@ describe('buildLegends i18n', () => {
     expect(fuelTitle?.textContent?.trim()).toBe('Tipo de combustible');
   });
 });
+
+describe('legend refresh on a layer switch', () => {
+  it('shows and hides a layer\'s legend on the layer:visibility event', () => {
+    document.body.innerHTML = `<div id="legendContainer" hidden></div><div id="femaNriLegend" hidden></div>`;
+    state.layerVisibility['fema-nri'] = true;
+    emit('layer:visibility', { id: 'fema-nri', visible: true });
+    expect(document.getElementById('femaNriLegend')?.hidden).toBe(false);
+    expect(document.getElementById('legendContainer')?.hidden).toBe(false);
+
+    state.layerVisibility['fema-nri'] = false;
+    emit('layer:visibility', { id: 'fema-nri', visible: false });
+    expect(document.getElementById('femaNriLegend')?.hidden).toBe(true);
+  });
+});

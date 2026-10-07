@@ -7,7 +7,7 @@
 // Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
 // every unproject and every hit-test under raised ground goes through.
 // Deps: state.js (state), constants.js (TERRAIN_* constants). Called from ui/ui.ts (toggles),
-// map.ts (apply3dFromState at load-end, ensureBuildingsLayer after the OFM
+// map.ts (apply3dFromState at load-end), basemap.ts (ensureBuildingsLayer after the OFM
 // style graft resolves, repositionHillshade from switchBasemap).
 
 import { state } from './state.js';
@@ -127,7 +127,7 @@ export function setTerrain3d(on: boolean) {
 // buildings, not be occluded by them.
 //
 // On Aerial what follows "aerial-bg" is now the first cloned road layer of the
-// map.ts overlay group, so that overlay's roads and labels paint above the
+// basemap.ts overlay group, so that overlay's roads and labels paint above the
 // extrusions — same rule, and the same way the Light basemap already behaves.
 //
 // Hillshade is skipped when it is the layer sitting there: it shades the

@@ -18,15 +18,16 @@
 //       liveGeneratedUtc/liveAgeMs, the single reader for a live source's pull
 //       age, used by the gate below and by diagnostics.ts.
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
-//       visibility.ts (setLayerVisibility — which also ticks the checkbox and writes URL state),
-//       ui/ui-legends.ts (updateLegends), diag-log.ts (recordDiagEvent — records
-//       refetch failures for the diagnostics panel). Modal DOM ids come from cfg.
+//       visibility.ts (setLayerVisibility — which also ticks the checkbox, writes URL state
+//       and, through 'layer:visibility', refreshes the legends),
+//       diag-log.ts (recordDiagEvent — records refetch failures for the diagnostics panel),
+//       experience-link.ts (rebaselineExperience before the kill switch). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';
-import { state, rebaselineExperience } from './state.js';
+import { state } from './state.js';
+import { rebaselineExperience } from './experience-link.js';
 import { setLayerVisibility } from './visibility.js';
-import { updateLegends } from './ui/ui-legends.js';
 import { recordDiagEvent } from './diag-log.js';
 import { fetchGeojson } from './layers/layer-init.js';
 
@@ -145,7 +146,6 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     // out of an active Map Experience (see url-state.ts).
     rebaselineExperience();
     for (const id of on) setLayerVisibility(id, false);
-    updateLegends();
     showStaleModal(age);
   }
 
@@ -201,7 +201,6 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     acknowledged = true;   // knowingly accept stale data — suppress re-prompts
     for (const id of disabledForStale) setLayerVisibility(id, true);
     disabledForStale = [];
-    updateLegends();
     dlg?.close();
   });
   document.getElementById(dismissId)?.addEventListener("click", () => dlg?.close());

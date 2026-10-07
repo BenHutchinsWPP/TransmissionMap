@@ -6,6 +6,7 @@ import { Inflate, deflateSync, strToU8 } from 'fflate';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { formatUrlState, parseUrlState, defaultView, type UrlStateData } from './url-state-codec.js';
 import { state } from './state.js';
+import { beginExperience, endExperienceLink, experienceIsDirty } from './experience-link.js';
 import { readUrlState, writeUrlState, paintLinkedView } from './url-state.js';
 import { setLocale, loadDictionary } from '../src/i18n/index.js';
 import type { Condition } from '../src/registry/condition-compile.js';
@@ -14,6 +15,15 @@ import { setWhere } from './filters.js';
 import { EXPERIENCES } from '../src/registry/experiences.js';
 import { validateWhere, validateStyleOverride } from '../src/registry/view-validate.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
+
+// readUrlState() runs once, before initMap() builds the map: hide the fixture's
+// map for the read, as a cold boot would, then hand it back for the writes.
+function coldBoot() {
+  const { map, mapReady } = state;
+  state.map = null;
+  state.mapReady = false;
+  try { readUrlState(); } finally { state.map = map; state.mapReady = mapReady; }
+}
 
 const KV345: Condition = { field: 'nominal_kv', op: '>=', value: 345 };
 const WIND: Condition = { field: 'energy_source', op: 'in', value: ['WND', 'SUN'] };
@@ -241,9 +251,7 @@ describe('vx – url-state glue', () => {
     state.where = {};
     state.styleOverrides = {};
     state.basemap = 'light';
-    state.experienceId = null;
-    state.experienceDirty = false;
-    state.experiencePristine = null;
+    endExperienceLink();
     state.mapReady = true;
     state.map = {
       getCenter: () => ({ lat: 39.5, lng: -98.35 }), getZoom: () => 5, getBearing: () => 0, getPitch: () => 0,
@@ -273,26 +281,26 @@ describe('vx – url-state glue', () => {
   it('a story with vx keeps exp after two writes', () => {
     state.where = { 'osm-substations-points': [KV345] };
     state.styleOverrides = { railroads: { opacity: 0.5 } };
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();
     writeUrlState();
-    expect(state.experienceDirty).toBe(false);
+    expect(experienceIsDirty()).toBe(false);
     expect(location.hash).toMatch(/vx=[jz][\w-]+&exp=columbia-hydro$/);
   });
 
   it('changing where after the pristine snapshot makes the story dirty', () => {
-    state.experienceId = 'columbia-hydro';
+    beginExperience('columbia-hydro');
     writeUrlState();
-    expect(state.experienceDirty).toBe(false);
+    expect(experienceIsDirty()).toBe(false);
     state.where = { 'osm-substations-points': [KV345] };
     writeUrlState();
-    expect(state.experienceDirty).toBe(true);
+    expect(experienceIsDirty()).toBe(true);
     expect(location.hash).not.toContain('exp=');
   });
 
   it('cold boot seeds both sections and shows no notice for a clean link', () => {
     history.replaceState(null, '', '#5/40/-100?' + format({ 'osm-substations-points': [KV345] }, { railroads: { size: 2 } }).join('&'));
-    readUrlState();
+    coldBoot();
     expect(state.where).toEqual({ 'osm-substations-points': [KV345] });
     expect(state.styleOverrides).toEqual({ railroads: { size: 2 } });
     expect(document.querySelector('[role=status]')).toBeNull();
@@ -303,7 +311,7 @@ describe('vx – url-state glue', () => {
     const json = JSON.stringify({ v: 1, w: { 'not-a-layer': [KV345] }, s: { nope: {}, railroads: { opacity: 0.5 } } });
     history.replaceState(null, '', '#5/40/-100?bm=d&lang=fr&vx=' + rawVx(json));
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    readUrlState();
+    coldBoot();
     expect(state.basemap).toBe('dark');
     expect(state.styleOverrides).toEqual({ railroads: { opacity: 0.5 } });
     state.map = null;                    // the map's own drops: view-state-paint.test.ts

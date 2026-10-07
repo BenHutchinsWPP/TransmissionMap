@@ -2,7 +2,8 @@
 // Role: owns how a view (every field a shared link carries: layers, filters,
 //       modes, basemap, projection, 3D, region) gets into the app and back out.
 //         seedView(data)   cold boot, before the map exists: writes `state`
-//                          only; map.ts's load handler paints it.
+//                          only, through the setters applyView() uses;
+//                          map.ts's load handler paints it.
 //         applyView(data)  live map: drives the map to the view, then emits
 //                          'view:applied' (ui.ts resyncs panels and controls)
 //                          and 'url:write' — the apply's one URL write.
@@ -22,7 +23,9 @@
 // Adding a view field: a UrlStateData field with its param and default in
 // url-state-codec.ts, then its write in writeState() and its map call in
 // applyView() here (or in repaintView(), when cold boot must paint it
-// too). Nothing else has to learn about it.
+// too). A field with its own setter is called from both seedView() and
+// applyView() instead, and that setter must write state before its map
+// guard. Nothing else has to learn about it.
 //
 // AppState by kind (fields not listed are the map handle, popups and caches):
 //   view (in the link): basemap, basemapLabels, projection, terrain3d, buildings3d,
@@ -33,15 +36,16 @@
 //   personal data: userLayers, userLayerCounter, drawDefaultColor, selectedDrawId,
 //     userHighlightKey, draw.
 //   session: map, mapReady, popup, editMode, measure, weatherStepSuffix, yearPlayback,
-//     sourcesLoaded, sourcesData, liveFcMeta, rasterLut, rasterLutLoading,
-//     experienceId, experienceDirty, experiencePristine.
+//     sourcesLoaded, sourcesData, liveFcMeta, rasterLut, rasterLutLoading.
+//   Map Experience link (story id, snapshot, dirty flag): experience-link.ts,
+//     not AppState.
 //
 // Camera stays outside the view: map.ts owns the hash's position segment, and
 // applyView() takes it as a separate argument.
 //
 // Deps: state.js, url-state-codec.js (defaultView, UrlStateData, CameraView),
-//       visibility.js (setLayerVisibility, exclusiveRivals + the gen-mode/colour-by appliers),
-//       map.js (switchBasemap, switchProjection),
+//       visibility.js (setLayerVisibility, settleExclusiveGroups + the gen-mode/colour-by appliers),
+//       basemap.js (switchBasemap, switchProjection),
 //       terrain.js (setTerrain3d, setBuildings3d, setHillshade),
 //       weather-live.js (setWeatherVar), fema-nri.js (setNriHazard),
 //       layers/map-layers-conditions.js (applySmokeOpacity), state-bus.js,
@@ -50,9 +54,9 @@
 import { state } from './state.js';
 import { defaultView, type UrlStateData, type CameraView } from './url-state-codec.js';
 import {
-  setLayerVisibility, exclusiveRivals, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy,
+  setLayerVisibility, settleExclusiveGroups, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy,
 } from './visibility.js';
-import { switchBasemap, switchProjection } from './map.js';
+import { switchBasemap, switchProjection } from './basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from './terrain.js';
 import { setWeatherVar } from './weather-live.js';
 import { setNriHazard } from './fema-nri.js';
@@ -83,11 +87,7 @@ function resolve(data: Partial<UrlStateData>): View {
   Object.assign(v.legendFilters, data.legendFilters);
   Object.assign(v.layerFilters, data.layerFilters);
   Object.assign(v.genMode, data.genMode);
-  // The layer furthest down the registry wins its exclusive group, as it would
-  // switching the group's members on in registry order.
-  for (const id of Object.keys(v.layerVisibility).reverse()) {
-    if (v.layerVisibility[id]) for (const r of exclusiveRivals(id)) v.layerVisibility[r] = false;
-  }
+  settleExclusiveGroups(v.layerVisibility);
   // Replaced wholesale: a key from the previous view must not survive a Reset.
   v.where = copyWhere(data.where);
   v.style = copyStyle(data.style);
@@ -102,8 +102,8 @@ function resolve(data: Partial<UrlStateData>): View {
 
 // The state-only half, shared by both entry points. Fields with a live-map
 // side (layer visibility, basemap, projection, 3D, weather variable, NRI
-// hazard) go through their setters in applyView() instead; switchBasemap()
-// reads the labels flag set here.
+// hazard) go through their setters in seedView() and applyView() instead;
+// switchBasemap() reads the labels flag set here.
 function writeState(v: View) {
   Object.assign(state.legendFilters, v.legendFilters);
   Object.assign(state.layerFilters, v.layerFilters);
@@ -121,17 +121,21 @@ function writeState(v: View) {
   if (v.region) state.regionScope = v.region;
 }
 
+// The same setters applyView() calls, each of which writes its state field
+// before its map guard, so before the map exists they only write state. Layer
+// visibility is the exception: setLayerVisibility() returns before writing
+// until the map is ready, so the seed writes it directly.
 export function seedView(data: Partial<UrlStateData>) {
   const v = resolve(data);
   writeState(v);
+  switchBasemap(v.basemap);
+  switchProjection(v.projection);
+  setWeatherVar(v.weatherVar);
+  setNriHazard(v.nriHazard);
   Object.assign(state.layerVisibility, v.layerVisibility);
-  state.weatherVar = v.weatherVar;
-  state.nriHazard = v.nriHazard;
-  state.basemap = v.basemap;
-  state.projection = v.projection;
-  state.terrain3d = v.terrain3d;
-  state.buildings3d = v.buildings3d;
-  state.hillshade = v.hillshade;
+  setTerrain3d(v.terrain3d);
+  setBuildings3d(v.buildings3d);
+  setHillshade(v.hillshade);
 }
 
 /** Repaint the whole view from state: re-filters every layer (`where` rides on

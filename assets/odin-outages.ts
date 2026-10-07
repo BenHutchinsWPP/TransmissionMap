@@ -12,7 +12,8 @@
 //       wildfire-staleness.ts).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, layerVisibility), constants (DATA), diag-log.ts (recordDiagEvent —
-//       records refetch failures for the diagnostics panel). Legend age chip
+//       records refetch failures for the diagnostics panel), experience-link.ts
+//       (rebaselineExperience before the kill switch). Legend age chip
 //       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from the feature-state set here, and
@@ -25,13 +26,13 @@
 //       to ODIN from the browser.
 // Wired from ui/ui.ts init() via initOdinOutages().
 
-import { state, rebaselineExperience } from './state.js';
+import { state } from './state.js';
+import { rebaselineExperience } from './experience-link.js';
 import { DATA } from './constants.js';
 import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
 import { escapeHtml } from './utils/utils.js';
 import { recordDiagEvent } from './diag-log.js';
 import { setLayerVisibility } from './visibility.js';
-import { updateLegends } from './ui/ui-legends.js';
 import { fmtAge } from './live-staleness.js';
 
 const REGISTRY_ID = "odin-outages";
@@ -287,7 +288,6 @@ function enterStale(age: number) {
   rebaselineExperience();
   setLayerVisibility(REGISTRY_ID, false);
   disabledForStale = true;
-  updateLegends();
   const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
   const ageEl = document.getElementById("odinStaleAge");
   if (ageEl) ageEl.textContent = fmtAge(age);
@@ -306,7 +306,6 @@ function wireStaleDialog() {
     if (disabledForStale) { setLayerVisibility(REGISTRY_ID, true); disabledForStale = false; }
     applyJoin();
     appliedFips = new Set(Object.keys(snapshot));
-    updateLegends();
     dlg?.close();
   });
   document.getElementById("odinStaleDismiss")?.addEventListener("click", () => {

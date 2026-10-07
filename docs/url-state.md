@@ -167,11 +167,12 @@ byte-identical.
 
 Every other param is a pure function of state. `exp` is written only while the
 view still matches the story: `writeUrlState()` formats the other params first
-and compares that string against the snapshot `assets/experiences.ts` left in
-`state.experiencePristine`. An edit sets `state.experienceDirty`, emits
-`exp:dirty`, and drops `exp` from the link for the rest of the session. The
-camera is outside the comparison, so panning inside a story keeps the link on
-the story — and a shared `exp` link opens at the story's camera, not the hash's.
+and hands that string to `noteUrlWrite()` (`assets/experience-link.ts`), which
+compares it against the snapshot recorded by the first write after the story
+began. An edit marks the story dirty, emits `exp:dirty`, and drops `exp` from
+the link for the rest of the session. The camera is outside the comparison, so
+panning inside a story keeps the link on the story — and a shared `exp` link
+opens at the story's camera, not the hash's.
 
 The "omit the default" rule is what keeps links short. It also means **both
 sides must agree on the default** — `formatUrlState` skips a value when it
@@ -204,7 +205,8 @@ choice once the app is open. Code: `assets/user-data/view-file.ts`.
 [ ] url-state-codec.ts: give it a default in defaultView(), and emit it in formatUrlState()
     (state → key=val) only when it differs from that default
 [ ] view-state.ts: if it's a new state field, merge it in resolve(), write it in
-    writeState() (or through its setter in applyView()), read it in currentView()
+    writeState() (or through its setter in both seedView() and applyView(),
+    a setter that writes state before its map guard), read it in currentView()
 [ ] Emit 'url:write' wherever the value changes (usually assets/ui/ui-*.ts)
 [ ] Add the char to the reserved table in this doc
 ```

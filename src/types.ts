@@ -1,7 +1,8 @@
-// Central shared type definitions for src/ modules.
-import type { Map as MaplibreMap, Popup } from 'maplibre-gl';
-import type MapboxDraw from '@mapbox/mapbox-gl-draw';
-import type { Condition } from './registry/condition-compile.js';
+// Shared registry and view types: LayerDef and the shapes it carries (ramps,
+// buckets, scopes, downloads), FuelEntry, LayerSourceDef and StyleOverride.
+// Types with a single owning module live beside it instead: AppState in
+// assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
+// assets/raster-probes.ts. Imports nothing.
 
 // Per-layer look override in a view: opacity and size are multipliers on the layer's own values, color a literal.
 export interface StyleOverride { opacity?: number; size?: number; color?: string }
@@ -117,75 +118,4 @@ export interface LayerDef {
 export interface LayerSourceDef {
   label: string;
   tooltip: string;
-}
-
-// State sub-objects
-interface MwFilter { min: number; max: number; }
-interface YearFilter { enabled: boolean; year: number; min: number; max: number; }
-interface YearPlayback { active: boolean; interval: ReturnType<typeof setInterval> | null; speedMs: number; }
-
-
-export interface UserLayer {
-  id: string;
-  filename: string;
-  geojson: GeoJSON.FeatureCollection;
-  visible: boolean;
-  color: string;
-  expanded?: boolean;
-}
-
-export interface RasterMeta {
-  west: number;
-  north: number;
-  dx: number;
-  dy: number;
-  width: number;
-  height: number;
-  nodata: number;
-  scale: number;
-}
-
-export interface AppState {
-  map: MaplibreMap | null;
-  mapReady: boolean;
-  basemap: string;
-  basemapLabels: boolean;
-  projection: string;
-  terrain3d: boolean;
-  buildings3d: boolean;
-  hillshade: boolean;
-  smokeOpacity: number;
-  popup: Popup | null;
-  layerVisibility: Record<string, boolean>;
-  layerFilters: Record<string, Set<string>>;
-  where: Record<string, Condition[]>;                // registry id → field conditions (a view section)
-  styleOverrides: Record<string, StyleOverride>;     // registry id → look override (a view section)
-  userLayers: UserLayer[];
-  userLayerCounter: number;
-  editMode: string;
-  measure: { active: boolean; points: [number, number][]; finished: boolean };
-  draw: MapboxDraw | null;
-  drawDefaultColor: string;
-  selectedDrawId: string | null;
-  userHighlightKey: string | null;
-  legendFilters: Record<string, Set<string>>; // legendKey → active bucket Set
-  mwFilter: MwFilter;
-  genMode: Record<string, string>;
-  ogfColorBy: "region" | "status"; // OGF planned-lines color-by mode
-  westtecColorBy: "scenario" | "dataset"; // WestTEC 10-Yr color-by mode
-  weatherVar: string; // Weather Forecast selected variable id — see WEATHER_VARIABLES
-  nriHazard: string;  // FEMA National Risk Index hazard shown — an NRI_HAZARDS id
-  weatherStepSuffix: string; // scrubbed step's file suffix ("" = base step) — routes the hover LUT fetch
-  yearFilter: YearFilter;
-  yearPlayback: YearPlayback;
-  sourcesLoaded: Record<string, boolean>;
-  sourcesData: Record<string, unknown[]>;
-  liveFcMeta: Record<string, { generated_utc?: string; feed_status?: Record<string, string>; feed_last_ok?: Record<string, string | null> }>;
-  rasterLut: Record<string, { meta: RasterMeta; data: Int16Array }>;
-  rasterLutLoading: Record<string, boolean>;
-  regionScope: LayerScope;
-  // ─── Map Experiences (assets/experiences.ts) ───────────────────────────────
-  experienceId: string | null;        // active experience id, or null
-  experienceDirty: boolean;           // the view has been edited since it was applied
-  experiencePristine: string | null;  // URL param string captured right after apply
 }

@@ -25,7 +25,10 @@ import { state } from './state.js';
 import { writeUrlState } from './url-state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
-import { setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes, refetchZoomGatedLayers } from './visibility.js';
+import {
+  setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes, refetchZoomGatedLayers,
+  wantedLayout, settleExclusiveGroups,
+} from './visibility.js';
 import { on } from './state-bus.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -459,5 +462,60 @@ describe('refetchZoomGatedLayers', () => {
     state.map = mockMap([], 10) as unknown as typeof state.map;
     refetchZoomGatedLayers();
     expect(ensureLayerData).not.toHaveBeenCalled();
+  });
+});
+
+// ─── wantedLayout ─────────────────────────────────────────────────────────────
+
+describe('wantedLayout', () => {
+  const plain = makeLayer('p', ['p-line', 'p-label']);
+  const heat  = makeLayer('g', ['g-icons', 'g-heat'], 'g-heat');
+  const moded = {
+    ...makeLayer('m', ['m-a', 'm-b', 'm-heat'], 'm-heat'),
+    modes: [
+      { id: 'points', label: 'Points', layers: ['m-a'] },
+      { id: 'density', label: 'Density', layers: ['m-heat', 'm-b'] },
+    ],
+  } as LayerDef;
+
+  it.each([
+    ['plain on',          plain, true,  'icons',   { 'p-line': 'visible', 'p-label': 'visible' }],
+    ['plain off',         plain, false, 'icons',   { 'p-line': 'none',    'p-label': 'none' }],
+    ['heat: icons',       heat,  true,  'icons',   { 'g-icons': 'visible', 'g-heat': 'none' }],
+    ['heat: heat',        heat,  true,  'heat',    { 'g-icons': 'none',    'g-heat': 'visible' }],
+    ['heat: both',        heat,  true,  'both',    { 'g-icons': 'visible', 'g-heat': 'visible' }],
+    ['heat: off',         heat,  false, 'both',    { 'g-icons': 'none',    'g-heat': 'none' }],
+    ['heat: unknown mode', heat, true,  'nope',    { 'g-icons': 'none',    'g-heat': 'none' }],
+    ['modes: active set', moded, true,  'density', { 'm-a': 'none', 'm-b': 'visible', 'm-heat': 'visible' }],
+    ['modes: unknown → first', moded, true, 'nope', { 'm-a': 'visible', 'm-b': 'none', 'm-heat': 'none' }],
+    ['modes: off',        moded, false, 'points',  { 'm-a': 'none', 'm-b': 'none', 'm-heat': 'none' }],
+  ] as const)('%s', (_name, entry, on, mode, expected) => {
+    expect(wantedLayout(entry, on, mode)).toEqual(expected);
+  });
+});
+
+// ─── settleExclusiveGroups ────────────────────────────────────────────────────
+
+describe('settleExclusiveGroups', () => {
+  beforeEach(() => {
+    _mockLayers.push(
+      { ...makeLayer('a', []), exclusiveGroup: 'g' },
+      { ...makeLayer('b', []), exclusiveGroup: 'g' },
+      { ...makeLayer('c', []), exclusiveGroup: 'g' },
+      makeLayer('d', []),
+    );
+    _mockLayerById.mockImplementation(id => _mockLayers.find(l => l.id === id));
+  });
+
+  it('keeps the member furthest down the map on and switches the rest of its group off', () => {
+    const vis = { a: true, b: false, c: true, d: true };
+    settleExclusiveGroups(vis);
+    expect(vis).toEqual({ a: false, b: false, c: true, d: true });
+  });
+
+  it('leaves a group with one member on, and ungrouped layers, untouched', () => {
+    const vis = { a: false, b: true, c: false, d: true };
+    settleExclusiveGroups(vis);
+    expect(vis).toEqual({ a: false, b: true, c: false, d: true });
   });
 });

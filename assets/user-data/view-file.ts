@@ -5,13 +5,15 @@
 // with applyView(). A file's hash may run to 16 KB, so its `vx` cap is that
 // size rather than a link's. Deps: url-state-codec, url-state, view-state, experiences
 // (registry + story controller; a hash's `exp` restores the story via the
-// ui-experiences chunk), i18n, user-data-export (download helper).
+// ui-experiences chunk), experience-link (the active story id), i18n,
+// user-data-export (download helper).
 
 import { state } from '../state.js';
 import { splitHash, parseUrlState, parseCameraSegment } from '../url-state-codec.js';
 import { currentHash, showDroppedNotice } from '../url-state.js';
 import { applyView } from '../view-state.js';
 import { endExperience } from '../experiences.js';
+import { beginExperience, endExperienceLink, activeExperienceId } from '../experience-link.js';
 import type { DroppedStyle } from '../style-overrides.js';
 import { experienceById } from '../../src/registry/experiences.js';
 import { t } from '../../src/i18n/index.js';
@@ -30,7 +32,8 @@ export function buildViewFile(title: string, hash: string, note = ''): string {
 export function saveView() {
   const hash = currentHash();
   if (hash === null) return;
-  const title = (state.experienceId && experienceById(state.experienceId)?.title) || 'Map view';
+  const id = activeExperienceId();
+  const title = (id && experienceById(id)?.title) || 'Map view';
   downloadFile(buildViewFile(title, hash), 'map-view' + SUFFIX, 'application/json');
 }
 
@@ -60,13 +63,13 @@ export function openViewFile(j: unknown, filename: string): boolean {
     if (all.length) showDroppedNotice(all);
   };
   if (data.experienceId && experienceById(data.experienceId)) {
-    state.experienceId = data.experienceId;
+    beginExperience(data.experienceId);
     import('../ui/ui-experiences.js').then(m => {
       m.restoreFromUrl();
       if (cam) state.map?.jumpTo({ center: cam.center, zoom: cam.zoom, bearing: cam.bearing, pitch: cam.pitch });
       notice([]);
     }).catch(err => {
-      state.experienceId = null;
+      endExperienceLink();
       alert(`Could not open view: ${(err as Error).message}`);
     });
     return true;

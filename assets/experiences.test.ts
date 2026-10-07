@@ -17,10 +17,9 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 // view-state.js stays real: resolving each view over the defaults is what makes
 // the applier complete, so a double for it would test the double instead.
 
-vi.mock('./map.js', async () => {
+vi.mock('./basemap.js', async () => {
   const { state } = await import('./state.js');
   return {
-    initMap: vi.fn(),
     switchBasemap: vi.fn((b: string) => { state.basemap = b; }),
     switchProjection: vi.fn((p: string) => { state.projection = p; }),
     setBasemapLabels: vi.fn(),
@@ -85,18 +84,19 @@ vi.mock('./visibility.js', async (importOriginal) => {
 
 const writeUrlStateCalls: (string | null)[] = [];
 vi.mock('./url-state.js', async () => {
-  const { state } = await import('./state.js');
+  const { activeExperienceId } = await import('./experience-link.js');
   return {
     readUrlState: vi.fn(),
     // Records who the session thought the active story was at write time, which
     // is what the dirty-flag ordering turns on.
-    writeUrlState: vi.fn(() => { writeUrlStateCalls.push(state.experienceId); }),
+    writeUrlState: vi.fn(() => { writeUrlStateCalls.push(activeExperienceId()); }),
   };
 });
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import { state } from './state.js';
+import { beginExperience, endExperienceLink, activeExperienceId, experienceIsDirty, noteUrlWrite } from './experience-link.js';
 import { YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
 import { formatUrlState, parseUrlState, defaultView, type UrlStateData } from './url-state-codec.js';
 import { EXPERIENCES, type MapExperience } from '../src/registry/experiences.js';
@@ -184,9 +184,7 @@ beforeEach(() => {
     min: YEAR_FILTER_MIN, max: YEAR_FILTER_MAX,
   };
   seedView({});
-  state.experienceId = null;
-  state.experienceDirty = false;
-  state.experiencePristine = null;
+  endExperienceLink();
   state.map = mockMap();
   state.mapReady = true;
   document.body.innerHTML = '';
@@ -395,7 +393,7 @@ describe('applyExperience', () => {
     const direct = snapshot();
     applyExperience(exp.id, 'jump');
     expect(snapshot()).toEqual(direct);
-    expect(state.experienceId).toBe(exp.id);
+    expect(activeExperienceId()).toBe(exp.id);
   });
 
   it('holds the story id back until the whole view has landed', () => {
@@ -406,8 +404,11 @@ describe('applyExperience', () => {
     expect(writeUrlStateCalls.length).toBeGreaterThan(0);
     expect(writeUrlStateCalls.slice(0, -1).every(id => id === null)).toBe(true);
     expect(writeUrlStateCalls.at(-1)).toBe('columbia-hydro');
-    expect(state.experienceDirty).toBe(false);
-    expect(state.experiencePristine).toBeNull();
+    expect(experienceIsDirty()).toBe(false);
+    // No snapshot yet: the next URL write is recorded as the reference point,
+    // not compared against one, so it leaves the story clean.
+    expect(noteUrlWrite('next-write')).toBe(true);
+    expect(experienceIsDirty()).toBe(false);
   });
 
   it('flies by default and jumps for a cold deep link', () => {
@@ -427,8 +428,8 @@ describe('applyExperience', () => {
   });
 
   it('drops a retired slug instead of leaving it on the link', () => {
-    state.experienceId = 'retired-story';
+    beginExperience('retired-story');
     expect(applyExperience('retired-story')).toBeNull();
-    expect(state.experienceId).toBeNull();
+    expect(activeExperienceId()).toBeNull();
   });
 });

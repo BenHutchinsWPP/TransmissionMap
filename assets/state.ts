@@ -1,7 +1,58 @@
-// assets/state.ts — Mutable global runtime state singleton.
+// assets/state.ts — Mutable global runtime state singleton and its AppState type.
 // Static constants (DATA, tile URLs, EMPTY_FC, etc.) live in ./constants.ts —
-// import them from there.
-import type { AppState } from '../src/types.js';
+// import them from there. Type-only imports, so this module pulls in no code.
+import type { Map as MaplibreMap, Popup } from 'maplibre-gl';
+import type MapboxDraw from '@mapbox/mapbox-gl-draw';
+import type { Condition } from '../src/registry/condition-compile.js';
+import type { LayerScope, StyleOverride } from '../src/types.js';
+import type { UserLayer } from './user-data/user-data.js';
+import type { RasterMeta } from './raster-probes.js';
+
+// State sub-objects
+interface MwFilter { min: number; max: number; }
+interface YearFilter { enabled: boolean; year: number; min: number; max: number; }
+interface YearPlayback { active: boolean; interval: ReturnType<typeof setInterval> | null; speedMs: number; }
+
+export interface AppState {
+  map: MaplibreMap | null;
+  mapReady: boolean;
+  basemap: string;
+  basemapLabels: boolean;
+  projection: string;
+  terrain3d: boolean;
+  buildings3d: boolean;
+  hillshade: boolean;
+  smokeOpacity: number;
+  popup: Popup | null;
+  layerVisibility: Record<string, boolean>;
+  layerFilters: Record<string, Set<string>>;
+  where: Record<string, Condition[]>;                // registry id → field conditions (a view section)
+  styleOverrides: Record<string, StyleOverride>;     // registry id → look override (a view section)
+  userLayers: UserLayer[];
+  userLayerCounter: number;
+  editMode: string;
+  measure: { active: boolean; points: [number, number][]; finished: boolean };
+  draw: MapboxDraw | null;
+  drawDefaultColor: string;
+  selectedDrawId: string | null;
+  userHighlightKey: string | null;
+  legendFilters: Record<string, Set<string>>; // legendKey → active bucket Set
+  mwFilter: MwFilter;
+  genMode: Record<string, string>;
+  ogfColorBy: "region" | "status"; // OGF planned-lines color-by mode
+  westtecColorBy: "scenario" | "dataset"; // WestTEC 10-Yr color-by mode
+  weatherVar: string; // Weather Forecast selected variable id — see WEATHER_VARIABLES
+  nriHazard: string;  // FEMA National Risk Index hazard shown — an NRI_HAZARDS id
+  weatherStepSuffix: string; // scrubbed step's file suffix ("" = base step) — routes the hover LUT fetch
+  yearFilter: YearFilter;
+  yearPlayback: YearPlayback;
+  sourcesLoaded: Record<string, boolean>;
+  sourcesData: Record<string, unknown[]>;
+  liveFcMeta: Record<string, { generated_utc?: string; feed_status?: Record<string, string>; feed_last_ok?: Record<string, string | null> }>;
+  rasterLut: Record<string, { meta: RasterMeta; data: Int16Array }>;
+  rasterLutLoading: Record<string, boolean>;
+  regionScope: LayerScope;
+}
 
 // ─── Global runtime state ────────────────────────────────────────────────────
 export const state: AppState = {
@@ -43,20 +94,4 @@ export const state: AppState = {
   rasterLut:        {}, // raster layer id → { meta, data:Int16Array } — hover value grids (wind/solar)
   rasterLutLoading: {}, // raster layer id → boolean — guards concurrent LUT fetches
   regionScope:      'usa', // layer-list scope: 'usa' (all layers) | 'global' (worldwide layers only)
-  // Map Experiences — see assets/experiences.ts. `experiencePristine` is the
-  // URL param string as the experience left it; writeUrlState() compares each
-  // later write against it to notice the user has taken the view somewhere else.
-  experienceId:       null,
-  experienceDirty:    false,
-  experiencePristine: null,
 };
-
-// Re-arms the pristine snapshot so the NEXT writeUrlState() becomes the new
-// reference point. Anything that changes a shared param without the reader
-// asking for it — the stale-feed kill switch switching a layer off, a language
-// change — calls this, or url-state.ts's diff reads it as them editing their
-// way out of an active Map Experience. Lives here rather than in url-state.ts
-// so callers don't pull the URL codec in behind it.
-export function rebaselineExperience() {
-  if (state.experienceId && !state.experienceDirty) state.experiencePristine = null;
-}

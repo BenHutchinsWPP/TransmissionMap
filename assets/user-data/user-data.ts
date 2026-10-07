@@ -1,5 +1,6 @@
 // ─── User data: layer management + My Data tab + selection highlight ──────────
 // Deps: state, constants, utils, user-data-geom, user-data-colors (no back-imports from url-state)
+// Exports the UserLayer type (state.userLayers); state.ts imports it type-only.
 // Caches loaded drawnFeatures in `_cachedDrawnFeatures` so a save that happens
 // before MapboxDraw is loaded (lazy chunk; see user-data-draw.ts) doesn't
 // overwrite localStorage with an empty FeatureCollection. `restoreDrawnFeatures()`
@@ -9,12 +10,21 @@
 import type { GeoJSONSource, FilterSpecification, LayerSpecification, MapGeoJSONFeature } from 'maplibre-gl';
 import { state } from '../state.js';
 import { USER_FEATURE_THRESHOLD, USER_LAYER_COLORS } from '../constants.js';
-import type { UserLayer } from '../../src/types.js';
 import { ensureFeatureUid, ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
 import { escapeHtml } from '../utils/utils.js';
 import { collectCoords, coordsBounds, showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
+
+// One drawn or file-loaded layer in the My Data tab (state.userLayers).
+export interface UserLayer {
+  id: string;
+  filename: string;
+  geojson: GeoJSON.FeatureCollection;
+  visible: boolean;
+  color: string;
+  expanded?: boolean;
+}
 
 const USER_SUBLAYER_SUFFIXES = ['-fill', '-line', '-circle', '-point-label', '-line-label'];
 

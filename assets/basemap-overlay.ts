@@ -4,13 +4,13 @@
 // restyles them for contrast over photography instead of Positron's near-
 // white ground. No side effects, no map/DOM access — unit-tested directly
 // against real Positron layer objects (see basemap-overlay.test.ts).
-// Consumed by assets/map.ts's addOfmBasemaps() graft loop, which supplies the
+// Consumed by assets/basemap.ts's addOfmBasemaps() graft loop, which supplies the
 // raw (pre-remap) layer objects fetched from the Positron style JSON and adds
 // the returned specs above the Aerial raster tiers.
 
 // Minimal structural view of an OFM style layer — enough to select and restyle
 // without modeling MapLibre's whole LayerSpecification union. Defined here
-// rather than in map.ts so this module keeps zero imports; map.ts's
+// rather than in basemap.ts so this module keeps zero imports; basemap.ts's
 // OfmStyleJson imports it back for its own `layers` field.
 export type OfmLayer = {
   id: string;
