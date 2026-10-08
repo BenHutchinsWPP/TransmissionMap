@@ -12,7 +12,7 @@ import {
   PADUS_CLASS_BUCKETS, PADUS_CLASS_MAP,
   TRIBAL_BUCKETS, TRIBAL_MAP,
   NERC_BUCKETS, NERC_MAP,
-  OGF_STATUS_BUCKETS, OGF_STATUS_MAP,
+  OGF_STATUS_BUCKETS, OGF_STATUS_MAP, DCM_CLASSES, DCM_CLASS_MAP,
   OGF_REGION_BUCKETS, OGF_REGION_MAP,
   OGF_WORK_BUCKETS, OGF_WORK_MAP,
   RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
@@ -253,6 +253,11 @@ export function applyRetailTypeFilter() {
   applyBucketFilterToLayers(
     ["retail-fill", "retail-outline"],
     "type", state.legendFilters.retail, RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP);
+}
+
+export function applyDcMoratoriumFilter() {
+  applyBucketFilterToLayers(layerById("dc-moratoriums")!.mapLayerIds,
+    "cls", state.legendFilters.dcm, DCM_CLASSES, DCM_CLASS_MAP);
 }
 
 export function applyNwsGroupFilter() {
@@ -515,6 +520,7 @@ on('filter:all',           () => {
   applyCritHabFilter();
   applyNercFilter();
   applyRetailTypeFilter();
+  applyDcMoratoriumFilter();
   applyNatgasLineFilter();
   applyNatgasPtsFilter();
   applySubstanceFilter();

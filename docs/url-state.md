@@ -78,7 +78,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `region` | Layer-list scope (`global` only; `usa` is the default and is omitted) | codec, `VALID_REGIONS` |
 | `exp` | Active Map Experience slug (`columbia-hydro`, …) | codec (parse) + `url-state.ts` (pristine check); catalogue in `registry/experiences.ts` |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
-| `v f p h j t n r c e g u b m k d i o q x z` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
+| `v f p h j t n r c e g u b m k d i o q x z a` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
 
 Per-layer bucket filters use `filterGroupCode` (currently only `s`), read as a
 top-level param the same way — so they share the same key namespace as
@@ -90,7 +90,7 @@ Legend-filter `groupCode` assignments: `v`=voltage, `f`=fuel, `p`=pipeline,
 `b`=ogfRegion, `m`=ogfWork (OGF type of work), `k`=mines (commodity),
 `d`=minesStatus, `i`=sector (EIA Plants sector), `o`=underground (line placement,
 overhead/underground), `q`=nwsGroup (NWS weather alert group), `x`=westtecScenario,
-`z`=westtecDataset.
+`z`=westtecDataset, `a`=dcm (data center moratorium status).
 
 > **Pick a code in none of the rows above.** When you take one, add it here and
 > to the table the same commit, or the next person re-collides.

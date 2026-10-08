@@ -448,10 +448,11 @@ export const NRI_RATINGS: { code: number; label: string; color: string }[] = [
 
 // Data center moratorium classes — the `cls` property baked by the
 // moratorium build (strongest measure in a jurisdiction wins, in this order).
-// Swatches mirror the #dcMoratoriumLegend block in index.html.
-export const DCM_CLASSES: { id: string; label: string; color: string }[] = [
-  { id: "ban",     label: "Permanent ban",              color: "#7f1d1d" },
-  { id: "active",  label: "Moratorium in effect",       color: "#dc2626" },
-  { id: "pending", label: "Proposed",                   color: "#f59e0b" },
-  { id: "ended",   label: "Expired, lifted or replaced", color: "#9ca3af" },
+// They are also the legend's filter chips (LEGEND_FILTERS key "dcm").
+export const DCM_CLASSES: BucketDef[] = [
+  { id: "ban",     urlCode: "B", label: "Permanent ban",              color: "#7f1d1d" },
+  { id: "active",  urlCode: "A", label: "Moratorium in effect",       color: "#dc2626" },
+  { id: "pending", urlCode: "P", label: "Proposed",                   color: "#f59e0b" },
+  { id: "ended",   urlCode: "E", label: "Expired, lifted or replaced", color: "#9ca3af" },
 ];
+export const DCM_CLASS_MAP = Object.fromEntries(DCM_CLASSES.map(c => [c.id, [c.id]]));

@@ -28,6 +28,11 @@ measures, its colour is the strongest one, in this order:
 3. proposed;
 4. expired, lifted or replaced.
 
+The legend's four status rows are filter checkboxes (URL group `a`, built
+from `DCM_CLASSES`). They filter on that strongest class, `cls`, so
+unticking "Expired, lifted or replaced" hides a jurisdiction only when all
+of its measures have ended.
+
 The popup lists every measure, newest first, followed by the jurisdiction's
 latest changes. Each adopted and end date also reads as an offset from today
 ("6 days ago", "in 11 months"), computed when the popup opens and worded in

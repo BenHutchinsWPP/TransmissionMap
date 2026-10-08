@@ -15,7 +15,7 @@ import { FUEL_LEGEND } from '../../src/colors/fuel.js';
 import {
   KV_BUCKETS, VOLTAGE_LEGEND, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
-  NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS,
+  NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS, DCM_CLASSES,
   OGF_REGION_BUCKETS, OGF_WORK_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
   NWS_GROUP_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_DATASET_BUCKETS,
 } from '../../src/colors/buckets.js';
@@ -23,7 +23,7 @@ import {
   applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
   applyCritHabFilter, applyPadusClassFilter, applyTribalClassFilter,
   applyNatgasLineFilter, applyNatgasPtsFilter, applyNercFilter,
-  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter, applyMinesFilter,
+  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter, applyMinesFilter, applyDcMoratoriumFilter,
   applyNwsGroupFilter, applyWestTECFilters,
 } from '../filters.js';
 import { MINES_COMMODITY_BUCKETS, MINES_STATUS_BUCKETS } from '../../src/colors/minerals.js';
@@ -76,6 +76,9 @@ export const LEGEND_FILTERS = [
   { key: "retail", groupCode: "e", buckets: RETAIL_TYPE_BUCKETS,
     masterId: "retailAllCb", legendId: "retailLegend", itemsId: "retailLegendItems",
     title: "Utility type", swatch: "color", apply: applyRetailTypeFilter },
+  { key: "dcm", groupCode: "a", buckets: DCM_CLASSES,
+    masterId: "dcmAllCb", legendId: "dcMoratoriumLegend", itemsId: "dcMoratoriumLegendItems",
+    title: "Data Center Moratoriums", swatch: "color", apply: applyDcMoratoriumFilter },
   { key: "ogfRegion", groupCode: "b", buckets: OGF_REGION_BUCKETS,
     masterId: "ogfRegionAllCb", legendId: "ogfRegionLegend", itemsId: "ogfRegionLegendItems",
     title: "Region", titleKey: "popup.region", swatch: "color", apply: applyOGFFilters },

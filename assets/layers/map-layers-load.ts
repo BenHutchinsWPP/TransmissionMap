@@ -182,6 +182,12 @@ function dcmHatch(hex: string): { width: number; height: number; data: Uint8Arra
   return { width: n, height: n, data };
 }
 
+// The kind filters set in addLayer are structural: the status legend filter
+// (applyDcMoratoriumFilter) is combined with them, never replaces them.
+function registerDcmBaseFilters(ids: string[]) {
+  for (const id of ids) registerBaseFilter(id, state.map!.getFilter(id) ?? null);
+}
+
 export function addDcMoratoriumAreas() {
   if (!state.map || state.map.getSource("dc-moratoriums")) return;
   state.map.addSource("dc-moratoriums", {
@@ -244,6 +250,8 @@ export function addDcMoratoriumAreas() {
       "line-width": ["case", dcmRecent(), 2.5, 0.8],
     },
   } as LayerSpecification);
+  registerDcmBaseFilters(["dcm-state-fill", "dcm-state-line", "dcm-utility-fill", "dcm-utility-line",
+    "dcm-county-fill", "dcm-county-line"]);
 }
 
 export function addDcMoratoriumPoints() {
@@ -274,4 +282,5 @@ export function addDcMoratoriumPoints() {
       "circle-opacity": 0.9,
     },
   } as LayerSpecification);
+  registerDcmBaseFilters(["dcm-points-recent", "dcm-points"]);
 }
