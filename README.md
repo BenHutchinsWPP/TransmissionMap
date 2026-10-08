@@ -33,8 +33,8 @@ the seed day, so a feed of newly recorded changes should skip them.
 | `field` / `old` / `new` | The column that changed, for `corrected`/`extended`/status changes |
 | `note` | `seed` for history found on the first sync |
 
-Edits to `summary`, `source_urls`, `scope`, `verify`, `upstream_id` and
-`last_verified` update the row but log no event.
+Edits to `summary`, `source_urls`, `scope`, `verify`, `upstream_id`, `date_uncertain`,
+`last_verified` and `eia_id` update the row but log no event.
 
 ## `moratoriums.csv`
 
@@ -43,7 +43,11 @@ Edits to `summary`, `source_urls`, `scope`, `verify`, `upstream_id` and
 
 - a state measure paints the state;
 - a county measure paints the county;
-- every other level is a point.
+- a utility measure with an `eia_id` (EIA-861 utility number) paints that
+  utility's HIFLD retail service territory, clipped to the row's state; all
+  measures of one utility share one feature;
+- the TX ERCOT audit directive paints the ERCOT balancing-authority area;
+- every other level, and a utility without an `eia_id`, is a point.
 
 `status` is the status as reported. `build_layer.py` shows a past-due
 `active`/`extended` row as expired, and never writes that back, so a quiet
@@ -52,10 +56,20 @@ confirmed against a primary source.
 
 ## Rebuild
 
+`inputs/` holds everything the build reads besides the pinned upstream clone
+and the Census boundary files: the research CSVs (`research/`, one
+`research/weekly/<date>/` folder per refresh run), `additions.csv`,
+`state_additions.csv`, the utility and ERCOT polygons (`territories/`),
+`county_names.csv`, and the pinned upstream commit (`upstream.sha`,
+`upstream_as_of`). The scripts live in the TransmissionMap repository under
+`scripts/moratoriums/`:
+
 ```
-python sync.py --as-of YYYY-MM-DD          # research CSVs → moratoriums.csv + events.csv
-python build_layer.py --as-of YYYY-MM-DD   # → dc_moratoriums.geojson (needs geopandas)
+bash scripts/moratoriums/rebuild.sh --work <WORK> --dataset <this checkout> [--as-of YYYY-MM-DD]
 ```
+
+A weekly GitHub Action rebuilds from these inputs and proposes changes as a
+pull request into this branch; merging it publishes them.
 
 ## Attribution
 

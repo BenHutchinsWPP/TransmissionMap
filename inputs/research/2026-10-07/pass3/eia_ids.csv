@@ -1,0 +1,20 @@
+id,eia_id,ba_code,utility_name_eia,source_url
+add-wa-douglaspud-2019,5326,DOPD,PUD No 1 of Douglas County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-douglaspud-2014,5326,DOPD,PUD No 1 of Douglas County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-chelanpud-2018,3413,CHPD,PUD No 1 of Chelan County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-chelanpud-2014,3413,CHPD,PUD No 1 of Chelan County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-grantpud-2017,14624,GCPD,PUD No 2 of Grant County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-grantpud-2025,14624,GCPD,PUD No 2 of Grant County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-franklinpud-2018,6716,BPAT,PUD No 1 of Franklin County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-okanoganpud-2018,14055,DOPD,PUD No 1 of Okanogan County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-masonpud3-2018,15419,BPAT,PUD No 3 of Mason County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-ny-massenaelectric-2021,11811,NYIS,Town of Massena - (NY),https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-ny-plattsburgh-2018,15145,NYIS,City of Plattsburgh - (NY),https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-va-dominion-2022,19876,PJM,Virginia Electric & Power Co,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-oh-aepohio-2023,14006,PJM,Ohio Power Co,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-az-aps-2024,803,AZPS,Arizona Public Service Co,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-de-psc-delmarva-2025,5027,PJM,Delmarva Power,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-tx-ercot-2026,,ERCO,(ERCOT region; grid-operator-wide),https://www.ercot.com/files/docs/2026/09/11/14-Batch-Zero-Update.pdf
+add-ga-marietta-blw-2026,11646,SOCO,City of Marietta - (GA),https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-wa-lewispud-2018,10944,BPAT,PUD No 1 of Lewis County,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
+add-mt-flatheadelectric-2018,6395,BPAT,Flathead Electric Coop Inc,https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip
