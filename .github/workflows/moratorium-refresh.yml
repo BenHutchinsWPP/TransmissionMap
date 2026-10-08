@@ -1,0 +1,320 @@
+name: Moratorium weekly refresh
+# Finds new and changed data center moratoriums, bans and utility pauses each
+# week with a fixed search -> fetch -> extract -> quote-verify pipeline
+# (scripts/moratoriums/refresh/run.py), rebuilds the layer from the inputs/ on
+# the `data-moratoriums` branch (scripts/moratoriums/rebuild.sh), and opens or
+# updates ONE pull request from the rolling `refresh/weekly` branch into
+# `data-moratoriums` (scripts/moratoriums/refresh/pr.py). It never pushes
+# `data-moratoriums` itself: merging the PR is the publishing step.
+#
+# Modes (workflow_dispatch `mode`; the schedule always asks for `research`):
+#   research      live Brave search + model extraction, rebuild, PR.
+#   dry_run       fixtures + stub model in a temporary copy, PR body printed, no push.
+#                 Chosen automatically (with a ::notice::) when BRAVE_API_KEY or both
+#                 ANTHROPIC_API_KEY and OPENROUTER_API_KEY are unset.
+#   rebuild_only  no search, no model: rebuild from inputs/. With no refresh PR open
+#                 it rebuilds as of the geojson's own date and must produce no diff
+#                 (the reproducibility check); with one open it rebuilds as of today and
+#                 force-pushes `refresh/weekly` (e.g. after a reviewer adds a DROP
+#                 row to updates.csv).
+#
+# To stop it: disable the workflow (Actions > Moratorium weekly refresh >
+# Disable workflow), or close the open refresh PR to discard a week's rows —
+# a closed PR is never carried over.
+#
+# Secrets, settings and the reviewing steps: scripts/moratoriums/README.md.
+
+on:
+  schedule:
+    - cron: '23 9 * * 0'   # Sundays 09:23 UTC
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "research | dry_run | rebuild_only"
+        type: choice
+        options: [research, dry_run, rebuild_only]
+        default: research
+      max_requests:
+        description: "Hard cap on Brave search requests this run"
+        type: string
+        default: '220'
+      models:
+        description: "Optional model ids, triage then escalation, e.g. claude-sonnet-5-5,claude-opus-5-5"
+        type: string
+        default: ''
+
+# Two runs editing the same refresh branch would race its force-push; queue
+# instead. Deliberately NOT the `data-branch` group: that one serialises the
+# force-pushed live-feed `data` branch, and a 2-hour refresh in it would stall
+# the hourly feeds.
+concurrency:
+  group: data-moratoriums
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      W: ${{ github.workspace }}/work
+      PYTHONPATH: ${{ github.workspace }}/scripts
+      BASE: data-moratoriums
+      BRANCH: refresh/weekly
+
+    steps:
+      - uses: actions/checkout@v5          # main: the scripts
+
+      - uses: actions/checkout@v5
+        with:
+          # Fully qualified on purpose (see data-feed.yml): an unqualified ref
+          # fetches with a glob that also matches `data-moratoriums*` siblings.
+          # Not fetch-depth 0, which fetches every branch, ~1 GB of
+          # `data-static` tiles included; the history this needs is fetched
+          # below, for these two branches only.
+          ref: refs/heads/data-moratoriums
+          path: work/site
+          persist-credentials: true          # pr.py force-pushes refresh/weekly
+
+      - name: Fetch data-moratoriums history and the refresh branch
+        # pr.py diffs origin/data-moratoriums...origin/refresh/weekly and reads
+        # the base events.csv, so both need history. refresh/weekly is absent
+        # until the first PR; that is fine.
+        working-directory: work/site
+        run: |
+          git remote get-url origin > /dev/null
+          git fetch --no-tags --unshallow origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          git fetch --no-tags origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
+            || echo "No $BRANCH branch yet."
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Force IPv4 for network stability
+        # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
+        # See: https://github.com/actions/runner-images/issues/668
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Python deps
+        # Pinned so the runner rebuild matches the local one byte for byte.
+        run: pip install --quiet -r scripts/moratoriums/requirements-refresh.txt
+
+      - name: Decide mode
+        id: mode
+        env:
+          ASKED: ${{ inputs.mode || 'research' }}
+          MAX_REQUESTS: ${{ inputs.max_requests || '220' }}
+          HAS_BRAVE: ${{ secrets.BRAVE_API_KEY != '' }}
+          HAS_LLM: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.OPENROUTER_API_KEY != '' }}
+        run: |
+          mode="$ASKED"
+          if [ "$mode" = research ] && { [ "$HAS_BRAVE" != true ] || [ "$HAS_LLM" != true ]; }; then
+            echo "::notice::Search or model key not set: running dry_run on fixtures, no PR."
+            mode=dry_run
+          fi
+          [[ "$MAX_REQUESTS" =~ ^[0-9]+$ ]] || { echo "::error::max_requests must be a whole number"; exit 1; }
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "max_requests=$MAX_REQUESTS" >> "$GITHUB_OUTPUT"
+          echo "run_date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode (asked: $ASKED), run date $(date -u +%F), max requests $MAX_REQUESTS"
+
+      - name: Stdlib tests
+        # PRs opened with GITHUB_TOKEN don't trigger pipeline-tests.yml, so the
+        # gate runs here, before anything is searched or pushed.
+        run: python3 -m unittest discover -s scripts -p "test_*.py"
+
+      - name: Work layout
+        # The scripts read WORK/inputs, WORK/upstream and WORK/census. inputs/
+        # is a symlink into the branch checkout so weekly CSVs land in it;
+        # build intermediates go to work/build, outside the checkout.
+        run: |
+          [ -f "$W/site/inputs/upstream.sha" ] || {
+            echo "::error::$BASE has no inputs/upstream.sha: the branch needs its inputs/ folder (see scripts/moratoriums/README.md)."
+            exit 1
+          }
+          ln -sfn site/inputs "$W/inputs"
+          mkdir -p "$W/build/logs" "$W/census"
+
+      - name: Restore Census cartographic boundaries
+        id: census
+        uses: actions/cache@v4
+        with:
+          path: work/census
+          key: census-genz2023-cb_2023_us_county_500k-cb_2023_us_place_500k-cb_2023_us_cousub_500k
+
+      - name: Download Census cartographic boundaries
+        # Fails here, before any search request is spent, if Census is down.
+        if: steps.census.outputs.cache-hit != 'true'
+        run: |
+          for n in cb_2023_us_county_500k cb_2023_us_place_500k cb_2023_us_cousub_500k; do
+            curl -sS --fail --retry 3 --retry-delay 20 --connect-timeout 30 \
+              -o "$W/census/$n.zip" "https://www2.census.gov/geo/tiger/GENZ2023/shp/$n.zip"
+          done
+
+      - name: Check Census files
+        run: |
+          for n in cb_2023_us_county_500k cb_2023_us_place_500k cb_2023_us_cousub_500k; do
+            [ -s "$W/census/$n.zip" ] || { echo "::error::missing work/census/$n.zip"; exit 1; }
+          done
+
+      - name: Clone Moratorium Nation at the pinned sha
+        # Pinned in inputs/upstream.sha so an upstream change arrives only as a
+        # deliberate bump in its own PR.
+        run: |
+          sha="$(tr -d '[:space:]' < "$W/site/inputs/upstream.sha")"
+          git init -q "$W/upstream"
+          git -C "$W/upstream" remote add origin https://github.com/mjbommar/moratorium-data-2026
+          git -C "$W/upstream" fetch -q --depth 1 origin "$sha"
+          git -C "$W/upstream" checkout -q --detach FETCH_HEAD
+          echo "upstream at $(git -C "$W/upstream" rev-parse HEAD)"
+
+      - name: Carry over the open refresh PR's weekly folders
+        # Before run.py, so this week's follow-ups see last week's unmerged ids.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m moratoriums.refresh.pr carry-over --checkout "$W/site"
+
+      - name: Search, fetch, extract, verify
+        if: steps.mode.outputs.mode != 'rebuild_only'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          MAX_REQUESTS: ${{ steps.mode.outputs.max_requests }}
+          MODELS: ${{ inputs.models }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DCM_CONTACT: ${{ secrets.DCM_CONTACT }}
+        run: |
+          if [ -n "$MODELS" ]; then
+            IFS=, read -r sonnet opus <<< "$MODELS"
+            [ -n "$sonnet" ] && export DCM_SONNET_MODEL="$sonnet"
+            [ -n "$opus" ] && export DCM_OPUS_MODEL="$opus"
+          fi
+          python3 -m moratoriums.refresh.run --mode "$MODE" --work "$W" --dataset "$W/site" \
+            --build "$W/build" --run-date "$RUN_DATE" --max-requests "$MAX_REQUESTS" \
+            --report "$W/build/run_report.json"
+
+      - name: As-of date
+        id: asof
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          GH_TOKEN: ${{ github.token }}
+        # Only a rebuild_only run with no refresh PR open rebuilds as of the published
+        # geojson's own date, so unchanged inputs give no diff (the reproducibility check).
+        # Every other run, including a rebuild_only push to the open PR, is dated today.
+        run: |
+          as_of="$RUN_DATE"
+          if [ "$MODE" = rebuild_only ]; then
+            open="$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')"
+            if [ -z "$open" ]; then
+              as_of="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["generated_utc"])' "$W/site/dc_moratoriums.geojson")"
+            fi
+          fi
+          echo "as_of=$as_of" >> "$GITHUB_OUTPUT"
+          echo "Rebuilding as of $as_of"
+
+      - name: Rebuild the layer
+        if: steps.mode.outputs.mode != 'dry_run'
+        env:
+          AS_OF: ${{ steps.asof.outputs.as_of }}
+        run: |
+          set -o pipefail
+          bash scripts/moratoriums/rebuild.sh --work "$W" --dataset "$W/site" --build "$W/build" \
+            --as-of "$AS_OF" 2>&1 | tee "$W/build/logs/rebuild.log"
+
+      - name: Check the published files
+        # The frontend reads these four files at the branch root; a malformed
+        # one must never reach a PR. events.csv is append-only.
+        if: steps.mode.outputs.mode != 'dry_run'
+        working-directory: work/site
+        run: |
+          python3 - <<'PY'
+          import csv, json, subprocess, sys
+          g = json.load(open("dc_moratoriums.geojson", encoding="utf-8"))
+          assert g.get("type") == "FeatureCollection" and g.get("generated_utc"), "geojson header"
+          assert g["features"], "geojson has no features"
+          assert open("README.md", encoding="utf-8").read().strip(), "README.md empty"
+          for name in ("moratoriums.csv", "events.csv"):
+              base = subprocess.run(["git", "show", f"origin/data-moratoriums:{name}"], capture_output=True, text=True)
+              new = open(name, encoding="utf-8", newline="").read()
+              head = next(csv.reader(new.splitlines()))
+              if base.returncode == 0:
+                  assert head == next(csv.reader(base.stdout.splitlines())), f"{name}: header changed: {head}"
+                  if name == "events.csv":
+                      assert new.startswith(base.stdout), "events.csv: base history was rewritten"
+              print(f"{name}: {len(new.splitlines()) - 1} rows, header ok")
+          print(f"dc_moratoriums.geojson: {len(g['features'])} features as of {g['generated_utc']}")
+          PY
+
+      - name: Open or update the refresh PR
+        if: steps.mode.outputs.mode != 'rebuild_only'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
+            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE"
+
+      - name: rebuild_only — no-diff check, or push the open PR's rebuild
+        if: steps.mode.outputs.mode == 'rebuild_only'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open="$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$open" ]; then
+            # Unchanged inputs must rebuild to the same files.
+            python3 -m moratoriums.refresh.run --mode rebuild_only --check-clean --dataset "$W/site"
+          else
+            echo "Refresh PR #$open is open: pushing its rebuild."
+            python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
+              --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode rebuild_only
+          fi
+
+      - name: Job summary
+        if: always()
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          python3 - "$W/build/run_report.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, os, sys
+          print(f"### Moratorium refresh — {os.environ.get('MODE') or 'not started'}\n")
+          try:
+              r = json.load(open(sys.argv[1], encoding="utf-8"))
+          except (OSError, ValueError):
+              print("No run report (rebuild_only, or the run stopped before run.py finished).")
+              sys.exit(0)
+          rows = r.get("rows", {})
+          llm = r.get("llm", {})
+          print("| measure | value |\n|---|---|")
+          for k in ("moratoriums", "bans", "utilities", "updates"):
+              print(f"| {k} rows | {rows.get(k, 0)} |")
+          print(f"| leads | {r.get('leads', {}).get('total', 0)} |")
+          print(f"| search requests | {r.get('search_requests', 0)} |")
+          print(f"| pages fetched (rate) | {r.get('fetch', {}).get('pages', 0)} ({r.get('fetch', {}).get('rate', 0)}) |")
+          print(f"| model calls (escalated, refusals) | {llm.get('calls', 0)} ({llm.get('escalated', 0)}, {llm.get('refusals', 0)}) |")
+          print(f"| est. model cost (USD) | {llm.get('est_cost_usd', 0)} |")
+          print(f"| caps hit | {', '.join(r.get('caps_hit') or []) or 'none'} |")
+          PY
+
+      - name: Upload run report, logs and weekly notes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moratorium-refresh-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            work/build/run_report.json
+            work/build/pr_body.md
+            work/build/logs/
+            work/site/inputs/research/weekly/

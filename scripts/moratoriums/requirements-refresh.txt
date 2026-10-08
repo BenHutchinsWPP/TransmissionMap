@@ -1,0 +1,11 @@
+# Exact pins for the weekly moratorium refresh (.github/workflows/moratorium-refresh.yml).
+# Pinned so a runner rebuild matches the local one: a different pandas/GEOS moves points past the
+# 5-decimal rounding and logs spurious `corrected` events. Bump them together, then dispatch
+# `rebuild_only` and confirm it shows no diff. Every pin has a CPython 3.12 manylinux wheel.
+numpy==2.5.2
+pandas==3.0.5
+geopandas==1.1.4
+shapely==2.1.2
+pyogrio==0.13.0
+pyproj==3.7.2
+pypdf==6.19.0

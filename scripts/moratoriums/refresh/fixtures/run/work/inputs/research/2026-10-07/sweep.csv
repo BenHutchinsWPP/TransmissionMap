@@ -1,0 +1,3 @@
+id,jurisdiction_name,jurisdiction_level,state,county,type,sectors,status,date_adopted,date_expires,duration,summary,source_urls,source_quality,upstream_id,kind,notes
+add-oh-franklin-township-2026,Franklin Township,township,OH,Pickett,temporary moratorium,data center,active,2026-03-10,2027-03-10,1 year,Trustees adopted a one-year moratorium on data centers.,https://news.example.com/franklin-pickett,secondary,,new,"Fixture row: a same-named township in another county, whose id a new row must not reuse."
+add-pa-birch-hollow-2026,Birch Hollow Township,township,PA,Larkin,temporary moratorium,data center,active,2026-06-09,,,Supervisors adopted a moratorium on data center applications.,https://www.larkinledger.example.com/2026/06/10/birch-hollow,secondary,,new,Fixture row.

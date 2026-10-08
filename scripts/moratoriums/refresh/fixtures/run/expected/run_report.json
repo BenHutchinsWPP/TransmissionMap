@@ -1,0 +1,93 @@
+{
+  "caps_hit": [],
+  "fetch": {
+    "outcomes": {
+      "http_404": 1,
+      "ok": 12
+    },
+    "pages": 13,
+    "rate": 0.923
+  },
+  "hits": {
+    "total": 13,
+    "unique_urls": 13
+  },
+  "items": {
+    "confirmed_unchanged": 1,
+    "eia_id_blanked": 0,
+    "extracted": 11,
+    "merged": 0,
+    "none": 0
+  },
+  "leads": {
+    "by_reason": {
+      "fetch failed": 1,
+      "model refused": 1,
+      "no county": 1,
+      "quote not found on page": 2,
+      "seed citation not in page": 1
+    },
+    "total": 6
+  },
+  "llm": {
+    "by_model": {
+      "claude-opus-5-5": {
+        "cache_read": 1100,
+        "cache_write": 0,
+        "calls": 3,
+        "input": 2100,
+        "output": 300
+      },
+      "claude-sonnet-5-5": {
+        "cache_read": 1100,
+        "cache_write": 1200,
+        "calls": 13,
+        "input": 5300,
+        "output": 432
+      }
+    },
+    "calls": 16,
+    "errors": 0,
+    "escalated": 3,
+    "est_cost_usd": 0.03276,
+    "refusals": 1
+  },
+  "mode": "dry_run",
+  "out_dir": "inputs/research/weekly/2026-10-08",
+  "providers": {
+    "fetch": "fixture",
+    "llm": "stub",
+    "search": "fixture"
+  },
+  "queries": {
+    "by_kind": {
+      "discovery": 20,
+      "expiring": 1,
+      "pending": 1,
+      "rotating": 2,
+      "utility": 1
+    },
+    "error_ids": [],
+    "errors": 0,
+    "planned": 25,
+    "rows_queried": 5,
+    "run": 25,
+    "stopped_on_http": 0
+  },
+  "refresh_state_updated": 5,
+  "rows": {
+    "bans": 1,
+    "moratoriums": 4,
+    "updates": 3,
+    "utilities": 1
+  },
+  "run_date": "2026-10-08",
+  "search_requests": 25,
+  "seeds": {
+    "cited_urls_dropped": 1,
+    "cited_urls_kept": 2,
+    "pages": 9,
+    "read": 1
+  },
+  "upstream_sha": "0123456789abcdef0123456789abcdef01234567"
+}

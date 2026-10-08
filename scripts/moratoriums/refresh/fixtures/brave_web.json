@@ -1,0 +1,10 @@
+{
+  "type": "search",
+  "web": {
+    "results": [
+      {"url": "https://www.example-news.com/2026/10/council-votes-data-center-moratorium/?utm_source=x", "title": "Council votes for data center moratorium", "description": "The council adopted a 180-day pause on new data centers.", "age": "2 days ago", "page_age": "2026-10-06T12:00:00"},
+      {"url": "https://example-news.com/2026/10/council-votes-data-center-moratorium", "title": "Duplicate of the first", "description": "Same story, different URL form."},
+      {"url": "https://county.example.gov/ordinances/2026-14.pdf", "title": "Ordinance 2026-14", "description": "Temporary prohibition on large load interconnection.", "page_age": "2026-09-30T00:00:00"}
+    ]
+  }
+}

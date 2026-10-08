@@ -1,0 +1,368 @@
+{
+ "https://news.example.com/2026/10/06/lafayette-council-moratorium": {
+  "sonnet": {
+   "_usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1100,
+    "input_tokens": 1800,
+    "output_tokens": 240
+   },
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Tippecanoe",
+     "date_adopted": "2026-10-05",
+     "date_expires": "2027-10-05",
+     "duration": "1 year; computed",
+     "eia_id": "",
+     "jurisdiction_level": "city",
+     "jurisdiction_name": "Lafayette",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "The Lafayette City Council voted 6-1 on October 5, 2026 to adopt a one-year moratorium on new data center applications within city limits.",
+     "sectors": "data center",
+     "state": "IN",
+     "status": "active",
+     "summary": "City Council voted 6-1 to adopt a one-year moratorium on new data center applications while standards are drafted."
+    }
+   ]
+  }
+ },
+ "https://www.brooksidebeacon.example.com/2026/10/02/brookside-zoning-workshop": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.95,
+     "county": "Clark",
+     "date_adopted": "2026-10-01",
+     "date_expires": "",
+     "duration": "",
+     "eia_id": "",
+     "jurisdiction_level": "city",
+     "jurisdiction_name": "Springfield",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "The Springfield City Commission adopted a one-year moratorium on all data center development on October 1, 2026.",
+     "sectors": "data center",
+     "state": "OH",
+     "status": "active",
+     "summary": "City Commission adopted a one-year moratorium on data centers."
+    }
+   ]
+  }
+ },
+ "https://www.countyherald.example.com/2026/10/06/washington-township-moratorium": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "",
+     "date_adopted": "2026-10-05",
+     "date_expires": "",
+     "duration": "12 months",
+     "eia_id": "",
+     "jurisdiction_level": "township",
+     "jurisdiction_name": "Washington Township",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "Washington Township trustees adopted a 12-month moratorium on data center zoning applications on Monday, October 5, 2026",
+     "sectors": "data center",
+     "state": "OH",
+     "status": "active",
+     "summary": "Trustees adopted a 12-month moratorium on data center zoning applications."
+    }
+   ]
+  }
+ },
+ "https://www.elmstead.example.us/commissioners/2026-09-30-minutes": {
+  "opus": {
+   "_usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1100,
+    "input_tokens": 2100,
+    "output_tokens": 300
+   },
+   "items": [
+    {
+     "confidence": 0.93,
+     "county": "Elmstead",
+     "date_adopted": "2026-09-29",
+     "date_expires": "2027-09-29",
+     "duration": "12 months",
+     "eia_id": "",
+     "jurisdiction_level": "county",
+     "jurisdiction_name": "Elmstead County",
+     "kind": "correction",
+     "measure_type": "temporary moratorium",
+     "quote": "the Board voted 3-0 to adopt a twelve-month moratorium on the acceptance of applications for data centers in the unincorporated areas of Elmstead County",
+     "sectors": "data center",
+     "state": "OH",
+     "status": "active",
+     "summary": "Board of Commissioners voted 3-0 to adopt a twelve-month moratorium on data center applications in unincorporated Elmstead County."
+    }
+   ]
+  },
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.85,
+     "county": "Elmstead",
+     "date_adopted": "2026-09-29",
+     "date_expires": "2027-09-29",
+     "duration": "12 months",
+     "eia_id": "",
+     "jurisdiction_level": "county",
+     "jurisdiction_name": "Elmstead County",
+     "kind": "correction",
+     "measure_type": "temporary moratorium",
+     "quote": "the Board voted 3-0 to adopt a twelve-month moratorium on the acceptance of applications for data centers in the unincorporated areas of Elmstead County",
+     "sectors": "data center",
+     "state": "OH",
+     "status": "active",
+     "summary": "Board of Commissioners voted 3-0 to adopt a twelve-month moratorium on data center applications in unincorporated Elmstead County."
+    }
+   ]
+  }
+ },
+ "https://www.elmsteadgazette.example.com/2026/09/23/franklin-township-moratorium": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Elmstead",
+     "date_adopted": "2026-09-22",
+     "date_expires": "2027-03-22",
+     "duration": "6 months; computed",
+     "eia_id": "",
+     "jurisdiction_level": "township",
+     "jurisdiction_name": "Franklin Township",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "Franklin Township trustees in Elmstead County approved a six-month moratorium on data center development on September 22, 2026.",
+     "sectors": "data center",
+     "state": "OH",
+     "status": "active",
+     "summary": "Township trustees approved a six-month moratorium on data center development."
+    }
+   ]
+  }
+ },
+ "https://www.harmonytownship.example.org/DocumentCenter/View/412/Ordinance-2026-7.pdf": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.75,
+     "county": "Larkin",
+     "date_adopted": "2026-09-08",
+     "date_expires": "2027-03-08",
+     "duration": "6 months; computed",
+     "eia_id": "",
+     "jurisdiction_level": "township",
+     "jurisdiction_name": "Harmony Township",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "A moratorium is hereby imposed on the acceptance and processing of any application for a data center use within the Township for a period of six months",
+     "sectors": "data center",
+     "state": "PA",
+     "status": "active",
+     "summary": "Board of Supervisors enacted Ordinance 2026-7, a six-month moratorium on data center applications."
+    }
+   ]
+  }
+ },
+ "https://www.larkinledger.example.com/2026/10/07/birch-hollow-extends-moratorium": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.85,
+     "county": "Larkin",
+     "date_adopted": "2026-06-09",
+     "date_expires": "2027-04-09",
+     "duration": "extended to 2027-04-09",
+     "eia_id": "",
+     "jurisdiction_level": "township",
+     "jurisdiction_name": "Birch Hollow Township",
+     "kind": "extension",
+     "measure_type": "temporary moratorium",
+     "quote": "The Birch Hollow Township supervisors voted on October 6, 2026 to extend the township's data center moratorium",
+     "sectors": "data center",
+     "state": "PA",
+     "status": "extended",
+     "summary": "Supervisors voted to extend the township's data center moratorium until April 9, 2027."
+    }
+   ]
+  }
+ },
+ "https://www.metroweekly.example.com/2026/10/04/data-center-opinion": {
+  "sonnet": {
+   "_refusal": true,
+   "_usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 900,
+    "output_tokens": 12
+   }
+  }
+ },
+ "https://www.northjerseyledger.example.com/2026/09/18/lakeview-bans-data-centers": {
+  "opus": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Halsey",
+     "date_adopted": "2026-09-16",
+     "date_expires": "",
+     "duration": "",
+     "eia_id": "",
+     "jurisdiction_level": "borough",
+     "jurisdiction_name": "Lakeview",
+     "kind": "new",
+     "measure_type": "permanent ban",
+     "quote": "adopted Ordinance 2026-14, which prohibits data centers in every zoning district in the borough",
+     "sectors": "data center",
+     "state": "NJ",
+     "status": "active",
+     "summary": "Borough Council adopted Ordinance 2026-14 prohibiting data centers in every zoning district."
+    }
+   ]
+  },
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.8,
+     "county": "Halsey",
+     "date_adopted": "2026-09-17",
+     "date_expires": "",
+     "duration": "",
+     "eia_id": "",
+     "jurisdiction_level": "borough",
+     "jurisdiction_name": "Lakeview",
+     "kind": "new",
+     "measure_type": "permanent ban",
+     "quote": "adopted Ordinance 2026-14, which prohibits data centers in every zoning district in the borough",
+     "sectors": "data center",
+     "state": "NJ",
+     "status": "active",
+     "summary": "Borough Council adopted Ordinance 2026-14 prohibiting data centers in every zoning district."
+    }
+   ]
+  }
+ },
+ "https://www.oakgroveobserver.example.com/2026/10/01/oak-grove-pause": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Tamarack",
+     "date_adopted": "2026-09-28",
+     "date_expires": "",
+     "duration": "9 months",
+     "eia_id": "",
+     "jurisdiction_level": "village",
+     "jurisdiction_name": "Oak Grove",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "The Oak Grove Village Council unanimously approved a nine-month moratorium on data centers",
+     "sectors": "data center",
+     "state": "MI",
+     "status": "active",
+     "summary": "Village Council approved a nine-month moratorium on data centers."
+    }
+   ]
+  }
+ },
+ "https://www.riverbendelectric.example.coop/news/large-load-pause": {
+  "opus": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Ardmore; Bell",
+     "date_adopted": "2026-09-24",
+     "date_expires": "",
+     "duration": "until a transmission study is complete",
+     "eia_id": "",
+     "jurisdiction_level": "utility",
+     "jurisdiction_name": "Riverbend Electric Cooperative",
+     "kind": "new",
+     "measure_type": "interconnection pause",
+     "quote": "the board of Riverbend Electric Cooperative voted to pause the acceptance of new large-load service requests of 10 MW or more",
+     "sectors": "data center; crypto mining; large load",
+     "state": "KS",
+     "status": "active",
+     "summary": "Cooperative board paused new large-load service requests of 10 MW or more, including data centers and crypto mining, pending a transmission study."
+    }
+   ]
+  },
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.9,
+     "county": "Ardmore; Bell",
+     "date_adopted": "2026-09-24",
+     "date_expires": "",
+     "duration": "until a transmission study is complete",
+     "eia_id": "",
+     "jurisdiction_level": "utility",
+     "jurisdiction_name": "Riverbend Electric Cooperative",
+     "kind": "new",
+     "measure_type": "interconnection pause",
+     "quote": "the board of Riverbend Electric Cooperative voted to pause the acceptance of new large-load service requests of 10 MW or more",
+     "sectors": "data center; crypto mining; large load",
+     "state": "KS",
+     "status": "active",
+     "summary": "Cooperative board paused new large-load service requests of 10 MW or more, including data centers and crypto mining, pending a transmission study."
+    }
+   ]
+  }
+ },
+ "https://www.savrn.com/data-center-moratorium-tracker": {
+  "seeds": {
+   "_usage": {
+    "cache_creation_input_tokens": 1200,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2600,
+    "output_tokens": 180
+   },
+   "candidates": [
+    {
+     "cited_url": "https://www.glenwoodtribune.example.com/2026/10/03/glenwood-moratorium",
+     "jurisdiction": "Glenwood",
+     "state": "MN"
+    },
+    {
+     "cited_url": "https://news.example.com/2026/10/06/lafayette-council-moratorium",
+     "jurisdiction": "Lafayette",
+     "state": "IN"
+    },
+    {
+     "cited_url": "https://ridgefield.example.com/made-up-citation",
+     "jurisdiction": "Ridgefield",
+     "state": "CT"
+    }
+   ]
+  }
+ },
+ "https://www.tamarackreporter.example.com/2026/10/05/moratorium-nears-end": {
+  "sonnet": {
+   "items": [
+    {
+     "confidence": 0.8,
+     "county": "Tamarack",
+     "date_adopted": "2025-10-14",
+     "date_expires": "2026-10-14",
+     "duration": "1 year",
+     "eia_id": "",
+     "jurisdiction_level": "township",
+     "jurisdiction_name": "Tamarack Township",
+     "kind": "new",
+     "measure_type": "temporary moratorium",
+     "quote": "Tamarack Township's one-year moratorium on data centers, adopted October 14, 2025, expires October 14, 2026",
+     "sectors": "data center",
+     "state": "MI",
+     "status": "active",
+     "summary": "Township's one-year data center moratorium expires October 14, 2026."
+    }
+   ]
+  }
+ }
+}

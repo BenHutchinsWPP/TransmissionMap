@@ -1,0 +1,100 @@
+{
+  "q-add-pa-birch-hollow-2026": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Birch Hollow extends",
+      "url": "https://www.larkinledger.example.com/2026/10/07/birch-hollow-extends-moratorium"
+    }
+  ],
+  "q-disc-01": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Lafayette moratorium",
+      "url": "https://news.example.com/2026/10/06/lafayette-council-moratorium"
+    },
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Franklin Township moratorium",
+      "url": "https://www.elmsteadgazette.example.com/2026/09/23/franklin-township-moratorium"
+    }
+  ],
+  "q-disc-02": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Lakeview bans data centers",
+      "url": "https://www.northjerseyledger.example.com/2026/09/18/lakeview-bans-data-centers"
+    },
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Lafayette moratorium (feed)",
+      "url": "https://www.news.example.com/2026/10/06/lafayette-council-moratorium/?utm_source=feed"
+    }
+  ],
+  "q-disc-03": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Brookside zoning workshop",
+      "url": "https://www.brooksidebeacon.example.com/2026/10/02/brookside-zoning-workshop"
+    }
+  ],
+  "q-disc-04": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Ordinance 2026-7",
+      "url": "https://www.harmonytownship.example.org/DocumentCenter/View/412/Ordinance-2026-7.pdf"
+    },
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Oak Grove pause",
+      "url": "https://www.oakgroveobserver.example.com/2026/10/01/oak-grove-pause"
+    }
+  ],
+  "q-disc-05": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Riverbend pauses large loads",
+      "url": "https://www.riverbendelectric.example.coop/news/large-load-pause"
+    }
+  ],
+  "q-disc-06": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Opinion",
+      "url": "https://www.metroweekly.example.com/2026/10/04/data-center-opinion"
+    }
+  ],
+  "q-nm-oh-elmstead-county-2026": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Commissioners minutes",
+      "url": "https://www.elmstead.example.us/commissioners/2026-09-30-minutes"
+    }
+  ],
+  "q-nm-oh-washington-township-2026": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Washington Township trustees",
+      "url": "https://www.countyherald.example.com/2026/10/06/washington-township-moratorium"
+    }
+  ],
+  "q-sweep-mi-tamarack-township-2026": [
+    {
+      "age": "2 days ago",
+      "description": "Search snippet text, never used as a source.",
+      "title": "Tamarack moratorium nears end",
+      "url": "https://www.tamarackreporter.example.com/2026/10/05/moratorium-nears-end"
+    }
+  ]
+}

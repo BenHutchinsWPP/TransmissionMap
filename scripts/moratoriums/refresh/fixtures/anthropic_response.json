@@ -1,0 +1,13 @@
+{
+  "id": "msg_01FixtureExample",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5-5",
+  "content": [
+    {"type": "thinking", "thinking": "The page describes one measure.", "signature": "fixture-signature"},
+    {"type": "text", "text": "{\"items\": [{\"jurisdiction\": \"Springfield\", \"state\": \"OH\", \"kind\": \"moratorium\"}]}"}
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {"input_tokens": 1200, "output_tokens": 85, "cache_creation_input_tokens": 900, "cache_read_input_tokens": 0}
+}

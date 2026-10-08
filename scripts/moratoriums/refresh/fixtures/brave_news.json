@@ -1,0 +1,6 @@
+{
+  "type": "news",
+  "results": [
+    {"url": "https://news.example.org/a", "title": "Township pauses crypto mining", "description": "A pause on cryptocurrency mining operations.", "age": "1 day ago"}
+  ]
+}

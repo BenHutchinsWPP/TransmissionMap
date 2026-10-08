@@ -177,6 +177,9 @@ turns public datasets into PMTiles consumed by the frontend.
   `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
+- `scripts/moratoriums/` — data center moratorium pipeline (`rebuild.sh` over `build*.py` + `sync.py`) and the
+  weekly refresh (`refresh/`: search, fetch, extract, quote-verify, PR; `moratorium-refresh.yml`); inputs live on
+  the `data-moratoriums` branch. See its `README.md` and `docs/layers/dc-moratoriums.md`.
 - `scripts/data_manifest.yaml` — hand-written per-layer provenance (label,
   source, url, licence, `source_id`), one entry per `tile_manifest.yaml` `id`;
   a field the linked docs don't settle with confidence is the literal string
@@ -230,6 +233,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Publishing a build / repo-size headroom | `docs/hosting-plan.md` § *Repository headroom* — read before running `make publish-data` (silent footgun: a force-push to `data-static` deletes nothing, so an overshoot of GitHub's 5 GB soft limit can only be undone by GitHub Support running GC — never set `SKIP_SIZE_CHECK=1` to get past the gate) |
 | Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN` / `LIVE_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
 | How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
+| Moratorium layer data / weekly refresh | `scripts/moratoriums/README.md` (silent footguns: the workflow YAML must be on `main` to run at all; there is one rolling `refresh/weekly` PR — reject rows with an `updates.csv` `DROP` line plus a `rebuild_only` dispatch, never by editing CSVs elsewhere; move the pin in one `data-moratoriums` PR changing `inputs/upstream.sha` and `inputs/upstream_as_of` together) |
 | Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them; a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
 
 ## Commands

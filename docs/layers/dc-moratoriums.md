@@ -39,14 +39,14 @@ jurisdiction whose newest dated event falls in the last 30 days
 
 | | |
 |---|---|
-| **Provider** | Moratorium Nation (Michael Bommarito, Alea Institute), extended with TransmissionMap research |
+| **Provider** | Moratorium Nation (Michael Bommarito, Alea Institute), extended with TransmissionMap research (2026-10-03 and 2026-10-07) |
 | **Dataset** | [moratorium-data-2026](https://github.com/mjbommar/moratorium-data-2026): local moratorium inventory, plus its state-bill table filtered to enacted measures that pause something |
-| **Version** | Upstream commit `dbaab04` (2026-09-23); seeded 2026-10-04 |
-| **Coverage** | 1,121 measures (393 county, 723 sub-county, 5 statewide) in 1,111 jurisdictions across 47 states: 389 counties, 719 points, and 3 states (AZ, NY, TX) |
+| **Version** | Upstream commit `dbaab04` (2026-09-23); seeded 2026-10-04; research merged and rebuilt 2026-10-08 |
+| **Coverage** | 1,396 measures (414 county, 952 sub-county, 25 utility, 5 statewide) in 1,352 map features across 47 states: 400 counties, 927 points, 22 utility or grid-operator areas, and 3 states (AZ, NY, TX) |
 | **License** | CC BY 4.0 (data); credit in the Data Credits dialog and the popup footer |
-| **Served** | `dc_moratoriums.geojson` (~1.4 MB, ~320 KB gzipped) at the root of the `data-moratoriums` branch → `DATA.dc_moratoriums` (`MORATORIUM_ORIGIN` in `assets/constants.ts`) |
+| **Served** | `dc_moratoriums.geojson` (~1.9 MB, ~420 KB gzipped) at the root of the `data-moratoriums` branch → `DATA.dc_moratoriums` (`MORATORIUM_ORIGIN` in `assets/constants.ts`) |
 | **Utility geometry** | HIFLD Retail Service Territories, joined on `ID` = EIA-861 utility number (never on name); the ERCOT polygon from the EIA balancing authorities used by [`eia-ba`](eia-ba.md). Both are extracted once by `build_territories.py` |
-| **Built by** | `sync.py` then `build_layer.py`, both still in `_private/moratoriums/` |
+| **Built by** | `scripts/moratoriums/rebuild.sh` (`build.py`, `build_research.py`, `build_state.py`, `sync.py`, `build_layer.py`); inputs and layout in [`scripts/moratoriums/README.md`](../../scripts/moratoriums/README.md) |
 
 ## Change tracking
 
@@ -66,6 +66,37 @@ branch is a real change. The dataset's `README.md` documents the full format.
 `moratoriums.csv` carries an `eia_id` column: the EIA-861 utility number of
 a utility-level measure, which selects its service territory. It is
 bookkeeping, so setting or changing it logs no event.
+
+## Weekly refresh
+
+The workflow `.github/workflows/moratorium-refresh.yml` looks for new and
+changed measures every Sunday at 09:23 UTC (and on demand from the Actions
+tab) and opens one pull request into `data-moratoriums`. Nothing reaches the
+map until a person merges it.
+
+| Step | What runs |
+|---|---|
+| Follow-up | Searches for rows already in the dataset: pending measures, measures expiring within 14 days, utilities, and a rotating slice of measures with no end date |
+| Discovery | A fixed list of general queries for new moratoriums, bans and utility pauses |
+| Sources | [Brave Search](https://brave.com/search/api/) (news and web), tracker seed pages (savrn.com, datacenterbans.com, dcmap.us, servercountry.org, strisker briefings, the NJ Pinelands ordinance log) and SEC full-text search for utilities |
+| Extraction | A model reads one fetched page at a time and fills a fixed JSON schema; it chooses no queries, URLs or files |
+| Rebuild | The pipeline in `scripts/moratoriums/` rebuilds the four published files from the branch's `inputs/` |
+
+Verification rule: a row is kept only when its quote (at least 40
+characters) appears in the fetched page text, the place is named on that
+page, and the dates are valid. Anything else is listed as a lead in
+`inputs/research/weekly/<date>/notes.md`. Every new row is marked
+unconfirmed, with its source attached.
+
+One rolling pull request (`refresh/weekly` into `data-moratoriums`) holds the
+unmerged weeks; each run updates it, and a pull request opens every week because `refresh_state.json` and `notes.md` change on every run. The
+body lists new and changed rows, QA flags, territory warnings, fetch rate,
+cap use and estimated cost. Reviewing and the secrets it needs are in the
+[pipeline README](../../scripts/moratoriums/README.md).
+
+To stop it, disable the workflow in the Actions tab (Moratorium weekly
+refresh, Disable workflow). Closing the open pull request discards that
+week's rows.
 
 ## Download pack
 
@@ -91,14 +122,27 @@ GeoJSON properties, one feature per jurisdiction:
 
 - **Informational only.** Ordinances change at council meetings, so confirm
   a measure's status with the jurisdiction.
-- **Unconfirmed rows.** About 20% of measures carry upstream `[VERIFY]` tags
-  (`verify=true`), and the popup marks them "unconfirmed". All 39 rows added
-  by TransmissionMap research are flagged the same way.
-- **End dates.** 149 active or extended measures (including the TransmissionMap
-  additions) have no known end date, so they can never be marked expired
-  automatically.
-- **Permanent bans are under-counted.** Upstream excludes them; most of the
-  27 shown come from TransmissionMap research.
+- **Unconfirmed rows.** 544 measures (39%) are `verify=true`, which the popup
+  shows as "unconfirmed". They are the upstream rows with `[VERIFY]` tags,
+  every row added by TransmissionMap research, and every upstream row that
+  research changed.
+- **End dates.** 153 temporary measures that are active or extended have no
+  known end date, so they can never be marked expired automatically. This
+  count leaves out permanent bans, which have no end date by design.
+- **Permanent bans.** Upstream excludes them, so nearly all of the 246 ban
+  rows come from TransmissionMap research: 175 in force, 69 proposed, 1
+  replaced and 1 withdrawn. 110 of them are in NJ, which a dedicated sweep
+  covered; other states had a partial pass, so bans there are under-counted.
+- **Utility measures.** 25 utility-level measures. 24 are drawn on 21 utility
+  service territories: seven Washington PUDs (mostly crypto-era moratoria from
+  2014 to 2019) and Avista; APS, Silicon Valley Power, Marietta, Flathead
+  Electric, AEP Ohio, BrightRidge and Dominion; five NY municipal utilities;
+  and Delmarva Power under the Delaware PSC order. The Ypsilanti Community
+  Utilities Authority, a water and sewer authority, stays a point. A utility's
+  "service pause" or "load cap" is shown as an `interconnection pause`.
+- **Upstream updates.** 38 Moratorium Nation rows carry newer facts from
+  TransmissionMap research: adoptions after its 2026-09-23 cutoff,
+  extensions, corrections and replacements.
 - **Point locations.** Sub-county measures are points at the place's
   location, not its boundary. 29 upstream points were moved to their named
   Census place.
