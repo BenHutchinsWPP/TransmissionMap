@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': '최근 변경',
   'popup.dcmUnconfirmed': '미확인',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap 조사, {date} 기준 · 참고용 — 해당 관할 기관에 확인하세요',
+  'legend.dcmUtility': '전력회사 공급 구역(빗금)',
   'popup.weatherZone': '기상 구역',
   'popup.fireWeatherZone': '산불 기상 구역',
   'popup.marineZone': '해상 기상 구역',

@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'Thay đổi gần đây',
   'popup.dcmUnconfirmed': 'chưa xác nhận',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + nghiên cứu TransmissionMap, tính đến {date} · chỉ để tham khảo — hãy xác nhận với cơ quan có thẩm quyền',
+  'legend.dcmUtility': 'Khu vực phục vụ của công ty điện lực (gạch chéo)',
   'popup.weatherZone': 'Khu vực thời tiết',
   'popup.fireWeatherZone': 'khu vực thời tiết nguy cơ cháy',
   'popup.marineZone': 'khu vực hàng hải',

@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'Cambios recientes',
   'popup.dcmUnconfirmed': 'sin confirmar',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + investigación de TransmissionMap, al {date} · solo informativo — confirme con la jurisdicción',
+  'legend.dcmUtility': 'Área de servicio de la empresa eléctrica (rayada)',
   'popup.weatherZone': 'Zona meteorológica',
   'popup.fireWeatherZone': 'zona de peligro de incendios',
   'popup.marineZone': 'zona marina',

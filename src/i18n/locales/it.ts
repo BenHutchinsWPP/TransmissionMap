@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'Modifiche recenti',
   'popup.dcmUnconfirmed': 'non confermato',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + ricerca TransmissionMap, al {date} · solo informativo — verificare con l\'ente competente',
+  'legend.dcmUtility': 'Area servita dal distributore (tratteggiata)',
   'popup.weatherZone': 'Zona meteorologica',
   'popup.fireWeatherZone': 'zona meteo incendi',
   'popup.marineZone': 'zona marina',

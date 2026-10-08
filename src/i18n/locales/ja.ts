@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': '最近の変更',
   'popup.dcmUnconfirmed': '未確認',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap 調査、{date} 時点 · 参考情報のみ — 各自治体に確認してください',
+  'legend.dcmUtility': '電力会社の供給区域（斜線）',
   'popup.weatherZone': '気象警報区域',
   'popup.fireWeatherZone': '火災気象区域',
   'popup.marineZone': '海上警報区域',

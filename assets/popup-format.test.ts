@@ -605,6 +605,18 @@ describe('dc-moratoriums popup', () => {
     expect(buildPopupHtml('dcm-points', { name: 'X', items, history })).toContain('Recent changes');
     expect(buildPopupHtml('dcm-state-fill', { name: 'Texas', items: '{bad', history: null })).toContain('Texas');
   });
+
+  it('renders a utility service area with every measure of that utility', () => {
+    const util = JSON.stringify([
+      { name: 'Chelan County PUD', type: 'temporary moratorium', status: 'replaced', cls: 'ended', adopted: '2018-03-19', level: 'utility' },
+      { name: 'Chelan County PUD', type: 'temporary moratorium', status: 'lifted', cls: 'ended', adopted: '2014-06-01', level: 'utility' },
+    ]);
+    const props = { kind: 'utility', name: 'Chelan County PUD, WA', items: util, history: '[]' };
+    const html = buildPopupHtml('dcm-utility-fill', props);
+    expect(html).toContain('Chelan County PUD, WA');
+    expect(html).toContain('2018-03-19');
+    expect(html).toContain('2014-06-01');
+  });
 });
 
 describe('withRelativeDate', () => {

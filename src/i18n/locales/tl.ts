@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'Mga kamakailang pagbabago',
   'popup.dcmUnconfirmed': 'hindi kumpirmado',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + pananaliksik ng TransmissionMap, hanggang {date} · para sa impormasyon lamang — kumpirmahin sa hurisdiksyon',
+  'legend.dcmUtility': 'Lugar na sineserbisyuhan ng utility (may guhit)',
   'popup.weatherZone': 'Sona ng Panahon',
   'popup.fireWeatherZone': 'sona ng panahon ng sunog',
   'popup.marineZone': 'sona sa dagat',

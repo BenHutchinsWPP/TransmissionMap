@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'हाल के बदलाव',
   'popup.dcmUnconfirmed': 'अपुष्ट',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap शोध, {date} तक · केवल जानकारी हेतु — संबंधित प्राधिकरण से पुष्टि करें',
+  'legend.dcmUtility': 'बिजली कंपनी का सेवा क्षेत्र (धारीदार)',
   'popup.weatherZone': 'मौसम क्षेत्र',
   'popup.fireWeatherZone': 'अग्नि मौसम क्षेत्र',
   'popup.marineZone': 'समुद्री क्षेत्र',

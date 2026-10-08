@@ -269,6 +269,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': '最近变更',
   'popup.dcmUnconfirmed': '未确认',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap 研究，截至 {date} · 仅供参考 — 请向所在辖区核实',
+  'legend.dcmUtility': '电力公司服务区域（斜线）',
   'popup.weatherZone': '气象分区',
   'popup.fireWeatherZone': '火险气象分区',
   'popup.marineZone': '海事分区',

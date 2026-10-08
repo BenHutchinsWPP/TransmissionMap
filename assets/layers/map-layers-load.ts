@@ -1,8 +1,10 @@
 // ─── Load context layers ──────────────────────────────────────────────────────
 // Data center moratoriums: one GeoJSON source (`dc-moratoriums`) drawn at two
-// z-levels — addDcMoratoriumAreas() with the context fills, addDcMoratoriumPoints()
-// with the infrastructure markers. Colours from DCM_CLASSES (src/colors/buckets.ts);
-// popups in popup-format.ts.
+// z-levels — addDcMoratoriumAreas() with the context fills (state wash, then
+// hatched utility service areas, then counties), addDcMoratoriumPoints() with the
+// infrastructure markers. Colours from DCM_CLASSES (src/colors/buckets.ts); the
+// utility hatch images are generated here from them (map.addImage); popups in
+// popup-format.ts.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
@@ -166,6 +168,20 @@ const DCM_RECENT_DAYS = 30;
 const dcmRecent = (): ExpressionSpecification => [">=", ["get", "last_event"],
   new Date(Date.now() - DCM_RECENT_DAYS * 864e5).toISOString().slice(0, 10)] as ExpressionSpecification;
 
+// Utility service areas are hatched rather than filled, so a county or town
+// inside one still reads as its own measure. One "/" stripe tile per class
+// colour: 16 device px at pixelRatio 2 (8 CSS px), stripes 1.5 CSS px wide.
+function dcmHatch(hex: string): { width: number; height: number; data: Uint8Array } {
+  const n = 16, data = new Uint8Array(n * n * 4);
+  const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if ((x + y) % n < 3) data.set([...rgb, 255], (y * n + x) * 4);
+    }
+  }
+  return { width: n, height: n, data };
+}
+
 export function addDcMoratoriumAreas() {
   if (!state.map || state.map.getSource("dc-moratoriums")) return;
   state.map.addSource("dc-moratoriums", {
@@ -185,6 +201,30 @@ export function addDcMoratoriumAreas() {
     filter: ["==", ["get", "kind"], "state"],
     layout: { visibility: vis },
     paint: { "line-color": DCM_COLOR, "line-width": 2.5, "line-dasharray": [3, 2], "line-opacity": 0.8 },
+  } as LayerSpecification);
+  // Utility (and grid-operator) service areas: hatched in the class colour under
+  // a dash-dot edge, below the counties so a county or town inside one wins the
+  // click.
+  for (const c of DCM_CLASSES) {
+    const id = `dcm-hatch-${c.id}`;
+    if (!state.map.hasImage(id)) state.map.addImage(id, dcmHatch(c.color), { pixelRatio: 2 });
+  }
+  const isUtility = ["==", ["get", "kind"], "utility"] as ExpressionSpecification;
+  state.map.addLayer({
+    id: "dcm-utility-fill", type: "fill", source: "dc-moratoriums",
+    filter: isUtility,
+    layout: { visibility: vis },
+    paint: { "fill-pattern": ["concat", "dcm-hatch-", ["get", "cls"]], "fill-opacity": 0.7 },
+  } as LayerSpecification);
+  state.map.addLayer({
+    id: "dcm-utility-line", type: "line", source: "dc-moratoriums",
+    filter: isUtility,
+    layout: { visibility: vis },
+    paint: {
+      "line-color": ["case", dcmRecent(), "#1d4ed8", DCM_COLOR],
+      "line-width": ["case", dcmRecent(), 2.5, 1.5],
+      "line-dasharray": [4, 2, 1, 2],
+    },
   } as LayerSpecification);
   state.map.addLayer({
     id: "dcm-county-fill", type: "fill", source: "dc-moratoriums",

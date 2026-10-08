@@ -270,6 +270,7 @@ const locale: LocaleDictionary = {
   'popup.dcmRecent': 'التغييرات الأخيرة',
   'popup.dcmUnconfirmed': 'غير مؤكد',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + أبحاث TransmissionMap، حتى {date} · للعلم فقط — تحقق من الجهة المختصة',
+  'legend.dcmUtility': 'منطقة خدمة شركة الكهرباء (مظللة بخطوط)',
   'popup.weatherZone': 'منطقة أرصاد جوية',
   'popup.fireWeatherZone': 'منطقة أرصاد حرائق الغابات',
   'popup.marineZone': 'منطقة بحرية',

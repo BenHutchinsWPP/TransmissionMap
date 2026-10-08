@@ -30,8 +30,10 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
   },
   {
     // A measure is drawn on the geometry of whoever adopted it: state-level
-    // measures paint the state, county ordinances the county, and everything
-    // smaller (city/town/township/village/tribal/utility) is a point.
+    // measures paint the state, county ordinances the county, a utility its
+    // hatched service territory (lowest click priority, so a county or town
+    // inside it wins), and everything smaller (city/town/township/village/
+    // tribal, utilities without a territory) is a point.
     id:            "dc-moratoriums",
     urlCode:       "DCM",
     label:         "Data Center Moratoriums",
@@ -40,8 +42,10 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     sourceId:      "moratorium-nation",
     swatch:        DCM_CLASSES[1].color,
     defaultOn:     false,
-    mapLayerIds:   ["dcm-state-fill", "dcm-state-line", "dcm-county-fill", "dcm-county-line", "dcm-points-recent", "dcm-points"],
-    clickPriority: { "dcm-points": 845, "dcm-county-fill": 457, "dcm-state-fill": 445 },
+    mapLayerIds:   ["dcm-state-fill", "dcm-state-line", "dcm-utility-fill", "dcm-utility-line",
+                    "dcm-county-fill", "dcm-county-line", "dcm-points-recent", "dcm-points"],
+    clickPriority: { "dcm-points": 845, "dcm-county-fill": 457, "dcm-state-fill": 445,
+                     "dcm-utility-fill": 444 },
     regions:       ["usa"],
     downloads:     {},
   },

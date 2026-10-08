@@ -514,7 +514,7 @@ const _defs = [
       rawUi +
       `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.odinFooter"))}</div>`;
   }],
-  [["dcm-points", "dcm-county-fill", "dcm-state-fill"], renderDcMoratorium],
+  [["dcm-points", "dcm-county-fill", "dcm-state-fill", "dcm-utility-fill"], renderDcMoratorium],
   [["fema-nri-fill"], (p: Record<string, unknown>) => {
     // Rating/score come from the feature-state join (merged into p by popup.ts);
     // county NAME/STATE_NAME from the county_boundaries tile properties.

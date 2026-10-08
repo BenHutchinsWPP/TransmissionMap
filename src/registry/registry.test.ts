@@ -109,6 +109,7 @@ describe('CLICKABLE_LAYERS click hit-test priority', () => {
     "fema-nri-fill",
     "boem-wind-leases-fill",
     "dcm-state-fill",
+    "dcm-utility-fill",
     "us-zcta-fill", "us-counties-fill", "us-states-fill", "admin1-fill", "countries-fill",
   ];
 
