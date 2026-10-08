@@ -100,7 +100,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'Линии электропередачи OSM',
   'layer.hifldLines': 'Линии электропередачи HIFLD',
   'layer.westtec10yr': '10-летнее исследование WestTEC',
-  'layer.ogfPlanned': 'Планируемые линии Our Grid Future',
+  'layer.ogfPlanned': 'Our Grid Future',
   'layer.weccPaths': 'Трассы WECC',
   'layer.osmPlants': 'Электростанции OSM',
   'layer.osmPlantPolygons': 'Площадки электростанций OSM',

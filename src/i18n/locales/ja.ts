@@ -100,7 +100,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'OSM 送電線',
   'layer.hifldLines': 'HIFLD 送電線',
   'layer.westtec10yr': 'WestTEC 10年計画研究',
-  'layer.ogfPlanned': 'Our Grid Future 計画送電線',
+  'layer.ogfPlanned': 'Our Grid Future',
   'layer.weccPaths': 'WECC パス',
   'layer.osmPlants': 'OSM 発電所',
   'layer.osmPlantPolygons': 'OSM 発電所敷地',

@@ -101,7 +101,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'خطوط نقل OSM',
   'layer.hifldLines': 'خطوط نقل HIFLD',
   'layer.westtec10yr': 'دراسة WestTEC للـ 10 سنوات',
-  'layer.ogfPlanned': 'خطوط Our Grid Future المخطط لها',
+  'layer.ogfPlanned': 'Our Grid Future',
   'layer.weccPaths': 'مسارات WECC',
   'layer.osmPlants': 'محطات توليد كهرباء OSM',
   'layer.osmPlantPolygons': 'مواقع محطات كهرباء OSM',

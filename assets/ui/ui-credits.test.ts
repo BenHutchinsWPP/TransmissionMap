@@ -51,7 +51,7 @@ const VALID_MANIFEST = {
       source_id: 'eia',
       source_rows: 14806,
       coverage: null,
-      retrieved: '2026-09-01',
+      data_as_of: '2026-09-01',
       bytes: 12345,
     },
     osm_plants_polygons: {
@@ -62,7 +62,7 @@ const VALID_MANIFEST = {
       source_id: 'osm',
       source_rows: null,
       coverage: null,
-      retrieved: null,
+      data_as_of: null,
       bytes: null,
     },
   },
@@ -161,12 +161,12 @@ describe('renderDataCredits', () => {
         osm_plants_points: {
           label: 'OSM Plants (Points)', source: 'OpenStreetMap contributors',
           url: 'https://www.openstreetmap.org/copyright', licence: 'ODbL 1.0', source_id: 'osm',
-          source_rows: 100, coverage: null, retrieved: null, bytes: null,
+          source_rows: 100, coverage: null, data_as_of: null, bytes: null,
         },
         osm_generators: {
           label: 'OSM Generators', source: 'OpenStreetMap contributors',
           url: 'https://www.openstreetmap.org/copyright', licence: 'ODbL 1.0', source_id: 'osm',
-          source_rows: 200, coverage: null, retrieved: null, bytes: null,
+          source_rows: 200, coverage: null, data_as_of: null, bytes: null,
         },
       },
     });
@@ -246,15 +246,15 @@ describe('renderDataCredits', () => {
         admin_lines: {
           label: 'Natural Earth Admin Lines', source: 'Natural Earth',
           url: 'https://www.naturalearthdata.com/about/terms-of-use/', licence: 'Public domain',
-          source_id: 'UNKNOWN', source_rows: null, coverage: null, retrieved: null, bytes: null,
+          source_id: 'UNKNOWN', source_rows: null, coverage: null, data_as_of: null, bytes: null,
         },
         no_source_id_field: {
           label: 'No Source Id', source: 'Someone', url: 'https://example.com', licence: 'UNKNOWN',
-          source_rows: null, coverage: null, retrieved: null, bytes: null,
+          source_rows: null, coverage: null, data_as_of: null, bytes: null,
         },
         fabricated_source_id: {
           label: 'Fabricated', source: 'Someone', url: 'https://example.com', licence: 'UNKNOWN',
-          source_id: 'not-a-real-layer-source', source_rows: null, coverage: null, retrieved: null, bytes: null,
+          source_id: 'not-a-real-layer-source', source_rows: null, coverage: null, data_as_of: null, bytes: null,
         },
       },
     });
@@ -275,11 +275,11 @@ describe('renderDataCredits', () => {
       layers: {
         proto: {
           label: 'Proto', source: 'Someone', url: 'https://example.com', licence: 'UNKNOWN',
-          source_id: '__proto__', source_rows: null, coverage: null, retrieved: null, bytes: null,
+          source_id: '__proto__', source_rows: null, coverage: null, data_as_of: null, bytes: null,
         },
         ctor: {
           label: 'Ctor', source: 'Someone', url: 'https://example.com', licence: 'UNKNOWN',
-          source_id: 'constructor', source_rows: null, coverage: null, retrieved: null, bytes: null,
+          source_id: 'constructor', source_rows: null, coverage: null, data_as_of: null, bytes: null,
         },
       },
     });
@@ -305,7 +305,7 @@ describe('renderDataCredits', () => {
           source_id: 'osm',
           source_rows: 5,
           coverage: null,
-          retrieved: null,
+          data_as_of: null,
           bytes: null,
         },
       },
@@ -334,7 +334,7 @@ describe('renderDataCredits', () => {
           label: 'EIA Generators', source: 'EIA', url: 'UNKNOWN', licence: 'Public domain',
           source_id: 'eia', source_rows: 14806,
           coverage: { state: 14806, county: 13427, capacity_factor: 11452 },
-          retrieved: null, bytes: null,
+          data_as_of: null, bytes: null,
         },
       },
     });
@@ -360,11 +360,11 @@ describe('renderDataCredits', () => {
       layers: {
         null_coverage: {
           label: 'Null Coverage', source: 'EIA', url: 'UNKNOWN', licence: 'Public domain',
-          source_id: 'eia', source_rows: 100, coverage: null, retrieved: null, bytes: null,
+          source_id: 'eia', source_rows: 100, coverage: null, data_as_of: null, bytes: null,
         },
         full_coverage: {
           label: 'Full Coverage', source: 'OSM', url: 'UNKNOWN', licence: 'ODbL 1.0',
-          source_id: 'osm', source_rows: 50, coverage: { name: 50 }, retrieved: null, bytes: null,
+          source_id: 'osm', source_rows: 50, coverage: { name: 50 }, data_as_of: null, bytes: null,
         },
       },
     });
@@ -384,7 +384,7 @@ describe('renderDataCredits', () => {
           label: 'Wide Select', source: 'EIA', url: 'UNKNOWN', licence: 'Public domain',
           source_id: 'eia', source_rows: 1000,
           coverage: { a: 900, b: 800, c: 700, d: 600, e: 500, f: 400 },
-          retrieved: null, bytes: null,
+          data_as_of: null, bytes: null,
         },
       },
     });
@@ -407,7 +407,7 @@ describe('renderDataCredits', () => {
           label: 'Hostile Field', source: 'EIA', url: 'UNKNOWN', licence: 'Public domain',
           source_id: 'eia', source_rows: 100,
           coverage: { '<img src=x onerror=alert(1)>': 50 },
-          retrieved: null, bytes: null,
+          data_as_of: null, bytes: null,
         },
       },
     });
@@ -426,7 +426,7 @@ describe('renderDataCredits', () => {
       layers: {
         sized: {
           label: 'Sized Layer', source: 'EIA', url: 'UNKNOWN', licence: 'Public domain',
-          source_id: 'eia', source_rows: 2048, coverage: null, retrieved: null, bytes: 2_400_000,
+          source_id: 'eia', source_rows: 2048, coverage: null, data_as_of: null, bytes: 2_400_000,
         },
       },
     });
@@ -459,7 +459,7 @@ describe('renderDataCredits', () => {
     anchoredSourceIds.forEach((sourceId, i) => {
       layers[`layer_${i}`] = {
         label: `Layer ${i}`, source: 'Some Source', url: 'https://example.com', licence: 'Public domain',
-        source_id: sourceId, source_rows: null, coverage: null, retrieved: null, bytes: null,
+        source_id: sourceId, source_rows: null, coverage: null, data_as_of: null, bytes: null,
       };
     });
     stubFetchOk({ generated_utc: '2026-09-19T00:00:00Z', note: 'test manifest', layers });

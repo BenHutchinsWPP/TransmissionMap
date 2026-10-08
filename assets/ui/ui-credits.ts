@@ -15,7 +15,7 @@
 //       out. A failed fetch, a non-JSON response, or a malformed payload leave
 //       the markup untouched. Each member layer's line carries its label
 //       (linked only for an http(s) url), licence, row count (with the built
-//       artifact's size alongside when known), retrieval date, and a short
+//       artifact's size alongside when known), data-as-of date, and a short
 //       per-field join-quality summary ("14,806 with state, 13,427 with
 //       county") — the top few fields by count, skipping any field with full
 //       coverage. Lazy chunk: loaded when the info button first opens the
@@ -39,7 +39,7 @@ interface ManifestLayerEntry {
   source_id?: string;
   source_rows: number | null;
   coverage: Record<string, number> | null;
-  retrieved: string | null;
+  data_as_of: string | null;
   bytes: number | null;
 }
 
@@ -77,7 +77,7 @@ function isManifestEntry(v: unknown): v is ManifestLayerEntry {
     (e.source_id === undefined || typeof e.source_id === 'string') &&
     isNullableNumber(e.source_rows) &&
     isNullableCoverage(e.coverage) &&
-    isNullableString(e.retrieved) &&
+    isNullableString(e.data_as_of) &&
     isNullableNumber(e.bytes);
 }
 
@@ -133,7 +133,7 @@ function renderCoverage(entry: ManifestLayerEntry): string {
 
 // One member layer's line inside its source group's <li> — label (linked when
 // the url is http(s)), licence, row count (with built-artifact size alongside,
-// when known), retrieval date, per-field coverage summary. Omits any bit
+// when known), data-as-of date, per-field coverage summary. Omits any bit
 // whose field is UNKNOWN or null rather than printing the sentinel to a user.
 function renderLayerDetail(id: string, entry: ManifestLayerEntry): string {
   const label = entry.label !== UNKNOWN ? entry.label : id;
@@ -149,7 +149,7 @@ function renderLayerDetail(id: string, entry: ManifestLayerEntry): string {
   } else if (entry.bytes !== null) {
     bits.push(formatBytes(entry.bytes));
   }
-  if (entry.retrieved !== null) bits.push(`retrieved ${escapeHtml(entry.retrieved)}`);
+  if (entry.data_as_of !== null) bits.push(`data as of ${escapeHtml(entry.data_as_of)}`);
   const coverage = renderCoverage(entry);
   if (coverage) bits.push(coverage);
 

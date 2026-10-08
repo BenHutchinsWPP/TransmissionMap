@@ -288,8 +288,7 @@ export const RETAIL_TYPE_MAP = Object.fromEntries(
 // reads as "planned" via its white casing, so hue is free to encode status
 // (mirrors ourgridfuture.org's own status palette semantics).
 export const OGF_STATUS_BUCKETS = [
-  { id: "conceptual",   urlCode: "N", label: "Pre-planning / conceptual", color: "#a78bfa" },
-  { id: "planning",     urlCode: "L", label: "Planning",                  color: "#60a5fa" },
+  { id: "planning",     urlCode: "L", label: "Conceptual / planning",     color: "#60a5fa" },
   { id: "engineering",  urlCode: "E", label: "Engineering & routing",     color: "#22d3ee" },
   { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#eab308" },
   { id: "construction", urlCode: "C", label: "Construction",              color: "#f97316" },
@@ -301,9 +300,10 @@ export const OGF_STATUS_BUCKETS = [
 export const OGF_STATUS_MAP = {
   construction: ["Construction"],
   permitting:   ["Permitting"],
-  planning:     ["Planning"],
+  // "Planning" and "Pre-planning / conceptual" are the source labels before
+  // extract_ogf.py merged them; matched too so either build of the data draws.
+  planning:     ["Conceptual / planning", "Planning", "Pre-planning / conceptual"],
   engineering:  ["Engineering, design, and routing"],
-  conceptual:   ["Pre-planning / conceptual"],
   on_hold:      ["On hold"],
   complete:     ["Complete"],
   terminated:   ["Terminated"],

@@ -5,10 +5,21 @@ provenance manifest the credits page renders from.
 Merges hand-written provenance (scripts/data_manifest.yaml: label, source,
 url, licence, source_id — some fields the literal string UNKNOWN) with facts
 measured off each layer's tile-build input (scripts/tile_manifest.yaml
-`src`): a row count, per-field coverage, and the source artifact's retrieval
-date — plus the built artifact's size under data/layers/, when one exists.
-`source_id` passes through unchanged; it names the src/registry/sources.ts
+`src`): a row count, per-field coverage, and a `data_as_of` date — plus
+the built artifact's size under data/layers/, when one exists.  `source_id`
+passes through unchanged; it names the src/registry/sources.ts
 LAYER_SOURCES key the credits page groups this layer's entry under.
+
+`data_as_of` is the date the upstream *data* was captured, not the date we
+processed it:
+
+  * **OSM layers** (source_id "osm"):  the OSM snapshot timestamp read from
+    each continental PBF header via `osmium fileinfo`, taking the *oldest*
+    of the eight extracts (a layer is only as fresh as its stalest part).
+    If osmium is missing, a PBF lacks the header, or no PBFs exist: null.
+  * **Non-OSM layers** with a `raw:` path in data_manifest.yaml:  the
+    newest mtime among the files matching that glob under repo root.
+  * Everything else: null (never guess).
 
 Row counts come from each layer's tile_manifest `src` — the file
 ogr2ogr/tippecanoe actually consume — never from the built PMTiles/GeoJSON.
@@ -25,9 +36,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import glob
 import gzip
 import json
 import math
+import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
@@ -152,7 +166,66 @@ def built_artifact_bytes(layer_id: str, tile_format: str, repo_root: Path) -> Op
     return built.stat().st_size if built.exists() else None
 
 
-def build_layer_entry(tile_entry: dict, provenance: dict, repo_root: Path) -> tuple[dict, str]:
+# ── OSM snapshot date ────────────────────────────────────────────────────────
+
+OSM_PBF_GLOB = "data/raw/osm/*-latest.osm.pbf"
+
+
+def _read_pbf_timestamp(pbf: Path) -> Optional[str]:
+    """Read the replication timestamp from one PBF header, or None."""
+    try:
+        result = subprocess.run(
+            ["osmium", "fileinfo", "-g",
+             "header.option.osmosis_replication_timestamp", str(pbf)],
+            capture_output=True, text=True, timeout=30,
+        )
+        ts = result.stdout.strip()
+        return ts if ts and result.returncode == 0 else None
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+
+def osm_snapshot_date(repo_root: Path) -> Optional[str]:
+    """Oldest OSM snapshot date across the continental PBF extracts.
+
+    Returns an ISO date string (YYYY-MM-DD) or None if osmium is missing,
+    no PBFs exist, or any PBF lacks the header.
+    """
+    if not shutil.which("osmium"):
+        return None
+    pbfs = sorted(repo_root.glob(OSM_PBF_GLOB))
+    if not pbfs:
+        return None
+    dates: list[str] = []
+    for pbf in pbfs:
+        ts = _read_pbf_timestamp(pbf)
+        if not ts:
+            return None  # one missing header → can't determine the stalest
+        # Timestamps look like "2026-07-12T20:21:42Z" — take the date part.
+        dates.append(ts[:10])
+    return min(dates)
+
+
+# ── Raw-file date ────────────────────────────────────────────────────────────
+
+def raw_file_date(raw_pattern: str, repo_root: Path) -> Optional[str]:
+    """Newest mtime across files matching a glob under repo_root, as YYYY-MM-DD.
+
+    None if the pattern matches nothing.
+    """
+    matches = glob.glob(str(repo_root / raw_pattern))
+    if not matches:
+        return None
+    newest = max(Path(m).stat().st_mtime for m in matches)
+    return datetime.fromtimestamp(newest, tz=timezone.utc).date().isoformat()
+
+
+# ── Per-layer entry builder ──────────────────────────────────────────────────
+
+def build_layer_entry(
+    tile_entry: dict, provenance: dict, repo_root: Path,
+    *, osm_date: Optional[str],
+) -> tuple[dict, str]:
     """One `layers` value for the output manifest, plus a status tag
     ("ok" | "missing" | "unsupported:<ext>") for the run summary."""
     entry: dict = {f: provenance.get(f, "UNKNOWN") for f in PROVENANCE_FIELDS}
@@ -163,7 +236,7 @@ def build_layer_entry(tile_entry: dict, provenance: dict, repo_root: Path) -> tu
         entry["source_rows"] = None
         if has_select:
             entry["coverage"] = None
-        entry["retrieved"] = None
+        entry["data_as_of"] = None
         entry["bytes"] = None
         return entry, status
 
@@ -177,8 +250,18 @@ def build_layer_entry(tile_entry: dict, provenance: dict, repo_root: Path) -> tu
     entry["source_rows"] = n
     if has_select:
         entry["coverage"] = coverage
-    mtime = src_path.stat().st_mtime
-    entry["retrieved"] = datetime.fromtimestamp(mtime, tz=timezone.utc).date().isoformat()
+
+    # data_as_of: OSM layers use the PBF snapshot timestamp; non-OSM layers
+    # use the newest mtime of their declared raw input; everything else null.
+    if provenance.get("source_id") == "osm":
+        entry["data_as_of"] = osm_date
+    else:
+        raw_pattern = provenance.get("raw")
+        if raw_pattern:
+            entry["data_as_of"] = raw_file_date(raw_pattern, repo_root)
+        else:
+            entry["data_as_of"] = None
+
     entry["bytes"] = built_artifact_bytes(tile_entry["id"], tile_entry.get("format", ""), repo_root)
     return entry, "ok"
 
@@ -196,12 +279,15 @@ def build_manifest(
     provenance_by_id = load_yaml(data_manifest_path).get("layers") or {}
     tile_layers = load_yaml(tile_manifest_path).get("layers") or []
 
+    osm_date = osm_snapshot_date(repo_root)
+
     layers_out: dict[str, dict] = {}
     summary = {"ok": 0, "missing": 0, "unsupported": 0}
     for tile_entry in tile_layers:
         layer_id = tile_entry["id"]
         entry, status = build_layer_entry(
-            tile_entry, provenance_by_id.get(layer_id) or {}, repo_root
+            tile_entry, provenance_by_id.get(layer_id) or {}, repo_root,
+            osm_date=osm_date,
         )
         layers_out[layer_id] = entry
         summary["ok" if status == "ok" else "missing" if status == "missing" else "unsupported"] += 1
@@ -218,7 +304,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Build data/layers/manifest.json: hand-written provenance from "
-            "scripts/data_manifest.yaml merged with row/coverage/retrieval "
+            "scripts/data_manifest.yaml merged with row/coverage/data_as_of "
             "facts measured off each layer's scripts/tile_manifest.yaml "
             "`src` artifact. Safe to run with no data/ present — missing "
             "artifacts get null facts, not a build failure."

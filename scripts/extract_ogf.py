@@ -51,7 +51,12 @@ def build() -> gpd.GeoDataFrame:
     gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty]
     gdf = gdf[gdf.geometry.geom_type.isin(["LineString", "MultiLineString"])]
     # Source data has inconsistent status spellings; normalize to one form.
-    gdf["Status"] = gdf["Status"].replace({"On Hold": "On hold", "Hold": "On hold"})
+    # Pre-planning and planning are shown as one early-stage status.
+    gdf["Status"] = gdf["Status"].replace({
+        "On Hold": "On hold", "Hold": "On hold",
+        "Pre-planning / conceptual": "Conceptual / planning",
+        "Planning": "Conceptual / planning",
+    })
     # Some PlanProc values carry embedded line breaks; collapse to one space.
     gdf["PlanProc"] = gdf["PlanProc"].str.split().str.join(" ")
 

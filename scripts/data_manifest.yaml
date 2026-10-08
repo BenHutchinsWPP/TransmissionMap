@@ -2,13 +2,16 @@
 #
 # One entry per `id:` in `scripts/tile_manifest.yaml` (the authoritative list
 # of ids this file must match). This is the input a generated data manifest
-# (a build-time "Data Credits" listing, one row per layer, with a `retrieved`
+# (a build-time "Data Credits" listing, one row per layer, with a `data_as_of`
 # date) is built from — facts a script cannot derive from the data itself:
 # who publishes the layer, where its landing page is, what licence governs
 # redistribution, and which credits-dialog anchor its entry belongs under.
-# `retrieved` is intentionally absent here — the generator stamps it from the
-# built artifact's mtime, not from a hand-typed date that would drift out of
-# sync with the actual build.
+# `data_as_of` is derived by the generator:
+#   - OSM layers (source_id: osm): the oldest PBF snapshot timestamp across the
+#     continental extracts in data/raw/osm/*-latest.osm.pbf.
+#   - Non-OSM layers with a `raw:` field: the newest mtime of the matching
+#     files under the repo root.
+#   - Everything else: null.
 #
 # Fields per entry:
 #   label      human name as it would read on a credits page
@@ -23,6 +26,10 @@
 #              sharing one key by design, so this is what keeps a layer row's
 #              "source" button (openSourceCredit() in ui.ts) landing on the
 #              entry that carries this layer's detail.
+#   raw        (optional) repo-relative path or glob to the raw download the
+#              extract script reads. The generator takes the newest mtime of
+#              the matching files as data_as_of. Omit when the path is not
+#              unambiguously clear from the extract script.
 #
 # Facts here are drawn only from docs/data-sources.md and docs/layers/<id>.md
 # — never from the web or from memory of what a licence "usually" is (source_id
@@ -41,6 +48,7 @@ layers:
     url: https://www.eia.gov/electricity/data/eia860/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: eia
+    raw: data/raw/eia/*.xlsx
 
   osm_plants_polygons:
     label: OSM Plants (Polygons)
@@ -62,6 +70,7 @@ layers:
     url: https://www.arcgis.com/home/item.html?id=ef04dc8231c9491e804a008e5faa7d3a
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-substations
+    raw: data/raw/hifld/electric_substations.csv
 
   osm_substations_points:
     label: OSM Substations (Points)
@@ -101,6 +110,7 @@ layers:
     url: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: bts-narn
+    raw: data/raw/railroads/narn_rail_lines.geojson
 
   osm_pipelines_points:
     label: OSM Pipelines (Points)
@@ -122,6 +132,7 @@ layers:
     url: https://source.coop/repositories/seerai/hifld/description/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-natgas
+    raw: data/raw/hifld/natgas/*.parquet
 
   # Not documented in docs/data-sources.md or docs/layers/ under this id or
   # any HIFLD/EIA pipeline doc — no source, url or licence can be confirmed
@@ -135,6 +146,7 @@ layers:
     # as "eia-atlas" — the anchor is confirmable even though the provenance
     # text above is not.
     source_id: eia-atlas
+    raw: data/raw/eia_petroleum/CrudeOil_Pipelines_US_EIA/*.shp
 
   # Same gap as eia_crude_pipelines above.
   eia_product_pipelines:
@@ -143,6 +155,7 @@ layers:
     url: UNKNOWN
     licence: UNKNOWN
     source_id: eia-atlas
+    raw: data/raw/eia_petroleum/PetroleumProduct_Pipelines_US_EIA/*.shp
 
   hifld_natgas_lines:
     label: HIFLD Natural Gas & Petroleum Pipeline Lines
@@ -150,6 +163,7 @@ layers:
     url: https://source.coop/repositories/seerai/hifld/description/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-natgas
+    raw: data/raw/hifld/natgas/*.parquet
 
   countries:
     label: Countries (geoBoundaries CGAZ)
@@ -157,6 +171,7 @@ layers:
     url: https://www.geoboundaries.org/
     licence: CC BY 4.0 (attribution required)
     source_id: cgaz-adm0
+    raw: data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip
 
   admin1_boundaries:
     label: States / Provinces (geoBoundaries CGAZ Admin-1)
@@ -164,6 +179,7 @@ layers:
     url: https://www.geoboundaries.org/
     licence: CC BY 4.0 (attribution required)
     source_id: cgaz-adm1
+    raw: data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip
 
   us_states:
     label: Census States
@@ -171,6 +187,7 @@ layers:
     url: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: census-states
+    raw: data/raw/census_boundaries/cb_2025_us_state_500k.zip
 
   us_zcta:
     label: US ZIP Codes / ZCTAs (Census)
@@ -178,6 +195,7 @@ layers:
     url: https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: census-zcta
+    raw: data/raw/census_boundaries/cb_2020_us_zcta520_500k.zip
 
   nerc_regions:
     label: HIFLD NERC Regions
@@ -185,6 +203,7 @@ layers:
     url: https://source.coop/repositories/seerai/hifld/description/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-nerc
+    raw: data/raw/hifld/regions/nerc-regions.parquet
 
   control_areas:
     label: HIFLD Control Areas (Balancing Authorities)
@@ -192,6 +211,7 @@ layers:
     url: https://source.coop/repositories/seerai/hifld/description/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-ba
+    raw: data/raw/hifld/regions/control-areas.parquet
 
   eia_ba:
     label: EIA Balancing Authorities
@@ -199,6 +219,7 @@ layers:
     url: https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: eia-ba
+    raw: data/raw/eia-ba/balancing_authorities.geojson
 
   retail_territories:
     label: HIFLD Retail Service Territories
@@ -206,6 +227,7 @@ layers:
     url: https://source.coop/repositories/seerai/hifld/description/
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-retail
+    raw: data/raw/hifld/regions/retail-service-territories.parquet
 
   tribal_lands:
     label: Tribal Lands (AIANNH)
@@ -216,6 +238,7 @@ layers:
     # from before the switch to Census TIGER as the actual data source — see
     # the comment in src/registry/sources.ts).
     source_id: hifld-tribal
+    raw: data/raw/aiannh/tl_2025_us_aiannh.zip
 
   bia_tribal_lands:
     label: Tribal Lands (BIA AIAN-LAR)

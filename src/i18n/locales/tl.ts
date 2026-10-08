@@ -100,7 +100,7 @@ const locale: LocaleDictionary = {
   'layer.osmLines': 'Mga Linya ng Transmisyon ng OSM',
   'layer.hifldLines': 'Mga Linya ng Transmisyon ng HIFLD',
   'layer.westtec10yr': '10-Taong Pag-aaral ng WestTEC',
-  'layer.ogfPlanned': 'Mga nakaplanong linya ng Our Grid Future',
+  'layer.ogfPlanned': 'Our Grid Future',
   'layer.weccPaths': 'Mga Ruta ng WECC',
   'layer.osmPlants': 'Mga Planta ng Kuryente ng OSM',
   'layer.osmPlantPolygons': 'Mga Lugar ng Planta ng OSM',

@@ -1,20 +1,25 @@
 """Tests for build_data_manifest.py: the present/absent coverage rule, row +
-coverage counting over a small artifact, the missing-artifact null path, and
-that hand-written provenance (UNKNOWN included) survives the merge into
+coverage counting over a small artifact, the missing-artifact null path, OSM
+snapshot date selection, raw-file date, and that
+hand-written provenance (UNKNOWN included) survives the merge into
 data/layers/manifest.json.
 """
 import json
-import math
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     import yaml
 except ImportError:  # the stdlib-only CI runners; `make test-pipeline` has it
     raise unittest.SkipTest("PyYAML is not installed")
 
-from build_data_manifest import build_manifest, is_present, main, scan_source
+from build_data_manifest import (
+    build_manifest, is_present, main, osm_snapshot_date, raw_file_date,
+    scan_source,
+)
 
 
 class TestIsPresent(unittest.TestCase):
@@ -122,7 +127,7 @@ class TestBuildManifestMissingArtifact(unittest.TestCase):
             entry = manifest["layers"]["ghost_layer"]
             self.assertIsNone(entry["source_rows"])
             self.assertIsNone(entry["coverage"])
-            self.assertIsNone(entry["retrieved"])
+            self.assertIsNone(entry["data_as_of"])
             self.assertIsNone(entry["bytes"])
             # data_manifest.yaml's fixture entry above names no source_id —
             # same UNKNOWN default as the other provenance fields.
@@ -187,7 +192,7 @@ class TestBuildManifestMerge(unittest.TestCase):
             self.assertEqual(entry["source_id"], "acme-widgets")
             self.assertEqual(entry["source_rows"], 2)
             self.assertEqual(entry["coverage"], {"name": 2, "operator": 1})
-            self.assertIsNotNone(entry["retrieved"])
+            self.assertIsNone(entry["data_as_of"])
             # No built data/layers/widgets.geojson.gz in this fixture.
             self.assertIsNone(entry["bytes"])
 
@@ -214,6 +219,188 @@ class TestBuildManifestMerge(unittest.TestCase):
             entry = manifest["layers"]["widgets"]
             self.assertEqual(entry["bytes"], built.stat().st_size)
             self.assertNotIn("coverage", entry)  # no `select:` on this entry
+
+
+class TestOsmSnapshotDate(unittest.TestCase):
+    """OSM snapshot date: oldest of the continental PBF timestamps."""
+
+    def _make_pbf_dir(self, root, names_and_timestamps):
+        """Create dummy PBF files and set up mock osmium responses."""
+        osm_dir = root / "data" / "raw" / "osm"
+        osm_dir.mkdir(parents=True)
+        for name, _ in names_and_timestamps:
+            (osm_dir / name).write_bytes(b"\x00")
+        return {
+            str(osm_dir / name): ts
+            for name, ts in names_and_timestamps
+        }
+
+    @patch("build_data_manifest.shutil.which", return_value="/usr/bin/osmium")
+    @patch("build_data_manifest.subprocess.run")
+    def test_oldest_of_eight(self, mock_run, _mock_which):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pbfs = [
+                ("africa-latest.osm.pbf", "2026-07-12T20:21:42Z"),
+                ("asia-latest.osm.pbf", "2026-07-10T20:21:42Z"),
+                ("europe-latest.osm.pbf", "2026-07-14T20:21:42Z"),
+            ]
+            ts_map = self._make_pbf_dir(root, pbfs)
+
+            def side_effect(*args, **kwargs):
+                pbf_path = args[0][-1]
+                ts = ts_map.get(pbf_path, "")
+                return type("R", (), {"stdout": ts + "\n", "returncode": 0})()
+
+            mock_run.side_effect = side_effect
+            result = osm_snapshot_date(root)
+            self.assertEqual(result, "2026-07-10")
+
+    @patch("build_data_manifest.shutil.which", return_value=None)
+    def test_osmium_missing_returns_none(self, _mock_which):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.assertIsNone(osm_snapshot_date(root))
+
+    @patch("build_data_manifest.shutil.which", return_value="/usr/bin/osmium")
+    def test_no_pbfs_returns_none(self, _mock_which):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "data" / "raw" / "osm").mkdir(parents=True)
+            self.assertIsNone(osm_snapshot_date(root))
+
+    @patch("build_data_manifest.shutil.which", return_value="/usr/bin/osmium")
+    @patch("build_data_manifest.subprocess.run")
+    def test_missing_header_returns_none(self, mock_run, _mock_which):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pbfs = [
+                ("africa-latest.osm.pbf", "2026-07-12T20:21:42Z"),
+                ("asia-latest.osm.pbf", ""),  # missing header
+            ]
+            ts_map = self._make_pbf_dir(root, pbfs)
+
+            def side_effect(*args, **kwargs):
+                pbf_path = args[0][-1]
+                ts = ts_map.get(pbf_path, "")
+                return type("R", (), {"stdout": ts, "returncode": 0})()
+
+            mock_run.side_effect = side_effect
+            self.assertIsNone(osm_snapshot_date(root))
+
+
+class TestRawFileDate(unittest.TestCase):
+    """raw_file_date: newest mtime among matching files."""
+
+    def test_newest_mtime_of_glob(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_dir = root / "data" / "raw" / "stuff"
+            raw_dir.mkdir(parents=True)
+            older = raw_dir / "a.csv"
+            newer = raw_dir / "b.csv"
+            older.write_text("old")
+            newer.write_text("new")
+            # Ensure different mtimes.
+            os.utime(older, (1_000_000, 1_000_000))
+            os.utime(newer, (2_000_000, 2_000_000))
+            result = raw_file_date("data/raw/stuff/*.csv", root)
+            self.assertIsNotNone(result)
+            self.assertIsInstance(result, str)
+            self.assertEqual(len(result), 10)  # YYYY-MM-DD
+
+    def test_no_match_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.assertIsNone(raw_file_date("data/raw/nothing/*.csv", root))
+
+
+class TestOsmDataAsOf(unittest.TestCase):
+    """OSM layers get data_as_of from the PBF snapshot; non-OSM without raw: null."""
+
+    @patch("build_data_manifest.osm_snapshot_date", return_value="2026-07-10")
+    def test_osm_layer_gets_osm_date(self, _mock_osm):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "data" / "build").mkdir(parents=True)
+            src = root / "data" / "build" / "plant_osm.csv"
+            src.write_text("osm_id,name\n1,A\n")
+
+            data_manifest = root / "data_manifest.yaml"
+            tile_manifest = root / "tile_manifest.yaml"
+            data_manifest.write_text(yaml.dump({"layers": {
+                "osm_plants_points": {
+                    "label": "OSM Plants", "source": "OSM", "url": "UNKNOWN",
+                    "licence": "ODbL", "source_id": "osm",
+                }
+            }}))
+            tile_manifest.write_text(yaml.dump({"layers": [{
+                "id": "osm_plants_points",
+                "src": "data/build/plant_osm.csv",
+                "format": "geojson",
+                "select": ["osm_id", "name"],
+            }]}))
+            manifest, _ = build_manifest(data_manifest, tile_manifest, root)
+            entry = manifest["layers"]["osm_plants_points"]
+            self.assertEqual(entry["data_as_of"], "2026-07-10")
+
+    @patch("build_data_manifest.osm_snapshot_date", return_value="2026-07-10")
+    def test_non_osm_without_raw_gets_null(self, _mock_osm):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "data" / "build").mkdir(parents=True)
+            src = root / "data" / "build" / "eia.csv"
+            src.write_text("name\nA\n")
+
+            data_manifest = root / "data_manifest.yaml"
+            tile_manifest = root / "tile_manifest.yaml"
+            data_manifest.write_text(yaml.dump({"layers": {
+                "eia_generators": {
+                    "label": "EIA", "source": "EIA", "url": "UNKNOWN",
+                    "licence": "PD", "source_id": "eia",
+                }
+            }}))
+            tile_manifest.write_text(yaml.dump({"layers": [{
+                "id": "eia_generators",
+                "src": "data/build/eia.csv",
+                "format": "geojson",
+            }]}))
+            manifest, _ = build_manifest(data_manifest, tile_manifest, root)
+            entry = manifest["layers"]["eia_generators"]
+            self.assertIsNone(entry["data_as_of"])
+
+    @patch("build_data_manifest.osm_snapshot_date", return_value="2026-07-10")
+    def test_non_osm_with_raw_gets_raw_date(self, _mock_osm):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "data" / "build").mkdir(parents=True)
+            src = root / "data" / "build" / "eia.csv"
+            src.write_text("name\nA\n")
+
+            raw_dir = root / "data" / "raw" / "eia"
+            raw_dir.mkdir(parents=True)
+            raw_file = raw_dir / "workbook.xlsx"
+            raw_file.write_text("fake")
+            os.utime(raw_file, (1_700_000_000, 1_700_000_000))
+
+            data_manifest = root / "data_manifest.yaml"
+            tile_manifest = root / "tile_manifest.yaml"
+            data_manifest.write_text(yaml.dump({"layers": {
+                "eia_generators": {
+                    "label": "EIA", "source": "EIA", "url": "UNKNOWN",
+                    "licence": "PD", "source_id": "eia",
+                    "raw": "data/raw/eia/workbook.xlsx",
+                }
+            }}))
+            tile_manifest.write_text(yaml.dump({"layers": [{
+                "id": "eia_generators",
+                "src": "data/build/eia.csv",
+                "format": "geojson",
+            }]}))
+            manifest, _ = build_manifest(data_manifest, tile_manifest, root)
+            entry = manifest["layers"]["eia_generators"]
+            self.assertIsNotNone(entry["data_as_of"])
+            self.assertEqual(len(entry["data_as_of"]), 10)  # YYYY-MM-DD
 
 
 if __name__ == "__main__":

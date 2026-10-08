@@ -25,7 +25,8 @@ Marked `skip: true` in `scripts/release_manifest.yaml`.
 
 `extract_ogf.py` reads the shapefile from inside the ZIP (`/vsizip/`), reprojects
 to EPSG:4326, keeps only line features with geometry, normalizes inconsistent
-`Status` spellings ("On Hold"/"Hold" → "On hold"), collapses line breaks
+`Status` spellings ("On Hold"/"Hold" → "On hold"), merges "Pre-planning /
+conceptual" and "Planning" into one "Conceptual / planning" status, collapses line breaks
 inside `PlanProc` values, and drops server-computed
 columns (`Shape_Leng`, `Shape__Length`, `OBJECTID`, `CalcCapMW`). No geometry
 simplification. `build_tiles.py` then serves it raw as gzipped GeoJSON
@@ -62,7 +63,7 @@ Notable columns (2026-08-20 edition, 714 features; the full list also includes `
 |---|---|---|
 | `Project` | Project name | "Southwest Intertie Project" |
 | `Owner` | Project owner / developer | "NV Energy" |
-| `Status` | Development stage | "Planning", "Permitting", "Construction", "Complete" |
+| `Status` | Development stage | "Conceptual / planning", "Permitting", "Construction", "Complete" |
 | `Type` | Line type | "New", "Upgrade" |
 | `ACDC` | AC or DC flag | "AC" |
 | `MinVolt` / `MaxVolt` | Voltage range (kV) | 230 / 500 |

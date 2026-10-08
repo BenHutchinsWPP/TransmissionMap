@@ -48,6 +48,17 @@ count decoded from the built PMTiles/GeoJSON is that zoom's surviving feature
 count, not the dataset's — the two differ by design, and the manifest's own
 `note` field says so for anyone reading the JSON without this doc.
 
+**`data_as_of` is when the upstream data was captured, not when we processed
+it.** For OSM layers (`source_id: osm`) it is the snapshot timestamp in the raw
+extracts' headers (`osmium fileinfo`), taking the oldest of the continental
+`data/raw/osm/*-latest.osm.pbf` files, since a joined world layer is only as
+fresh as its stalest continent. For other layers it is the newest mtime of the
+files matched by that entry's optional `raw:` path or glob in
+`scripts/data_manifest.yaml` — the download the extract script reads. With no
+`raw:`, no `osmium`, or a PBF without the header, it is null; the Credits dialog
+then omits the date rather than show a processing date in its place. The
+top-level `generated_utc` records when the manifest itself was built.
+
 The script runs cleanly with no `data/` present — a fresh clone or CI, where the
 pipeline has never run — emitting null facts for artifacts it can't see rather
 than failing, so `make data-manifest` is always safe to run.
