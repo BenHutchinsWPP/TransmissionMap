@@ -75,14 +75,14 @@ bookkeeping, so setting or changing it logs no event.
 ## Weekly refresh
 
 The workflow `.github/workflows/moratorium-refresh.yml` looks for new and
-changed measures every Sunday at 09:23 UTC (and on demand from the Actions
+changed measures on the 1st and 15th of each month at 09:23 UTC (and on demand from the Actions
 tab) and commits the result straight to `data-moratoriums`, so a week's
 changes reach the map without review. A run dispatched with
 `publish: pull_request` opens a pull request instead.
 
 | Step | What runs |
 |---|---|
-| Follow-up | Searches for rows already in the dataset: pending measures, measures expiring within 14 days, utilities, and a rotating slice of measures with no end date |
+| Follow-up | Searches for rows already in the dataset: pending measures, measures expiring within 21 days, utilities, and a rotating slice of measures with no end date |
 | Discovery | A fixed list of general queries for new moratoriums, bans and utility pauses |
 | Sources | [Brave Search](https://brave.com/search/api/) (news and web), tracker seed pages (savrn.com, datacenterbans.com, dcmap.us, servercountry.org, strisker briefings, the NJ Pinelands ordinance log) and SEC full-text search for utilities |
 | Extraction | A model reads one fetched page at a time and fills a fixed JSON schema; it chooses no queries, URLs or files |

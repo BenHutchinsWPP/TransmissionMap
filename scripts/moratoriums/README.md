@@ -52,7 +52,8 @@ workflow checks that the base file is a byte prefix of the new one.
 
 ## Weekly workflow
 
-`.github/workflows/moratorium-refresh.yml` runs Sundays 09:23 UTC and on
+`.github/workflows/moratorium-refresh.yml` runs on the 1st and 15th of each
+month at 09:23 UTC and on
 `workflow_dispatch`. The YAML must be on `main` for either to work.
 
 | `mode` | What happens |

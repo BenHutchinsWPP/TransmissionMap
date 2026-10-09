@@ -95,7 +95,7 @@ class Config:
     # Stop issuing searches, fetches and model calls after this long, so the job's own timeout
     # never ends a run after its credits are spent; what was gathered is still verified and written.
     wall_clock_minutes: int = 90
-    expiry_window_days: int = 14
+    expiry_window_days: int = 21  # wider than the longest gap between runs (16 days)
     stale_days: int = 90
     sonnet_model: str = SONNET_MODEL
     opus_model: str = OPUS_MODEL

@@ -28,7 +28,7 @@ name: Moratorium weekly refresh
 
 on:
   schedule:
-    - cron: '23 9 * * 0'   # Sundays 09:23 UTC
+    - cron: '23 9 1,15 * *'   # the 1st and 15th of each month, 09:23 UTC
   workflow_dispatch:
     inputs:
       mode:
