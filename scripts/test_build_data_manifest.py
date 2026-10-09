@@ -9,7 +9,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import yaml
+try:
+    import yaml
+except ImportError:  # the stdlib-only CI runners; `make test-pipeline` has it
+    raise unittest.SkipTest("PyYAML is not installed")
 
 from build_data_manifest import build_manifest, is_present, main, scan_source
 
