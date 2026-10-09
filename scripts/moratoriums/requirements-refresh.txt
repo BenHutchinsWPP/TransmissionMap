@@ -2,10 +2,34 @@
 # Pinned so a runner rebuild matches the local one: a different pandas/GEOS moves points past the
 # 5-decimal rounding and logs spurious `corrected` events. Bump them together, then dispatch
 # `rebuild_only` and confirm it shows no diff. Every pin has a CPython 3.12 manylinux wheel.
-numpy==2.5.2
-pandas==3.0.5
-geopandas==1.1.4
-shapely==2.1.2
-pyogrio==0.13.0
-pyproj==3.7.2
-pypdf==6.19.0
+# Installed with --require-hashes: every package, dependencies included, is pinned to the
+# sha256 of its CPython 3.12 Linux x86_64 wheel(s) on PyPI. After a bump, re-resolve with
+#   pip install --dry-run --report r.json --python-version 3.12 --platform manylinux_2_28_x86_64 --only-binary=:all: --target t -r <top-level pins>
+# and take each resolved file's hash from https://pypi.org/pypi/<name>/<version>/json.
+geopandas==1.1.4 \
+    --hash=sha256:1a0c459cbdb1537cd154dafe6174be20d1760844b7f1c967dc8520b180f2e773
+numpy==2.5.2 \
+    --hash=sha256:3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8 \
+    --hash=sha256:c1f017dc0875c9209d219f97feceb7d54c2661bb243deb4114478e1295808af7
+pandas==3.0.5 \
+    --hash=sha256:a5ad3b02ed6bc7d7ae9b70804b2c6aa31827489d150f8e623ce82491b82085d7 \
+    --hash=sha256:d373ce03ffd84010ed9839fa73672a9c8256990532e158440c0085db7d914b34
+pyogrio==0.13.0 \
+    --hash=sha256:220a988ce2a26591d6db5c775b07289d4f54cabdf274cc048f0e17a0b9d5be14 \
+    --hash=sha256:9e84e7b09b073ee4cc8c35663afcf644b0c17db75ac72c7591dc3864252db461
+pypdf==6.19.0 \
+    --hash=sha256:7e5d6e730e7dae87d560a2cee218b852f6498c8be61966f3cd02ead971e48d14
+pyproj==3.7.2 \
+    --hash=sha256:1edc34266c0c23ced85f95a1ee8b47c9035eae6aca5b6b340327250e8e281630 \
+    --hash=sha256:f9428b318530625cb389b9ddc9c51251e172808a4af79b82809376daaeabe5e9
+shapely==2.1.2 \
+    --hash=sha256:1e7d4d7ad262a48bb44277ca12c7c78cb1b0f56b32c10734ec9a1d30c0b0c54b \
+    --hash=sha256:980c777c612514c0cf99bc8a9de6d286f5e186dcaf9091252fcd444e5638193d
+certifi==2026.7.22 \
+    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+python-dateutil==2.9.0.post0 \
+    --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274

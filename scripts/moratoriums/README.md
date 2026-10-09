@@ -86,9 +86,15 @@ not carried over. Because carried-over rows are re-synced each run, their
 | `DCM_CONTACT` | Actions secret, optional | Contact (email or URL) in the fetcher's User-Agent, which SEC EDGAR requires; defaults to the repo URL |
 | Allow GitHub Actions to create and approve pull requests | Settings > Actions > General > Workflow permissions | Opening the PR (a 403 from `gh` names this setting) |
 
-Python is 3.12 with exact pins in `requirements-refresh.txt`. Bump the pins
-together, then dispatch `rebuild_only` and confirm no diff. The unit tests stay
-stdlib-only.
+Python is 3.12 with exact pins in `requirements-refresh.txt`, installed with
+`--require-hashes`, so dependencies are pinned too; the file's header says how
+to regenerate the hashes. Bump the pins together, then dispatch `rebuild_only`
+and confirm no diff. The unit tests stay stdlib-only.
+
+The workflow's third-party actions are pinned to commit SHAs. Neither checkout
+keeps the job token: only the two steps that push `refresh/weekly` receive it,
+in their own environment, so the steps that fetch and parse web pages are
+never given a credential that can write to the repo.
 
 ### Caps and cost
 
