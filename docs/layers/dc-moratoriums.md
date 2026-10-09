@@ -76,8 +76,9 @@ bookkeeping, so setting or changing it logs no event.
 
 The workflow `.github/workflows/moratorium-refresh.yml` looks for new and
 changed measures every Sunday at 09:23 UTC (and on demand from the Actions
-tab) and opens one pull request into `data-moratoriums`. Nothing reaches the
-map until a person merges it.
+tab) and commits the result straight to `data-moratoriums`, so a week's
+changes reach the map without review. A run dispatched with
+`publish: pull_request` opens a pull request instead.
 
 | Step | What runs |
 |---|---|
@@ -93,15 +94,15 @@ page, and the dates are valid. Anything else is listed as a lead in
 `inputs/research/weekly/<date>/notes.md`. Every new row is marked
 unconfirmed, with its source attached.
 
-One rolling pull request (`refresh/weekly` into `data-moratoriums`) holds the
-unmerged weeks; each run updates it, and a pull request opens every week because `refresh_state.json` and `notes.md` change on every run. The
-body lists new and changed rows, QA flags, territory warnings, fetch rate,
-cap use and estimated cost. Reviewing and the secrets it needs are in the
+Each run's report, as the commit message (or the pull request body), lists
+new and changed rows, QA flags, territory warnings, fetch rate, cap use and
+estimated cost. A run publishes every week, because `refresh_state.json` and
+`notes.md` change on every run. Reviewing and the secrets it needs are in the
 [pipeline README](../../scripts/moratoriums/README.md).
 
 To stop it, disable the workflow in the Actions tab (Moratorium weekly
-refresh, Disable workflow). Closing the open pull request discards that
-week's rows.
+refresh, Disable workflow). To take back a week, revert its commit on
+`data-moratoriums`.
 
 ## Download pack
 

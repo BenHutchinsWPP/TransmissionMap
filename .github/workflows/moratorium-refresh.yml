@@ -2,13 +2,15 @@ name: Moratorium weekly refresh
 # Finds new and changed data center moratoriums, bans and utility pauses each
 # week with a fixed search -> fetch -> extract -> quote-verify pipeline
 # (scripts/moratoriums/refresh/run.py), rebuilds the layer from the inputs/ on
-# the `data-moratoriums` branch (scripts/moratoriums/rebuild.sh), and opens or
-# updates ONE pull request from the rolling `refresh/weekly` branch into
-# `data-moratoriums` (scripts/moratoriums/refresh/pr.py). It never pushes
-# `data-moratoriums` itself: merging the PR is the publishing step.
+# the `data-moratoriums` branch (scripts/moratoriums/rebuild.sh), and publishes
+# it (scripts/moratoriums/refresh/pr.py). By default (`publish: direct`, and
+# every scheduled run) it commits straight to `data-moratoriums`, the week's
+# report as the commit message; undo a week with `git revert`. With
+# `publish: pull_request` it instead opens or updates ONE pull request from the
+# rolling `refresh/weekly` branch, and merging it is the publishing step.
 #
 # Modes (workflow_dispatch `mode`; the schedule always asks for `research`):
-#   research      live Brave search + model extraction, rebuild, PR.
+#   research      live Brave search + model extraction, rebuild, publish.
 #   dry_run       fixtures + stub model in a temporary copy, PR body printed, no push.
 #                 Chosen automatically (with a ::notice::) when BRAVE_API_KEY or both
 #                 ANTHROPIC_API_KEY and OPENROUTER_API_KEY are unset.
@@ -19,8 +21,8 @@ name: Moratorium weekly refresh
 #                 row to updates.csv).
 #
 # To stop it: disable the workflow (Actions > Moratorium weekly refresh >
-# Disable workflow), or close the open refresh PR to discard a week's rows —
-# a closed PR is never carried over.
+# Disable workflow). In pull_request mode, closing the open refresh PR discards
+# that week's rows; a closed PR is never carried over.
 #
 # Secrets, settings and the reviewing steps: scripts/moratoriums/README.md.
 
@@ -34,6 +36,11 @@ on:
         type: choice
         options: [research, dry_run, rebuild_only]
         default: research
+      publish:
+        description: "direct: commit straight to data-moratoriums | pull_request: open a PR to review first"
+        type: choice
+        options: [direct, pull_request]
+        default: direct
       max_requests:
         description: "Hard cap on Brave search requests this run"
         type: string
@@ -260,11 +267,12 @@ jobs:
           print(f"dc_moratoriums.geojson: {len(g['features'])} features as of {g['generated_utc']}")
           PY
 
-      - name: Open or update the refresh PR
+      - name: Publish to data-moratoriums, or open or update the refresh PR
         if: steps.mode.outputs.mode != 'rebuild_only'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
           RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          PUBLISH: ${{ inputs.publish || 'direct' }}
           GH_TOKEN: ${{ github.token }}
         run: |
           # Push credentials for this step only: git reads GIT_CONFIG_* from the
@@ -272,8 +280,9 @@ jobs:
           auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"; echo "::add-mask::$auth"
           export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
             GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          direct=(); [ "$PUBLISH" = direct ] && direct=(--direct)
           python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
-            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE"
+            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE" "${direct[@]}"
 
       - name: rebuild_only — no-diff check, or push the open PR's rebuild
         if: steps.mode.outputs.mode == 'rebuild_only'

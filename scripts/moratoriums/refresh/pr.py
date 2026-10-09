@@ -8,7 +8,9 @@ plan D8). Subcommands:
               would be lost).
   publish     stage the four root files and inputs/, commit as github-actions[bot], force-push
               the refresh branch only, then `gh pr create` or `gh pr edit`. No staged change
-              means no commit and no PR.
+              means no commit and no PR. With --direct: no branch and no PR; the commit, its
+              message carrying the PR body, is pushed straight to the base branch (a plain
+              push, so it fails rather than overwrite a base that moved).
 Reads run_report.json (refresh/run.py), BUILD/qa_research.csv (build_research.py) and
 BUILD/logs/rebuild.log (else build_layer.log) for build_layer.py territory WARNING lines. Writes BUILD/pr_body.md.
 The title and summary count new rows that reached the map (this run's weekly ids found in the
@@ -18,7 +20,7 @@ the mutating calls are printed, not run. GH_TOKEN comes from the environment and
 Dependencies: stdlib, and the git and gh CLIs.
 Usage: python -m moratoriums.refresh.pr publish --checkout D --build B --report R
          --run-date YYYY-MM-DD --mode research|dry_run|rebuild_only [--base data-moratoriums]
-         [--branch refresh/weekly] [--log-dir B/logs]
+         [--branch refresh/weekly] [--log-dir B/logs] [--direct]
 """
 from __future__ import annotations
 
@@ -311,12 +313,14 @@ def events_added(run, checkout: Path, base: str) -> tuple[int, int]:
 def publish(run, a) -> int:
     check_branches(a.base, a.branch)
     dry = run.dry
-    try:
-        number = find_open_pr(run, a.base, a.branch)
-    except PrError:
-        if not dry:
-            raise
-        number = None
+    direct = getattr(a, "direct", False)
+    number = None
+    if not direct:
+        try:
+            number = find_open_pr(run, a.base, a.branch)
+        except PrError:
+            if not dry:
+                raise
     if number is not None:
         guard_open_pr(run, a.base, a.branch)
     run(["git", "add", "--", *ADD_PATHS], write=True)
@@ -342,7 +346,11 @@ def publish(run, a) -> int:
         print(f"--- PR title ---\n{title}\n--- PR body ({body_file}) ---\n{body}\n--- end ---")
     run(["git", "-c", f"user.name={BOT_NAME}", "-c", f"user.email={BOT_EMAIL}", "commit",
          f"--author={BOT_NAME} <{BOT_EMAIL}>", "-m", title, "-m",
-         f"Weekly refresh of the data center moratorium layer, run date {a.run_date}, mode {a.mode}."], write=True)
+         f"Weekly refresh of the data center moratorium layer, run date {a.run_date}, mode {a.mode}.",
+         *(["-m", body] if direct else [])], write=True)
+    if direct:
+        run(["git", "push", "origin", f"HEAD:refs/heads/{a.base}"], write=True)
+        return 0
     run(["git", "push", "--force", "origin", f"HEAD:refs/heads/{a.branch}"], write=True)
     if number is not None:
         if a.mode == "rebuild_only":
@@ -368,6 +376,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--run-date", required=True)
             p.add_argument("--mode", choices=("research", "dry_run", "rebuild_only"), required=True)
             p.add_argument("--log-dir", type=Path)
+            p.add_argument("--direct", action="store_true",
+                           help="push the commit straight to --base instead of opening a pull request")
     a = ap.parse_args(argv)
     if a.cmd == "publish":
         a.log_dir = a.log_dir or a.build / "logs"

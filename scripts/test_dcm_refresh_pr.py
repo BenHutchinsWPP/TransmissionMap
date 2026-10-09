@@ -209,6 +209,18 @@ class Publish(unittest.TestCase):
         for a in w:
             self.assertNotIn("refs/heads/data-moratoriums", " ".join(a))
 
+    def test_direct_pushes_base_without_a_pr(self):
+        self.args.direct = True
+        f = Fake(self.answers())
+        rc, _ = self.run_publish(f)
+        self.assertEqual(rc, 0)
+        self.assertFalse(any(a[0] == "gh" for a in f.argvs()))
+        w = f.argvs(write=True)
+        self.assertEqual(w[-1], ["git", "push", "origin", "HEAD:refs/heads/data-moratoriums"])
+        commit = [a for a in w if "commit" in a][0]
+        self.assertIn("| new rows | 1 on the map, 2 not drawn (see QA) |", commit[-1])
+        self.assertFalse(any("refresh/weekly" in " ".join(a) for a in w))
+
     def test_open_pr_edits(self):
         f = Fake(self.answers({PR_LIST: json.dumps([{"number": 9, "headRefName": "refresh/weekly"}])}))
         self.run_publish(f)

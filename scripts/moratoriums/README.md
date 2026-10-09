@@ -6,11 +6,13 @@ and refreshes it every week. Two parts:
 | Part | Where | What it does |
 |---|---|---|
 | Build | `build*.py`, `sync.py`, `rebuild.sh` | Turns the Moratorium Nation snapshot plus TransmissionMap research CSVs into the four published files |
-| Weekly refresh | `refresh/`, `.github/workflows/moratorium-refresh.yml` | Searches for new and changed measures, verifies each against its source page, rebuilds, and opens one pull request into `data-moratoriums` |
+| Weekly refresh | `refresh/`, `.github/workflows/moratorium-refresh.yml` | Searches for new and changed measures, verifies each against its source page, rebuilds, and publishes to `data-moratoriums`: a direct commit by default, or a pull request to review first |
 
 The map reads the published files from the root of the `data-moratoriums`
-branch. The workflow never pushes that branch: merging the pull request is the
-publishing step.
+branch. Each weekly run commits there directly, with the week's report as the
+commit message, so a week goes live without review and is undone with
+`git revert`. Dispatching with `publish: pull_request` opens a pull request
+instead, and merging it publishes.
 
 ## Directory layout
 
@@ -55,11 +57,13 @@ workflow checks that the base file is a byte prefix of the new one.
 
 | `mode` | What happens |
 |---|---|
-| `research` (schedule default) | Live Brave search, model extraction, quote check, rebuild, pull request |
+| `research` (schedule default) | Live Brave search, model extraction, quote check, rebuild, publish |
 | `dry_run` | Fixture search and stub model in a temporary copy; prints the PR body; no push. `research` falls back to this, with a notice, when a search or model key is missing |
 | `rebuild_only` | No search, no model. With no refresh PR open it rebuilds as of the geojson's own `generated_utc` and must show no diff (the reproducibility check); with one open it rebuilds as of the run date and force-pushes `refresh/weekly` |
 
-Dispatch inputs: `mode`; `max_requests` (Brave request cap, default 220);
+Dispatch inputs: `mode`; `publish` (`direct`, the default and what the
+schedule uses, commits to `data-moratoriums`; `pull_request` opens or updates
+the rolling refresh PR); `max_requests` (Brave request cap, default 220);
 `models` (optional `triage,escalation` model ids, e.g.
 `claude-sonnet-5-5,claude-opus-5-5`; sets `DCM_SONNET_MODEL` and
 `DCM_OPUS_MODEL`).
@@ -70,8 +74,8 @@ ban or a utility measure), verify, write `inputs/research/weekly/<date>/`,
 rebuild, schema check, publish. A run uses one UTC date for `--as-of`, the
 weekly folder and the branch name.
 
-One rolling branch, `refresh/weekly`, is reset to the `data-moratoriums` tip
-each run. If a refresh PR is open its weekly folders are carried over first,
+In `pull_request` mode, one rolling branch, `refresh/weekly`, is reset to the
+`data-moratoriums` tip each run. If a refresh PR is open its weekly folders are carried over first,
 and the run fails if the PR changed anything outside `inputs/research/weekly/`
 or the four published files, since a rebuild would overwrite it. A closed PR is
 not carried over. Because carried-over rows are re-synced each run, their
@@ -105,24 +109,27 @@ never given a credential that can write to the repo.
 | Model calls / escalation calls | 400 / 40 |
 | Job timeout | 120 minutes; fetch and model calls run 4 at a time |
 
-A pull request opens every week, because `refresh_state.json` and `notes.md`
+Every run publishes a commit, because `refresh_state.json` and `notes.md`
 change on every run even when nothing new is found. A run stops cleanly at any
 cap, including a 90-minute wall clock (`wall_clock_minutes`) that stops new
 searches, fetches and model calls well inside the job's 120-minute timeout, and
-lists it under "Caps hit" in the PR. Brave
+lists it under "Caps hit" in the report. Brave
 bills about $5 per 1,000 requests against a monthly credit, so a full run is
 about $1.10 and four runs a month use about 880 of the roughly 1,000 requests
-the credit covers. Model cost depends on the pages found: the PR body and job
+the credit covers. Model cost depends on the pages found: the report and job
 summary show tokens (including cache reads) and an estimated cost from the
 prices in `config.py`. Calibrate from the first run.
 
-## Reviewing the weekly PR
+## Reviewing a week
 
-1. Read the body: new rows (how many reached the map and how many were not drawn, with the QA flags saying why), changed rows, QA flags, territory warnings, fetch rate, caps hit, cost.
+A direct run's report is its commit message on `data-moratoriums` (and
+`pr_body.md` in the run's artifact); a pull-request run puts it in the PR body.
+
+1. Read the report: new rows (how many reached the map and how many were not drawn, with the QA flags saying why), changed rows, QA flags, territory warnings, fetch rate, caps hit, cost.
 2. Open each source link for the rows. Every new row is marked unconfirmed and carries its quote in the row's notes.
 3. Read `inputs/research/weekly/<date>/notes.md`: leads that failed verification (page unreadable, quote not found, no county) and seed-page results. Promote a lead by adding a row to that week's CSVs, citing a page.
-4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, in the PR branch under `inputs/research/weekly/`. Then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them.
-5. Merge. The map serves the new files from `data-moratoriums`.
+4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, under `inputs/research/weekly/`: on `data-moratoriums` for a direct run (then rebuild locally with `rebuild.sh` and commit the regenerated files), or in the PR branch then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them. To take back a whole direct week, `git revert` its commit.
+5. For a pull request, merge it. The map serves the new files from `data-moratoriums`.
 
 ## Moving the Moratorium Nation pin
 
