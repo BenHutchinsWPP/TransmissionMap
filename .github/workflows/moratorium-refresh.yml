@@ -1,8 +1,10 @@
-name: Moratorium weekly refresh
-# Finds new and changed data center moratoriums, bans and utility pauses each
-# week with a fixed search -> fetch -> extract -> quote-verify pipeline
-# (scripts/moratoriums/refresh/run.py), rebuilds the layer from the inputs/ on
-# the `data-moratoriums` branch (scripts/moratoriums/rebuild.sh), and publishes
+name: Moratorium refresh
+# Finds new and changed data center moratoriums, bans and utility pauses twice a
+# month with a fixed search -> fetch -> extract -> quote-verify -> review pipeline
+# (scripts/moratoriums/refresh/run.py: every change is checked in code and by a
+# review model before it is written, and a rejected one only becomes a lead),
+# rebuilds the layer from the inputs/ on the `data-moratoriums` branch
+# (scripts/moratoriums/rebuild.sh), and publishes
 # it (scripts/moratoriums/refresh/pr.py). By default (`publish: direct`, and
 # every scheduled run) it commits straight to `data-moratoriums`, the week's
 # report as the commit message; undo a week with `git revert`. With
@@ -20,7 +22,7 @@ name: Moratorium weekly refresh
 #                 force-pushes `refresh/weekly` (e.g. after a reviewer adds a DROP
 #                 row to updates.csv).
 #
-# To stop it: disable the workflow (Actions > Moratorium weekly refresh >
+# To stop it: disable the workflow (Actions > Moratorium refresh >
 # Disable workflow). In pull_request mode, closing the open refresh PR discards
 # that week's rows; a closed PR is never carried over.
 #
@@ -46,7 +48,7 @@ on:
         type: string
         default: '220'
       models:
-        description: "Optional model ids, triage then escalation, e.g. claude-sonnet-5-5,claude-opus-5-5"
+        description: "Optional model ids: triage,escalation,review (blank parts keep the default), e.g. ,,claude-opus-5-5"
         type: string
         default: ''
 
@@ -137,6 +139,19 @@ jobs:
           echo "run_date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
           echo "Mode: $mode (asked: $ASKED), run date $(date -u +%F), max requests $MAX_REQUESTS"
 
+      - name: One research run per published date
+        # A run writes inputs/research/weekly/<run date>/ and replaces what is there, so a second
+        # research run on a date data-moratoriums already has would undo that day's published rows.
+        # (The checkout is the published tip here; an open refresh PR's folders are carried over later.)
+        if: steps.mode.outputs.mode == 'research'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: |
+          if [ -e "$W/site/inputs/research/weekly/$RUN_DATE" ]; then
+            echo "::error::data-moratoriums already has a research run for $RUN_DATE; a second one would replace that day's rows. Run it again tomorrow (UTC)."
+            exit 1
+          fi
+
       - name: Stdlib tests
         # PRs opened with GITHUB_TOKEN don't trigger pipeline-tests.yml, so the
         # gate runs here, before anything is searched or pushed.
@@ -206,9 +221,10 @@ jobs:
           DCM_CONTACT: ${{ secrets.DCM_CONTACT }}
         run: |
           if [ -n "$MODELS" ]; then
-            IFS=, read -r sonnet opus <<< "$MODELS"
-            [ -n "$sonnet" ] && export DCM_SONNET_MODEL="$sonnet"
-            [ -n "$opus" ] && export DCM_OPUS_MODEL="$opus"
+            IFS=, read -r triage escalation review <<< "$MODELS"
+            [ -n "$triage" ] && export DCM_TRIAGE_MODEL="$triage"
+            [ -n "$escalation" ] && export DCM_ESCALATION_MODEL="$escalation"
+            [ -n "$review" ] && export DCM_REVIEW_MODEL="$review"
           fi
           python3 -m moratoriums.refresh.run --mode "$MODE" --work "$W" --dataset "$W/site" \
             --build "$W/build" --run-date "$RUN_DATE" --max-requests "$MAX_REQUESTS" \

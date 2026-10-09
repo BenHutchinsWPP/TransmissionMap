@@ -222,15 +222,15 @@ class Planner(unittest.TestCase):
 
     def test_config_load(self):
         c = config.Config.load(env={"DCM_MAX_REQUESTS": "7"}, overrides={"max_pages": 3})
-        self.assertEqual((c.max_requests, c.max_pages, c.max_opus_calls), (7, 3, 40))
+        self.assertEqual((c.max_requests, c.max_pages, c.max_escalation_calls), (7, 3, 40))
         d = config.Config()
         self.assertEqual((d.max_requests, d.max_requests_for_planning), (220, 200))
         self.assertFalse(hasattr(d, "cost"))
-        self.assertEqual(config.PRICES[config.OPUS_MODEL], {"input": 4.0, "output": 20.0, "cache_read": 0.2, "cache_write": 5.0})
+        self.assertEqual(config.PRICES[config.REVIEW_MODEL], {"input": 4.0, "output": 20.0, "cache_read": 0.2, "cache_write": 5.0})
 
     def test_config_model_env(self):
-        c = config.Config.load(env={"DCM_SONNET_MODEL": " m-s ", "DCM_OPUS_MODEL": ""})
-        self.assertEqual((c.sonnet_model, c.opus_model), ("m-s", config.OPUS_MODEL))
+        c = config.Config.load(env={"DCM_TRIAGE_MODEL": " m-s ", "DCM_ESCALATION_MODEL": "", "DCM_REVIEW_MODEL": "m-r"})
+        self.assertEqual((c.triage_model, c.escalation_model, c.review_model), ("m-s", config.ESCALATION_MODEL, "m-r"))
 
     def many(self, prefix, n, **kw):
         return [row(f"{prefix}{i:03d}", **kw) for i in range(n)]

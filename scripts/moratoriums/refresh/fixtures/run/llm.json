@@ -1,6 +1,6 @@
 {
  "https://news.example.com/2026/10/06/lafayette-council-moratorium": {
-  "sonnet": {
+  "triage": {
    "_usage": {
     "cache_creation_input_tokens": 0,
     "cache_read_input_tokens": 1100,
@@ -29,7 +29,7 @@
   }
  },
  "https://www.brooksidebeacon.example.com/2026/10/02/brookside-zoning-workshop": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.95,
@@ -52,7 +52,7 @@
   }
  },
  "https://www.countyherald.example.com/2026/10/06/washington-township-moratorium": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.9,
@@ -75,7 +75,7 @@
   }
  },
  "https://www.elmstead.example.us/commissioners/2026-09-30-minutes": {
-  "opus": {
+  "escalation": {
    "_usage": {
     "cache_creation_input_tokens": 0,
     "cache_read_input_tokens": 1100,
@@ -102,7 +102,7 @@
     }
    ]
   },
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.85,
@@ -125,7 +125,7 @@
   }
  },
  "https://www.elmsteadgazette.example.com/2026/09/23/franklin-township-moratorium": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.9,
@@ -148,7 +148,7 @@
   }
  },
  "https://www.harmonytownship.example.org/DocumentCenter/View/412/Ordinance-2026-7.pdf": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.75,
@@ -171,7 +171,7 @@
   }
  },
  "https://www.larkinledger.example.com/2026/10/07/birch-hollow-extends-moratorium": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.85,
@@ -194,7 +194,7 @@
   }
  },
  "https://www.metroweekly.example.com/2026/10/04/data-center-opinion": {
-  "sonnet": {
+  "triage": {
    "_refusal": true,
    "_usage": {
     "cache_creation_input_tokens": 0,
@@ -205,7 +205,7 @@
   }
  },
  "https://www.northjerseyledger.example.com/2026/09/18/lakeview-bans-data-centers": {
-  "opus": {
+  "escalation": {
    "items": [
     {
      "confidence": 0.9,
@@ -226,7 +226,7 @@
     }
    ]
   },
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.8,
@@ -249,7 +249,7 @@
   }
  },
  "https://www.oakgroveobserver.example.com/2026/10/01/oak-grove-pause": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.9,
@@ -272,7 +272,7 @@
   }
  },
  "https://www.riverbendelectric.example.coop/news/large-load-pause": {
-  "opus": {
+  "escalation": {
    "items": [
     {
      "confidence": 0.9,
@@ -293,7 +293,7 @@
     }
    ]
   },
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.9,
@@ -343,7 +343,7 @@
   }
  },
  "https://www.tamarackreporter.example.com/2026/10/05/moratorium-nears-end": {
-  "sonnet": {
+  "triage": {
    "items": [
     {
      "confidence": 0.8,

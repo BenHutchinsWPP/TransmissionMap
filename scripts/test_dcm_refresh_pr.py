@@ -20,11 +20,15 @@ REPORT = {
     "leads": {"total": 7},
     "caps_hit": ["max_requests"],
     "search_requests": 20,
+    "review": {"claims": 4, "accepted": 3, "model_calls": 3,
+               "rejected": [{"kind": "extension", "state": "NC", "name": "Charlotte", "target": "nm-nc-charlotte-2026",
+                             "problems": ["not_yet_happened"], "reason": "The council is only considering an extension.",
+                             "url": "https://news.example/charlotte", "by": "model"}]},
 }
 
 
 def row(i):
-    return {"id": f"add-{i}", "state": "OH", "jurisdiction_name": f"Town {i}", "type": "temporary moratorium",
+    return {"id": f"add-{i}", "state": "OH", "name": f"Town {i}", "type": "temporary moratorium",
             "status": "active", "date_adopted": "2026-10-01", "source_urls": f"https://x.example/{i} https://y.example"}
 
 
@@ -55,17 +59,24 @@ class Fake:
 
 class Body(unittest.TestCase):
     def test_title_and_sections(self):
-        body = pr.build_body(REPORT, " 1 file changed", [row(1), row(2)], [{"id": "add-1", "field": "date_expires", "old": "", "new": "2027-01-01", "source_urls": "https://z.example"}],
+        changes = [{"id": "nm-9", "state": "OH", "name": "Other", "event": "extended", "field": "date_expires",
+                    "old": "2026-11-01", "new": "2027-01-01"},
+                   {"id": "nm-9", "state": "OH", "name": "Other", "event": "extended", "field": "status", "old": "active", "new": "extended"}]
+        body = pr.build_body(REPORT, " 1 file changed", [row(1), row(2)], changes,
                              [], ["WARNING add-1: no territory"], "2026-10-08", "research", 5, 2)
-        self.assertTrue(body.startswith("# Moratorium refresh 2026-10-08: +3 new, 1 changes, 2 expired"))
-        for h in ("## Summary", "## Cost and usage", "## Caps hit", "## Fetch outcomes", "## New rows", "## Changed rows",
-                  "## QA flags", "## Territory warnings", "## Leads", "## Reviewing"):
+        self.assertTrue(body.startswith("# Moratorium refresh 2026-10-08: +2 new, 1 updated, 2 expired"))
+        for h in ("## Summary", "## New rows", "## Updated rows", "## Rejected in review", "## Cost and usage", "## Caps hit",
+                  "## Fetch outcomes", "## QA flags", "## Territory warnings", "## Leads", "## Correcting a row"):
             self.assertIn(h, body)
-        self.assertIn("[source](https://x.example/1)", body)
+        self.assertIn("| OH | Town 1 | temporary moratorium | active | 2026-10-01 | [source](https://x.example/1) |", body)
+        self.assertIn("| OH | Other | extended | date_expires | 2026-11-01 | 2027-01-01 |", body)
+        self.assertIn("| NC | Charlotte | extension | not_yet_happened | The council is only considering an extension. |", body)
+        self.assertIn("| changes reviewed | 4: 3 accepted, 1 rejected |", body)
+        self.assertIn("| input rows written | 4 |", body)
         self.assertIn("inputs/research/weekly/2026-10-08/notes.md", body)
         self.assertIn("rebuild_only", body)
+        self.assertIn("git revert", body)
         self.assertIn("unconfirmed", body)
-        self.assertIn("recorded_at", body)
         self.assertIn("WARNING add-1", body)
 
     def test_truncation(self):
@@ -80,7 +91,7 @@ class Body(unittest.TestCase):
 
     def test_qa_filtered_to_this_run(self):
         qa = [{"id": "add-1", "issue": "weak", "detail": ""}, {"id": "old-9", "issue": "dup", "detail": ""}]
-        got = pr.filter_qa(qa, [row(1)], [{"id": "add-2"}])
+        got = pr.filter_qa(qa, {"add-1", "add-2"})
         self.assertEqual([r["id"] for r in got], ["add-1"])
 
     def test_first_url_and_cells(self):
@@ -156,9 +167,12 @@ class Publish(unittest.TestCase):
         self.build.mkdir()
         (wk / "moratoriums.csv").write_text("id,state,jurisdiction_name,type,status,date_adopted,source_urls\nadd-1,OH,Town,temporary moratorium,active,2026-10-01,https://x.example\n")
         (self.build / "qa_research.csv").write_text("id,issue,detail\nadd-1,weak,d\nold-2,dup,e\n")
-        (self.co / "moratoriums.csv").write_text("id,level,name\nadd-1,city,Town\nnm-9,city,Other\n")
+        (self.co / "moratoriums.csv").write_text("id,level,name,state,type,status,date_adopted,source_urls\n"
+                                                 "add-1,city,Town,OH,temporary moratorium,active,2026-10-01,https://x.example\n"
+                                                 "nm-9,city,Other,OH,temporary moratorium,extended,2026-05-01,https://o.example\n")
         (self.co / "events.csv").write_text("recorded_at,id,event,event_date,field,old,new,note\n"
-                                            "2026-10-01,a,adopted,,,,,\n2026-10-08,b,expired,,,,,\n2026-10-08,add-1,added,,,,,\n")
+                                            "2026-10-01,a,adopted,,,,,\n2026-10-08,b,expired,,,,,\n2026-10-08,add-1,added,,,,,\n"
+                                            "2026-10-08,nm-9,extended,,date_expires,2026-11-01,2027-01-01,\n")
         (t / "report.json").write_text(json.dumps(REPORT))
         self.args = Namespace(checkout=self.co, build=self.build, report=t / "report.json", run_date="2026-10-08", mode="research",
                               base="data-moratoriums", branch="refresh/weekly", log_dir=self.build / "logs")
@@ -199,10 +213,11 @@ class Publish(unittest.TestCase):
         self.assertEqual(w[-1][:3], ["gh", "pr", "create"])
         self.assertIn("--base", w[-1])
         body = (self.build / "pr_body.md").read_text()
-        self.assertIn("+1 new, 1 changes, 1 expired", body)  # one weekly row reached the map, of the 3 extracted
-        self.assertIn("| new rows | 1 on the map, 2 not drawn (see QA) |", body)
-        self.assertIn("| events added | 2 (1 `added`) |", body)
-        self.assertIn("add-1", body)
+        self.assertIn("+1 new, 1 updated, 1 expired", body)  # counted from the events the rebuild appended
+        self.assertIn("| new on the map | 1 |", body)
+        self.assertIn("| events added | 3 |", body)
+        self.assertIn("| OH | Other | extended | date_expires | 2026-11-01 | 2027-01-01 |", body)
+        self.assertIn("| add-1 | weak | d |", body)  # QA flags only for this run's rows
         self.assertNotIn("old-2", body)
         self.assertIn("eia_id 5 has no HIFLD territory", body)
         # no write touches the base branch
@@ -218,7 +233,7 @@ class Publish(unittest.TestCase):
         w = f.argvs(write=True)
         self.assertEqual(w[-1], ["git", "push", "origin", "HEAD:refs/heads/data-moratoriums"])
         commit = [a for a in w if "commit" in a][0]
-        self.assertIn("| new rows | 1 on the map, 2 not drawn (see QA) |", commit[-1])
+        self.assertIn("| new on the map | 1 |", commit[-1])
         self.assertFalse(any("refresh/weekly" in " ".join(a) for a in w))
 
     def test_open_pr_edits(self):
@@ -274,26 +289,20 @@ class Publish(unittest.TestCase):
         self.assertFalse(any(a[:3] == ["gh", "pr", "edit"] for a in f.argvs()))
         self.assertTrue(any(a[:2] == ["git", "push"] for a in f.argvs()))
 
-    def test_on_map_ids_counts_only_drawn_weekly_rows(self):
-        new = [{"id": "add-1"}, {"id": "add-2"}]
-        self.assertEqual(pr.on_map_ids(self.co, new), {"add-1"})
-        self.assertEqual(pr.on_map_ids(self.co / "missing", new), set())
+    def test_published_changes_from_events(self):
+        events = [{"id": "add-1", "event": "added"}, {"id": "b", "event": "expired"},
+                  {"id": "nm-9", "event": "extended", "field": "status"}, {"id": "nm-9", "event": "extended", "field": "date_expires"}]
+        new, changes, expired = pr.published_changes(self.co, events)
+        self.assertEqual([r["id"] for r in new], ["add-1"])
+        self.assertEqual([(c["id"], c["name"], c["field"]) for c in changes], [("nm-9", "Other", "status"), ("nm-9", "Other", "date_expires")])
+        self.assertEqual(expired, 1)
+        self.assertEqual(pr.make_title("2026-10-08", 1, 1, 1), "Moratorium refresh 2026-10-08: +1 new, 1 updated, 1 expired")
 
-    def test_title_uses_on_map_count(self):
-        self.assertEqual(pr.make_title(REPORT, "2026-10-08", 2), "Moratorium refresh 2026-10-08: +3 new, 1 changes, 2 expired")
-        self.assertEqual(pr.make_title(REPORT, "2026-10-08", 2, 0), "Moratorium refresh 2026-10-08: +0 new, 1 changes, 2 expired")
-        body = pr.build_body(REPORT, "", [], [], [], [], "2026-10-08", "research", 0, 2, on_map=0)
-        self.assertIn("| new rows | 0 on the map, 3 not drawn (see QA) |", body)
-
-    def test_dry_run_title_keeps_extracted_count(self):
+    def test_dry_run_reports_rows_written(self):
         self.args.mode = "dry_run"
         f = Fake(self.answers(), dry=True)
         _, out = self.run_publish(f)
-        self.assertIn("+3 new", out)
-
-    def test_events_added(self):
-        f = Fake({("git", "show"): "recorded_at,id,event,event_date,field,old,new,note\n2026-10-01,a,adopted,,,,,\n"})
-        self.assertEqual(pr.events_added(f, self.co, "data-moratoriums"), (2, 1))
+        self.assertIn("| input rows written | 4 |", out)
 
 
 if __name__ == "__main__":

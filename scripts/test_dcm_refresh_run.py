@@ -6,7 +6,7 @@ refresh_state.json and run_report.json with fixtures/run/expected/. The report h
 fields (no timestamps or absolute paths), so it is compared whole.
 Rule-level tests drive run.Verifier on in-memory pages (notes vs build_research.REPL, page ties,
 extensions, replacements, status moves), and pipeline-level tests drive run.research with fake
-search/fetch/LLM objects (Opus escalation, billed refusals, search errors, seed links).
+search/fetch/LLM objects (escalation, review, billed refusals, search errors, seed links).
 Regenerate the golden files after an intended change:
     DCM_UPDATE_GOLDEN=1 python3 -m unittest discover -s scripts -p "test_dcm_refresh_run.py"
 """
@@ -43,7 +43,7 @@ WEEKLY = Path("inputs/research/weekly/2026-10-08")
 BUILD_RESEARCH = Path(run.__file__).resolve().parent.parent / "build_research.py"
 # Must equal build_research.REPL (Notes.test_repl_copy_matches_build_research keeps them equal).
 REPL = re.compile(r"upstream_moratorium_id=(\S+?) \([^)]*replaced[^)]*\)|[Ss]upersedes [^(]*\(upstream (\S+?)\)")
-SONNET, OPUS = Config().sonnet_model, Config().opus_model
+TRIAGE, ESCALATION = Config().triage_model, Config().escalation_model
 
 
 def tree_hash(root: Path) -> str:
@@ -111,8 +111,8 @@ class DryRun(unittest.TestCase):
     def test_refusal_counted_no_rows(self):
         self.assertEqual(self.report["llm"]["refusals"], 1)
         # the refusal fixture carries _usage (900 in / 12 out): a refusal is billed and tallied
-        self.assertEqual(self.report["llm"]["by_model"][SONNET]["input"], 1800 + 2600 + 900)
-        self.assertEqual(self.report["llm"]["by_model"][SONNET]["output"], 240 + 180 + 12)
+        self.assertEqual(self.report["llm"]["by_model"][TRIAGE]["input"], 1800 + 2600 + 900)
+        self.assertEqual(self.report["llm"]["by_model"][TRIAGE]["output"], 240 + 180 + 12)
         self.assertIn("- model refused: https://www.metroweekly.example.com/", self.out["notes.md"])
         self.assertNotIn("metroweekly", "".join(self.out[n] for n in self.out if n.endswith(".csv")))
 
@@ -132,7 +132,7 @@ class DryRun(unittest.TestCase):
         self.assertEqual((corr["kind"], corr["upstream_id"], corr["source_quality"]), ("correction", "oh-elmstead-county-2026", "primary"))
         self.assertEqual(m["add-pa-harmony-township-2026"]["source_quality"], "primary")  # municipal PDF
         self.assertEqual([r["id"] for r in rows(self.copy, "bans")], ["add-nj-lakeview-2026"])
-        self.assertEqual(rows(self.copy, "bans")[0]["date_adopted"], "2026-09-16")  # the Opus answer wins
+        self.assertEqual(rows(self.copy, "bans")[0]["date_adopted"], "2026-09-16")  # the escalation answer wins
         self.assertEqual([r["jurisdiction_level"] for r in rows(self.copy, "utilities")], ["utility"])
         self.assertEqual({(r["id"], r["field"]) for r in rows(self.copy, "updates")},
                          {("add-pa-birch-hollow-2026", f) for f in ("status", "date_expires", "source_urls")})
@@ -177,29 +177,30 @@ class Budget(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             _, report = run.dry_run(WORK, DATASET, RUN, Config(max_llm_calls=4), copy_root=Path(d))
             self.assertIn("max_llm_calls", report["caps_hit"])
-            self.assertLessEqual(report["llm"]["calls"], 4)
+            # max_llm_calls caps reading pages; reviews have their own cap (max_review_calls)
+            self.assertLessEqual(report["llm"]["calls"] - report["review"]["model_calls"], 4)
 
 
 class Models(unittest.TestCase):
     def test_openrouter_uses_slugs_unless_overridden(self):
         from moratoriums.refresh.llm import OpenRouterClient
         orc, cfg = OpenRouterClient("k"), Config()
-        self.assertEqual(run.models_for(orc, cfg), (cfg.openrouter_sonnet, cfg.openrouter_opus))
-        over = Config.load({"DCM_SONNET_MODEL": "x/custom-sonnet"})
-        self.assertEqual(run.models_for(orc, over), ("x/custom-sonnet", cfg.openrouter_opus))
-        self.assertEqual(run.models_for(StubClient(FIX), over), ("x/custom-sonnet", cfg.opus_model))
+        self.assertEqual(run.models_for(orc, cfg), (cfg.openrouter_triage, cfg.openrouter_escalation, cfg.openrouter_review))
+        over = Config.load({"DCM_TRIAGE_MODEL": "x/custom-haiku", "DCM_REVIEW_MODEL": "x/custom-opus"})
+        self.assertEqual(run.models_for(orc, over), ("x/custom-haiku", cfg.openrouter_escalation, "x/custom-opus"))
+        self.assertEqual(run.models_for(StubClient(FIX), over), ("x/custom-haiku", cfg.escalation_model, "x/custom-opus"))
 
     def test_cost_prices_unknown_ids_by_family(self):
         from moratoriums.refresh.llm import UsageTally
         t = UsageTally()
         t.add("vendor/Claude-Sonnet-9", Usage(1_000_000, 0))
         t.add("x", Usage(1_000_000, 0))
-        self.assertEqual(t.est_cost(run.PRICES), run.PRICES[SONNET]["input"])
+        self.assertEqual(t.est_cost(run.PRICES), run.PRICES[ESCALATION]["input"])
         self.assertEqual(t.price_notes(run.PRICES), {"vendor/Claude-Sonnet-9": "sonnet", "x": "unpriced"})
 
     def test_report_notes_assumed_price(self):
         pages = {LAKE_URL: page(LAKE, LAKE_URL)}
-        report, _, _, _ = pipeline(pages, {}, cfg=Config(seed_pages=(), sonnet_model="odd-sonnet-model"))
+        report, _, _, _ = pipeline(pages, {}, cfg=Config(seed_pages=(), triage_model="odd-sonnet-model"))
         self.assertEqual(report["llm"]["price_assumed"], {"odd-sonnet-model": "sonnet"})
         self.assertGreater(report["llm"]["est_cost_usd"], 0)
 
@@ -209,7 +210,7 @@ class WallClock(unittest.TestCase):
         ticks = iter(range(0, 10_000, 1))  # one clock reading per call; 60 s each below
         cfg = Config(seed_pages=(), wall_clock_minutes=1)
         pages = {LAKE_URL: page(LAKE, LAKE_URL)}
-        report, notes, llm, _ = pipeline(pages, {SONNET: {"items": [FAIR]}}, cfg=cfg, clock=lambda: next(ticks) * 30)
+        report, notes, llm, _ = pipeline(pages, {TRIAGE: {"items": [FAIR]}}, cfg=cfg, clock=lambda: next(ticks) * 30)
         self.assertIn("wall_clock", report["caps_hit"])
         self.assertEqual(llm.calls, [])
         self.assertEqual(report["llm"]["calls"], 0)
@@ -217,7 +218,7 @@ class WallClock(unittest.TestCase):
         self.assertIn("- wall_clock", notes)
 
     def test_within_budget_is_unchanged(self):
-        report, _, llm, _ = pipeline({LAKE_URL: page(LAKE, LAKE_URL)}, {SONNET: {"items": [FAIR]}},
+        report, _, llm, _ = pipeline({LAKE_URL: page(LAKE, LAKE_URL)}, {TRIAGE: {"items": [FAIR]}},
                                      cfg=Config(seed_pages=()), clock=lambda: 0.0)
         self.assertNotIn("wall_clock", report["caps_hit"])
         self.assertTrue(llm.calls)
@@ -384,7 +385,7 @@ class Notes(unittest.TestCase):
         self.assertTrue(REPL.search(f"Supersedes the interim moratorium (upstream foo-1)"))  # the copy is live
         v = verifier()
         v.take(item(measure_type="permanent ban", jurisdiction_name="Lakeview", jurisdiction_level="borough", state="NJ",
-                    county="Halsey", date_adopted="2026-10-06", quote=quote), page(text), "secondary", OPUS)
+                    county="Halsey", date_adopted="2026-10-06", quote=quote), page(text), "secondary", ESCALATION)
         self.assertEqual(len(v.rows["bans"]), 1, v.leads)
         notes = v.rows["bans"][0]["notes"]
         self.assertIn("[upstream foo-1]", notes)
@@ -392,7 +393,7 @@ class Notes(unittest.TestCase):
         self.assertNotIn("\n", notes)
 
     def test_note_brackets_and_caps(self):
-        n = run._note(OPUS, item(quote="upstream_moratorium_id=foo-1 (replaced by this ban) " + "x " * 300))
+        n = run._note(ESCALATION, item(quote="upstream_moratorium_id=foo-1 (replaced by this ban) " + "x " * 300))
         self.assertIsNone(REPL.search(n))
         self.assertLess(len(n), 480)
 
@@ -404,7 +405,7 @@ class PageTies(unittest.TestCase):
         text = "The City Commission adopted a one-year moratorium on all data center development on October 1, 2026."
         v = verifier()
         v.take(item(jurisdiction_name="Springfield", state="OH", county="Clark", date_adopted="2026-10-01",
-                    quote=text), page(text), "secondary", SONNET)
+                    quote=text), page(text), "secondary", TRIAGE)
         self.assertEqual(reasons(v), ["jurisdiction not named on page"])
         self.assertFalse(any(v.rows.values()))
 
@@ -421,7 +422,7 @@ class PageTies(unittest.TestCase):
             v = verifier()
             v.take(item(measure_type="interconnection pause", jurisdiction_name="Riverbend Electric Cooperative",
                         jurisdiction_level="utility", state="KS", county="Ardmore", date_adopted="2026-09-24",
-                        quote=quote, eia_id=eia), page(text), "secondary", OPUS)
+                        quote=quote, eia_id=eia), page(text), "secondary", ESCALATION)
             row = v.rows["utilities"][0]
             self.assertEqual(row["eia_id"], want, eia)
             self.assertEqual(v.counts["eia_id_blanked"], 0 if want else 1)
@@ -439,7 +440,7 @@ class Changes(unittest.TestCase):
                     jurisdiction_level="township", state="MI", county="Tamarack", status="extended",
                     date_adopted="2026-10-06", date_expires="2027-04-14",
                     quote="board voted on October 6, 2026 to extend its data center moratorium until April 14, 2027"),
-               page(text), "secondary", SONNET)
+               page(text), "secondary", TRIAGE)
         self.assertEqual(v.leads, [])
         self.assertFalse(v.rows["moratoriums"] or v.rows["bans"])
         self.assertEqual({(r["id"], r["field"], r["new"].split(" ")[0]) for r in v.rows["updates"]},
@@ -453,10 +454,58 @@ class Changes(unittest.TestCase):
         v.take(item(kind="extension", jurisdiction_name="Washington Township", jurisdiction_level="township",
                     state="OH", county="Pickett", status="extended", date_adopted="2026-10-06",
                     quote="voted on October 6, 2026 to extend the data center moratorium by six months"),
-               page(text), "secondary", OPUS)
+               page(text), "secondary", ESCALATION)
         row, = v.rows["moratoriums"]
         self.assertEqual((row["kind"], row["upstream_id"], row["status"], row["date_adopted"]),
                          ("extension", "oh-washington-township-2026", "extended", ""))
+
+    def test_written_rows_become_claims_for_review(self):
+        text = "Washington Township trustees in Pickett County voted on October 6, 2026 to extend the data center moratorium by six months."
+        v = verifier()
+        v.take(item(kind="extension", jurisdiction_name="Washington Township", jurisdiction_level="township",
+                    state="OH", county="Pickett", status="extended", date_adopted="",
+                    quote="voted on October 6, 2026 to extend the data center moratorium by six months"),
+               page(text), "secondary", ESCALATION)
+        claim, = v.claims
+        self.assertEqual((claim.kind, claim.target["id"], claim.page_text), ("extension", "nm-oh-washington-township-2026", text))
+        self.assertIs(claim.rows[0][1], v.rows["moratoriums"][0])
+
+    def test_vaguer_date_keeps_the_tracked_precise_one(self):
+        # 2026-10-09: an aggregator's "September" overwrote Loudoun County's tracked 2026-09-16
+        text = "Washington Township trustees in Pickett County adopted the data center moratorium in May 2026; it runs until November 12, 2026."
+        v = verifier()
+        v.take(item(kind="correction", jurisdiction_name="Washington Township", jurisdiction_level="township",
+                    state="OH", county="Pickett", status="active", date_adopted="2026-05", date_expires="2026-11-12",
+                    quote="adopted the data center moratorium in May 2026; it runs until November 12, 2026"),
+               page(text), "secondary", ESCALATION)
+        row, = v.rows["moratoriums"]
+        self.assertEqual((row["date_adopted"], row["date_expires"]), ("2026-05-12", "2026-11-12"))
+
+    def test_pending_measure_gets_no_end_date(self):
+        # 2026-10-09: proposals in Hillsborough and St. Johns counties were given their planned end dates
+        text = "Elmstead County commissioners in Elmstead County will vote on October 20, 2026 on a moratorium that would last until October 2027."
+        v = verifier()
+        v.take(item(kind="correction", jurisdiction_name="Elmstead County", jurisdiction_level="county",
+                    state="OH", county="Elmstead", status="pending", date_adopted="", date_expires="2027-10",
+                    quote="will vote on October 20, 2026 on a moratorium that would last until October 2027"),
+               page(text), "secondary", ESCALATION)
+        self.assertFalse(any(v.rows.values()))  # with the end date dropped there is nothing left to change
+        self.assertEqual([i for i, _ in v.confirmed], ["nm-oh-elmstead-county-2026"])
+
+    def test_body_names_reduce_to_the_place(self):
+        # 2026-10-09: "Lexington-Fayette Urban County Council" arrived as a new row instead of an extension
+        cases = {("Humboldt County Board of Supervisors", "county"): "Humboldt County",
+                 ("San Francisco Board of Supervisors", "city"): "San Francisco",
+                 ("Memphis City Council", "city"): "Memphis",
+                 ("Lexington-Fayette Urban County Council", "county"): "Lexington-Fayette",
+                 ("Anne Arundel County Council", "county"): "Anne Arundel County",
+                 ("Durbin Township Board of Trustees", "township"): "Durbin Township",
+                 ("Council Bluffs", "city"): "Council Bluffs",
+                 ("Delaware Public Service Commission", "state_agency"): "Delaware Public Service Commission",
+                 ("Grant PUD Board", "utility"): "Grant PUD Board"}
+        for (name, level), want in cases.items():
+            self.assertEqual(run.place_name(name, level), want, name)
+        self.assertEqual(run._clean_item(item(jurisdiction_name="Fairbrook City Council"))["jurisdiction_name"], "Fairbrook")
 
     def test_status_regression_is_lead(self):
         text = "Washington Township trustees in Pickett County will hold a hearing on a proposed data center moratorium on October 20, 2026."
@@ -464,7 +513,7 @@ class Changes(unittest.TestCase):
         v.take(item(kind="correction", jurisdiction_name="Washington Township", jurisdiction_level="township",
                     state="OH", county="Pickett", status="pending", date_adopted="",
                     quote="will hold a hearing on a proposed data center moratorium on October 20, 2026"),
-               page(text), "secondary", OPUS)
+               page(text), "secondary", ESCALATION)
         self.assertEqual(reasons(v), ["status regression active→pending"])
         self.assertFalse(any(v.rows.values()))
 
@@ -475,7 +524,7 @@ class Changes(unittest.TestCase):
         v.take(item(kind="replacement", measure_type="permanent ban", jurisdiction_name="Washington Township",
                     jurisdiction_level="township", state="OH", county="Pickett", status="active",
                     quote="adopted a permanent ban on data centers on October 5, 2026, replacing the moratorium"),
-               page(text), "secondary", OPUS)
+               page(text), "secondary", ESCALATION)
         self.assertEqual(v.leads, [])
         row, = v.rows["moratoriums"]
         self.assertEqual((row["kind"], row["upstream_id"], row["type"], row["status"]),
@@ -490,7 +539,7 @@ class Changes(unittest.TestCase):
         v.take(item(kind="replacement", measure_type="permanent ban", jurisdiction_name="Birch Hollow Township",
                     jurisdiction_level="township", state="PA", county="Larkin", status="replaced", date_adopted="2026-10-06",
                     quote="adopted an ordinance on October 6, 2026 that permanently prohibits data centers"),
-               page(text), "primary", OPUS)
+               page(text), "primary", ESCALATION)
         self.assertEqual(v.leads, [])
         ban, = v.rows["bans"]
         self.assertEqual((ban["type"], ban["status"]), ("permanent ban", "active"))
@@ -506,7 +555,7 @@ class Changes(unittest.TestCase):
         v.take(item(kind="replacement", jurisdiction_name="Birch Hollow Township", jurisdiction_level="township",
                     state="PA", county="Larkin", date_adopted="2026-06-09",
                     quote="adopted a new twelve-month moratorium on data centers on October 6, 2026"),
-               page(text), "primary", OPUS)
+               page(text), "primary", ESCALATION)
         self.assertEqual(v.confirmed, [])
         self.assertEqual(len(v.rows["moratoriums"]), 1)
         self.assertEqual([(u["id"], u["new"]) for u in v.rows["updates"]], [("add-pa-birch-hollow-2026", "replaced")])
@@ -515,10 +564,10 @@ class Changes(unittest.TestCase):
         text = "The Fairbrook City Council voted 6-1 on October 5, 2026 to adopt a one-year moratorium on new data center applications."
         q = "voted 6-1 on October 5, 2026 to adopt a one-year moratorium on new data center applications"
         v = verifier()
-        v.take(item(quote=q), page(text, "https://a.example.com/1"), "secondary", SONNET)
-        v.take(item(quote=q, date_adopted="2026-10-04"), page(text, "https://b.example.com/2"), "secondary", SONNET)
-        v.take(item(quote=q), page(text, "https://c.example.com/3"), "secondary", SONNET)
-        v.take(item(kind="none", quote=q), page(text, "https://d.example.com/4"), "secondary", SONNET)
+        v.take(item(quote=q), page(text, "https://a.example.com/1"), "secondary", TRIAGE)
+        v.take(item(quote=q, date_adopted="2026-10-04"), page(text, "https://b.example.com/2"), "secondary", TRIAGE)
+        v.take(item(quote=q), page(text, "https://c.example.com/3"), "secondary", TRIAGE)
+        v.take(item(kind="none", quote=q), page(text, "https://d.example.com/4"), "secondary", TRIAGE)
         self.assertEqual(reasons(v), ["conflicting sources", "nothing usable (kind none)"])
         row, = v.rows["moratoriums"]
         self.assertEqual(row["source_urls"], "https://a.example.com/1|https://c.example.com/3")
@@ -544,7 +593,8 @@ class FakeLlm:
 
     def complete_json(self, system, user, schema, model, max_tokens):
         self.calls.append(model)
-        a = self.answers.get(model, {"items": []})
+        default = {"verdict": "accept", "problems": [], "reason": "ok"} if "verdict" in schema["properties"] else {"items": []}
+        a = self.answers.get(model, default)
         if isinstance(a, Exception):
             raise a
         return copymod.deepcopy(a), Usage(100, 10)
@@ -574,31 +624,31 @@ FAIR = item(quote="the Fairbrook City Council voted 6-1 on October 5, 2026 to ad
 
 
 class Escalation(unittest.TestCase):
-    """Fix 5: Opus re-reads only verified items, and an item Opus drops becomes a lead."""
+    """Fix 5: the escalation model re-reads only verified items, and an item it drops becomes a lead."""
 
     def test_unverifiable_low_confidence_ban_not_escalated(self):
         pages = {LAKE_URL: page(LAKE, LAKE_URL)}
         bad = {**BAN, "confidence": 0.4, "quote": "a quote that does not appear anywhere on this page at all"}
-        report, notes, llm, _ = pipeline(pages, {SONNET: {"items": [bad]}})
-        self.assertNotIn(OPUS, llm.calls)
+        report, notes, llm, _ = pipeline(pages, {TRIAGE: {"items": [bad]}})
+        self.assertNotIn(ESCALATION, llm.calls)
         self.assertEqual(report["llm"]["escalated"], 0)
         self.assertIn("- quote not found on page: NJ Lakeview", notes)
 
-    def test_item_dropped_by_opus_is_lead(self):
+    def test_item_dropped_on_escalation_is_lead(self):
         pages = {LAKE_URL: page(LAKE, LAKE_URL)}
-        report, notes, llm, _ = pipeline(pages, {SONNET: {"items": [BAN, FAIR]}, OPUS: {"items": [BAN]}})
-        self.assertEqual(llm.calls.count(OPUS), 1)
+        report, notes, llm, _ = pipeline(pages, {TRIAGE: {"items": [BAN, FAIR]}, ESCALATION: {"items": [BAN]}})
+        self.assertEqual(llm.calls.count(ESCALATION), 1)
         self.assertEqual(report["rows"]["bans"], 1)
         self.assertEqual(report["rows"]["moratoriums"], 0)
-        self.assertIn("- dropped on Opus re-read: IN Fairbrook |", notes)
+        self.assertIn("- dropped on escalation re-read: IN Fairbrook |", notes)
 
 
 class PipelineNits(unittest.TestCase):
     def test_refusal_usage_is_tallied(self):
         report, _, _, _ = pipeline({LAKE_URL: page(LAKE, LAKE_URL)},
-                                   {SONNET: LlmRefusal("model refused", usage=Usage(700, 5))})
+                                   {TRIAGE: LlmRefusal("model refused", usage=Usage(700, 5))})
         self.assertEqual(report["llm"]["refusals"], 1)
-        self.assertEqual((report["llm"]["by_model"][SONNET]["input"], report["llm"]["by_model"][SONNET]["output"]), (700, 5))
+        self.assertEqual((report["llm"]["by_model"][TRIAGE]["input"], report["llm"]["by_model"][TRIAGE]["output"]), (700, 5))
 
     def test_search_stops_after_auth_error(self):
         s = FakeSearch(error=SearchError("brave search failed: HTTP 401", 401))

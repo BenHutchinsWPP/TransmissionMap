@@ -178,7 +178,7 @@ turns public datasets into PMTiles consumed by the frontend.
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
 - `scripts/moratoriums/` — data center moratorium pipeline (`rebuild.sh` over `build*.py` + `sync.py`) and the
-  weekly refresh (`refresh/`: search, fetch, extract, quote-verify, PR; `moratorium-refresh.yml`); inputs live on
+  twice-monthly refresh (`refresh/`: search, fetch, extract, quote-verify, review, publish; `moratorium-refresh.yml`); inputs live on
   the `data-moratoriums` branch. See its `README.md` and `docs/layers/dc-moratoriums.md`.
 - `scripts/data_manifest.yaml` — hand-written per-layer provenance (label,
   source, url, licence, `source_id`), one entry per `tile_manifest.yaml` `id`;

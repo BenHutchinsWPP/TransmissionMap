@@ -1,4 +1,4 @@
-"""Weekly refresh orchestrator: seeds + queries -> search -> fetch -> extract -> verify -> weekly CSVs.
+"""Refresh orchestrator: seeds + queries -> search -> fetch -> extract -> verify -> review -> weekly CSVs.
 
     python -m moratoriums.refresh.run --work W --dataset D --run-date YYYY-MM-DD \\
         --mode research|dry_run|rebuild_only [--build B] [--max-requests N] [--fixtures DIR]
@@ -12,8 +12,11 @@ the model only fills a JSON schema for one page at a time (prompts/extract.md, a
 prompts/seeds.md for tracker pages; a seed citation must be one of the page's own links).
 Every row needs a >= 40-character quote found in the FULL fetched page text, its jurisdiction
 named on that page, valid dates, a county (or a state/utility level), a status that only moves
-forward (FORWARD) and a schema-valid shape; anything else becomes a lead in notes.md. Notes
-cells embed the quote through `_note` only (build_research.REPL must never match page text).
+forward (FORWARD) and a schema-valid shape; anything else becomes a lead in notes.md. A cheap
+triage model reads every page, a stronger one re-reads the hard ones (escalation), and every
+resulting change then passes review.py (code checks, then the review model) or becomes a lead
+with the reason it was rejected. Notes cells embed the quote through `_note` only
+(build_research.REPL must never match page text).
 Writes, under WORK:
   inputs/research/weekly/<run-date>/{moratoriums,bans,utilities,updates}.csv (only files
     with rows; schema.py headers) + notes.md
@@ -28,13 +31,14 @@ back to `dry_run` (with a ::notice::) when one is missing. `dry_run` replays fix
 (fixtures/run/: search results by query id, pages by URL, canned model answers by URL) through
 FixtureSearch, FixtureFetcher and StubClient on a temporary copy of WORK's inputs, so WORK's
 inputs are never written; the copy is removed at exit unless --keep-temp (which prints its path).
-Search stops at the first HTTP 401/402/403. After Config.wall_clock_minutes (90) no further search, fetch
-or model call starts; the run verifies and writes what it has and records caps_hit "wall_clock". `rebuild_only` does no search and no model calls
+Search stops at the first HTTP 401/402/403. Searching, fetching and extraction stop
+Config.review_minutes (10) before Config.wall_clock_minutes (90), and the review stops at the wall
+clock; the run verifies, reviews and writes what it has and records caps_hit "wall_clock". `rebuild_only` does no search and no model calls
 (rebuild.sh rebuilds); with `--check-clean` it exits 1 when `git status` shows the four published
 files or WORK/inputs/ changed.
 
 New rows are research rows, which build_research.py marks verify_flag=True ("unconfirmed").
-Dependencies: config, queries, search, fetch, llm, verify, schema, textnorm (this package);
+Dependencies: config, queries, search, fetch, llm, verify, review, schema, textnorm (this package);
 stdlib otherwise. Keys and request headers are never printed.
 """
 from __future__ import annotations
@@ -58,11 +62,13 @@ from functools import lru_cache
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from .config import OPUS_MODEL, PRICES, SEC_QUERY_TERMS, SONNET_MODEL, US_STATES, Config
+from .config import (ESCALATION_MODEL, PRICES, REVIEW_MODEL, SEC_QUERY_TERMS, TRIAGE_MODEL, US_STATES,
+                     Config)
 from .fetch import FixtureFetcher, Page, PdfUnsupported, fetch, fetch_many, truncate_for_prompt, url_key
 from .llm import (AnthropicClient, LlmError, LlmRefusal, OpenRouterClient, StubClient, Usage, UsageTally,
                   make_client, stub_key)
 from .queries import plan_queries
+from .review import Claim, review_claims
 from .schema import STATUSES, TYPES, validate_row, write_rows
 from .search import BraveSearch, FixtureSearch, SearchBudgetExhausted, SearchError, fixture_key, normalize_url
 from .textnorm import jn, norm
@@ -195,6 +201,22 @@ def _row_context(r: dict) -> str:
             f"adopted {r.get('date_adopted') or '-'}, expires {r.get('date_expires') or '-'}")
 
 
+# The body that acted, trailing a local government's name ("Humboldt County Board of Supervisors",
+# "Memphis City Council"): the dataset names the place, so the matcher needs the place alone.
+BODY_SUFFIX = re.compile(
+    r"\s+(?:planning (?:commission|board)|board of (?:county )?(?:supervisors|commissioners|trustees|selectmen|aldermen|alders)"
+    r"|urban county council|metro council|fiscal court|(?:city|town|village|borough) (?:council|board(?: of trustees)?)"
+    r"|council|commission|commissioners|board|supervisors|trustees)$", re.I)
+LOCAL_LEVELS = ("city", "town", "village", "borough", "township", "county", "tribal")
+
+
+def place_name(name: str, level: str) -> str:
+    """A local government's name without the body that acted; other levels unchanged."""
+    if level not in LOCAL_LEVELS:
+        return name
+    return BODY_SUFFIX.sub("", name).strip() or name
+
+
 def _clean_item(it) -> dict | None:
     """Model item -> normalised dict, or None when a field is missing, mistyped or off-vocabulary."""
     if not isinstance(it, dict):
@@ -213,6 +235,7 @@ def _clean_item(it) -> dict | None:
     if (out["kind"] not in EXTRACT_KINDS or out["measure_type"] not in TYPES
             or out["jurisdiction_level"] not in LEVELS or out["status"] not in STATUSES):
         return None
+    out["jurisdiction_name"] = place_name(out["jurisdiction_name"], out["jurisdiction_level"])
     return out
 
 
@@ -302,7 +325,7 @@ def named_on_page(name: str, text: str) -> bool:
 
 
 def verify_key(c: dict) -> tuple[str, str]:
-    """What makes a Sonnet item and an Opus item the same claim."""
+    """What makes a triage item and an escalation item the same claim."""
     return c["state"], jn(c["jurisdiction_name"])
 
 
@@ -326,6 +349,8 @@ class Verifier:
     leads: list = field(default_factory=list)
     confirmed: list = field(default_factory=list)
     counts: Counter = field(default_factory=Counter)
+    claims: list = field(default_factory=list)  # review.Claim per written change, reviewed before anything is written
+    _page_text: str = ""
 
     def __post_init__(self):
         self.index = build_index(self.inp.dataset, self.inp.county_names)
@@ -409,6 +434,9 @@ class Verifier:
         self.counts[f"rows_{file}"] += 1
         return True
 
+    def _claim(self, kind, c, url, rows, target=None):
+        self.claims.append(Claim(kind=kind, c=c, url=url, page_text=self._page_text, rows=rows, target=target))
+
     def _merge(self, row, url, field_name="source_urls"):
         if url not in row[field_name].removeprefix("append ").split("|"):
             row[field_name] += "|" + url
@@ -445,6 +473,9 @@ class Verifier:
         if problems:
             self.lead("dates", url, c, "; ".join(problems))
             return
+        if c["status"] == "pending" and c["date_expires"]:
+            c = {**c, "date_expires": ""}  # a proposal's planned length is not an end date
+        self._page_text = page.text
         c = self._check_eia(c, page.text)
         if c["kind"] == "replacement" and self._replacement(c, url, quality, model):
             return
@@ -481,6 +512,7 @@ class Verifier:
         file, row = self._new_row(c, url, quality, model)
         if self._accept(file, row, c, url):
             self.run_keys[key] = row
+            self._claim("new", c, url, [(file, row)])
 
     def _seen_change(self, tid, c, url, values) -> bool:
         """A second page about a change already written: add its source, or a lead when it disagrees."""
@@ -525,6 +557,7 @@ class Verifier:
             if self._accept("moratoriums", row, c, url):
                 self.changed[tid] = (row, c)
                 self.run_keys[self._key(c)] = row
+                self._claim("replacement", c, url, [("moratoriums", row)], target)
             return True
         file, row = self._new_row(c, url, quality, model)
         rfile, rrow = self._research_file(tid)
@@ -541,6 +574,7 @@ class Verifier:
         self.counts["rows_updates"] += 1
         self.changed[tid] = (row, c)
         self.run_keys[self._key(c)] = row
+        self._claim("replacement", c, url, [(file, row), ("updates", upd)], target)
         return True
 
     def _change(self, c, target, url, quality, model):
@@ -566,11 +600,16 @@ class Verifier:
         if tid.startswith("nm-"):
             # Upstream rows change through a moratoriums.csv row carrying kind + upstream_id (sweep.csv convention).
             # A lift is written as a correction to status lifted: build_research applies status for corrections.
+            # build_research copies the row's dates over the upstream row's, so a date the page gives only
+            # vaguely (2026-09 for a tracked 2026-09-16) keeps the tracked, more precise value.
+            c = {**c, **{f: target[f] for f in ("date_adopted", "date_expires")
+                         if c[f] and (target.get(f) or "") != c[f] and (target.get(f) or "").startswith(c[f])}}
             ukind = "extension" if kind == "extension" else "correction"
             row = dict(id=self._id(c, ID_SUFFIX[ukind]), **self._base(c, url, quality, model),
                        county=c["county"], upstream_id=target.get("upstream_id") or tid[3:], kind=ukind)
             if self._accept("moratoriums", row, c, url):
                 self.changed[tid] = (row, {f: new for f, _, new in d})
+                self._claim(kind, c, url, [("moratoriums", row)], target)
             return
         file, rrow = self._research_file(tid)
         note = _note(model, c)
@@ -585,6 +624,7 @@ class Verifier:
         self.rows["updates"] += rows
         self.counts["rows_updates"] += len(rows)
         self.changed[tid] = (rows[-1], {f: new for f, _, new in d})  # the source_urls append row
+        self._claim(kind, c, url, [("updates", r) for r in rows], target)
 
 
 # ---------------------------------------------------------------- the pipeline
@@ -606,32 +646,38 @@ def _call_all(llm, jobs, over=lambda: False) -> list[tuple[object, object, str]]
         return list(pool.map(one, jobs))
 
 
-def models_for(llm, cfg: Config) -> tuple[str, str]:
-    """(triage, escalation) model ids. OpenRouter uses its own slugs unless DCM_SONNET_MODEL /
-    DCM_OPUS_MODEL name a different model."""
+def models_for(llm, cfg: Config) -> tuple[str, str, str]:
+    """(triage, escalation, review) model ids. OpenRouter uses its own slugs unless DCM_TRIAGE_MODEL,
+    DCM_ESCALATION_MODEL or DCM_REVIEW_MODEL name a different model."""
     if isinstance(llm, OpenRouterClient):
-        return (cfg.sonnet_model if cfg.sonnet_model != SONNET_MODEL else cfg.openrouter_sonnet,
-                cfg.opus_model if cfg.opus_model != OPUS_MODEL else cfg.openrouter_opus)
-    return cfg.sonnet_model, cfg.opus_model
+        return (cfg.triage_model if cfg.triage_model != TRIAGE_MODEL else cfg.openrouter_triage,
+                cfg.escalation_model if cfg.escalation_model != ESCALATION_MODEL else cfg.openrouter_escalation,
+                cfg.review_model if cfg.review_model != REVIEW_MODEL else cfg.openrouter_review)
+    return cfg.triage_model, cfg.escalation_model, cfg.review_model
 
 
 def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fetcher, llm,
              stage=None, mode: str = "research", providers: dict | None = None, clock=time.monotonic) -> dict:
     """The whole research run on WORK; returns the run report (also the caller writes it).
-    Past cfg.wall_clock_minutes (by `clock`) no further search, fetch or model call is issued;
-    what was gathered is still verified and written, and caps_hit gains "wall_clock"."""
+    Past cfg.wall_clock_minutes less cfg.review_minutes (by `clock`) no further search, fetch or
+    extraction call is issued, and past cfg.wall_clock_minutes no review call; what was gathered is
+    still verified, reviewed and written, and caps_hit gains "wall_clock"."""
     started = clock()
 
-    def over() -> bool:
+    def over() -> bool:  # searching, fetching and extracting stop early, leaving the review its minutes
+        return clock() - started >= (cfg.wall_clock_minutes - cfg.review_minutes) * 60
+
+    def review_over() -> bool:
         return clock() - started >= cfg.wall_clock_minutes * 60
 
     def timed_fetch(u):
         return Page(u, u, 0, "", "", error="wall_clock") if over() else fetcher(u)
 
     inp = load_inputs(work, dataset, run_date)
-    sonnet, opus = models_for(llm, cfg)
+    triage, escalation, reviewer = models_for(llm, cfg)
     sys_extract = (PROMPTS / "extract.md").read_text(encoding="utf-8")
     sys_seeds = (PROMPTS / "seeds.md").read_text(encoding="utf-8")
+    sys_review = (PROMPTS / "review.md").read_text(encoding="utf-8")
     tally = UsageTally()
     caps: set[str] = set()
     llm_calls = 0
@@ -661,8 +707,8 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
         if p.text and llm_calls + len(jobs) < cfg.max_llm_calls:
             user = seed_prompt(p, run_date)
             if stage:
-                stage("seeds", p.url, sonnet, user)
-            jobs.append((sys_seeds, user, SEED_SCHEMA, sonnet, SEED_MAX_TOKENS))
+                stage("seeds", p.url, triage, user)
+            jobs.append((sys_seeds, user, SEED_SCHEMA, triage, SEED_MAX_TOKENS))
             job_pages.append(p)
         elif p.text:
             caps.add("max_llm_calls")
@@ -672,7 +718,7 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
         if p.url not in seed_results:
             seed_report.append((p.url, f"fetch failed ({p.error or 'empty'})" if not p.text else "not read (max_llm_calls)"))
             continue
-        obj, err = tally_add(sonnet, seed_results[p.url])
+        obj, err = tally_add(triage, seed_results[p.url])
         if err == "wall_clock":
             seed_report.append((p.url, "not read (wall_clock)"))
             continue
@@ -740,7 +786,7 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
     pages = fetch_many([e["url"] for e in entries], timed_fetch, WORKERS)
     fetch_outcomes = Counter((p.error or ("ok" if p.text else "empty")) for p in pages)
 
-    # 4. Extract with Sonnet, within the call cap.
+    # 4. Extract with the triage model, within the call cap.
     todo = []
     for e, p in zip(entries, pages):
         if p.error == "wall_clock":
@@ -759,12 +805,12 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
         todo = todo[:room]
     for p, user in todo:
         if stage:
-            stage("sonnet", p.url, sonnet, user)
-    first = [tally_add(sonnet, r) for r in _call_all(llm, [(sys_extract, u, EXTRACT_SCHEMA, sonnet, EXTRACT_MAX_TOKENS)
+            stage("triage", p.url, triage, user)
+    first = [tally_add(triage, r) for r in _call_all(llm, [(sys_extract, u, EXTRACT_SCHEMA, triage, EXTRACT_MAX_TOKENS)
                                                             for _, u in todo], over)]
 
-    # 5. Escalate to Opus by rule, in page order, within both caps. Only items that already pass the
-    #    quote and date checks count: Opus is never paid to re-read a claim the page cannot support.
+    # 5. Escalate by rule, in page order, within both caps. Only items that already pass the quote and
+    #    date checks count: the escalation model is never paid to re-read a claim the page cannot support.
     def checked(obj, page) -> list[dict]:
         out = []
         for raw in _items(obj):
@@ -774,26 +820,26 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
                 out.append(c)
         return out
 
-    def needs_opus(obj, page):
+    def needs_escalation(obj, page):
         return any(c["confidence"] < 0.7 or c["measure_type"] == "permanent ban"
                    or c["jurisdiction_level"] in ("utility", "state_agency") or v.is_upstream_change(c)
                    for c in checked(obj, page))
 
-    escalate = [i for i, (obj, err) in enumerate(first) if not err and needs_opus(obj, todo[i][0])]
-    allowed = min(cfg.max_opus_calls, max(0, cfg.max_llm_calls - llm_calls))
+    escalate = [i for i, (obj, err) in enumerate(first) if not err and needs_escalation(obj, todo[i][0])]
+    allowed = min(cfg.max_escalation_calls, max(0, cfg.max_llm_calls - llm_calls))
     if len(escalate) > allowed:
-        caps.add("max_opus_calls" if allowed == cfg.max_opus_calls else "max_llm_calls")
+        caps.add("max_escalation_calls" if allowed == cfg.max_escalation_calls else "max_llm_calls")
         escalate = escalate[:allowed]
     for i in escalate:
         if stage:
-            stage("opus", todo[i][0].url, opus, todo[i][1])
-    second = _call_all(llm, [(sys_extract, todo[i][1], EXTRACT_SCHEMA, opus, EXTRACT_MAX_TOKENS) for i in escalate], over)
-    final = {i: (obj, err, sonnet) for i, (obj, err) in enumerate(first)}
-    dropped: dict[int, list[dict]] = {}  # page -> verified Sonnet items the Opus answer left out
+            stage("escalation", todo[i][0].url, escalation, todo[i][1])
+    second = _call_all(llm, [(sys_extract, todo[i][1], EXTRACT_SCHEMA, escalation, EXTRACT_MAX_TOKENS) for i in escalate], over)
+    final = {i: (obj, err, triage) for i, (obj, err) in enumerate(first)}
+    dropped: dict[int, list[dict]] = {}  # page -> verified triage items the escalation answer left out
     for i, res in zip(escalate, second):
-        obj, err = tally_add(opus, res)
-        if not err.startswith("error") and err != "wall_clock":  # an Opus failure keeps the Sonnet answer; a refusal stands
-            final[i] = (obj, err, opus)
+        obj, err = tally_add(escalation, res)
+        if not err.startswith("error") and err != "wall_clock":  # an escalation failure keeps the triage answer; a refusal stands
+            final[i] = (obj, err, escalation)
         if not err:
             got = {verify_key(c) for c in map(_clean_item, _items(obj)) if c is not None and c["kind"] != "none"}
             dropped[i] = [c for c in checked(first[i][0], todo[i][0]) if verify_key(c) not in got]
@@ -811,12 +857,16 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
             v.lead("extraction error", p.final_url, None, err)
             continue
         for c in dropped.get(i, []):
-            v.lead("dropped on Opus re-read", p.final_url, c)
+            v.lead("dropped on escalation re-read", p.final_url, c)
         quality = source_quality(p.final_url, p.kind)
         for raw in _items(obj):
             v.take(raw, p, quality, model)
 
-    # 7. Write the weekly folder and refresh_state.json.
+    # 7. Review every change before anything is written; a rejected one becomes a lead with its reason.
+    review = review_claims(v, inp.dataset, run_date, llm, reviewer, sys_review, cfg.max_review_calls,
+                           _call_all, tally_add, _family, review_over, stage)
+
+    # 8. Write the weekly folder and refresh_state.json.
     out = work / "inputs" / "research" / "weekly" / run_date.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     for k in OUT_FILES:
@@ -830,8 +880,6 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
     (work / "inputs" / "refresh_state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     prices = dict(PRICES)
-    prices[cfg.openrouter_sonnet] = PRICES[SONNET_MODEL]
-    prices[cfg.openrouter_opus] = PRICES[OPUS_MODEL]
     price_assumed = tally.price_notes(prices)
     by_model = {m: {"calls": tally.calls[m], "input": u.input_tokens, "output": u.output_tokens,
                     "cache_read": u.cache_read_input_tokens, "cache_write": u.cache_creation_input_tokens}
@@ -860,6 +908,7 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
                   "confirmed_unchanged": v.counts["confirmed"], "merged": v.counts["merged"],
                   "eia_id_blanked": v.counts["eia_id_blanked"]},
         "rows": {k: len(v.rows[k]) for k in OUT_FILES},
+        "review": review,
         "leads": {"total": len(v.leads), "by_reason": dict(sorted(lead_reasons.items()))},
         "refresh_state_updated": len(set(queried)),
         "out_dir": out.relative_to(work).as_posix(),
@@ -890,6 +939,15 @@ def _notes(report: dict, v: Verifier, seed_report) -> str:
         out.append(f"- {l['reason']}: " + " | ".join(x for x in (who, l["url"], l["detail"]) if x))
     if not v.leads:
         out.append("- none")
+    rv = r.get("review") or {}
+    out += ["", "## Rejected in review", "",
+            f"{rv.get('claims', 0)} changes reviewed, {rv.get('accepted', 0)} accepted. "
+            "A rejected change is not written; publish it by adding its row to this folder's CSVs, citing a page.", ""]
+    for x in rv.get("rejected", []):
+        target = f" (row {x['target']})" if x.get("target") else ""
+        out.append(f"- {x['state']} {x['name']}{target}, {x['kind']}: {', '.join(x['problems'])}. {x['reason']} | {x['url']}")
+    if not rv.get("rejected"):
+        out.append("- none")
     undrawn = [x["id"] for x in v.rows["utilities"] if x["jurisdiction_level"] == "utility" and not x["eia_id"]]
     out += ["", "## Utilities without an EIA id", ""]
     out += [f"- {i}: will not be drawn until its EIA-861 eia_id is added" for i in undrawn] or ["- none"]
@@ -910,7 +968,7 @@ class Stager:
     """Lays fixtures/run/ out in the FixtureSearch / FixtureFetcher / StubClient layouts under `dst`.
 
     Source files: search.json {query id: [Brave result]}, pages.json {url: file under pages/},
-    llm.json {url: {"seeds"|"sonnet"|"opus": answer}}. Answers are keyed by URL here and staged under
+    llm.json {url: {"seeds"|"triage"|"escalation"|"review": answer}}. Answers are keyed by URL here and staged under
     the exact prompt the run builds, so editing a prompt needs no fixture regeneration."""
 
     def __init__(self, src: Path, dst: Path):

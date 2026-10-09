@@ -437,6 +437,30 @@ class LlmRobustnessTests(unittest.TestCase):
             self.assertEqual((cm.exception.status, len(op.requests)), (0, 4))
             self.assertNotIn("SECRET", str(cm.exception))
 
+    def test_rate_limit_waits_longer_and_retries_more(self):
+        # 2026-10-09: 73 of 246 calls failed on OpenRouter's new-account per-minute limit
+        waits = []
+        limited = urllib.error.HTTPError("https://x.test/", 429, "err", {"Retry-After": "7"}, None)
+        op = Opener(limited, http_error(429), http_error(429), http_error(429), FakeResp(self.fixture(), "application/json"))
+        c = L.AnthropicClient("SECRET", opener=op, sleep=waits.append)
+        c.complete_json("s", "u", SCHEMA, "m", 100)
+        self.assertEqual(len(op.requests), 5)  # more than MAX_RETRIES (3) for a rate limit
+        self.assertEqual(waits, [7.0, 20.0, 40.0, 60.0])  # Retry-After first, then 10 * 2**attempt, capped at 60
+
+    def test_rate_limit_gives_up_after_its_own_cap(self):
+        op = Opener(*[http_error(429)] * 10)
+        c = L.AnthropicClient("SECRET", opener=op, sleep=lambda s: None)
+        with self.assertRaises(L.LlmError) as cm:
+            c.complete_json("s", "u", SCHEMA, "m", 100)
+        self.assertEqual((cm.exception.status, len(op.requests)), (429, L.RATE_LIMIT_RETRIES + 1))
+
+    def test_server_error_keeps_the_short_retry_count(self):
+        op = Opener(*[http_error(503)] * 10)
+        c = L.AnthropicClient("SECRET", opener=op, sleep=lambda s: None)
+        with self.assertRaises(L.LlmError):
+            c.complete_json("s", "u", SCHEMA, "m", 100)
+        self.assertEqual(len(op.requests), L.MAX_RETRIES + 1)
+
     def test_401_body_message_included(self):
         body = json.dumps({"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}).encode()
         c, _ = anth_client(err_resp(401, body))
@@ -461,7 +485,8 @@ class OpenRouterTests(unittest.TestCase):
         req = op.requests[0][0]
         body = json.loads(req.data)
         self.assertEqual(req.get_header("Authorization"), "Bearer SECRET")
-        self.assertEqual(body["messages"][0], {"role": "system", "content": "SYS"})
+        self.assertEqual(body["messages"][0], {"role": "system", "content": [
+            {"type": "text", "text": "SYS", "cache_control": {"type": "ephemeral"}}]})
         self.assertEqual(body["response_format"]["json_schema"],
                          {"name": "extract", "strict": True, "schema": SCHEMA})
         self.assertEqual(obj["items"][0]["state"], "OH")
@@ -581,11 +606,11 @@ class StubAndFactoryTests(unittest.TestCase):
 
     def test_opus_cost_from_price_table(self):
         t = L.UsageTally()
-        t.add(config.OPUS_MODEL, L.Usage(1_000_000, 1_000_000, 1_000_000, 1_000_000))
+        t.add(config.REVIEW_MODEL, L.Usage(1_000_000, 1_000_000, 1_000_000, 1_000_000))
         self.assertAlmostEqual(t.est_cost(config.PRICES), 4.0 + 20.0 + 0.2 + 5.0)
         self.assertAlmostEqual(t.est_cost(), 29.2)
         s = L.UsageTally()
-        s.add(config.SONNET_MODEL, L.Usage(1_000_000, 1_000_000, 0, 0))
+        s.add(config.ESCALATION_MODEL, L.Usage(1_000_000, 1_000_000, 0, 0))
         self.assertAlmostEqual(s.est_cost(), 12.0)
 
     def test_tally_thread_safe(self):

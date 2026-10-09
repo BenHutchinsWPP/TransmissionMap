@@ -12,11 +12,15 @@ import os
 from dataclasses import dataclass, fields, replace
 from typing import Mapping
 
-# Model ids. The OpenRouter slugs are checked against https://openrouter.ai/api/v1/models (2026-10-08).
-SONNET_MODEL = "claude-sonnet-5-5"
-OPUS_MODEL = "claude-opus-5-5"
-OPENROUTER_SONNET = "anthropic/claude-sonnet-5.5"
-OPENROUTER_OPUS = "anthropic/claude-opus-5.5"
+# Model ids, one per role: a cheap model reads every page (triage), a mid-tier model re-reads the
+# hard ones (escalation), and the strongest model reviews each change before it publishes (review).
+# The OpenRouter slugs are checked against https://openrouter.ai/api/v1/models (2026-10-09).
+TRIAGE_MODEL = "claude-haiku-5-5"
+ESCALATION_MODEL = "claude-sonnet-5-5"
+REVIEW_MODEL = "claude-opus-5-5"
+OPENROUTER_TRIAGE = "anthropic/claude-haiku-5.5"
+OPENROUTER_ESCALATION = "anthropic/claude-sonnet-5.5"
+OPENROUTER_REVIEW = "anthropic/claude-opus-5.5"
 
 SEED_PAGES: tuple[str, ...] = (
     "https://www.savrn.com/data-center-moratorium-tracker",
@@ -60,12 +64,15 @@ DISCOVERY_QUERIES: tuple[str, ...] = (
 
 # USD per million tokens; list prices 2026-10, verify on the pricing page.
 PRICES: dict[str, dict[str, float]] = {
-    SONNET_MODEL: {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5},
-    OPUS_MODEL: {"input": 4.0, "output": 20.0, "cache_read": 0.2, "cache_write": 5.0},
+    TRIAGE_MODEL: {"input": 0.1, "output": 0.5, "cache_read": 0.01, "cache_write": 0.125},
+    ESCALATION_MODEL: {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5},
+    REVIEW_MODEL: {"input": 4.0, "output": 20.0, "cache_read": 0.2, "cache_write": 5.0},
 }
+PRICES.update({OPENROUTER_TRIAGE: PRICES[TRIAGE_MODEL], OPENROUTER_ESCALATION: PRICES[ESCALATION_MODEL],
+               OPENROUTER_REVIEW: PRICES[REVIEW_MODEL]})
 
 # Probe models per provider (used by `llm --probe`).
-PROBE_MODELS = {"anthropic": SONNET_MODEL, "openrouter": OPENROUTER_SONNET}
+PROBE_MODELS = {"anthropic": TRIAGE_MODEL, "openrouter": OPENROUTER_TRIAGE}
 
 US_STATES: dict[str, str] = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
@@ -90,17 +97,21 @@ class Config:
     max_requests: int = 220
     max_pages: int = 300
     max_llm_calls: int = 400
-    max_opus_calls: int = 40
+    max_escalation_calls: int = 40
+    max_review_calls: int = 60
     discovery_reserved: int = 20
     # Stop issuing searches, fetches and model calls after this long, so the job's own timeout
     # never ends a run after its credits are spent; what was gathered is still verified and written.
     wall_clock_minutes: int = 90
+    review_minutes: int = 10  # of the wall clock, kept for the review: gathering stops this much earlier
     expiry_window_days: int = 21  # wider than the longest gap between runs (16 days)
     stale_days: int = 90
-    sonnet_model: str = SONNET_MODEL
-    opus_model: str = OPUS_MODEL
-    openrouter_sonnet: str = OPENROUTER_SONNET
-    openrouter_opus: str = OPENROUTER_OPUS
+    triage_model: str = TRIAGE_MODEL
+    escalation_model: str = ESCALATION_MODEL
+    review_model: str = REVIEW_MODEL
+    openrouter_triage: str = OPENROUTER_TRIAGE
+    openrouter_escalation: str = OPENROUTER_ESCALATION
+    openrouter_review: str = OPENROUTER_REVIEW
     seed_pages: tuple[str, ...] = SEED_PAGES
     discovery_queries: tuple[str, ...] = DISCOVERY_QUERIES
     # Per-priority request shares (D10); an unused share flows down to the next group.
@@ -114,7 +125,7 @@ class Config:
     @classmethod
     def load(cls, env: Mapping[str, str] | None = None,
              overrides: Mapping[str, object] | None = None) -> "Config":
-        """Defaults, then `DCM_<FIELD>` env vars (int fields; `DCM_SONNET_MODEL`/`DCM_OPUS_MODEL` strings, blank = default), then `overrides`."""
+        """Defaults, then `DCM_<FIELD>` env vars (int fields; `DCM_TRIAGE_MODEL`/`DCM_ESCALATION_MODEL`/`DCM_REVIEW_MODEL` strings, blank = default), then `overrides`."""
         env = os.environ if env is None else env
         cfg = cls()
         changes: dict[str, object] = {}
@@ -123,7 +134,7 @@ class Config:
                 raw = env.get("DCM_" + f.name.upper())
                 if raw not in (None, ""):
                     changes[f.name] = int(raw)
-        for name in ("sonnet_model", "opus_model"):
+        for name in ("triage_model", "escalation_model", "review_model"):
             raw = (env.get("DCM_" + name.upper()) or "").strip()
             if raw:
                 changes[name] = raw

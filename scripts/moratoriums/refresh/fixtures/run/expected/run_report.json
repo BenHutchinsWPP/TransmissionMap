@@ -31,25 +31,32 @@
   },
   "llm": {
     "by_model": {
-      "claude-opus-5-5": {
-        "cache_read": 1100,
-        "cache_write": 0,
-        "calls": 3,
-        "input": 2100,
-        "output": 300
-      },
-      "claude-sonnet-5-5": {
+      "claude-haiku-5-5": {
         "cache_read": 1100,
         "cache_write": 1200,
         "calls": 13,
         "input": 5300,
         "output": 432
+      },
+      "claude-opus-5-5": {
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 7,
+        "input": 0,
+        "output": 0
+      },
+      "claude-sonnet-5-5": {
+        "cache_read": 1100,
+        "cache_write": 0,
+        "calls": 3,
+        "input": 2100,
+        "output": 300
       }
     },
-    "calls": 16,
+    "calls": 23,
     "errors": 0,
     "escalated": 3,
-    "est_cost_usd": 0.03276,
+    "est_cost_usd": 0.008327,
     "refusals": 1
   },
   "mode": "dry_run",
@@ -75,6 +82,13 @@
     "stopped_on_http": 0
   },
   "refresh_state_updated": 5,
+  "review": {
+    "accepted": 7,
+    "by": {},
+    "claims": 7,
+    "model_calls": 7,
+    "rejected": []
+  },
   "rows": {
     "bans": 1,
     "moratoriums": 4,

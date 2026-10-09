@@ -37,6 +37,11 @@ ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 RETRY_CODES = {429, 500, 502, 503, 504, 529}
 MAX_RETRIES = 3
+# A rate limit (429) is retried more often and waits longer than a server or network error: the
+# API's Retry-After when it sends one, else 10, 20, 40, 60, 60 seconds. New OpenRouter accounts
+# have a low per-minute limit.
+RATE_LIMIT_RETRIES = 5
+RATE_LIMIT_WAIT_MAX = 60
 JSON_ONLY_NOTE = "\n\nReturn only JSON matching the schema"
 NETWORK_ERRORS = (urllib.error.URLError, TimeoutError, ConnectionResetError, http.client.RemoteDisconnected)
 
@@ -78,12 +83,12 @@ class LlmClient(Protocol):
 
 def price_for(model: str, prices: Mapping[str, Mapping[str, float]]) -> tuple[Mapping[str, float] | None, str]:
     """(price, family): the model's own entry (family ""), else the first priced model of the same
-    family named in its id ("sonnet" or "opus"), else (None, "")."""
+    family named in its id ("haiku", "sonnet" or "opus"), else (None, "")."""
     own = prices.get(model)
     if own:
         return own, ""
     low = model.lower()
-    for family in ("opus", "sonnet"):
+    for family in ("opus", "sonnet", "haiku"):
         if family in low:
             for key, p in prices.items():
                 if family in key.lower() and p:
@@ -106,7 +111,7 @@ class UsageTally:
         return sum(self.by_model.values(), Usage())
 
     def price_notes(self, prices: Mapping[str, Mapping[str, float]] = PRICES) -> dict[str, str]:
-        """Models billed at a family price rather than their own: {model: "sonnet"|"opus"}; a model with
+        """Models billed at a family price rather than their own: {model: "haiku"|"sonnet"|"opus"}; a model with
         no family match is {model: "unpriced"} and adds nothing to `est_cost`."""
         out = {}
         for model in self.by_model:
@@ -147,11 +152,19 @@ def _error_detail(body: bytes) -> str:
     return ": ".join(str(x) for x in parts if x)[:300]
 
 
+def _retry_after(headers) -> float:
+    """Seconds from a Retry-After header (capped at RATE_LIMIT_WAIT_MAX), 0 when absent or not a number."""
+    try:
+        return min(float(RATE_LIMIT_WAIT_MAX), max(0.0, float((headers or {}).get("Retry-After") or 0)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _post_json(url: str, headers: dict, body: dict, opener: Callable | None,
                sleep: Callable[[float], None]) -> dict:
     data = json.dumps(body).encode()
     host = url.split("/")[2]
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(RATE_LIMIT_RETRIES + 1):
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
         try:
             with (opener or urllib.request.urlopen)(req, timeout=120) as resp:
@@ -165,10 +178,14 @@ def _post_json(url: str, headers: dict, body: dict, opener: Callable | None,
                 detail = ""
             finally:
                 e.close()
-            if e.code not in RETRY_CODES or attempt == MAX_RETRIES:
+            last = attempt >= (RATE_LIMIT_RETRIES if e.code == 429 else MAX_RETRIES)
+            if e.code not in RETRY_CODES or last:
                 raise LlmError(f"HTTP {e.code} from {host}" + (f" ({detail})" if detail else ""), e.code) from None
+            if e.code == 429:
+                sleep(_retry_after(e.headers) or min(RATE_LIMIT_WAIT_MAX, 10.0 * 2 ** attempt))
+                continue
         except NETWORK_ERRORS as e:
-            if attempt == MAX_RETRIES:
+            if attempt >= MAX_RETRIES:
                 raise LlmError(f"network error {type(e).__name__} from {host}", 0) from None
         sleep(2.0 ** attempt)
     raise LlmError("unreachable")
@@ -267,7 +284,11 @@ class OpenRouterClient:
         body = {
             "model": model,
             "max_tokens": max_tokens,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            # The system prompt is the same on every call of a stage: marked cacheable, Anthropic models
+            # behind OpenRouter bill repeat reads at the cache price.
+            "messages": [{"role": "system", "content": [{"type": "text", "text": system,
+                                                         "cache_control": {"type": "ephemeral"}}]},
+                         {"role": "user", "content": user}],
         }
         if structured:
             body["response_format"] = {"type": "json_schema",
@@ -341,7 +362,8 @@ def stub_key(model: str, user: str) -> str:
 
 
 class StubClient:
-    """Canned answers from <dir>/llm/<sha1(model|user)>.json, else {"items": []}; no network.
+    """Canned answers from <dir>/llm/<sha1(model|user)>.json, else {"items": []} (an accept for a
+    review schema); no network.
     A canned answer may carry `"_usage": {...}` (Usage fields, tallied as if billed) and
     `"_refusal": true` (raises LlmRefusal carrying that usage, as a real refusal does)."""
 
@@ -357,6 +379,8 @@ class StubClient:
                 if obj.pop("_refusal", False):
                     raise LlmRefusal("model refused", usage=usage)
                 return obj, usage
+        if "verdict" in (schema.get("properties") or {}):
+            return {"verdict": "accept", "problems": [], "reason": "stub review"}, Usage()
         return {"items": []}, Usage()
 
 

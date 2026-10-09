@@ -85,12 +85,15 @@ changes reach the map without review. A run dispatched with
 | Follow-up | Searches for rows already in the dataset: pending measures, measures expiring within 21 days, utilities, and a rotating slice of measures with no end date |
 | Discovery | A fixed list of general queries for new moratoriums, bans and utility pauses |
 | Sources | [Brave Search](https://brave.com/search/api/) (news and web), tracker seed pages (savrn.com, datacenterbans.com, dcmap.us, servercountry.org, strisker briefings, the NJ Pinelands ordinance log) and SEC full-text search for utilities |
-| Extraction | A model reads one fetched page at a time and fills a fixed JSON schema; it chooses no queries, URLs or files |
+| Extraction | A cheap model (Claude Haiku) reads one fetched page at a time and fills a fixed JSON schema; a stronger one (Claude Sonnet) re-reads the harder pages. Neither chooses queries, URLs or files |
+| Review | Every new row and every change to a tracked row is checked in code (duplicates, a change about a different place) and by Claude Opus against the page before it is written; a rejected change is only listed, with its reasons |
 | Rebuild | The pipeline in `scripts/moratoriums/` rebuilds the four published files from the branch's `inputs/` |
 
 Verification rule: a row is kept only when its quote (at least 40
 characters) appears in the fetched page text, the place is named on that
-page, and the dates are valid. Anything else is listed as a lead in
+page, the dates are valid, and the review accepts it: same place, not a
+duplicate, actually adopted rather than proposed, and dates the page supports
+at least as precisely as the tracked ones. Anything else is listed as a lead in
 `inputs/research/weekly/<date>/notes.md`. Every new row is marked
 unconfirmed, with its source attached.
 
@@ -100,8 +103,8 @@ estimated cost. A run publishes every week, because `refresh_state.json` and
 `notes.md` change on every run. Reviewing and the secrets it needs are in the
 [pipeline README](../../scripts/moratoriums/README.md).
 
-To stop it, disable the workflow in the Actions tab (Moratorium weekly
-refresh, Disable workflow). To take back a week, revert its commit on
+To stop it, disable the workflow in the Actions tab (Moratorium refresh,
+Disable workflow). To take back a week, revert its commit on
 `data-moratoriums`.
 
 ## Download pack

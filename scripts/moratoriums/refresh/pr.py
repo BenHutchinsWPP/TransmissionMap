@@ -1,7 +1,7 @@
-"""Pull-request step of the weekly moratorium refresh: PR body, carry-over and publish.
+"""Publish step of the moratorium refresh: the run's report, carry-over and publish.
 
-Role: turns one refresh run into one rolling pull request (`refresh/weekly` -> `data-moratoriums`,
-plan D8). Subcommands:
+Role: turns one refresh run into one commit on `data-moratoriums` (--direct), or one rolling pull
+request (`refresh/weekly` -> `data-moratoriums`, plan D8). Subcommands:
   carry-over  with an open refresh PR, copy its inputs/research/weekly/** and
               inputs/refresh_state.json into the checkout (which sits at the base tip); exits 3
               when the PR head changed anything a rebuild would overwrite (a reviewer edit there
@@ -13,8 +13,9 @@ plan D8). Subcommands:
               push, so it fails rather than overwrite a base that moved).
 Reads run_report.json (refresh/run.py), BUILD/qa_research.csv (build_research.py) and
 BUILD/logs/rebuild.log (else build_layer.log) for build_layer.py territory WARNING lines. Writes BUILD/pr_body.md.
-The title and summary count new rows that reached the map (this run's weekly ids found in the
-rebuilt moratoriums.csv) and show how many were not drawn; the QA table says why.
+The title and tables come from the events the rebuild appended to events.csv (`added` = new on
+the map, `expired`, every other event = an updated row), so they say what was published, and the
+report's review section lists every change the review rejected, with its reasons.
 Every git and gh call is an argument list through `Runner`; with --mode dry_run or PR_DRY_RUN=1
 the mutating calls are printed, not run. GH_TOKEN comes from the environment and is never printed.
 Dependencies: stdlib, and the git and gh CLIs.
@@ -42,7 +43,6 @@ WEEKLY_PREFIX = "inputs/research/weekly/"
 ALLOWED_EXACT = frozenset(ROOT_FILES) | {"inputs/refresh_state.json"}
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
-ROW_FILES = ("moratoriums", "bans", "utilities")
 PERMISSION_HINT = (
     'gh was refused. In the repository, enable Settings > Actions > General > Workflow permissions >'
     ' "Allow GitHub Actions to create and approve pull requests".'
@@ -98,23 +98,19 @@ def _link(row: dict) -> str:
     return f"[source]({u})" if u else ""
 
 
-def count_rows(report: dict) -> tuple[int, int]:
-    rows = report.get("rows", {})
-    return sum(int(rows.get(k, 0)) for k in ROW_FILES), int(rows.get("updates", 0))
+def published_changes(checkout: Path, events: list[dict]) -> tuple[list[dict], list[dict], int]:
+    """What the rebuild published, from the events it appended: (new rows from the rebuilt
+    moratoriums.csv, one dict per other event with the row's state and name, expired count).
+    Summary-only edits log no event, so they are not listed."""
+    rows = {r.get("id"): r for r in read_csv(checkout / "moratoriums.csv")}
+    new = [rows[i] for i in dict.fromkeys(e.get("id") for e in events if e.get("event") == "added") if i in rows]
+    changes = [dict(e, state=rows.get(e.get("id"), {}).get("state", ""), name=rows.get(e.get("id"), {}).get("name", ""))
+               for e in events if e.get("event") not in ("added", "expired")]
+    return new, changes, sum(1 for e in events if e.get("event") == "expired")
 
 
-def on_map_ids(checkout: Path, new_rows: list[dict]) -> set[str]:
-    """Ids of this run's new rows that the rebuild published in the checkout's moratoriums.csv."""
-    drawn = {r.get("id") for r in read_csv(checkout / "moratoriums.csv")}
-    return {r["id"] for r in new_rows if r.get("id") in drawn}
-
-
-def make_title(report: dict, run_date: str, expired: int, on_map: int | None = None) -> str:
-    """`on_map` (new rows that reached the map) replaces the report's extracted-row count when known."""
-    new, changes = count_rows(report)
-    if on_map is not None:
-        new = on_map
-    return f"Moratorium refresh {run_date}: +{new} new, {changes} changes, {expired} expired"
+def make_title(run_date: str, new: int, updated: int, expired: int) -> str:
+    return f"Moratorium refresh {run_date}: +{new} new, {updated} updated, {expired} expired"
 
 
 def _table(headers: list[str], rows: list[list[str]], limit: int) -> list[str]:
@@ -127,26 +123,42 @@ def _table(headers: list[str], rows: list[list[str]], limit: int) -> list[str]:
     return out + [""]
 
 
-def _render(report, diff_stat, new_rows, changed_rows, qa_rows, territory_warnings, run_date, mode,
-            events_added, expired, limit, on_map=None, added_events=None) -> str:
-    extracted_n, change_n = count_rows(report)
-    new_cell = str(extracted_n) if on_map is None else f"{on_map} on the map, {max(0, extracted_n - on_map)} not drawn (see QA)"
+def _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, run_date, mode,
+            events_added, expired, limit) -> str:
+    updated = len({c.get("id") for c in changes})
     llm = report.get("llm", {})
     fetch = report.get("fetch", {})
     leads = report.get("leads", {})
-    L = [f"# {make_title(report, run_date, expired, on_map)}", "",
-         f"Run mode: `{mode}`. Rows are AI-extracted from public pages and marked unconfirmed; check each source before merging."
-         " Carried-over rows are re-synced every run, so their `events.csv` `recorded_at` is the latest run's date.", "",
+    rv = report.get("review") or {}
+    rejected = rv.get("rejected", [])
+    written = sum(int(n) for n in (report.get("rows") or {}).values())
+    L = [f"# {make_title(run_date, len(new_rows), updated, expired)}", "",
+         f"Run mode: `{mode}`. Rows are AI-extracted from public pages, checked against a quote on the page and"
+         " reviewed before publishing; new rows are marked unconfirmed until a person confirms them.", "",
          "## Summary", "", "| item | count |", "|---|---|",
-         f"| new rows | {new_cell} |", f"| changes to existing rows | {change_n} |",
-         f"| events added | {events_added}" + ("" if added_events is None else f" ({added_events} `added`)") + " |", f"| expired | {expired} |",
+         f"| new on the map | {len(new_rows)} |", f"| rows updated | {updated} |", f"| expired | {expired} |",
+         f"| changes reviewed | {rv.get('claims', 0)}: {rv.get('accepted', 0)} accepted, {len(rejected)} rejected |",
+         f"| input rows written | {written} |", f"| events added | {events_added} |",
          f"| leads | {leads.get('total', 0)} |", ""]
     if diff_stat.strip():
         L += ["```", diff_stat.strip(), "```", ""]
+    L += ["## New rows", ""]
+    L += _table(["state", "name", "type", "status", "adopted", "source"],
+                [[_cell(r.get("state")), _cell(r.get("name")), _cell(r.get("type")), _cell(r.get("status")),
+                  _cell(r.get("date_adopted")), _link(r)] for r in new_rows], limit)
+    L += ["## Updated rows", ""]
+    L += _table(["state", "name", "event", "field", "old", "new"],
+                [[_cell(c.get("state")), _cell(c.get("name")), _cell(c.get("event")), _cell(c.get("field")),
+                  _cell(c.get("old"), 60), _cell(c.get("new"), 60)] for c in changes], limit)
+    L += ["## Rejected in review", ""]
+    L += _table(["state", "name", "change", "problems", "reason", "source"],
+                [[_cell(x.get("state")), _cell(x.get("name")), _cell(x.get("kind")), _cell(", ".join(x.get("problems", []))),
+                  _cell(x.get("reason"), 200), _link({"source_urls": x.get("url", "")})] for x in rejected], limit)
     by_model = llm.get("by_model", {})
     L += ["## Cost and usage", "",
           f"- Search requests: {report.get('search_requests', 0)}",
-          f"- Model calls: {llm.get('calls', 0)} ({llm.get('errors', 0)} errors, {llm.get('refusals', 0)} refusals, {llm.get('escalated', 0)} escalated)",
+          f"- Model calls: {llm.get('calls', 0)} ({llm.get('errors', 0)} errors, {llm.get('refusals', 0)} refusals,"
+          f" {llm.get('escalated', 0)} escalated, {rv.get('model_calls', 0)} reviews)",
           f"- Estimated cost: ${float(llm.get('est_cost_usd', 0)):.2f}"]
     for name in sorted(by_model):
         m = by_model[name]
@@ -160,14 +172,6 @@ def _render(report, diff_stat, new_rows, changed_rows, qa_rows, territory_warnin
     outcomes = fetch.get("outcomes", {})
     L += ["## Fetch outcomes", "", f"{fetch.get('pages', 0)} pages" + (f", success rate {fetch['rate']}" if "rate" in fetch else "")
           + (": " + ", ".join(f"{k} {outcomes[k]}" for k in sorted(outcomes)) if outcomes else ""), ""]
-    L += ["## New rows", ""]
-    L += _table(["state", "name", "type", "status", "adopted", "source"],
-                [[_cell(r.get("state")), _cell(r.get("jurisdiction_name")), _cell(r.get("type")), _cell(r.get("status")),
-                  _cell(r.get("date_adopted")), _link(r)] for r in new_rows], limit)
-    L += ["## Changed rows", ""]
-    L += _table(["id", "field", "old", "new", "source"],
-                [[_cell(r.get("id")), _cell(r.get("field")), _cell(r.get("old"), 60), _cell(r.get("new"), 60), _link(r)]
-                 for r in changed_rows], limit)
     L += ["## QA flags for this run's rows", ""]
     L += _table(["id", "issue", "detail"], [[_cell(r.get("id")), _cell(r.get("issue")), _cell(r.get("detail"))] for r in qa_rows], limit)
     L += ["## Territory warnings", ""]
@@ -179,21 +183,21 @@ def _render(report, diff_stat, new_rows, changed_rows, qa_rows, territory_warnin
     else:
         L += ["_none_", ""]
     L += ["## Leads", "",
-          f"{leads.get('total', 0)} candidates did not pass verification; see `inputs/research/weekly/{run_date}/notes.md`.", "",
-          "## Reviewing", "",
-          "To reject a row, add an `updates.csv` `DROP` line for it (or delete the row) in this pull request,"
-          " then dispatch the workflow with `mode=rebuild_only`. That rebuilds this branch from its `inputs/` without any search or model call.", ""]
+          f"{leads.get('total', 0)} candidates did not pass verification or review; see `inputs/research/weekly/{run_date}/notes.md`.", "",
+          "## Correcting a row", "",
+          "Add an `updates.csv` line (`field=DROP` removes a row) under `inputs/research/weekly/` and rebuild:"
+          " locally with `rebuild.sh`, or for a pull request by dispatching the workflow with `mode=rebuild_only`."
+          " A published week is taken back with `git revert` on `data-moratoriums`.", ""]
     return "\n".join(L)
 
 
-def build_body(report: dict, diff_stat: str, new_rows: list[dict], changed_rows: list[dict], qa_rows: list[dict],
-               territory_warnings: list[str], run_date: str, mode: str, events_added: int = 0, expired: int = 0,
-               on_map: int | None = None, added_events: int | None = None) -> str:
-    """PR markdown under MAX_BODY characters; tables shrink with an "… and N more" count when needed."""
+def build_body(report: dict, diff_stat: str, new_rows: list[dict], changes: list[dict], qa_rows: list[dict],
+               territory_warnings: list[str], run_date: str, mode: str, events_added: int = 0, expired: int = 0) -> str:
+    """Report markdown under MAX_BODY characters; tables shrink with an "… and N more" count when needed."""
     limit = 200
     while True:
-        body = _render(report, diff_stat, new_rows, changed_rows, qa_rows, territory_warnings, run_date, mode,
-                       events_added, expired, limit, on_map, added_events)
+        body = _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, run_date, mode,
+                       events_added, expired, limit)
         if len(body) <= MAX_BODY or limit <= 1:
             break
         limit //= 2
@@ -273,14 +277,7 @@ def load_report(path: Path) -> dict:
         return {}
 
 
-def weekly_rows(checkout: Path, run_date: str) -> tuple[list[dict], list[dict]]:
-    d = checkout / "inputs" / "research" / "weekly" / run_date
-    new = [r for k in ROW_FILES for r in read_csv(d / f"{k}.csv")]
-    return new, read_csv(d / "updates.csv")
-
-
-def filter_qa(qa_rows: list[dict], new_rows: list[dict], changed_rows: list[dict]) -> list[dict]:
-    ids = {r.get("id") for r in new_rows + changed_rows}
+def filter_qa(qa_rows: list[dict], ids: set) -> list[dict]:
     return [r for r in qa_rows if r.get("id") in ids]
 
 
@@ -300,12 +297,6 @@ def new_events(run, checkout: Path, base: str) -> list[dict]:
     p = run(["git", "show", f"origin/{base}:events.csv"], check=False)
     old_n = len(list(csv.DictReader(io.StringIO(p.stdout)))) if p.returncode == 0 else 0
     return head[old_n:]
-
-
-def events_added(run, checkout: Path, base: str) -> tuple[int, int]:
-    """(events appended, of which expired)."""
-    added = new_events(run, checkout, base)
-    return len(added), sum(1 for e in added if e.get("event") == "expired")
 
 
 # ---------------------------------------------------------------- publish
@@ -329,16 +320,13 @@ def publish(run, a) -> int:
         return 0
     stat = "" if dry else run(["git", "diff", "--cached", "--stat"]).stdout
     report = load_report(a.report)
-    new_rows, changed_rows = weekly_rows(a.checkout, a.run_date)
-    n_events, n_expired = events_added(run, a.checkout, a.base)
-    n_added = sum(1 for e in new_events(run, a.checkout, a.base) if e.get("event") == "added")
-    on_map = len(on_map_ids(a.checkout, new_rows)) if a.mode == "research" else None
-    if a.mode == "rebuild_only" and not report:
-        report = {"rows": {"moratoriums": 0, "bans": 0, "utilities": 0, "updates": 0}}
-    qa = filter_qa(read_csv(a.build / "qa_research.csv"), new_rows, changed_rows)
-    body = build_body(report, stat, new_rows, changed_rows, qa, territory_warnings(a.log_dir), a.run_date, a.mode,
-                      n_events, n_expired, on_map, n_added)
-    title = make_title(report, a.run_date, n_expired, on_map)
+    events = new_events(run, a.checkout, a.base)
+    new_rows, changes, n_expired = published_changes(a.checkout, events)
+    ids = {r.get("id") for r in new_rows} | {c.get("id") for c in changes}
+    qa = filter_qa(read_csv(a.build / "qa_research.csv"), ids)
+    body = build_body(report, stat, new_rows, changes, qa, territory_warnings(a.log_dir), a.run_date, a.mode,
+                      len(events), n_expired)
+    title = make_title(a.run_date, len(new_rows), len({c.get("id") for c in changes}), n_expired)
     body_file = a.build / "pr_body.md"
     a.build.mkdir(parents=True, exist_ok=True)
     body_file.write_text(body, encoding="utf-8")
