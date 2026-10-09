@@ -1944,6 +1944,7 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   .layers-panel { width: 190px; }
   .geocoder { width: 180px; }
   header h1 { display: none; }
+  .brand { flex-shrink: 0; }
 }
 
 /* ── Hide draw default toolbar (we use our own Add menu) ─────────────────── */

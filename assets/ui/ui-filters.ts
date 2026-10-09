@@ -4,15 +4,23 @@
 // keyboard step), so one drag is one undo step however slow it is; a year
 // drag that switched the filter on or stopped playback also commits on
 // pointer release, since one released at its start value fires no 'change'. Smoke
-// paint comes from map-layers-conditions.js.
+// paint comes from map-layers-conditions.js. The controls' values (active
+// buttons, the year, MW and smoke sliders, the play button) are painted from
+// state by panel-mirror.js — syncPanel and its one-control helpers — which
+// also sets them all at init, before this wiring runs.
 import { state } from '../state.js';
-import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster } from './ui-legends.js';
+import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster, updateLegends } from './ui-legends.js';
 import { emit } from '../state-bus.js';
 import { MW_SLIDER_MAX, mwPosToMw, mwToPos } from '../filters.js';
 import { setWeatherVar } from '../weather-live.js';
 import { setNriHazard } from '../fema-nri.js';
 import { refreshWeatherRampBlock } from './ui-legends.js';
 import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
+import { setColorBy } from '../style-overrides.js';
+import { applyGenMode } from '../visibility.js';
+import {
+  syncPanel, updateYearSliderUI, updateYearPlayBtn, updateMwSliderUI, updateSmokeOpacityUI, MW_POS_GAP,
+} from './panel-mirror.js';
 
 export function wireLayerFilterPanels() {
   document.addEventListener("change", (e) => {
@@ -74,9 +82,6 @@ export function wireMwFilter() {
   const mwSliderMin = document.getElementById("mwSliderMin") as HTMLInputElement | null;
   const mwSliderMax = document.getElementById("mwSliderMax") as HTMLInputElement | null;
   if (mwSliderMin && mwSliderMax) {
-    mwSliderMin.value = String(mwToPos(state.mwFilter.min));
-    mwSliderMax.value = String(mwToPos(state.mwFilter.max));
-    updateMwSliderUI();
     for (const el of [mwSliderMin, mwSliderMax]) {
       el.addEventListener("input", onMwSliderInput);
       el.addEventListener("change", () => emit('url:write'));
@@ -94,7 +99,6 @@ export function wireMwFilter() {
 export function wireSmokeOpacity() {
   const slider = document.getElementById("smokeOpacitySlider") as HTMLInputElement | null;
   if (!slider) return;
-  updateSmokeOpacityUI();
   slider.addEventListener("input", () => {
     state.smokeOpacity = parseInt(slider.value, 10) / 100;
     updateSmokeOpacityUI();
@@ -102,18 +106,6 @@ export function wireSmokeOpacity() {
   });
   slider.addEventListener("change", () => emit('url:write'));
 }
-
-export function updateSmokeOpacityUI() {
-  const slider = document.getElementById("smokeOpacitySlider") as HTMLInputElement | null;
-  const readout = document.getElementById("smokeOpacityReadout");
-  if (!slider) return;
-  const percent = Math.round(state.smokeOpacity * 100);
-  slider.value = String(percent);
-  slider.setAttribute("aria-valuetext", `${percent}% of standard smoke opacity`);
-  if (readout) readout.textContent = `${percent}%`;
-}
-
-const MW_POS_GAP = 1; // min separation between handles, in slider position units
 
 function onMwSliderInput(e: Event) {
   const minEl = document.getElementById("mwSliderMin") as HTMLInputElement;
@@ -134,32 +126,6 @@ function onMwSliderInput(e: Event) {
 
   updateMwSliderUI();
   emit('filter:generators');
-}
-
-export function updateMwSliderUI() {
-  const minEl    = document.getElementById("mwSliderMin") as HTMLInputElement | null;
-  const maxEl    = document.getElementById("mwSliderMax") as HTMLInputElement | null;
-  const rangeEl  = document.getElementById("mwSliderRange");
-  const minInput = document.getElementById("mwMinInput") as HTMLInputElement | null;
-  const maxInput = document.getElementById("mwMaxInput") as HTMLInputElement | null;
-  if (!minEl || !maxEl) return;
-
-  const SMAX   = parseInt(minEl.max, 10);   // slider position max (4000)
-  const minPos = parseInt(minEl.value, 10);
-  const maxPos = parseInt(maxEl.value, 10);
-
-  const leftPct  = (minPos / SMAX) * 100;
-  const rightPct = (maxPos / SMAX) * 100;
-  if (rangeEl) {
-    rangeEl.style.left  = leftPct + "%";
-    rangeEl.style.width = (rightPct - leftPct) + "%";
-  }
-
-  if (minInput && document.activeElement !== minInput) minInput.value = String(mwPosToMw(minPos));
-  if (maxInput && document.activeElement !== maxInput) maxInput.value = maxPos >= SMAX ? "" : String(mwPosToMw(maxPos));
-
-  minEl.style.zIndex = (minPos >= maxPos - MW_POS_GAP) ? "2" : "1";
-  maxEl.style.zIndex = (minPos >= maxPos - MW_POS_GAP) ? "1" : "2";
 }
 
 function onMwTextChange(e: Event) {
@@ -204,9 +170,9 @@ export function wireGenModeToggle() {
     const mode = btn.dataset.genMode!;
     if (state.genMode[id] === mode) return;
     state.genMode[id] = mode;
-    btn.parentElement?.querySelectorAll<HTMLElement>(".gen-mode-btn").forEach(b =>
-      b.classList.toggle("gen-mode-btn--active", b.dataset.genMode === mode));
-    emit('gen:mode', { id });
+    applyGenMode(id);
+    syncPanel(id);
+    updateLegends();
     emit('url:write');
   });
 }
@@ -215,12 +181,10 @@ export function wireOgfColorByToggle() {
   document.addEventListener("click", (e) => {
     const btn = (e.target as Element)?.closest<HTMLElement>(".gen-mode-btn[data-ogf-colorby]");
     if (!btn) return;
-    const mode = btn.dataset.ogfColorby as typeof state.ogfColorBy;
-    if (state.ogfColorBy === mode) return;
-    state.ogfColorBy = mode;
-    btn.parentElement?.querySelectorAll<HTMLElement>("[data-ogf-colorby]").forEach(b =>
-      b.classList.toggle("gen-mode-btn--active", b.dataset.ogfColorby === mode));
-    emit('ogf:colorby');
+    const mode = btn.dataset.ogfColorby!;
+    if (state.ogfColorBy === mode || setColorBy("ogf-planned-transmission", mode)) return;
+    syncPanel("ogf-planned-transmission");
+    updateLegends();
     emit('url:write');
   });
 }
@@ -229,12 +193,10 @@ export function wireWestTECColorByToggle() {
   document.addEventListener("click", (e) => {
     const btn = (e.target as Element)?.closest<HTMLElement>(".gen-mode-btn[data-westtec-colorby]");
     if (!btn) return;
-    const mode = btn.dataset.westtecColorby as typeof state.westtecColorBy;
-    if (state.westtecColorBy === mode) return;
-    state.westtecColorBy = mode;
-    btn.parentElement?.querySelectorAll<HTMLElement>("[data-westtec-colorby]").forEach(b =>
-      b.classList.toggle("gen-mode-btn--active", b.dataset.westtecColorby === mode));
-    emit('westtec:colorby');
+    const mode = btn.dataset.westtecColorby!;
+    if (state.westtecColorBy === mode || setColorBy("westtec-10yr", mode)) return;
+    syncPanel("westtec-10yr");
+    updateLegends();
     emit('url:write');
   });
 }
@@ -259,9 +221,9 @@ export function wireNriHazardSelect() {
 }
 
 export function wireYearFilter() {
-  // ponytail: delegate on document — the panel HTML gets re-rendered by
-  // buildLayersPanel() (e.g. Reset all layers), which would orphan any
-  // listener bound directly to the button/slider elements.
+  // Delegated on document: panel-mirror.ts's renderPanel() re-renders the rows
+  // (a language or region change), which would orphan any listener bound
+  // directly to the button/slider elements.
   document.addEventListener("click", (e) => {
     const t = e.target as Element | null;
     if (t?.closest("#genYearFilterBtn")) {
@@ -287,9 +249,6 @@ export function wireYearFilter() {
   for (const type of ["pointerup", "pointercancel"]) {
     document.addEventListener(type, () => { if (yearDragPending) commitYearDrag(); });
   }
-
-  updateYearSliderUI();
-  updateYearPlayBtn();
 }
 
 let yearDragPending = false;
@@ -306,16 +265,6 @@ function onYearSliderInput(e: Event) {
   stopYearPlayback();
   updateYearSliderUI();
   emit('filter:generators');
-}
-
-export function updateYearSliderUI() {
-  const slider  = document.getElementById("yearSlider") as HTMLInputElement | null;
-  const readout = document.getElementById("yearReadout");
-  if (!slider) return;
-  const yf = state.yearFilter;
-  slider.value = String(yf.year);
-  slider.classList.toggle("year-slider--off", !yf.enabled);
-  if (readout) readout.textContent = yf.enabled ? String(yf.year) : "All years";
 }
 
 function clearYearFilter() {
@@ -352,11 +301,4 @@ function toggleYearPlayback() {
     updateYearSliderUI();
     emit('filter:generators');
   }, pb.speedMs);
-}
-
-export function updateYearPlayBtn() {
-  const btn = document.getElementById("yearPlayBtn");
-  if (!btn) return;
-  btn.textContent = state.yearPlayback.active ? "⏸" : "▶";
-  btn.title       = state.yearPlayback.active ? "Pause playback" : "Play through years";
 }

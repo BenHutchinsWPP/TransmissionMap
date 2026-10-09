@@ -5,12 +5,13 @@
 //                          only, through the setters applyView() uses;
 //                          map.ts's load handler paints it.
 //         applyView(data)  live map: drives the map to the view, then emits
-//                          'view:applied' (ui.ts resyncs panels and controls)
+//                          'view:applied' (ui/panel-mirror.ts repaints the
+//                          panel controls, ui.ts the legends)
 //                          and 'url:write' — the apply's one URL write.
 //         currentView()    the live view in the codec's shape, for the link.
 //         repaintView()    the one repaint sequence after state is written:
-//                          filter:all (which carries `where`), gen modes,
-//                          colour-bys, smoke opacity, then the styles; run by
+//                          smoke opacity, filter:all (which carries `where`),
+//                          gen modes, then the styles and colour-bys; run by
 //                          applyView() and by the cold-boot paint
 //                          (url-state.ts's paintLinkedView(), from map.ts).
 //       Both entry points resolve `data` over the codec's defaultView() first,
@@ -44,17 +45,17 @@
 // applyView() takes it as a separate argument.
 //
 // Deps: state.js, url-state-codec.js (defaultView, UrlStateData, CameraView),
-//       visibility.js (setLayerVisibility, settleExclusiveGroups + the gen-mode/colour-by appliers),
+//       visibility.js (setLayerVisibility, settleExclusiveGroups, applyAllGenModes),
 //       basemap.js (switchBasemap, switchProjection),
 //       terrain.js (setTerrain3d, setBuildings3d, setHillshade),
 //       weather-live.js (setWeatherVar), fema-nri.js (setNriHazard),
 //       layers/map-layers-conditions.js (applySmokeOpacity), state-bus.js,
-//       style-overrides.js (applyAllStyles), diag-log.js.
+//       style-overrides.js (applyAllStyles — the styles and colour-bys), diag-log.js.
 
 import { state } from './state.js';
 import { defaultView, type UrlStateData, type CameraView } from './url-state-codec.js';
 import {
-  setLayerVisibility, settleExclusiveGroups, applyAllGenModes, applyOGFColorBy, applyWestTECColorBy,
+  setLayerVisibility, settleExclusiveGroups, applyAllGenModes,
 } from './visibility.js';
 import { switchBasemap, switchProjection } from './basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from './terrain.js';
@@ -118,7 +119,7 @@ function writeState(v: View) {
   state.westtecColorBy = v.westtecColorBy as typeof state.westtecColorBy;
   state.smokeOpacity = v.smokeOpacity;
   state.basemapLabels = v.basemapLabels;
-  if (v.region) state.regionScope = v.region;
+  state.regionScope = v.region;
 }
 
 // The same setters applyView() calls, each of which writes its state field
@@ -138,15 +139,13 @@ export function seedView(data: Partial<UrlStateData>) {
   setHillshade(v.hillshade);
 }
 
-/** Repaint the whole view from state: re-filters every layer (`where` rides on
- *  'filter:all'), re-applies gen modes, colour-bys and smoke opacity, then
- *  paints the style overrides. Returns the style keys the map could not take. */
+/** Repaint the whole view from state: re-applies smoke opacity, re-filters
+ *  every layer (`where` rides on 'filter:all'), re-applies gen modes, then
+ *  paints the style overrides and colour-bys. Returns the style keys the map could not take. */
 export function repaintView(): DroppedStyle[] {
   applySmokeOpacity();
   emit('filter:all');
   applyAllGenModes();
-  applyOGFColorBy();
-  applyWestTECColorBy();
   return applyAllStyles();
 }
 

@@ -6,17 +6,19 @@
 // Deps: diag-log.ts (recordDiagEvent — records ensureLayerData failures for the
 //       diagnostics panel); registry/index.ts (layerById — reads a layer's
 //       fromZoom threshold).
-// ensureLayerData's contract: "fetch this if the zoom allows" — a registry id
-// whose LayerDef sets fromZoom is withheld below that zoom, so every caller
+// ensureLayerData's contract: "fetch this if the zoom allows" — a source
+// whose LayerDef sets fromZoom is withheld below that zoom (for every registry
+// id that shares it through LAYER_SOURCE_ALIAS too), so every caller
 // (bootstrap defaultOn loops included) can call it unconditionally and rely
-// on the gate rather than checking zoom itself. visibility.ts re-runs the
-// gate on zoom settle so a layer switched on while zoomed out still loads
-// once the map reaches its threshold.
+// on the gate rather than checking zoom itself. A held id is retried on each
+// 'zoomend' (one listener, attached on the first hold), so a layer switched on
+// while zoomed out still loads once the map reaches its threshold. A gated
+// layer whose fetch fails is held again, so the next zoom settle retries it.
 // >>> ADD-LAYER: lazy-geojson — see docs/adding-a-layer.md §7
 
 import type { ExpressionSpecification, GeoJSONSource, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
+import { DATA, EMPTY_FC, SOURCE_ATTRIB, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import {
   subRadius, bucketColorExpr, LINE_WIDTH, DC_STRIPE_COLOR, DC_STRIPE_WIDTH, DC_STRIPE_DASH,
@@ -77,18 +79,45 @@ const LAYER_SOURCE_ALIAS: Record<string, string> = {
 
 const _inflight: Partial<Record<string, Promise<void>>> = {};
 
+// Registry ids held back by the fromZoom gate (or whose gated fetch failed),
+// retried on each zoom settle.
+const _held = new Set<string>();
+let _hookedMap: unknown = null;
+
+function retryHeld() {
+  const ids = [..._held];
+  _held.clear();
+  for (const id of ids) if (state.layerVisibility[id]) void ensureLayerData(id);
+}
+
+function hold(registryId: string) {
+  _held.add(registryId);
+  if (state.map && _hookedMap !== state.map) {
+    state.map.on('zoomend', retryHeld);
+    _hookedMap = state.map;
+  }
+}
+
 export function ensureLayerData(registryId: string): Promise<void> {
-  const alias = LAYER_SOURCE_ALIAS[registryId];
-  if (alias) return ensureLayerData(alias);
+  const sourceId = LAYER_SOURCE_ALIAS[registryId] ?? registryId;
+  // Fetch gate: the source's fromZoom holds the fetch back below that zoom, so
+  // a heavy dataset zoomed-out users never render is never downloaded either.
+  // The asking id is remembered and retried on zoom settle, so the caller (a
+  // visibility toggle or a defaultOn bootstrap loop) never checks zoom itself.
+  const fromZoom = layerById(sourceId)?.fromZoom;
+  if (fromZoom === undefined) return fetchSource(sourceId);
+  if (!state.sourcesLoaded[sourceId] && (state.map?.getZoom() ?? 0) < fromZoom) {
+    hold(registryId);
+    return Promise.resolve();
+  }
+  return fetchSource(sourceId).then(() => {
+    if (!state.sourcesLoaded[sourceId]) hold(registryId);
+  });
+}
+
+function fetchSource(registryId: string): Promise<void> {
   const url = LAZY_GEOJSON[registryId];
   if (!url || state.sourcesLoaded[registryId]) return Promise.resolve();
-  // Fetch gate: a layer with a fromZoom stays unfetched below that zoom, so a
-  // heavy dataset zoomed-out users never render is never downloaded either.
-  // Safe to no-op here rather than error — the caller (a visibility toggle or
-  // a defaultOn bootstrap loop) doesn't need to know the zoom; the map's own
-  // zoom-settle handler (visibility.ts) re-calls this once it qualifies.
-  const fromZoom = layerById(registryId)?.fromZoom;
-  if (fromZoom !== undefined && (state.map?.getZoom() ?? 0) < fromZoom) return Promise.resolve();
   const existing = _inflight[registryId];
   if (existing) return existing;
   _inflight[registryId] = (async () => {
@@ -148,8 +177,7 @@ export function initialVisibility(registryId: string): "visible" | "none" {
 // addresses. GEOID is a zero-padded 5-digit string ("08123") — never parseInt it.
 // Consumers MUST namespace their feature-state keys (e.g. `odin_out`), since all
 // of them share one per-feature state bag on these same features.
-export const COUNTY_SRC = "county_boundaries";
-export const COUNTY_SRC_LAYER = "county_boundaries";   // tippecanoe names the layer after the manifest id
+export { COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 
 export function ensureCountyBoundaries() {
   if (!state.map || state.map.getSource(COUNTY_SRC)) return;

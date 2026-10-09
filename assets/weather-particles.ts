@@ -17,7 +17,9 @@
 //       is visible and a wind-animated variable is selected (after a fresh
 //       bake, or on first enable); updateWindField() on a timebar scrub/step
 //       within the same bake (hot-swaps the field, keeps trails);
-//       stopWindParticles() on hide or variable switch away from wind.
+//       stopWindParticles() on hide or variable switch away from wind;
+//       setParticleOpacity() with the weather layer's view opacity override
+//       (kept across stop/start, so a canvas made later starts faded).
 
 import { state } from './state.js';
 import { weatherLiveUrl } from './constants.js';
@@ -54,6 +56,9 @@ interface WindMeta {
 interface Particle { lon: number; lat: number; age: number; }
 
 let canvas: HTMLCanvasElement | null = null;
+// The weather layer's opacity override (1 = none), applied as the canvas's
+// CSS opacity so the trails fade with the wash.
+let canvasOpacity = 1;
 let ctx: CanvasRenderingContext2D | null = null;
 let rafId: number | null = null;
 let particles: Particle[] = [];
@@ -332,6 +337,7 @@ export async function startWindParticles(suffix = '', version = ''): Promise<voi
   canvas.style.top = '0';
   canvas.style.left = '0';
   canvas.style.pointerEvents = 'none';
+  canvas.style.opacity = String(canvasOpacity);
   state.map.getContainer().appendChild(canvas);
   resizeCanvas(); // also seeds the area-scaled particle pool
 
@@ -343,6 +349,12 @@ export async function startWindParticles(suffix = '', version = ''): Promise<voi
 
   running = true;
   rafId = requestAnimationFrame(frame);
+}
+
+/** Fades the particle canvas (now and on any later start) to `o` ∈ [0,1]. */
+export function setParticleOpacity(o: number): void {
+  canvasOpacity = o;
+  if (canvas) canvas.style.opacity = String(o);
 }
 
 // Cancels the animation frame loop, detaches listeners, and removes the

@@ -101,7 +101,7 @@ export interface UrlStateData {
   where?: Record<string, Condition[]>;
   style?: Record<string, StyleOverride>;
   lang?: string;
-  region?: LayerScope;
+  region: LayerScope;
   // Active Map Experience (assets/experiences.ts). The caller resolves the
   // pristine/edited question first: an edited view passes null so the link
   // stops claiming to be the curated one.

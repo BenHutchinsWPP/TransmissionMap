@@ -256,7 +256,7 @@ export function withRelativeDate(iso: string | undefined): string | undefined {
   return `${iso} (${new Intl.RelativeTimeFormat(getLocale(), { numeric: "auto" }).format(n, unit)})`;
 }
 
-export function renderDcMoratorium(p: Record<string, unknown>) {
+function renderDcMoratorium(p: Record<string, unknown>) {
   const items = parseJsonList<DcmItem>(p.items);
   const history = parseJsonList<DcmEvent>(p.history);
   const small = (s: string) => `<span style="opacity:0.7;font-size:0.85em">${s}</span>`;

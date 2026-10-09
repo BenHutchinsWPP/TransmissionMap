@@ -42,14 +42,14 @@
                pairs the two by nextElementSibling/previousElementSibling.
                Positioned against .menu-wrap, so placement here looks identical. -->
           <span class="menu-badge" id="fileMenuBadge" hidden role="img"
-                aria-label="Something failed to load this session — see File ▸ Diagnostics…"></span>
+                aria-label="Something failed to load this session — see File ▸ Diagnostics…" data-i18n-aria-label="menu.diagBadge"></span>
         </div>
-        <div class="mode-toggle" role="group" aria-label="Map mode">
+        <div class="mode-toggle" role="group" aria-label="Map mode" data-i18n-aria-label="menu.mapMode">
           <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button" data-i18n="menu.view">View</button>
           <button class="mode-btn" id="modeEditBtn" data-mode="edit" type="button" data-i18n="menu.edit">Edit</button>
         </div>
         <button class="menu-btn measure-btn" id="measureBtn" type="button"
-                aria-pressed="false" title="Measure linear distance">📏 <span data-i18n="menu.measure">Measure</span></button>
+                aria-pressed="false" title="Measure linear distance" data-i18n-title="menu.measureTitle">📏 <span data-i18n="menu.measure">Measure</span></button>
         <!-- Edit-only controls last so toggling edit/view never reflows the buttons above -->
         <div class="menu-wrap">
           <button class="menu-btn" id="menuAddBtn" type="button" aria-haspopup="true" aria-expanded="false" hidden><span data-i18n="menu.add">Add</span> ▾</button>
@@ -60,7 +60,7 @@
           </div>
         </div>
         <span class="color-picker" id="drawColorPicker" data-target="default"
-              title="Default color for new drawings" hidden></span>
+              title="Default color for new drawings" data-i18n-title="menu.drawColorTitle" hidden></span>
       </nav>
 
       <!-- Selected-object metrics (lat/long · length · area) -->
@@ -93,13 +93,13 @@
            assets/weather-live.ts only while the layer is on and the bake
            carries forward steps -->
       <div id="weatherTimebar" style="display:none">
-        <button id="weatherPlayBtn" type="button" aria-label="Play forecast animation">▶</button>
+        <button id="weatherPlayBtn" type="button" aria-label="Play forecast animation" data-i18n-aria-label="weather.playLabel">▶</button>
         <span class="weather-timebar-label"></span>
         <div class="weather-timebar-track">
           <input type="range" min="0" max="0" step="1" value="0"
-                 aria-label="Weather forecast time">
+                 aria-label="Weather forecast time" data-i18n-aria-label="weather.timeLabel">
           <div class="weather-timebar-ticks" aria-hidden="true"></div>
-          <span class="weather-timebar-now" title="Current time" hidden></span>
+          <span class="weather-timebar-now" title="Current time" data-i18n-title="weather.nowTitle" hidden></span>
         </div>
       </div>
 
@@ -107,7 +107,7 @@
            the first time either 3D toggle is enabled -->
       <div class="rotate-hint-toast" id="rotateHintToast" role="status" aria-live="polite" hidden>
         <span data-i18n="toast.rotate3d">Right-click and drag (or Ctrl + drag) to rotate and tilt the map. On touch, use two fingers. Click the compass icon to reset north.</span>
-        <button type="button" id="rotateHintDismiss" aria-label="Dismiss">×</button>
+        <button type="button" id="rotateHintDismiss" aria-label="Dismiss" data-i18n-aria-label="common.dismiss">×</button>
       </div>
 
       <!-- Map Experiences story card — content built by ui/ui-experiences.ts -->
@@ -129,7 +129,7 @@
             <button class="layers-tab layers-tab--active" data-tab="map-layers" type="button" data-i18n="tabs.mapLayers">Map Layers</button>
             <button class="layers-tab" data-tab="my-data" type="button" data-i18n="tabs.myData">My Data</button>
           </div>
-          <button class="icon-btn close-btn" id="closeLayers" type="button" aria-label="Close layers panel">×</button>
+          <button class="icon-btn close-btn" id="closeLayers" type="button" aria-label="Close layers panel" data-i18n-aria-label="panel.closeAria">×</button>
         </div>
 
         <!-- Tab pane: Map Layers -->
@@ -211,9 +211,6 @@
               <input type="radio" name="projection" value="globe"> <span data-i18n="basemap.globe">Globe</span>
             </label>
             <hr style="border: none; border-top: 1px solid var(--panel-border); margin: 8px 0 6px 0;">
-            <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);">
-              <input type="checkbox" id="dataCounterToggle"> <span data-i18n="basemap.dataCounter">Data Counter</span>
-            </label>
             <label class="basemap-checkbox" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-light);"
                    title="Show/hide place names and road labels on the Light, Dark and Hydro basemaps, and the roads, route shields, place names and boundaries drawn over Aerial. Street and Topo have labels baked into their tiles.">
               <input type="checkbox" id="basemapLabelsToggle" checked> <span data-i18n="basemap.mapLabels">Map Labels</span>
@@ -246,7 +243,7 @@
             <div class="section-title-row">
               <div class="section-title"><button class="collapse-btn" type="button" aria-label="Toggle section">▸</button> ⚡ <span data-i18n="groups.generators">Generators</span></div>
               <div class="section-filter-btns">
-                <button class="section-filter-btn" id="genMwFilterBtn" title="Filter by MW size">▾</button>
+                <button class="section-filter-btn" id="genMwFilterBtn" title="Filter by MW size" data-i18n-title="panel.mwFilterTitle">▾</button>
               </div>
             </div>
             <div class="collapsible-content">
@@ -257,7 +254,7 @@
                          min="0" max="10000" step="10" value="0" placeholder="0">
                   <span class="mw-dash">—</span>
                   <input type="number" class="mw-text-input" id="mwMaxInput"
-                         min="0" max="10000" step="10" placeholder="No max">
+                         min="0" max="10000" step="10" placeholder="No max" data-i18n-placeholder="panel.noMax">
                   <span class="mw-unit">MW</span>
                 </div>
                 <div class="mw-slider-track-wrap">
@@ -336,7 +333,7 @@
 
       <!-- Layers panel re-open button (shown when panel is closed) -->
       <button class="layers-toggle-btn" id="layersToggleBtn" type="button" hidden>
-        🗂 Layers
+        🗂 <span data-i18n="panel.layersButton">Layers</span>
       </button>
 
       <!-- Legends — bottom left -->
@@ -345,11 +342,11 @@
              by ui-legends.ts renderRasterRampLegends() -->
         <div id="rasterRampLegends"></div>
         <div class="legend collapsed" id="voltageLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="voltageLegendItems"></div>
         </div>
         <div class="legend collapsed" id="linePlacementLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="linePlacementLegendItems"></div>
           <div class="legend-items collapsible-content">
             <span class="legend-item">
@@ -359,128 +356,128 @@
           </div>
         </div>
         <div class="legend collapsed" id="fuelLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="fuelLegendItems"></div>
         </div>
         <div class="legend collapsed" id="sectorLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">EIA Plants — sector</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">EIA Plants — sector</span></div>
           <div class="legend-items collapsible-content" id="sectorLegendItems"></div>
         </div>
         <div class="legend collapsed" id="pipelineLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline Points</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Pipeline Points</span></div>
           <div class="legend-items collapsible-content" id="pipelineLegendItems"></div>
         </div>
         <div class="legend collapsed" id="crithabLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="crithabLegendItems"></div>
         </div>
         <div class="legend collapsed" id="padusLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="padusLegendItems"></div>
         </div>
         <div class="legend collapsed" id="tribalLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="tribalLegendItems"></div>
         </div>
         <div class="legend collapsed" id="ogfRegionLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Region</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Region</span></div>
           <div class="legend-items collapsible-content" id="ogfRegionLegendItems"></div>
         </div>
         <div class="legend collapsed" id="ogfStatusLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Project status</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Project status</span></div>
           <div class="legend-items collapsible-content" id="ogfStatusLegendItems"></div>
         </div>
         <div class="legend collapsed" id="ogfWorkLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Type of work</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Type of work</span></div>
           <div class="legend-items collapsible-content" id="ogfWorkLegendItems"></div>
         </div>
         <div class="legend collapsed" id="westtecScenarioLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">WestTEC scenario</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">WestTEC scenario</span></div>
           <div class="legend-items collapsible-content" id="westtecScenarioLegendItems"></div>
         </div>
         <div class="legend collapsed" id="westtecDatasetLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">WestTEC project type</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">WestTEC project type</span></div>
           <div class="legend-items collapsible-content" id="westtecDatasetLegendItems"></div>
         </div>
         <div class="legend collapsed" id="minesLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Mines — commodity</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Mines — commodity</span></div>
           <div class="legend-items collapsible-content" id="minesLegendItems"></div>
         </div>
         <div class="legend collapsed" id="minesStatusLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Mines — status</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Mines — status</span></div>
           <div class="legend-items collapsible-content" id="minesStatusLegendItems"></div>
         </div>
         <div class="legend collapsed" id="natgasLineLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline type</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Pipeline type</span></div>
           <div class="legend-items collapsible-content" id="natgasLineLegendItems"></div>
         </div>
         <div class="legend collapsed" id="natgasPtsLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Facility type</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Facility type</span></div>
           <div class="legend-items collapsible-content" id="natgasPtsLegendItems"></div>
         </div>
         <div class="legend collapsed" id="substanceLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Pipeline substance</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Pipeline substance</span></div>
           <div class="legend-items collapsible-content" id="substanceLegendItems"></div>
         </div>
         <div class="legend collapsed" id="nercLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="nercLegendItems"></div>
         </div>
         <div class="legend collapsed" id="retailLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span></div>
           <div class="legend-items collapsible-content" id="retailLegendItems"></div>
         </div>
         <div class="legend collapsed" id="nwsGroupLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label"></span><span class="legend-age" id="nwsAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"></span><span class="legend-age" id="nwsAge"></span></div>
           <div class="legend-items collapsible-content" id="nwsGroupLegendItems"></div>
         </div>
         <!-- HMS smoke detection live legend -->
         <div class="legend collapsed" id="smokeLiveLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Smoke (HMS)</span><span class="legend-age" id="smokeAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="legend.smokeTitle">Fire: Smoke (HMS)</span><span class="legend-age" id="smokeAge"></span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#ffd700;opacity:0.7"></span><span>Light smoke</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#ff8c00;opacity:0.8"></span><span>Medium smoke</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#8b4513;opacity:0.9"></span><span>Heavy smoke</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ffd700;opacity:0.7"></span><span data-i18n="legend.smokeLight">Light smoke</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ff8c00;opacity:0.8"></span><span data-i18n="legend.smokeMedium">Medium smoke</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#8b4513;opacity:0.9"></span><span data-i18n="legend.smokeHeavy">Heavy smoke</span></div>
             <div class="smoke-opacity-control">
-              <label for="smokeOpacitySlider">Smoke opacity</label>
+              <label for="smokeOpacitySlider" data-i18n="legend.smokeOpacity">Smoke opacity</label>
               <output id="smokeOpacityReadout" for="smokeOpacitySlider">100%</output>
               <input class="year-slider" id="smokeOpacitySlider" type="range" min="0" max="100" step="1" value="100" aria-describedby="smokeOpacityHint">
-              <span id="smokeOpacityHint">100% = standard smoke appearance</span>
+              <span id="smokeOpacityHint" data-i18n="legend.smokeHint">100% = standard smoke appearance</span>
             </div>
-            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="smokeDataTimestamp">Smoke data loading…</span></div>
+            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="smokeDataTimestamp" data-i18n="legend.smokeLoading">Smoke data loading…</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">NOAA HMS, analyst-drawn a few times daily — may lag several hours.</div>
           </div>
         </div>
         <!-- Active wildfire live legend -->
         <div class="legend collapsed" id="wildfireLiveLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Active</span><span class="legend-age" id="wildfireAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="legend.fireActive">Fire: Active</span><span class="legend-age" id="wildfireAge"></span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:linear-gradient(to right,rgba(255,200,0,0.7),rgba(255,100,0,0.9),rgba(180,0,0,1))"></span><span>Fire hotspot intensity (FRP)</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#cc2200;outline:2px solid #cc2200;outline-offset:1px"></span><span>Perimeter — active (0% contained)</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#ff8800;outline:2px solid #ff8800;outline-offset:1px"></span><span>Perimeter — partially contained</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#22aa44;outline:2px solid #22aa44;outline-offset:1px"></span><span>Perimeter — fully contained</span></div>
-            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="wildfireDataTimestamp">Data loading…</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:linear-gradient(to right,rgba(255,200,0,0.7),rgba(255,100,0,0.9),rgba(180,0,0,1))"></span><span data-i18n="legend.hotspotFrp">Fire hotspot intensity (FRP)</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#cc2200;outline:2px solid #cc2200;outline-offset:1px"></span><span data-i18n="legend.perimActive">Perimeter — active (0% contained)</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ff8800;outline:2px solid #ff8800;outline-offset:1px"></span><span data-i18n="legend.perimPartial">Perimeter — partially contained</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#22aa44;outline:2px solid #22aa44;outline-offset:1px"></span><span data-i18n="legend.perimFull">Perimeter — fully contained</span></div>
+            <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="wildfireDataTimestamp" data-i18n="legend.dataLoading">Data loading…</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Canada perimeters: CWFIS estimates (extent only, containment unknown).</div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Hotspots: NASA FIRMS VIIRS, 24&nbsp;h window (+1–3&nbsp;h latency). Perimeters: NIFC WFIGS. Not for firefighting decisions.</div>
           </div>
         </div>
         <!-- Named fire incidents legend -->
         <div class="legend collapsed" id="incidentLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Incidents</span><span class="legend-age" id="incidentAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="legend.fireIncidents">Fire: Incidents</span><span class="legend-age" id="incidentAge"></span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#cc0000;border:2px solid #fff;border-radius:50%"></span><span>0% contained</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#f1c40f;border:2px solid #fff;border-radius:50%"></span><span>~90% contained</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#2ecc71;border:2px solid #fff;border-radius:50%"></span><span>100% contained</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#999;border:2px solid #3498db;border-radius:50%"></span><span>Blue outline = prescribed fire (RX)</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#cc0000;border:2px solid #fff;border-radius:50%"></span><span data-i18n="legend.contained0">0% contained</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f1c40f;border:2px solid #fff;border-radius:50%"></span><span data-i18n="legend.contained90">~90% contained</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#2ecc71;border:2px solid #fff;border-radius:50%"></span><span data-i18n="legend.contained100">100% contained</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#999;border:2px solid #3498db;border-radius:50%"></span><span data-i18n="legend.rxOutline">Blue outline = prescribed fire (RX)</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">NIFC WFIGS, agency-reported (can lag hours). Dot size = acreage.</div>
             <div class="legend-item" style="opacity:0.65;font-size:0.8em"><span id="incidentDataTimestamp"></span></div>
           </div>
         </div>
         <!-- ODIN live county-outage choropleth legend (static buckets; feature-state join) -->
         <div class="legend collapsed" id="odinLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Power Outages (US)</span><span class="legend-age" id="odinAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="legend.outages">Power Outages (US)</span><span class="legend-age" id="odinAge"></span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#fed976"></span><span>&lt; 100 customers out</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fed976"></span><span data-i18n="legend.outageUnder100">&lt; 100 customers out</span></div>
             <div class="legend-item"><span class="legend-swatch" style="background:#fd8d3c"></span><span>100 – 1,000</span></div>
             <div class="legend-item"><span class="legend-swatch" style="background:#e31a1c"></span><span>1,000 – 5,000</span></div>
             <div class="legend-item"><span class="legend-swatch" style="background:#800026"></span><span>5,000+</span></div>
@@ -491,14 +488,14 @@
              FEMA's five classes); the title names the hazard (fema-nri.ts).
              Swatches mirror NRI_RATINGS in src/colors/buckets.ts. -->
         <div class="legend collapsed" id="femaNriLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Hazard Risk: <span id="femaNriHazard">Overall Risk (all hazards)</span></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"><span data-i18n="legend.hazardRisk">Hazard Risk:</span> <span id="femaNriHazard">Overall Risk (all hazards)</span></span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#980043"></span><span>Very High</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#dd1c77"></span><span>Relatively High</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#df65b0"></span><span>Relatively Moderate</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#d7b5d8"></span><span>Relatively Low</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#f1eef6"></span><span>Very Low</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span><span>Insufficient data</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#980043"></span><span data-i18n="legend.classVeryHigh">Very High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#dd1c77"></span><span data-i18n="legend.relHigh">Relatively High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#df65b0"></span><span data-i18n="legend.relModerate">Relatively Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#d7b5d8"></span><span data-i18n="legend.relLow">Relatively Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f1eef6"></span><span data-i18n="legend.classVeryLow">Very Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span><span data-i18n="legend.insufficientData">Insufficient data</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Unshaded: hazard not applicable. FEMA NRI, county level — for planning, not a local risk assessment.</div>
           </div>
         </div>
@@ -506,18 +503,18 @@
              in src/colors/buckets.ts (LEGEND_FILTERS key "dcm"); the blue ring
              mirrors DCM_RECENT_DAYS in assets/layers/map-layers-load.ts. -->
         <div class="legend collapsed" id="dcMoratoriumLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Data Center Moratoriums</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">Data Center Moratoriums</span></div>
           <div class="legend-items collapsible-content">
             <div id="dcMoratoriumLegendItems"></div>
             <div class="legend-item"><span class="legend-swatch" style="background:repeating-linear-gradient(135deg,#dc2626 0 2px,transparent 2px 6px);border:1px dashed #dc2626"></span><span data-i18n="legend.dcmUtility">Utility service area (hatched)</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:2px solid #1d4ed8;border-radius:50%"></span><span>Changed in the last 30 days</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:2px solid #1d4ed8;border-radius:50%"></span><span data-i18n="legend.changed30d">Changed in the last 30 days</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Dashed outline: statewide measure. Filled county: county ordinance. Hatched area: utility or grid-operator measure. Dot: city, town, township or tribal measure. Strongest measure wins. Informational only.</div>
           </div>
         </div>
         <!-- Live weather — baked-color mosaic; carries the selected variable's
              color scale (refreshWeatherRampBlock), the age pill and provenance. -->
         <div class="legend collapsed" id="weatherLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Weather Forecast</span><span class="legend-age" id="weatherAge"></span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="layer.weatherLive">Weather Forecast</span><span class="legend-age" id="weatherAge"></span></div>
           <div class="legend-items collapsible-content">
             <!-- Color scale for the selected variable — rendered by
                  ui-legends.ts refreshWeatherRampBlock() -->
@@ -527,39 +524,27 @@
         </div>
         <!-- Static categorical legend — NEXRAD radar tiles are baked colors, no per-class filter -->
         <div class="legend collapsed" id="radarLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Radar Intensity</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="legend.radarIntensity">Radar Intensity</span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#04e304"></span><span>Light</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#fdf802"></span><span>Moderate</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#fd9500"></span><span>Heavy</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#d40000"></span><span>Extreme</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#f800fd"></span><span>Hail possible</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#04e304"></span><span data-i18n="legend.radarLight">Light</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fdf802"></span><span data-i18n="legend.radarModerate">Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fd9500"></span><span data-i18n="legend.radarHeavy">Heavy</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#d40000"></span><span data-i18n="legend.radarExtreme">Extreme</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#f800fd"></span><span data-i18n="legend.radarHail">Hail possible</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">US: NEXRAD via IEM · Canada: ECCC GeoMet · auto-refreshes ~5 min</div>
           </div>
         </div>
         <!-- Static categorical legend — WHP raster has baked colors, no per-class filter -->
         <div class="legend collapsed" id="whpLegend" hidden data-collapsible>
-          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend">▸</button><span class="legend-title-label">Fire: Hazard Potential</span></div>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="layer.usfsWildfirePotential">Fire: Hazard Potential</span></div>
           <div class="legend-items collapsible-content">
-            <div class="legend-item"><span class="legend-swatch" style="background:#38A800"></span><span>Very Low</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#D1FF73"></span><span>Low</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#FFFF00"></span><span>Moderate</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#FFAA00"></span><span>High</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#FF0000"></span><span>Very High</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#B2B2B2"></span><span>Non-burnable</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="background:#0070FF"></span><span>Water</span></div>
-          </div>
-        </div>
-        <!-- Data usage counter legend -->
-        <div class="legend" id="dataCounterLegend">
-          <div class="legend-title">
-            <span class="legend-title-label">Data Usage</span>
-          </div>
-          <div class="legend-items">
-            <div class="legend-item">
-              <span class="legend-swatch" style="background:var(--accent)"></span>
-              <span id="dataUsageVal" style="font-family:monospace;font-weight:600">0.00 KB</span>
-            </div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#38A800"></span><span data-i18n="legend.classVeryLow">Very Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#D1FF73"></span><span data-i18n="legend.classLow">Low</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FFFF00"></span><span data-i18n="legend.classModerate">Moderate</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FFAA00"></span><span data-i18n="legend.classHigh">High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#FF0000"></span><span data-i18n="legend.classVeryHigh">Very High</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#B2B2B2"></span><span data-i18n="legend.nonBurnable">Non-burnable</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#0070FF"></span><span data-i18n="legend.water">Water</span></div>
           </div>
         </div>
       </div>
@@ -704,7 +689,7 @@
     <div class="credits-content">
       <div class="credits-header">
         <h2 data-i18n="info.dataCredits">Data Credits</h2>
-        <button id="closeCredits" type="button" aria-label="Close">×</button>
+        <button id="closeCredits" type="button" aria-label="Close" data-i18n-aria-label="common.close">×</button>
       </div>
       <p class="credits-disclaimer">Educational and informational use only. Data may be incomplete, outdated, or inaccurate. No warranty. Do not use for operational, safety, or regulatory decisions. Full attribution and licensing: <a href="https://github.com/BenHutchinsWPP/TransmissionMap/blob/main/docs/data-sources.md" target="_blank" rel="noopener">data-sources.md</a>.</p>
       <ul>
@@ -773,7 +758,7 @@
     <div class="credits-content">
       <div class="credits-header">
         <h2 data-i18n="settings.title">Settings</h2>
-        <button id="closeSettings" type="button" aria-label="Close">×</button>
+        <button id="closeSettings" type="button" aria-label="Close" data-i18n-aria-label="common.close">×</button>
       </div>
       <div id="settingsBody"></div>
     </div>
@@ -784,7 +769,7 @@
     <div class="credits-content">
       <div class="credits-header">
         <h2 data-i18n="experiences.title">Map Experiences</h2>
-        <button id="closeExperiences" type="button" aria-label="Close">×</button>
+        <button id="closeExperiences" type="button" aria-label="Close" data-i18n-aria-label="common.close">×</button>
       </div>
       <p class="exp-intro" data-i18n="experiences.intro">Guided views of the grid. Each one sets the camera, layers and filters, then explains what you are looking at.</p>
       <input id="experiencesSearch" class="exp-search" type="search" autocomplete="off" spellcheck="false"
@@ -798,7 +783,7 @@
     <div class="credits-content">
       <div class="credits-header">
         <h2>Diagnostics</h2>
-        <button id="closeDiagnostics" type="button" aria-label="Close">×</button>
+        <button id="closeDiagnostics" type="button" aria-label="Close" data-i18n-aria-label="common.close">×</button>
       </div>
       <div id="diagBody"></div>
       <div class="disclaimer-footer diag-footer">

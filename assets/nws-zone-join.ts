@@ -31,7 +31,7 @@
 //       `nws_multi` feature-state flags >1 matching alert and thickens the
 //       outline.
 // Deps: state-bus (on 'layer:visibility'), state (map, layerVisibility), constants (DATA), layers/layer-init.ts
-//       (ensureCountyBoundaries, COUNTY_SRC/COUNTY_SRC_LAYER, pmtilesUrl,
+//       (ensureCountyBoundaries, pmtilesUrl,
 //       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
 //       polygons with; reused here, not duplicated).
@@ -56,9 +56,9 @@
 
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from './state.js';
-import { DATA } from './constants.js';
+import { DATA, COUNTY_SRC, COUNTY_SRC_LAYER } from './constants.js';
 import {
-  ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, pmtilesUrl, initialVisibility,
+  ensureCountyBoundaries, pmtilesUrl, initialVisibility,
 } from './layers/layer-init.js';
 import { NWS_GROUP_BUCKETS } from '../src/colors/buckets.js';
 import { on } from './state-bus.js';

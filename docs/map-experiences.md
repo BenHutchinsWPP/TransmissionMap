@@ -69,14 +69,15 @@ wholesale, so the next story or Reset clears them.
    so a programmatic switch reaches them the same way a click does.
 4. `setTerrain3d()` / `setBuildings3d()` / `setHillshade()` where they change.
 5. `repaintView()`: `applySmokeOpacity()`, `emit('filter:all')` (which also
-   applies the view's `where` conditions), `applyAllGenModes()`, the colour-by
-   appliers, then the `style` overrides. Cold boot runs the same function from
+   applies the view's `where` conditions), `applyAllGenModes()`, then
+   `applyAllStyles()` — the `style` overrides and the colour-by modes. Cold boot runs the same function from
    `map.ts`'s load handler via `paintLinkedView()`. A style key the map cannot
    take (colour on an icon layer) is removed from the view and recorded in the
    Diagnostics log; on cold boot it is also counted in the link's
    dropped-settings notice.
-6. `emit('view:applied')` — `ui.ts` rebuilds the layer panel and legends and
-   mirrors the view onto the basemap radios, 3D checkboxes and sliders — then
+6. `emit('view:applied')` — `assets/ui/panel-mirror.ts` repaints every panel
+   control from state (rebuilding the layer rows only when the region or
+   language changed) and `ui.ts` rebuilds the legends — then
    `emit('url:write')`.
 7. Camera last: `flyTo` (or `jumpTo` for a cold deep link — there is nothing
    to fly from).
@@ -105,8 +106,9 @@ on the story. See [url-state.md](url-state.md).
 Anything that changes a shared param *without the reader asking for it* must call
 `rebaselineExperience()` (`assets/experience-link.ts`) first, or the diff reads it as an
 edit and the story is falsely marked modified. Callers today: the stale-feed
-kill switches in `live-staleness.ts` and `odin-outages.ts`, and the
-`lang:changed` and `region:changed` subscriptions in `url-state.ts`.
+kill switches in `live-staleness.ts` and `odin-outages.ts`, the `lang:changed`
+subscription in `url-state.ts`, and the region dropdown's click handler in
+`assets/ui/ui.ts`.
 
 ## Adding an experience — checklist
 

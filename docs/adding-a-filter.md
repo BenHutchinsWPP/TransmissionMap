@@ -44,7 +44,7 @@ expression your apply function last built ∧ the view's `where` conditions for
 the registry layer that owns it (`setWhere`, layers with a `dataset` only). So
 a user filter never clobbers a structural one (e.g. "HV lines only"), and a
 `where` change re-filters just that layer without re-running the appliers.
-Write through `setBucketFilter` / `applyBucketFilterToLayers` — never call
+Write through `setBucketFilter` (or the module's `applyBucketFilterToLayers` helper over it) — never call
 `map.setFilter` yourself (`assets/filters-where.test.ts` allowlists every call
 site), and register any inline `filter:` in an `addLayer` spec as its base
 (`assets/layers/base-filters.test.ts` checks every layer).
@@ -89,11 +89,16 @@ export function applyMyThingFilter() {
 }
 ```
 
-`applyBucketFilterToLayers` → `buildValueFilterExpr` builds an `["in", …]`
-expression, returns `null` when **all** buckets are active (no filter = fast
-path), and special-cases the `other` bucket as a negation.
+`applyBucketFilterToLayers` (a private helper in `filters.ts`) compiles the
+active set with `compileBucketExpr` and writes it with `setBucketFilter`.
+`compileBucketExpr` routes a field that `BUCKET_FILTER_DATASETS` maps to a
+`FIELD_SCHEMA` dataset through `toMapLibreFilter`; every other field, and any
+set with the `other` catch-all active, goes to `buildValueFilterExpr`, which
+builds an `["in", …]` expression, returns `null` when **all** buckets are
+active (no filter = fast path), and special-cases the `other` bucket as a
+negation.
 
-> Voltage (`buildKvFilterExpr`) and fuel (`buildEiaFuelExpr`) are bespoke —
+> Voltage (`buildKvFilterExpr`) and EIA fuel (`buildEiaFuelExpr`, called from `applyGeneratorFilters`) are bespoke —
 > they handle numeric ranges and the hydro/pumped-storage carve-out. Copy the
 > generic value-map path unless your filter is genuinely range-based.
 
@@ -177,7 +182,7 @@ existing two:
   MW, `mwPosToMw`/`mwToPos` convert at the slider edge.
 - Generator filters are combined per-layer in `applyGeneratorFilters`
   (fuel + MW + status + year all `combineFilters`'d together), not via the
-  generic `applyBucketFilterToLayers`. A new gen-scoped range filter slots in
+  generic `applyBucketFilterToLayers` path. A new gen-scoped range filter slots in
   there.
 - Still emit `filter:generators` (or your event) **and** `url:write` on every
   change, and persist it in the codec — see [url-state.md](url-state.md).
@@ -185,6 +190,10 @@ existing two:
   ([ADR-0004](adr/0004-undo-replays-url-write-snapshots.md)). On a range
   slider, apply on `input` but emit `url:write` on `change`, as the MW, year
   and smoke sliders do, so one drag is one undo step however slow it is.
+- Paint the control's value from `state` in `syncPanel()` in
+  `assets/ui/panel-mirror.ts` (see the MW and year sliders there), not in its
+  HTML template or its wire function. That one line is what makes Reset, Undo,
+  a story or a link show the value; the input handler only writes state.
 - The year filter also drives playback (`setInterval` stepping the year). If
   your control animates, mirror `toggleYearPlayback`/`stopYearPlayback` and
   make sure playback ticks emit the filter event but **not** `url:write` on

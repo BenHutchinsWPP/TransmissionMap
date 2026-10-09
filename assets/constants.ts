@@ -334,3 +334,9 @@ export const EMPTY_FC = { type: "FeatureCollection" as const, features: [] as Ge
 // Contiguous US overview
 export const DEFAULT_CENTER: [number, number] = [-95.7, 37.1];
 export const DEFAULT_ZOOM   = 4;
+
+// US county boundaries source, shared by the feature-state joins (ODIN, NRI, NWS).
+// Kept here, in a module that imports nothing, so nws-zone-join.ts can read it at
+// load time whatever order the layer-init ↔ filters ↔ nws-zone-join cycle loads in.
+export const COUNTY_SRC = "county_boundaries";
+export const COUNTY_SRC_LAYER = "county_boundaries";   // tippecanoe names the layer after the manifest id

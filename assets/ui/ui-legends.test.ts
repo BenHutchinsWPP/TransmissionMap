@@ -1,12 +1,7 @@
 // @vitest-environment jsdom
-// url-state.js must be imported before ui-legends.js. They sit in an import
-// cycle (ui-legends → visibility → url-state → url-state-codec → ui-legends),
-// and entering it from ui-legends leaves LEGEND_FILTERS in its TDZ when
-// url-state-codec.ts reads it at module scope. url-state.test.ts primes the
-// graph the same way.
 import { describe, it, expect, beforeEach } from 'vitest';
-import './../url-state.js';
 import { rampLegendHtml } from './ui-legends.js';
+import { wireLangChanged } from './ui.js';
 import { setUnits, DEFAULT_UNITS, fmtTemp, fmtSpeed } from '../../src/units.js';
 
 beforeEach(() => setUnits(DEFAULT_UNITS));
@@ -52,12 +47,13 @@ describe('rampLegendHtml', () => {
   });
 });
 
-import { buildLegends } from './ui-legends.js';
+import { buildLegends, updateLegends } from './ui-legends.js';
 import { setLocale, loadDictionary } from '../../src/i18n/index.js';
 import { emit } from '../state-bus.js';
 import { state } from '../state.js';
 
 describe('buildLegends i18n', () => {
+  wireLangChanged();
   beforeEach(() => {
     setLocale('en');
     document.body.innerHTML = `
@@ -105,5 +101,22 @@ describe('legend refresh on a layer switch', () => {
     state.layerVisibility['fema-nri'] = false;
     emit('layer:visibility', { id: 'fema-nri', visible: false });
     expect(document.getElementById('femaNriLegend')?.hidden).toBe(true);
+  });
+});
+
+describe('colour-by legend dimming', () => {
+  it('dims the swatches of the legend that is not the active colour key', () => {
+    document.body.innerHTML = `<div id="ogfRegionLegend"></div><div id="ogfStatusLegend"></div>
+      <div id="westtecScenarioLegend"></div><div id="westtecDatasetLegend"></div>`;
+    const dimmed = (id: string) => document.getElementById(id)!.classList.contains('legend--not-color-key');
+    state.ogfColorBy = 'status';
+    state.westtecColorBy = 'scenario';
+    updateLegends();
+    expect([dimmed('ogfRegionLegend'), dimmed('ogfStatusLegend')]).toEqual([true, false]);
+    expect([dimmed('westtecScenarioLegend'), dimmed('westtecDatasetLegend')]).toEqual([false, true]);
+    state.ogfColorBy = 'region';
+    updateLegends();
+    expect([dimmed('ogfRegionLegend'), dimmed('ogfStatusLegend')]).toEqual([false, true]);
+    state.westtecColorBy = 'scenario';
   });
 });

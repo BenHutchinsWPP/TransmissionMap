@@ -12,14 +12,15 @@
 //       feature of state.sourcesData[cfg.sourceKey], falling back to the
 //       FeatureCollection-level `generated_utc` stashed in
 //       state.liveFcMeta[cfg.sourceKey] (needed when `features` is empty).
-// Exports fmtAge/fmtAgeShort/downFor/feedIssue — pure age/degraded-feed text
-//       formatters with no DOM or state deps, consumed by ui/ui-legends.ts
+// Exports fmtAge/fmtAgeShort/downFor/feedIssue — age/degraded-feed text
+//       formatters with no DOM or state deps (feedIssue's words come from the
+//       active locale via i18n's t()), consumed by ui/ui-legends.ts
 //       (legend age chips) and any other per-feed status display — plus
 //       liveGeneratedUtc/liveAgeMs, the single reader for a live source's pull
 //       age, used by the gate below and by diagnostics.ts.
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
-//       visibility.ts (setLayerVisibility — which also ticks the checkbox, writes URL state
-//       and, through 'layer:visibility', refreshes the legends),
+//       visibility.ts (setLayerVisibility — which writes URL state and, through
+//       'layer:visibility', refreshes the legends and the panel checkbox),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the diagnostics panel),
 //       experience-link.ts (rebaselineExperience before the kill switch),
 //       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on). Modal DOM ids come from cfg.
@@ -32,6 +33,7 @@ import { setLayerVisibility } from './visibility.js';
 import { on } from './state-bus.js';
 import { recordDiagEvent } from './diag-log.js';
 import { fetchGeojson } from './layers/layer-init.js';
+import { t } from '../src/i18n/index.js';
 
 // Age → short human string ("42m", "3h 5m", "2d 1h"). Shared by the stale
 // modal below and the hand-rolled age chips (weather-live.ts).
@@ -64,10 +66,11 @@ export function downFor(lastOk: string | null | undefined): string {
 // incidents, smoke); unrecognized keys fall back to the raw feed name.
 export function feedIssue(feed: string, status: string, lastOk?: string | null): string | null {
   if (status === "ok") return null;
-  const name = { perimeters_us: "US perim", perimeters_ca: "CA perim",
-                 incidents: "incidents", smoke: "smoke" }[feed] ?? feed;
+  const key = { perimeters_us: "feed.usPerim", perimeters_ca: "feed.caPerim",
+                incidents: "feed.incidents", smoke: "feed.smoke" }[feed];
+  const name = key ? t(key) : feed;
   const m = status.match(/^fallback-(\d+)d$/);
-  return m ? `${name} ${m[1]}d old` : `${name} down${downFor(lastOk)}`;
+  return m ? `${name} ${t("age.old", { age: `${m[1]}d` })}` : t("age.feedDown", { name, age: downFor(lastOk) });
 }
 
 // Pull timestamp of a live source: the first feature's `generated_utc`, falling

@@ -19,9 +19,8 @@
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
-// Deps: state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, rasterLut),
-//       constants (weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS), style-overrides (effectiveOverride; call-time
-//       only, the import is cyclic), raster-probes
+// Deps: i18n (t, for the play button label and the age chip), state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, rasterLut),
+//       constants (weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS), style-overrides (effectiveOverride), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
@@ -29,6 +28,8 @@
 //       Dynamically import()s weather-particles.ts (the
 //       lazy chunk boundary — see that file's header) to start/stop the wind
 //       particle animation; never a static import, or the chunk split breaks.
+//       Passes the view's opacity override on to it (setParticleOpacity), so
+//       the particles fade with the wash.
 // Wired from ui/ui.ts init() via initWeatherLive(); setWeatherVar() is called
 // from ui-filters.ts when the dropdown in the layer row changes.
 // The wash opacity folds in the view's opacity override
@@ -48,6 +49,7 @@ import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';
 import { on } from './state-bus.js';
 import { effectiveOverride } from './style-overrides.js';
+import { t } from '../src/i18n/index.js';
 
 // Variables that animate wind particles: Wind itself, the Temp & Wind
 // combined view (temp wash + particles on top), and Windstream (particles
@@ -108,6 +110,7 @@ async function syncWindParticles(): Promise<void> {
   particleBakeKey = bakeKey;
   particleSuffix = suffix;
   particlesModule ??= await import('./weather-particles.js');
+  particlesModule.setParticleOpacity(styleOpacity());
   // generatedUtc rides along as the cache-busting query so the particle field
   // and the wash always come from the same bake.
   if (sameBake) await particlesModule.updateWindField(suffix, generatedUtc ?? "");
@@ -222,6 +225,12 @@ export async function paintImage(url: string, coords?: ImageCorners): Promise<vo
   img.src = url;
   await img.decode().catch(() => { /* fade unwarmed; updateImage still loads it */ });
   if (seq !== paintSeq || !state.map) return;
+  // A superseded fade stopped mid-frame with `back` still partly visible:
+  // settle the pair first, or updateImage() swaps a showing texture (a pop).
+  if (fading) {
+    fading = false;
+    applyWeatherOpacity();
+  }
   back.updateImage({ url, ...(coords ? { coordinates: coords } : {}) });
   frontIsB = !frontIsB;
 
@@ -248,8 +257,10 @@ export async function paintImage(url: string, coords?: ImageCorners): Promise<vo
 // override (style-overrides.ts), cached and refreshed on 'style:weather' so
 // every fade frame reads it for free.
 let washW = WEATHER_WASH_OPACITY;
+const styleOpacity = () => effectiveOverride(REGISTRY_ID).opacity ?? 1;
 function refreshWashOpacity() {
-  washW = WEATHER_WASH_OPACITY * (effectiveOverride(REGISTRY_ID).opacity ?? 1);
+  washW = WEATHER_WASH_OPACITY * styleOpacity();
+  particlesModule?.setParticleOpacity(styleOpacity());
 }
 
 /** One crossfade frame at progress t ∈ [0,1]: [incoming, outgoing] opacity,
@@ -413,13 +424,13 @@ const PLAY_STEP_MS = 900;
 function stopPlayback() {
   if (playTimer != null) { clearInterval(playTimer); playTimer = null; }
   const btn = document.getElementById("weatherPlayBtn");
-  if (btn) { btn.textContent = "▶"; btn.setAttribute("aria-label", "Play forecast animation"); }
+  if (btn) { btn.textContent = "▶"; btn.setAttribute("aria-label", t("weather.playLabel")); }
 }
 
 function togglePlayback() {
   if (playTimer != null) { stopPlayback(); return; }
   const btn = document.getElementById("weatherPlayBtn");
-  if (btn) { btn.textContent = "⏸"; btn.setAttribute("aria-label", "Pause forecast animation"); }
+  if (btn) { btn.textContent = "⏸"; btn.setAttribute("aria-label", t("weather.pauseLabel")); }
   playTimer = setInterval(() => {
     setWeatherStep((stepIdx + 1) % steps.length); // wraps back to the start
   }, PLAY_STEP_MS);
@@ -455,18 +466,18 @@ function renderTimebar() {
   if (!range || !label) return;
   range.max = String(steps.length - 1);
   range.value = String(stepIdx);
-  const t = new Date(Date.parse(steps[stepIdx].valid_utc));
-  const sameDay = t.toDateString() === new Date().toDateString();
+  const at = new Date(Date.parse(steps[stepIdx].valid_utc));
+  const sameDay = at.toDateString() === new Date().toDateString();
   // A stale bake's steps still claim to be "Today" / "Sat" — relative day names
   // read as live data long after the feed stopped. Spell the date out instead
   // (9/5), and tint the label, so a dead feed is obvious on the map itself.
   const stale = isStale();
   const day = stale
-    ? t.toLocaleDateString(undefined, { month: "numeric", day: "numeric" })
-    : sameDay ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" });
+    ? at.toLocaleDateString(undefined, { month: "numeric", day: "numeric" })
+    : sameDay ? t("weather.today") : at.toLocaleDateString(undefined, { weekday: "short" });
   // Steps are exactly on the hour, so no minutes; timeZoneName:"short"
   // appends the local zone abbreviation (e.g. "CDT").
-  const clock = t.toLocaleTimeString(undefined, { hour: "numeric", timeZoneName: "short" });
+  const clock = at.toLocaleTimeString(undefined, { hour: "numeric", timeZoneName: "short" });
   // No "now" suffix — the red track marker is the current-time indicator.
   label.textContent = `${day} ${clock}`;
   label.classList.toggle("weather-timebar-label--stale", stale);
@@ -553,16 +564,16 @@ function renderWeatherAge() {
   const then = Number.isNaN(run) ? pulled : run;
   if (Number.isNaN(then)) { el.textContent = ""; el.removeAttribute("title"); return; }
   const age = Number.isNaN(run)
-    ? `${fmtAgeShort(Date.now() - then)} old`
-    : `run ${fmtAgeShort(Date.now() - then)}`;
+    ? t("age.old", { age: fmtAgeShort(Date.now() - then) })
+    : t("age.run", { age: fmtAgeShort(Date.now() - then) });
   el.textContent = down().length ? `${age} · ${down().join(", ")}` : age;
   const titleParts: string[] = [];
   if (!Number.isNaN(pulled)) {
-    titleParts.push(`Pulled ${new Date(pulled).toLocaleTimeString(undefined, {
+    titleParts.push(t("age.pulled", { time: new Date(pulled).toLocaleTimeString(undefined, {
       hour: "numeric", minute: "2-digit", timeZoneName: "short",
-    })}`);
+    }) }));
   }
-  if (runUtc) titleParts.push(`model run ${runUtc}${step != null ? ` +${step}h` : ""}`);
+  if (runUtc) titleParts.push(t("age.modelRun", { run: `${runUtc}${step != null ? ` +${step}h` : ""}` }));
   el.title = titleParts.join(" · ");
   const pulledMin = Number.isNaN(pulled) ? Infinity : Math.max(0, (Date.now() - pulled) / 60_000);
   const stale = isStale();
@@ -578,7 +589,10 @@ function renderWeatherAge() {
 function down(): string[] {
   return Object.entries(feedStatus ?? {})
     .filter(([, s]) => s !== "ok")
-    .map(([varId]) => `${WEATHER_VARIABLES.find(w => w.id === varId)?.label ?? varId} down`);
+    .map(([varId]) => {
+      const v = WEATHER_VARIABLES.find(w => w.id === varId);
+      return t("age.feedDown", { name: v ? (v.labelKey ? t(v.labelKey) : v.label) : varId, age: "" });
+    });
 }
 
 // Applies state.layerVisibility["weather-live"] to particles/timebar/companion

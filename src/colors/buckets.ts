@@ -362,6 +362,7 @@ const OGF_COLOR_CFG: Record<OgfColorMode, {
   region: { field: "Region", buckets: OGF_REGION_BUCKETS, map: OGF_REGION_MAP },
   status: { field: "Status", buckets: OGF_STATUS_BUCKETS, map: OGF_STATUS_MAP },
 };
+export const OGF_COLOR_MODES = Object.keys(OGF_COLOR_CFG) as OgfColorMode[];
 
 // Shared ["match", ["get", field], ...] builder for categorical "color by"
 // expressions. First bucket wins combo values (e.g. "MISO, SPP" listed under
@@ -426,6 +427,7 @@ const WESTTEC_COLOR_CFG: Record<WesttecColorMode, {
   scenario: { field: "scenario", buckets: WESTTEC_SCENARIO_BUCKETS, map: WESTTEC_SCENARIO_MAP },
   dataset:  { field: "dataset",  buckets: WESTTEC_DATASET_BUCKETS,  map: WESTTEC_DATASET_MAP },
 };
+export const WESTTEC_COLOR_MODES = Object.keys(WESTTEC_COLOR_CFG) as WesttecColorMode[];
 
 export function westtecColorExpr(mode: WesttecColorMode): ExpressionSpecification {
   const { field, buckets, map } = WESTTEC_COLOR_CFG[mode];

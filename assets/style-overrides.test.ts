@@ -10,12 +10,12 @@ import { state } from './state.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { ogfColorExpr, westtecColorExpr } from '../src/colors/buckets.js';
-import { setStyle, clearStyle, applyAllStyles, listStylable, scaleBy, effectiveOverride } from './style-overrides.js';
+import { setStyle, clearStyle, applyAllStyles, listStylable, scaleBy, effectiveOverride, setColorBy } from './style-overrides.js';
 import { validateStyleOverride } from '../src/registry/view-validate.js';
 import { initPolygonHover, initLineHighlight, highlightLine } from './hover.js';
-import { applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
 import { crossfadeOpacities, initWeatherLive } from './weather-live.js';
 import { WEATHER_WASH_OPACITY } from './constants.js';
+import { parseUrlState } from './url-state-codec.js';
 
 type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Record<string, unknown> };
 
@@ -145,8 +145,7 @@ describe('setStyle', () => {
 
   it('every stylable layer, everything set, then clearStyle() → the builders\' map', () => {
     const { layers } = recordingMap();
-    applyOGFColorBy();
-    applyWestTECColorBy();
+    applyAllStyles();
     const before = snapshot(layers);
     const all = listStylable();
     expect(all.length).toBeGreaterThan(40);
@@ -299,13 +298,12 @@ describe('hover twins follow the size override', () => {
 
 // ─── F1 writers ───────────────────────────────────────────────────────────────
 describe('colour-by writers fold the override in', () => {
-  it('OGF: override survives applyOGFColorBy; clearing returns the current colour-by', () => {
+  it('OGF: override survives setColorBy; clearing returns the current colour-by', () => {
     const { layers } = recordingMap();
     const color = () => layers.get('ogf-planned-lines')!.paint!['line-color'];
     expect(setStyle('ogf-planned-transmission', { color: '#00ff00' })).toBeNull();
     expect(color()).toBe('#00ff00');
-    state.ogfColorBy = 'region';
-    applyOGFColorBy();
+    expect(setColorBy('ogf-planned-transmission', 'region')).toBeNull();
     expect(color()).toBe('#00ff00');
     clearStyle('ogf-planned-transmission');
     expect(color()).toEqual(ogfColorExpr('region'));
@@ -315,11 +313,61 @@ describe('colour-by writers fold the override in', () => {
     const { layers } = recordingMap();
     const color = () => layers.get('westtec-lines')!.paint!['line-color'];
     setStyle('westtec-10yr', { color: '#0000ff', size: 2 });
-    state.westtecColorBy = 'dataset';
-    applyWestTECColorBy();
+    setColorBy('westtec-10yr', 'dataset');
     expect(color()).toBe('#0000ff');
     clearStyle();
     expect(color()).toEqual(westtecColorExpr('dataset'));
+  });
+});
+
+describe('setColorBy', () => {
+  it('repaints the lines for the new mode', () => {
+    const { layers } = recordingMap();
+    expect(setColorBy('ogf-planned-transmission', 'region')).toBeNull();
+    expect(state.ogfColorBy).toBe('region');
+    expect(layers.get('ogf-planned-lines')!.paint!['line-color']).toEqual(ogfColorExpr('region'));
+  });
+
+  it('rejects an unknown mode or layer, leaving state and map untouched', () => {
+    const { layers, known } = recordingMap();
+    const before = snapshot(layers);
+    (known.setPaintProperty as ReturnType<typeof vi.fn>).mockClear();
+    expect(setColorBy('ogf-planned-transmission', 'bogus')).toMatch(/bogus/);
+    expect(setColorBy('westtec-10yr', 'region')).toMatch(/region/);
+    expect(setColorBy('osm-transmission-lines', 'region')).toMatch(/no colour-by/);
+    expect(setColorBy('toString', 'region')).toMatch(/no colour-by/);
+    expect(state.ogfColorBy).toBe('status');
+    expect(state.westtecColorBy).toBe('scenario');
+    expect(known.setPaintProperty).not.toHaveBeenCalled();
+    expect(snapshot(layers)).toEqual(before);
+  });
+
+  it('accepts every mode a link can carry', () => {
+    recordingMap();
+    const chars = [...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'];
+    const decoded = (param: string, field: 'ogfColorBy' | 'westtecColorBy') =>
+      chars.map(c => parseUrlState(new URLSearchParams({ [param]: c }))[field]).filter(m => m !== undefined);
+    const ogf = decoded('oc', 'ogfColorBy'), westtec = decoded('wc', 'westtecColorBy');
+    expect(ogf.length).toBeGreaterThan(1);
+    expect(westtec.length).toBeGreaterThan(1);
+    for (const m of ogf) expect(setColorBy('ogf-planned-transmission', m)).toBeNull();
+    for (const m of westtec) expect(setColorBy('westtec-10yr', m)).toBeNull();
+  });
+
+  it('writes state before the map exists', () => {
+    state.map = null;
+    state.mapReady = false;
+    expect(setColorBy('westtec-10yr', 'dataset')).toBeNull();
+    expect(state.westtecColorBy).toBe('dataset');
+  });
+
+  it('applyAllStyles repaints the colour-by from state', () => {
+    const { layers } = recordingMap();
+    state.ogfColorBy = 'region';
+    state.westtecColorBy = 'dataset';
+    applyAllStyles();
+    expect(layers.get('ogf-planned-lines')!.paint!['line-color']).toEqual(ogfColorExpr('region'));
+    expect(layers.get('westtec-lines')!.paint!['line-color']).toEqual(westtecColorExpr('dataset'));
   });
 });
 

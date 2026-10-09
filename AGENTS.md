@@ -75,13 +75,15 @@ turns public datasets into PMTiles consumed by the frontend.
     - `basemap.ts` — raster + OpenFreeMap basemaps, Map Labels, Esri → USGS aerial fallback,
       projection/atmosphere; `basemapVisibility` is the pure basemap × labels × fallback matrix
     - `state.ts` mutable global singleton and its `AppState` interface (type-only imports); constants live in `constants.ts` — import them from there. The Map Experience link (story id, dirty flag) is not on it — read it through `experience-link.ts`'s `activeExperienceId()` / `experienceIsDirty()`
-    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`, `undo:changed`; see `Events`); no deps
-    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, commits with `url:write`, then emits `layer:visibility`, which also refreshes the legends), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility) and `settleExclusiveGroups` (one member per exclusive group, for a whole view)
+    - `state-bus.ts` typed pub/sub (events: `filter:*`, `layer:visibility`, `view:applied`, `url:write`, `undo:changed`; see `Events`); no deps
+    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, commits with `url:write`, then emits `layer:visibility`, which refreshes the legends and the panel row), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility), `heatRampShown` (heat ramp legend rule) and `settleExclusiveGroups` (one member per exclusive group, for a whole view); writes no panel control
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`;
       `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
       filter each map layer carries, and `setWhere()` sets a layer's field conditions
     - `style-overrides.ts` — a view's per-layer `style` (opacity/size multipliers,
-      colour): `setStyle`, `clearStyle`, `applyAllStyles`; baselines restored exactly
+      colour): `setStyle`, `clearStyle`, `applyAllStyles`; baselines restored exactly.
+      Also the OGF/WestTEC colour-by: `setColorBy` (validated mode → state → line-color;
+      a view colour override still wins), repainted by `applyAllStyles`
     - `url-state.ts` — `readUrlState`, `writeUrlState` + bus subscription
     - `view-state.ts` — the one path a whole view takes into the app: `seedView`
       (cold boot, state only), `applyView` (live map — Reset is `applyView({})`,
@@ -140,7 +142,13 @@ turns public datasets into PMTiles consumed by the frontend.
     - `ui.ts` bootstrap + `init()`; wires all UI subsystems
     - `ui-filters.ts` — layer/legend/MW/year filter event wiring (emits bus events)
     - `ui-legends.ts` — legend HTML + `LEGEND_FILTERS` config
-    - `ui-layer-rows.ts` — layer panel row HTML
+    - `ui-layer-rows.ts` — layer panel row HTML (structure only — no template reads state for a value)
+    - `panel-mirror.ts` — **the only writer of panel control values derived from state**:
+      `renderPanel()` (rebuild rows, then sync) and `syncPanel(layerId?)` (values only:
+      checkboxes, heat ramps, mode/colour-by buttons, selects, chips, year/MW/smoke
+      sliders, basemap radios + 3D toggles, region dropdown); subscribes to
+      `layer:visibility` (one row) and `view:applied` (rows rebuilt only when region, locale or the set of switched-on
+      out-of-scope layers — which keep a row — changed, so Undo keeps open sub-panels and focus)
     - `ui-menubar.ts` — toolbar (draw/edit/export)
     - `ui-mydata.ts` — My Data tab wiring
     - `ui-search.ts` — feature search; `ui-geocoder.ts` — place search
@@ -235,6 +243,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`; and a new `MapExperience.state` field must be representable in `assets/url-state-codec.ts` or it never reaches a shared link — `assets/experiences.test.ts` § 1 fails when it isn't) |
 | Anything that reacts to a click/tap/hover on the map | `assets/map-input.ts` — subscribe there, never `map.on("click"\|"mousemove"\|…)` (silent footgun: a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas) |
 | Check a change in the real app / verify by screenshots | `.claude/skills/drive-app/SKILL.md` — headless Chromium against the dev server, with scenarios for links, `vx`, Reset, view files and style overrides (silent footgun: Reset's `window.confirm` is dismissed headless unless dialogs are accepted, and a screenshot taken before MapLibre's `idle` shows a half-drawn map while every check passes) |
+| A panel control shows the wrong value after Reset/Undo/a story/a link | `assets/ui/panel-mirror.ts` (`syncPanel`) (silent footgun: templates in `ui-layer-rows.ts` must not read state, and a control whose value is view state needs a line in `syncPanel` — nothing else repaints it, since a view that keeps region and language no longer re-renders the rows) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
 | Fix voltage colors | `src/colors/voltage.ts` |
@@ -245,7 +254,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add hover highlight to a polygon layer | set `hoverField` on the `LayerDef` in `src/registry/<group>.ts` |
 | Add line click-highlight to a line layer | set `lineHighlightKeys` on the `LayerDef` in `src/registry/<group>.ts` |
 | Change which feature a click resolves to / add a clickable layer | set `clickPriority` on the `LayerDef` in `src/registry/<group>.ts` (higher number wins); a style layer built outside the registry goes in `UNOWNED_CLICKABLE` in `assets/popup.ts` instead |
-| Gate a layer's fetch on zoom (large point datasets) | set `fromZoom` on the `LayerDef` in `src/registry/<group>.ts` — `assets/layers/layer-init.ts`'s `ensureLayerData()` withholds the fetch below it, and `assets/visibility.ts`'s `refetchZoomGatedLayers()` re-checks it on zoom settle |
+| Gate a layer's fetch on zoom (large point datasets) | set `fromZoom` on the `LayerDef` in `src/registry/<group>.ts` — `assets/layers/layer-init.ts`'s `ensureLayerData()` withholds the fetch below it (for any layer sharing that source too) and retries it on zoom settle |
 | Add a field to a dataset's filter schema (types, operators, closed value domains) | `src/registry/field-schema.ts` (`FIELD_SCHEMA`); compiled into filter expressions by `src/registry/condition-compile.ts` |
 | Legends | `assets/ui/ui-legends.ts` |
 | Search behavior | `assets/ui/ui-search.ts` |

@@ -47,7 +47,7 @@ Two derived fields drive the styling:
 Line color is selectable via a "color by" toggle on the layer row
 (`ogfStatusLayer` in the registry): `Region` (default) or `Status` —
 expression built by `ogfColorExpr()` in `src/colors/buckets.ts`, applied by
-`applyOGFColorBy()` in `assets/visibility.ts`, persisted as URL param `oc`.
+`setColorBy()` in `assets/style-overrides.ts`, persisted as URL param `oc`.
 Line style is fixed across both modes: solid for new lines, dashed for work on
 existing lines (`OGF_DASH_EXPR`). The OGF layer does not symbolize WestTEC
 scenarios; the WestTEC 10 Yr layer is the one place those are shown.

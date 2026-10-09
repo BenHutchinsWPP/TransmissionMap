@@ -43,7 +43,8 @@ distinct `name`, not features).
 ## Categorical views
 
 "Color by" toggle (`state.westtecColorBy`, expression from `westtecColorExpr()`
-in `src/colors/buckets.ts`) between two views, each with its own legend and
+in `src/colors/buckets.ts`, applied by `setColorBy()` in
+`assets/style-overrides.ts`) between two views, each with its own legend and
 filter chip panel:
 
 - **Scenario** (`WESTTEC_SCENARIO_BUCKETS`) — colors by `scenario`.

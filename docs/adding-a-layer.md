@@ -162,7 +162,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `lineHighlightKeys: ["name"]` | Line click-highlight — set to one or more feature properties that uniquely identify a line |
 | `clickPriority: { "my-layer-circles": 500 }` | **Required for a clickable layer.** Maps each of this entry's MapLibre layer ids to its click hit-test priority — higher number tested first when overlapping features exist. `assets/popup.ts` folds every `LayerDef.clickPriority` into its query order at module load; see §10. |
 | `exclusiveGroup: "county-choropleth"` | Optional. Layers sharing a group show one at a time — switching one on switches the others off and unticks their checkboxes (`setLayerVisibility()` in `assets/visibility.ts`). Give it to any new layer that paints the same shapes as an existing one, e.g. another county-keyed choropleth on `county_boundaries`. |
-| `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-init.ts`); `assets/visibility.ts`'s `refetchZoomGatedLayers()` re-checks it on zoom settle. Omit for anything fetched at its default visibility. |
+| `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-init.ts`), which also gates any layer sharing the source and retries a held layer on zoom settle. Omit for anything fetched at its default visibility. |
 
 **Ramp stops** are `[value, "r,g,b"]` pairs matching the gdaldem color ramp — define them as `<X>_RAMP_STOPS` / `<X>_RAMP_MAX` in `src/colors/ramps.ts` and reference them here (see **§3R**). `minLabel`/`maxLabel` override the default "0" / `max+ unit` labels.
 
@@ -424,7 +424,8 @@ Update `docs/data-sources.md`:
 [ ] assets/popup-format.ts                — renderer tuple in the _defs table (clickable layers)
 [ ] assets/filters.ts                     — bus subscription (if new filter type)
 [ ] assets/ui/ui-filters.ts              — emit events (if new filter type)
-[ ] index.html                            — layer-rows-* div (if new group: full section + ui/ui.ts)
+[ ] index.html                            — layer-rows-* div (if new group: full section + the `groups` array in ui/ui-layer-rows.ts)
+[ ] assets/ui/panel-mirror.ts             — a value line in syncPanel() (only if the row gets a new control whose value is view state; the template renders it neutral)
 [ ] index.html                            — source credit <li data-source-credit="...">
 [ ] docs/layers/my-layer.md               — layer documentation
 [ ] docs/layers/README.md                  — add the layer to the index prose

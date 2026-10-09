@@ -14,8 +14,8 @@
 // Deps: state (map, layerVisibility), constants (DATA), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel), experience-link.ts
 //       (rebaselineExperience before the kill switch), state-bus.ts (on
-//       'layer:visibility' — re-runs the gate as the layer switches on). Legend age chip
-//       = #odinAge in index.html.
+//       'layer:visibility' — re-runs the gate as the layer switches on), i18n (t,
+//       for the legend age chip = #odinAge in index.html).
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from the feature-state set here, and
 //       click-resolve.ts hit-tests with outageFeatureLit().
@@ -36,6 +36,7 @@ import { recordDiagEvent } from './diag-log.js';
 import { setLayerVisibility } from './visibility.js';
 import { on } from './state-bus.js';
 import { fmtAge } from './live-staleness.js';
+import { t } from '../src/i18n/index.js';
 
 const REGISTRY_ID = "odin-outages";
 
@@ -180,11 +181,9 @@ function renderOdinAge() {
   const then = Date.parse(generatedUtc);
   if (Number.isNaN(then)) { el.textContent = ""; return; }
   const min = Math.max(0, Math.round((Date.now() - then) / 60_000));
-  el.textContent =
-    min < 1    ? "updated just now"
-    : min < 60   ? `updated ${min} min ago`
-    : min < 1440 ? `updated ${Math.round(min / 60)}h ago`
-    :              `updated ${Math.round(min / 1440)}d ago`;
+  el.textContent = min < 1 ? t("age.updatedNow") : t("age.updated", {
+    age: min < 60 ? `${min} min` : min < 1440 ? `${Math.round(min / 60)}h` : `${Math.round(min / 1440)}d`,
+  });
   const stale = Date.now() - then > MAX_AGE_MS;
   el.className = "legend-age legend-age--" + (stale ? "stale" : min <= 60 ? "fresh" : "aging");
 }

@@ -2,10 +2,15 @@
 // Pure HTML-string generators for the layers panel: one row per LayerDef plus
 // its action buttons (filter / year / download / source) and the gen-mode and
 // filter sub-panels. buildLayersPanel() renders every group's rows into the DOM.
+// Structure only: which rows exist follows hasPanelRow() (the region scope, plus
+// any switched-on layer so it can be switched off), but no template reads state
+// for a control's value (checked, active, selected, the year) —
+// panel-mirror.ts writes every value right after the render.
 // Deps: state.js, registry/index.js (LAYERS, LAYER_SOURCES), colors/ramps.js
 // (HEAT_RAMP), ui-legends.js (rampLegendHtml), utils.js (escapeHtml),
 // src/i18n/index.js (t).
-// Consumed by ui.ts (init + the view:applied resync + wireLangChanged).
+// Consumed by panel-mirror.ts (renderPanel), which then writes every control
+// value from state (syncPanel); PANEL_GROUPS also by panel-mirror.test.ts.
 
 import { state } from '../state.js';
 import { LAYERS, LAYER_SOURCES, REGION_CODE_MAP } from '../../src/registry/index.js';
@@ -25,6 +30,12 @@ export function isLayerInRegion(layer: LayerDef, scope: LayerScope = state.regio
   if (scope === 'usa') return true;
   if (!layer.regions || layer.regions.length === 0) return true;
   return layer.regions.includes('global');
+}
+
+// A layer outside the scope keeps its row while it is on, so a link, a story or a
+// region change never leaves a drawn layer the panel cannot switch off.
+export function hasPanelRow(layer: LayerDef): boolean {
+  return !layer.hidden && (isLayerInRegion(layer) || !!state.layerVisibility[layer.id]);
 }
 
 // Every OSM-derived pack is built per continent: Geofabrik's continental
@@ -47,12 +58,14 @@ export function getRegionalDownloadPath(pathStr: string, region: DownloadRegion)
   return pathStr.replace(PACK_SUFFIX_RE, (_match, shp = '') => `-${code}${shp}.zip`);
 }
 
+// Panel sections in display order; each renders into #layer-rows-<group> (index.html).
+export const PANEL_GROUPS = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "conditions"];
+
 export function buildLayersPanel() {
-  const groups = ["transmission", "substations", "generators", "pipelines", "rail", "renewable", "load", "land", "regions", "conditions"];
-  for (const group of groups) {
+  for (const group of PANEL_GROUPS) {
     const container = document.getElementById(`layer-rows-${group}`);
     if (!container) continue;
-    const entries = LAYERS.filter(l => l.group === group && !l.hidden && isLayerInRegion(l, state.regionScope));
+    const entries = LAYERS.filter(l => l.group === group && hasPanelRow(l));
     container.innerHTML = entries.map(layerRowHtml).join("");
   }
 
@@ -65,34 +78,15 @@ export function buildLayersPanel() {
       section.style.display = hasAnyRows ? '' : 'none';
     }
   });
-
-  const regionMenu = document.getElementById('regionMenu');
-  if (regionMenu) {
-    const activeItem = regionMenu.querySelector<HTMLButtonElement>(`.region-menu-item[data-region="${state.regionScope}"]`);
-    regionMenu.querySelectorAll<HTMLButtonElement>('.region-menu-item').forEach(item => {
-      const active = item.dataset.region === state.regionScope;
-      item.classList.toggle('region-menu-item--active', active);
-      item.setAttribute('aria-checked', active ? 'true' : 'false');
-    });
-    const iconEl = document.getElementById('regionActiveIcon');
-    const textEl = document.getElementById('regionActiveText');
-    if (activeItem) {
-      const svg = activeItem.querySelector('svg');
-      if (iconEl && svg) iconEl.innerHTML = svg.outerHTML;
-      const label = activeItem.querySelector('.region-menu-label');
-      if (textEl && label) textEl.textContent = label.textContent;
-    }
-  }
 }
 
 function layerRowHtml(entry: LayerDef) {
-  const checked = state.layerVisibility[entry.id] ? " checked" : "";
   const label = t(entry.titleKey);
   const liveTooltip = t('layer.liveTooltip');
   return `
     <div class="layer-row">
       <label class="layer-label">
-        <input type="checkbox" data-layer-id="${entry.id}"${checked}>
+        <input type="checkbox" data-layer-id="${entry.id}">
         <span class="swatch${entry.live ? " swatch--live" : ""}" style="background:${entry.swatch}${entry.live ? `;color:${entry.swatch}` : ""}" ${entry.live ? `title="${escapeHtml(liveTooltip)}"` : ""}></span>
         <span class="layer-name truncate" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       </label>
@@ -210,15 +204,12 @@ function filterPanelHtml(entry: LayerDef) {
   if (!entry.filterBuckets) return "";
   return `
     <div class="layer-filter-panel" id="filter-panel-${entry.id}" hidden>
-      ${entry.filterBuckets.map((b: BucketDef) => {
-        const checked = state.layerFilters[entry.id]?.has(b.id) ? " checked" : "";
-        return `
+      ${entry.filterBuckets.map((b: BucketDef) => `
         <label class="filter-chip">
-          <input type="checkbox" data-filter-layer="${entry.id}" data-bucket-id="${b.id}"${checked}>
+          <input type="checkbox" data-filter-layer="${entry.id}" data-bucket-id="${b.id}">
           <span class="chip-swatch" style="background:${b.color}"></span>
           <span class="chip-label">${escapeHtml(b.label)}</span>
-        </label>`;
-      }).join("")}
+        </label>`).join("")}
     </div>`;
 }
 
@@ -226,8 +217,7 @@ function ogfColorByBlockHtml(entry: LayerDef) {
   if (!entry.ogfStatusLayer) return "";
   const label = t(entry.titleKey);
   const btn = (m: string, text: string) =>
-    `<button type="button" class="gen-mode-btn${state.ogfColorBy === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-ogf-colorby="${m}">${escapeHtml(text)}</button>`;
+    `<button type="button" class="gen-mode-btn" data-ogf-colorby="${m}">${escapeHtml(text)}</button>`;
   return `
     <div class="gen-mode">
       <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(label)} by">
@@ -240,8 +230,7 @@ function westtecColorByBlockHtml(entry: LayerDef) {
   if (!entry.westtecColorLayer) return "";
   const label = t(entry.titleKey);
   const btn = (m: string, text: string) =>
-    `<button type="button" class="gen-mode-btn${state.westtecColorBy === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-westtec-colorby="${m}">${escapeHtml(text)}</button>`;
+    `<button type="button" class="gen-mode-btn" data-westtec-colorby="${m}">${escapeHtml(text)}</button>`;
   return `
     <div class="gen-mode">
       <div class="gen-mode-toggle" role="group" aria-label="Color ${escapeHtml(label)} by">
@@ -255,7 +244,7 @@ function weatherVarBlockHtml(entry: LayerDef) {
   const label = t(entry.titleKey);
   const options = WEATHER_VARIABLES.map(v => {
     const vLabel = v.labelKey ? t(v.labelKey) : v.label;
-    return `<option value="${v.id}"${state.weatherVar === v.id ? " selected" : ""}>${escapeHtml(vLabel)}</option>`;
+    return `<option value="${v.id}">${escapeHtml(vLabel)}</option>`;
   }).join("");
   return `
     <div class="gen-mode">
@@ -268,7 +257,7 @@ function nriHazardBlockHtml(entry: LayerDef) {
   if (!entry.nriHazardLayer) return "";
   const label = t(entry.titleKey);
   const options = NRI_HAZARDS.map(h =>
-    `<option value="${h.id}"${state.nriHazard === h.id ? " selected" : ""}>${escapeHtml(h.label)}</option>`,
+    `<option value="${h.id}">${escapeHtml(h.label)}</option>`,
   ).join("");
   return `
     <div class="gen-mode">
@@ -280,7 +269,6 @@ function nriHazardBlockHtml(entry: LayerDef) {
 function genModeBlockHtml(entry: LayerDef) {
   if (!entry.heatLayerId && !entry.modes) return "";
   const label = t(entry.titleKey);
-  const mode = state.genMode[entry.id] || entry.defaultMode || "icons";
   const modeLabels: Record<string, string> = {
     icons: t('mode.icons'),
     heat: t('mode.heatmap'),
@@ -289,8 +277,7 @@ function genModeBlockHtml(entry: LayerDef) {
     clusters: t('mode.clusters'),
   };
   const btn = (m: string, text: string) =>
-    `<button type="button" class="gen-mode-btn${mode === m ? " gen-mode-btn--active" : ""}"` +
-    ` data-gen-mode-layer="${entry.id}" data-gen-mode="${m}">${escapeHtml(text)}</button>`;
+    `<button type="button" class="gen-mode-btn" data-gen-mode-layer="${entry.id}" data-gen-mode="${m}">${escapeHtml(text)}</button>`;
   const buttons = entry.modes
     ? entry.modes.map(m => btn(m.id, modeLabels[m.id] ?? m.label)).join("")
     : btn("icons", t('mode.icons')) + btn("heat", t('mode.heatmap')) + btn("both", t('mode.both'));

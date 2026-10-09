@@ -13,9 +13,10 @@
 //       A write equal to the top is skipped (a language change writes with no
 //       view change); one within REPLACE_MS of the last replaces the top (a
 //       burst of commits is one entry; a range slider commits once, on
-//       'change', so a drag is one at any speed), and drops it when that leaves it equal to
-//       the entry below. The baseline is taken at 'map:ready', after
-//       the linked view is painted, so the cold-boot write is not a commit.
+//       'change', so a drag is one at any speed), and drops it when that
+//       leaves it equal to the entry below. The baseline is taken at
+//       'map:ready', after the linked view is painted, so the cold-boot write
+//       is not a commit.
 //       Never history.pushState: Back would fire hashchange, and map.ts reloads
 //       on a hash carrying params. Undo changes the view, never which story is
 //       open; a dirty story stays dirty. A restored toggle does what its control

@@ -181,7 +181,7 @@ function addBasemapSources() {
 type OfmKey = keyof typeof OFM_STYLE_URLS;  // 'light' | 'dark' — indexes OFM_STYLE_URLS for the style fetch
 // Paint-order groups toggled by switchBasemap(); 'aerial' has no style URL of
 // its own — it's cloned from the fetched 'light' style (see addOfmBasemaps()).
-export type OfmGroup = OfmKey | 'aerial';
+type OfmGroup = OfmKey | 'aerial';
 const ofmLayerIds: Record<OfmGroup, string[]> = { light: [], dark: [], aerial: [] };
 // Symbol (text/shield) layers across both styles — the "Map Labels" toggle set.
 const ofmLabelIds = new Set<string>();

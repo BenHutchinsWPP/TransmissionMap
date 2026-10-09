@@ -122,7 +122,7 @@ export function writeUrlState() {
 
 // ─── Bus subscription ─────────────────────────────────────────────────────────
 on('url:write', writeUrlState);
-// Both scope the panel rather than the map, so they rebaseline: without it the
+// Language scopes the panel rather than the map, so it rebaselines: without it the
 // changed param reads as the user editing their way out of an active experience.
-on('lang:changed',   () => { rebaselineExperience(); emit('url:write'); });
-on('region:changed', () => { rebaselineExperience(); emit('url:write'); });
+// The region dropdown does the same in its own click handler (ui.ts).
+on('lang:changed', () => { rebaselineExperience(); emit('url:write'); });

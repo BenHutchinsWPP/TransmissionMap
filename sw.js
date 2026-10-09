@@ -60,15 +60,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(handleStatic(req));
 });
 
-// Tag cache-served responses so the page's data-usage counter can skip them
-// (cache hits cost zero network bytes). Headers are immutable on a cached
-// Response, so rewrap it.
-function markCacheHit(res) {
-  const headers = new Headers(res.headers);
-  headers.set('x-sw-cache', 'hit');
-  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
-}
-
 // ── Static: Network-First ─────────────────────────────────────────────────────
 // ponytail: network-first while updates ship frequently — nobody can be stale
 // while online. Flip back to cache-first (or SWR) once the site stabilizes.
@@ -82,7 +73,7 @@ async function handleStatic(req) {
     return response;
   } catch (err) {
     const cached = await caches.match(req);   // offline → serve last good copy
-    if (cached) return markCacheHit(cached);
+    if (cached) return cached;
     throw err;
   }
 }

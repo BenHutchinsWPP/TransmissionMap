@@ -1,30 +1,31 @@
 // ─── UI bootstrap + event wiring ──────────────────────────────────────────────
 // Top-level init() + the delegated event wiring (wireUI). The Reset button is
-// view-state.ts's applyView({}); the 'view:applied' subscriber below mirrors
-// any applied view onto the panels and controls. Layer-row HTML lives
-// in ui-layer-rows.js; menubar wiring in ui-menubar.js; My Data tab handlers in
-// ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
+// view-state.ts's applyView({}); panel-mirror.js repaints every panel control
+// from state after any applied view, and renders the layer rows (renderPanel)
+// at init and on a language or region change; the 'view:applied' subscriber
+// below keeps the rest (year playback, legends). Menubar wiring lives in
+// ui-menubar.js; My Data tab handlers in ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
 // Data Credits dialog opens its hand-written index.html markup immediately,
 // then lazily loads ui-credits.js once to add the generated manifest's detail.
 // undo.js: its bus subscriptions keep the view's undo history; resetHistory
-// re-baselines it once a ?exp= deep link's story has applied.
+// re-baselines it once a ?exp= deep link's story has applied. The region
+// dropdown is painted by panel-mirror.js; its click writes the scope, re-renders
+// the panel and writes the URL.
 
 import { state } from '../state.js';
-import { activeExperienceId, endExperienceLink } from '../experience-link.js';
+import { activeExperienceId, endExperienceLink, rebaselineExperience } from '../experience-link.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 import type { LayerScope } from '../../src/types.js';
 import { YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../../src/colors/ramps.js';
-import { mwToPos } from '../filters.js';
 import { setLayerVisibility } from '../visibility.js';
 import { initMap } from '../map.js';
 import { switchBasemap, switchProjection, setBasemapLabels } from '../basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from '../terrain.js';
 import { maybeShowRotateHint } from '../terrain-hint.js';
-import { buildLegends, updateLegends } from './ui-legends.js';
+import { buildLegends } from './ui-legends.js';
 import {
   wireLayerFilterPanels, wireLegendFilters, wireMwFilter, wireSmokeOpacity,
   wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireNriHazardSelect, wireYearFilter,
-  updateMwSliderUI, updateSmokeOpacityUI, updateYearSliderUI, updateYearPlayBtn,
   stopYearPlayback,
 } from './ui-filters.js';
 import { wireFeatureSearch } from './ui-search.js';
@@ -42,7 +43,7 @@ import { renderMyDataTab } from '../user-data/user-data.js';
 import { clearFeatureInfo } from '../user-data/user-data-geom.js';
 import { onMapTap } from '../map-input.js';
 import { updateMeasureReadout } from '../measure.js';
-import { buildLayersPanel } from './ui-layer-rows.js';
+import { renderPanel } from './panel-mirror.js';
 import { wireMenubar } from './ui-menubar.js';
 import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
@@ -69,7 +70,7 @@ export async function init() {
   readUrlState();
 
   initMap();
-  buildLayersPanel();
+  renderPanel();
   buildLegends();
   wireUI();
   if (TRIBAL_LAYER_IDS.some(id => state.layerVisibility[id])) showTribalDisclaimer();
@@ -79,89 +80,13 @@ export async function init() {
   initFemaNri();
   initWeatherLive();
   initNwsZoneJoin();
-
-  // Bandwidth tracking system
-  const toggle = document.getElementById("dataCounterToggle") as HTMLInputElement | null;
-  if (toggle) {
-    toggle.checked = window.innerWidth <= 768; // On by default for mobile, off for desktop
-  }
-  updateLegends();
-
-  let totalBytes = 0;
-  const updateCounter = (bytes: number) => {
-    totalBytes += bytes;
-    const el = document.getElementById("dataUsageVal");
-    if (el) {
-      el.textContent = totalBytes < 1048576
-        ? `${(totalBytes / 1024).toFixed(2)} KB`
-        : `${(totalBytes / 1048576).toFixed(2)} MB`;
-    }
-  };
-
-  // 1. Intercept static assets (images, CSS, JS, fonts)
-  try {
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as PerformanceResourceTiming[]) {
-        if (entry.initiatorType === "fetch" || entry.initiatorType === "xmlhttprequest") {
-          continue; // Handled by fetch wrapper to bypass CORS size masking
-        }
-        const size = entry.transferSize || entry.decodedBodySize || 0;
-        if (size > 0) updateCounter(size);
-      }
-    });
-    observer.observe({ type: "resource", buffered: true });
-  } catch (e) {
-    console.warn("PerformanceObserver failed:", e);
-  }
-
-  // 2. Intercept dynamic API, tiles, and layers (fetch calls)
-  const originalFetch = window.fetch;
-  window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const response = await originalFetch(input, init);
-    // ponytail: count only when content-length is present; skip body-buffering
-    // fallback (clone().blob()) — it bought a few unlabeled responses at the
-    // cost of buffering every response body on the hot path.
-    const contentLength = response.headers.get("content-length");
-    // Service-worker cache hits cost zero network bytes — don't count them.
-    if (contentLength && response.headers.get("x-sw-cache") !== "hit") {
-      updateCounter(parseInt(contentLength, 10));
-    }
-    return response;
-  };
 }
 
-// ─── Controls that mirror the view ───────────────────────────────────────────
-// These fire on user input only, so a view applied in code (Reset, a Map
-// Experience — view-state.ts's applyView()) has to be mirrored onto them.
-function syncBasemapControls() {
-  const basemap = document.querySelector<HTMLInputElement>(`input[type=radio][name=basemap][value="${state.basemap}"]`);
-  if (basemap) basemap.checked = true;
-  const projection = document.querySelector<HTMLInputElement>(`input[type=radio][name=projection][value="${state.projection}"]`);
-  if (projection) projection.checked = true;
-  for (const [elId, on] of [
-    ['terrain3dToggle', state.terrain3d],
-    ['buildings3dToggle', state.buildings3d],
-    ['hillshadeToggle', state.hillshade],
-    ['basemapLabelsToggle', state.basemapLabels],
-  ] as const) {
-    const el = document.getElementById(elId) as HTMLInputElement | null;
-    if (el) el.checked = on;
-  }
-}
-
+// The panel mirror (panel-mirror.js) repaints the controls on 'view:applied';
+// what is left here is not a control value.
 on('view:applied', () => {
   stopYearPlayback();
-  syncBasemapControls();
-  buildLayersPanel();
   buildLegends();
-  const mwMin = document.getElementById("mwSliderMin") as HTMLInputElement | null;
-  const mwMax = document.getElementById("mwSliderMax") as HTMLInputElement | null;
-  if (mwMin) mwMin.value = String(mwToPos(state.mwFilter.min));
-  if (mwMax) mwMax.value = String(mwToPos(state.mwFilter.max));
-  updateMwSliderUI();
-  updateSmokeOpacityUI();
-  updateYearSliderUI();
-  updateYearPlayBtn();
 });
 
 // ─── Data-credits source focus helpers ───────────────────────────────────────
@@ -251,30 +176,11 @@ function wireUI() {
 // 'global' hides the US-only layers. Which continental download pack a button
 // points at is chosen per-download in the menu, not here. Map data is planet-wide
 // — one tileset per layer — so changing scope never reloads a source.
-function wireRegionSelect() {
+export function wireRegionSelect() {
   const dropdown = document.getElementById("regionDropdown");
   const btn = document.getElementById("regionDropdownBtn") as HTMLButtonElement | null;
   const menu = document.getElementById("regionMenu");
-  const iconEl = document.getElementById("regionActiveIcon");
-  const textEl = document.getElementById("regionActiveText");
   if (!dropdown || !btn || !menu) return;
-
-  const updateUI = () => {
-    const activeItem = menu.querySelector<HTMLButtonElement>(`.region-menu-item[data-region="${state.regionScope}"]`);
-    menu.querySelectorAll<HTMLButtonElement>(".region-menu-item").forEach(item => {
-      const active = item.dataset.region === state.regionScope;
-      item.classList.toggle("region-menu-item--active", active);
-      item.setAttribute("aria-checked", active ? "true" : "false");
-    });
-    if (activeItem) {
-      const svg = activeItem.querySelector("svg");
-      if (iconEl && svg) iconEl.innerHTML = svg.outerHTML;
-      const label = activeItem.querySelector(".region-menu-label");
-      if (textEl && label) textEl.textContent = label.textContent;
-    }
-  };
-
-  updateUI();
 
   const items = () => [...menu.querySelectorAll<HTMLButtonElement>(".region-menu-item")];
   const close = (refocus = false) => {
@@ -326,9 +232,11 @@ function wireRegionSelect() {
     close(true);
     if (nextScope === state.regionScope) return;
     state.regionScope = nextScope;
-    updateUI();
-    buildLayersPanel();
-    emit('region:changed', { region: state.regionScope });
+    renderPanel();
+    // Region scopes the panel, not the map, so the change is not an edit of an
+    // active experience: rebaseline before the write the link diff compares.
+    rebaselineExperience();
+    emit('url:write');
   });
 
   document.addEventListener("click", (e) => {
@@ -339,8 +247,6 @@ function wireRegionSelect() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !menu.hidden) close(true);
   });
-
-  on('region:changed', () => updateUI());
 }
 
 // A hash carrying `exp=<id>` restores a curated story. readUrlState() has
@@ -399,9 +305,6 @@ function wireResetLayers() {
 }
 
 function wireBasemap() {
-  // URL restore (readUrlState) runs before this wiring.
-  syncBasemapControls();
-
   document.addEventListener("change", (e) => {
     const el = e.target as Element;
     const basemap = el?.closest<HTMLInputElement>("input[type=radio][name=basemap]");
@@ -410,8 +313,6 @@ function wireBasemap() {
     if (proj) { switchProjection(proj.value); emit('url:write'); return; }
     const labelsToggle = el?.closest<HTMLInputElement>("input[id=basemapLabelsToggle]");
     if (labelsToggle) { setBasemapLabels(labelsToggle.checked); emit('url:write'); return; }
-    const dataToggle = el?.closest<HTMLInputElement>("input[id=dataCounterToggle]");
-    if (dataToggle) { updateLegends(); return; }
     const terrain = el?.closest<HTMLInputElement>("input[id=terrain3dToggle]");
     if (terrain) { setTerrain3d(terrain.checked); if (terrain.checked) maybeShowRotateHint(); emit('url:write'); return; }
     const buildings = el?.closest<HTMLInputElement>("input[id=buildings3dToggle]");
@@ -519,11 +420,15 @@ function wireUnitsChanged() {
   });
 }
 
-function wireLangChanged() {
+// The one language handler for the panel and the legends: translations land in
+// the DOM before renderPanel() rebuilds the rows and copies the region label
+// from its menu item, and buildLegends() runs after both (ui-legends.ts does
+// not subscribe itself, so the legends rebuild once per change).
+export function wireLangChanged() {
   on('lang:changed', () => {
     state.popup?.remove();
     updateDomTranslations();
-    buildLayersPanel();
+    renderPanel();
     buildLegends();
   });
 }

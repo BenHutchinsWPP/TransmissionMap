@@ -5,8 +5,13 @@
 // rampLegendHtml() renders a ramp's end labels from the RampDef's own `fmt`
 // when it has one (a formatter from src/units.ts), so a ramp in a convertible
 // unit re-renders in the user's preference on each buildLegends() — which
-// ui.ts triggers from the 'units:changed' bus event. Covered by
+// ui.ts triggers from the 'units:changed' bus event, and from its one
+// 'lang:changed' handler (wireLangChanged), after the DOM translations, so a
+// language change rebuilds the legends once. Covered by
 // ui-legends.test.ts.
+// updateLegends() also dims the OGF/WestTEC legend that is not the active
+// colour key (state.ogfColorBy / state.westtecColorBy), via LEGEND_VISIBILITY's
+// `colorKey`.
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -41,44 +46,44 @@ export const LEGEND_FILTERS = [
     title: "Voltage (kV)", titleKey: "legend.voltage", swatch: "color", apply: applyVoltageFilter },
   { key: "underground", groupCode: "o", buckets: LINE_PLACEMENT_BUCKETS,
     masterId: "linePlacementAllCb", legendId: "linePlacementLegend", itemsId: "linePlacementLegendItems",
-    title: "Line placement", swatch: "line", apply: applyVoltageFilter },
+    title: "Line placement", titleKey: "legend.linePlacement", swatch: "line", apply: applyVoltageFilter },
   { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
     masterId: "fuelAllCb", legendId: "fuelLegend", itemsId: "fuelLegendItems",
     title: "Fuel Type", titleKey: "legend.fuel", swatch: "icon", apply: applyGeneratorFilters },
   { key: "sector", groupCode: "i", buckets: SECTOR_BUCKETS,
     masterId: "sectorAllCb", legendId: "sectorLegend", itemsId: "sectorLegendItems",
-    title: "EIA Plants — sector", swatch: "none", apply: applyGeneratorFilters },
+    title: "EIA Plants — sector", titleKey: "legend.sector", swatch: "none", apply: applyGeneratorFilters },
   { key: "pipeline", groupCode: "p", buckets: PIPELINE_TYPE_BUCKETS,
     masterId: "pipelineAllCb", legendId: "pipelineLegend", itemsId: "pipelineLegendItems",
-    title: "Pipeline Points", swatch: "icon", apply: applyPipelineTypeFilter },
+    title: "Pipeline Points", titleKey: "legend.pipelinePoints", swatch: "icon", apply: applyPipelineTypeFilter },
   { key: "crithab", groupCode: "h", buckets: CRITHAB_BUCKETS,
     masterId: "crithabAllCb", legendId: "crithabLegend", itemsId: "crithabLegendItems",
-    title: "Critical Habitat — ESA status", swatch: "color", apply: applyCritHabFilter },
+    title: "Critical Habitat — ESA status", titleKey: "legend.crithab", swatch: "color", apply: applyCritHabFilter },
   { key: "padus", groupCode: "j", buckets: PADUS_CLASS_BUCKETS,
     masterId: "padusAllCb", legendId: "padusLegend", itemsId: "padusLegendItems",
-    title: "PAD-US — land type", swatch: "color", apply: applyPadusClassFilter },
+    title: "PAD-US — land type", titleKey: "legend.padus", swatch: "color", apply: applyPadusClassFilter },
   { key: "tribal", groupCode: "t", buckets: TRIBAL_BUCKETS,
     masterId: "tribalAllCb", legendId: "tribalLegend", itemsId: "tribalLegendItems",
-    title: "Tribal (Census)", swatch: "color", apply: applyTribalClassFilter },
+    title: "Tribal (Census)", titleKey: "layer.tribalCensus", swatch: "color", apply: applyTribalClassFilter },
   { key: "natgasLine", groupCode: "n", buckets: NATGAS_PIPE_TYPE_BUCKETS,
     masterId: "natgasLineAllCb", legendId: "natgasLineLegend", itemsId: "natgasLineLegendItems",
-    title: "Pipeline type", swatch: "color", apply: applyNatgasLineFilter },
+    title: "Pipeline type", titleKey: "legend.pipelineType", swatch: "color", apply: applyNatgasLineFilter },
   { key: "natgasPts", groupCode: "r", buckets: NATGAS_FAC_TYPE_BUCKETS,
     masterId: "natgasPtsAllCb", legendId: "natgasPtsLegend", itemsId: "natgasPtsLegendItems",
-    title: "Facility type", swatch: "icon", apply: applyNatgasPtsFilter },
+    title: "Facility type", titleKey: "legend.facilityType", swatch: "icon", apply: applyNatgasPtsFilter },
   { key: "substance", groupCode: "u", buckets: SUBSTANCE_BUCKETS,
     masterId: "substanceAllCb", legendId: "substanceLegend", itemsId: "substanceLegendItems",
-    title: "Pipeline fuel", swatch: "color",
+    title: "Pipeline fuel", titleKey: "legend.pipelineFuel", swatch: "color",
     defaultActive: ["gas", "oil", "products", "hydrogen", "coal"], apply: applySubstanceFilter },
   { key: "nerc", groupCode: "c", buckets: NERC_BUCKETS,
     masterId: "nercAllCb", legendId: "nercLegend", itemsId: "nercLegendItems",
-    title: "NERC Region", swatch: "color", apply: applyNercFilter },
+    title: "NERC Region", titleKey: "popup.nercRegion", swatch: "color", apply: applyNercFilter },
   { key: "retail", groupCode: "e", buckets: RETAIL_TYPE_BUCKETS,
     masterId: "retailAllCb", legendId: "retailLegend", itemsId: "retailLegendItems",
-    title: "Utility type", swatch: "color", apply: applyRetailTypeFilter },
+    title: "Utility type", titleKey: "legend.utilityType", swatch: "color", apply: applyRetailTypeFilter },
   { key: "dcm", groupCode: "a", buckets: DCM_CLASSES,
     masterId: "dcmAllCb", legendId: "dcMoratoriumLegend", itemsId: "dcMoratoriumLegendItems",
-    title: "Data Center Moratoriums", swatch: "color", apply: applyDcMoratoriumFilter },
+    title: "Data Center Moratoriums", titleKey: "layer.dcMoratoriums", swatch: "color", apply: applyDcMoratoriumFilter },
   { key: "ogfRegion", groupCode: "b", buckets: OGF_REGION_BUCKETS,
     masterId: "ogfRegionAllCb", legendId: "ogfRegionLegend", itemsId: "ogfRegionLegendItems",
     title: "Region", titleKey: "popup.region", swatch: "color", apply: applyOGFFilters },
@@ -87,22 +92,22 @@ export const LEGEND_FILTERS = [
     title: "Project status", titleKey: "legend.status", swatch: "color", apply: applyOGFFilters },
   { key: "ogfWork", groupCode: "m", buckets: OGF_WORK_BUCKETS,
     masterId: "ogfWorkAllCb", legendId: "ogfWorkLegend", itemsId: "ogfWorkLegendItems",
-    title: "Type of work", swatch: "line", apply: applyOGFFilters },
+    title: "Type of work", titleKey: "legend.typeOfWork", swatch: "line", apply: applyOGFFilters },
   { key: "mines", groupCode: "k", buckets: MINES_COMMODITY_BUCKETS,
     masterId: "minesAllCb", legendId: "minesLegend", itemsId: "minesLegendItems",
-    title: "Mines — commodity", swatch: "icon", apply: applyMinesFilter },
+    title: "Mines — commodity", titleKey: "legend.minesCommodity", swatch: "icon", apply: applyMinesFilter },
   { key: "minesStatus", groupCode: "d", buckets: MINES_STATUS_BUCKETS,
     masterId: "minesStatusAllCb", legendId: "minesStatusLegend", itemsId: "minesStatusLegendItems",
-    title: "Mines — status", swatch: "none", defaultActive: ["active"], apply: applyMinesFilter },
+    title: "Mines — status", titleKey: "legend.minesStatus", swatch: "none", defaultActive: ["active"], apply: applyMinesFilter },
   { key: "nwsGroup", groupCode: "q", buckets: NWS_GROUP_BUCKETS,
     masterId: "nwsGroupAllCb", legendId: "nwsGroupLegend", itemsId: "nwsGroupLegendItems",
-    title: "Weather Alerts", swatch: "color", apply: applyNwsGroupFilter },
+    title: "Weather Alerts", titleKey: "legend.weatherAlerts", swatch: "color", apply: applyNwsGroupFilter },
   { key: "westtecScenario", groupCode: "x", buckets: WESTTEC_SCENARIO_BUCKETS,
     masterId: "westtecScenarioAllCb", legendId: "westtecScenarioLegend", itemsId: "westtecScenarioLegendItems",
     title: "Scenario", titleKey: "legend.scenario", swatch: "color", apply: applyWestTECFilters },
   { key: "westtecDataset", groupCode: "z", buckets: WESTTEC_DATASET_BUCKETS,
     masterId: "westtecDatasetAllCb", legendId: "westtecDatasetLegend", itemsId: "westtecDatasetLegendItems",
-    title: "Project Type", swatch: "color", apply: applyWestTECFilters },
+    title: "Project Type", titleKey: "legend.projectType", swatch: "color", apply: applyWestTECFilters },
 ];
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
@@ -154,7 +159,7 @@ function renderRasterRampLegends(): boolean {
       const entry = LAYERS.find(l => l.id === id);
       if (!entry?.ramp) return "";
       return `<div class="legend">
-        <div class="legend-title"><span class="legend-title-label">${escapeHtml(entry.label)}</span></div>
+        <div class="legend-title"><span class="legend-title-label">${escapeHtml(t(entry.titleKey))}</span></div>
         <div class="legend-items">${rampLegendHtml(entry)}</div></div>`;
     }).join("");
   return host.innerHTML.trim() !== "";
@@ -239,13 +244,13 @@ function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: s
   const then = Date.parse(tsIso);
   if (Number.isNaN(then)) return { short: "", level: "", abs: "" };
   // Show the pull time in the viewer's local timezone (e.g. "Pulled Jun 28, 7:30 AM PDT").
-  const abs = "Pulled " + new Date(then).toLocaleString(undefined, {
+  const abs = t("age.pulled", { time: new Date(then).toLocaleString(undefined, {
     month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
-  });
+  }) });
   const min = Math.max(0, Math.round((Date.now() - then) / 60000));
   // Compact on purpose — the chip widens the whole legend; the verbose pull
   // time lives in the title attribute.
-  const short = min < 1 ? "now" : fmtAgeShort(Date.now() - then);
+  const short = min < 1 ? t("age.now") : fmtAgeShort(Date.now() - then);
   // Wildfire defaults: cron misses of 1–3h are routine and VIIRS obs are hours
   // old anyway — warn only when meaningfully behind; "stale" aligns with the
   // 6h kill-switch. Faster feeds (NWS alerts) pass tighter thresholds.
@@ -260,12 +265,14 @@ let nwsGeneratedUtc: string | undefined;
 let nwsFeedStatus: Record<string, string> | undefined;
 let nwsFeedLastOk: Record<string, string | null> | undefined;
 
-const NWS_FEED_NAMES: Record<string, string> = { nws: "US", eccc: "Canada" };
+const NWS_FEED_NAMES: Record<string, string> = { nws: "feed.us", eccc: "feed.canada" };
 
 function nwsIssues(): string[] {
   return Object.entries(nwsFeedStatus ?? {})
     .filter(([, status]) => status !== "ok")
-    .map(([feed]) => `${NWS_FEED_NAMES[feed] ?? feed} down${downFor(nwsFeedLastOk?.[feed])}`);
+    .map(([feed]) => t("age.feedDown", {
+      name: NWS_FEED_NAMES[feed] ? t(NWS_FEED_NAMES[feed]) : feed, age: downFor(nwsFeedLastOk?.[feed]),
+    }));
 }
 
 function renderNwsAge() {
@@ -275,8 +282,7 @@ function renderNwsAge() {
   const { short, level, abs } = relAge(nwsGeneratedUtc, 60, 180);
   const issues = nwsIssues();
   el.textContent = issues.length ? `${short} · ${issues.join(", ")}` : short;
-  el.title = abs + " — when the map last fetched the alert feed; expired alerts are removed automatically"
-    + (issues.length ? ". A source feed is degraded — this layer shows the last good data, which may be incomplete." : "");
+  el.title = abs + t("age.nwsTip") + (issues.length ? t("age.degradedTip") : "");
   // A degraded feed is at least "aging" (amber), same rule as renderLiveAge.
   el.className = "legend-age legend-age--" + (issues.length && level === "fresh" ? "aging" : level);
 }
@@ -291,14 +297,15 @@ function renderLiveAge() {
       .map(f => feedIssue(f, liveFeedStatus?.[f] ?? "ok", liveFeedLastOk?.[f]))
       .filter((s): s is string => s !== null);
     el.textContent = issues.length ? `${short} · ${issues.join(", ")}` : short;
-    el.title = abs + " — when the map last fetched the feeds; observations can be older (see legend note)"
-      + (issues.length ? ". A source feed is degraded — this layer shows the last good data, which may be incomplete." : "");
+    el.title = abs + t("age.fireTip") + (issues.length ? t("age.degradedTip") : "");
     // A degraded feed is at least "aging" (amber) even seconds after a pull.
     el.className = "legend-age legend-age--" + (issues.length && level === "fresh" ? "aging" : level);
   }
   for (const id of ["smokeDataTimestamp", "wildfireDataTimestamp", "incidentDataTimestamp"]) {
     const el = document.getElementById(id);
-    if (el) el.textContent = abs;
+    // The pull time replaces the "loading…" placeholder; a language change
+    // must not put the placeholder back.
+    if (el) { el.removeAttribute("data-i18n"); el.textContent = abs; }
   }
 }
 
@@ -330,11 +337,12 @@ export function buildLegends() {
   updateLegends();
 }
 
-on('lang:changed', () => { buildLegends(); });
 // Every layer switch (visibility.ts's setLayerVisibility) re-runs the show/hide pass.
 on('layer:visibility', () => updateLegends());
 
-const LEGEND_VISIBILITY = [
+// `colorKey`: for a legend that only colours the lines in one colour-by mode,
+// whether it is the active key; otherwise its swatches dim (it stays a filter).
+const LEGEND_VISIBILITY: { el: string; show: () => boolean; colorKey?: () => boolean }[] = [
   { el: "voltageLegend",    show: () => LAYERS.some(l => l.voltageLayer  && state.layerVisibility[l.id]) },
   { el: "linePlacementLegend", show: () => !!state.layerVisibility["osm-transmission-lines"] || !!state.layerVisibility["hifld-transmission-lines"] },
   { el: "fuelLegend",       show: () => LAYERS.some(l => l.fuelLayer     && state.layerVisibility[l.id]) },
@@ -349,8 +357,8 @@ const LEGEND_VISIBILITY = [
   { el: "nercLegend",       show: () => !!state.layerVisibility["nerc-regions"] },
   { el: "retailLegend",     show: () => !!state.layerVisibility["retail-territories"] },
   { el: "whpLegend",             show: () => !!state.layerVisibility["usfs-wildfire-potential"] },
-  { el: "ogfRegionLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
-  { el: "ogfStatusLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"] },
+  { el: "ogfRegionLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"], colorKey: () => state.ogfColorBy === "region" },
+  { el: "ogfStatusLegend",       show: () => !!state.layerVisibility["ogf-planned-transmission"], colorKey: () => state.ogfColorBy === "status" },
   { el: "ogfWorkLegend",         show: () => !!state.layerVisibility["ogf-planned-transmission"] },
   { el: "minesLegend",           show: () => !!state.layerVisibility["mines"] },
   { el: "minesStatusLegend",     show: () => !!state.layerVisibility["mines"] },
@@ -362,20 +370,20 @@ const LEGEND_VISIBILITY = [
   { el: "femaNriLegend",         show: () => !!state.layerVisibility["fema-nri"] },
   { el: "dcMoratoriumLegend",    show: () => !!state.layerVisibility["dc-moratoriums"] },
   { el: "radarLegend",           show: () => !!state.layerVisibility["nexrad-radar"] },
-  { el: "westtecScenarioLegend", show: () => !!state.layerVisibility["westtec-10yr"] },
-  { el: "westtecDatasetLegend",  show: () => !!state.layerVisibility["westtec-10yr"] },
+  { el: "westtecScenarioLegend", show: () => !!state.layerVisibility["westtec-10yr"], colorKey: () => state.westtecColorBy === "scenario" },
+  { el: "westtecDatasetLegend",  show: () => !!state.layerVisibility["westtec-10yr"], colorKey: () => state.westtecColorBy === "dataset" },
   { el: "weatherLegend",         show: () => !!state.layerVisibility["weather-live"] },
-  { el: "dataCounterLegend",     show: () => { const cb = document.getElementById("dataCounterToggle") as HTMLInputElement | null; return !cb || cb.checked; } },
 ];
 
 export function updateLegends() {
   let anyShown = renderRasterRampLegends();
   refreshWeatherRampBlock();
-  for (const { el, show } of LEGEND_VISIBILITY) {
+  for (const { el, show, colorKey } of LEGEND_VISIBILITY) {
     const visible = show();
     if (visible) anyShown = true;
     const node = document.getElementById(el);
     if (node) node.hidden = !visible;
+    if (node && colorKey) node.classList.toggle("legend--not-color-key", !colorKey());
   }
 
   const container = document.getElementById("legendContainer");

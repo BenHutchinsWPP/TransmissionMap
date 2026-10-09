@@ -5,30 +5,39 @@
 // replaces it. Baselines are read off the map the first time an override
 // touches a (layer, property) and restored exactly when it goes away; the
 // registry and src/colors/* are never mutated.
-// Writers that own an overridable property fold the override in themselves:
-// OGF/WestTEC line-color (visibility.ts's colour-by appliers — clearing colour
-// re-runs them) and the weather wash's crossfade opacity (weather-live.ts).
+// Colour-by: OGF planned lines and WestTEC 10-Yr take their line-color from a
+// mode (state.ogfColorBy / state.westtecColorBy, the private COLOR_BY table).
+// setColorBy() validates and writes the mode, then repaints; a view's colour
+// override still wins over it, and clearing that override returns the line to
+// the current mode. The weather wash's crossfade opacity folds the override in
+// itself (weather-live.ts).
 // Smoke opacity belongs to the smoke slider and is not overridable; the
 // weather wash takes opacity only, its raster pair folded in by weather-live.ts
 // and its border-line layers scaled here. Colour skips `-casing` map layers.
 // setStyle() validates and paints one layer; clearStyle() drops one or all;
-// applyAllStyles() repaints everything from state (whole-view applies, Reset)
-// and returns the keys it had to skip, removing them from state so they never
-// reach a link or view file; listStylable() names what each registry
-// layer accepts. The map-free checks (keys, ranges, colours, barred keys) live
-// in src/registry/view-validate.ts; effectiveOverride() is the one validated
-// read of state for other writers.
-// Deps: state.ts, registry (LAYERS, layerById), view-validate.ts, visibility.ts
-// (colour-by appliers), state-bus.js. The weather wash repaints on the
-// 'style:weather' event, so this module never imports weather-live.ts (that
-// chain reaches filters.ts).
-// Imported by: hover.ts (scaleBy, effectiveOverride), visibility.ts and
-// weather-live.ts (effectiveOverride; call-time only, the import is cyclic).
+// applyAllStyles() repaints every override and colour-by from state
+// (whole-view applies, Reset, undo) and returns the keys it had to skip,
+// removing them from state so they never reach a link or view file;
+// listStylable() names what each registry layer accepts. The map-free checks
+// (keys, ranges, colours, barred keys) live in src/registry/view-validate.ts;
+// effectiveOverride() is the one validated read of state for other writers.
+// Deps: state.ts, registry (LAYERS, layerById), view-validate.ts,
+// src/colors/buckets.ts (ogfColorExpr, westtecColorExpr and their mode lists
+// OGF_COLOR_MODES, WESTTEC_COLOR_MODES), state-bus.js. The
+// weather wash repaints on the 'style:weather' event, so this module never
+// imports weather-live.ts (that chain reaches filters.ts). It imports no UI
+// module: ui-legends.ts derives the colour-key dimming from state itself.
+// Imported by: hover.ts (scaleBy, effectiveOverride), weather-live.ts
+// (effectiveOverride), ui-filters.ts (setColorBy), view-state.ts
+// (applyAllStyles), dev-console.ts (setStyle, clearStyle, listStylable).
 
 import { state } from './state.js';
 import type { StyleOverride } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
-import { applyOGFColorBy, applyWestTECColorBy } from './visibility.js';
+import {
+  ogfColorExpr, westtecColorExpr, OGF_COLOR_MODES, WESTTEC_COLOR_MODES, type OgfColorMode, type WesttecColorMode,
+} from '../src/colors/buckets.js';
+import type { ExpressionSpecification } from 'maplibre-gl';
 import { emit } from './state-bus.js';
 import { STYLE_KEYS, barredReason, keyError, validateStyleOverride, type StyleKey } from '../src/registry/view-validate.js';
 
@@ -63,9 +72,22 @@ const SPEC_DEFAULT: Record<string, number> = {
 };
 
 const WEATHER_ID = "weather-live";
-const COLOR_BY: Record<string, () => void> = {
-  "ogf-planned-lines": () => applyOGFColorBy(),
-  "westtec-lines": () => applyWestTECColorBy(),
+// Colour-by layers: line-color comes from the state field's mode, unless the
+// view's colour override replaces it.
+const COLOR_BY: Record<string, {
+  mapLayerId: string;
+  modes: readonly string[];
+  field: "ogfColorBy" | "westtecColorBy";
+  expr: (mode: string) => ExpressionSpecification;
+}> = {
+  "ogf-planned-transmission": {
+    mapLayerId: "ogf-planned-lines", modes: OGF_COLOR_MODES, field: "ogfColorBy",
+    expr: m => ogfColorExpr(m as OgfColorMode),
+  },
+  "westtec-10yr": {
+    mapLayerId: "westtec-lines", modes: WESTTEC_COLOR_MODES, field: "westtecColorBy",
+    expr: m => westtecColorExpr(m as WesttecColorMode),
+  },
 };
 // The white casing under a planned line is its "planned" cue; colour skips it.
 const isCasing = (mlId: string) => mlId.endsWith("-casing");
@@ -186,7 +208,7 @@ function paint(registryId: string): DroppedStyle[] {
     for (const k of KEYS) {
       if (k === "color" && isCasing(mlId)) continue;
       for (const prop of STYLE_PROPS[k][type] ?? []) {
-        if (k === "color" && COLOR_BY[mlId]) { COLOR_BY[mlId](); continue; }
+        if (k === "color" && COLOR_BY[registryId]?.mapLayerId === mlId) { paintColorBy(registryId); continue; }
         const key = `${mlId}|${prop}`;
         if (o[k] === undefined && !baselines.has(key)) continue;
         if (!baselines.has(key)) baselines.set(key, readProp(mlId, prop));
@@ -201,6 +223,24 @@ function paint(registryId: string): DroppedStyle[] {
   if (Object.keys(o).length) touched.add(registryId);
   else touched.delete(registryId);
   return dropped;
+}
+
+function paintColorBy(registryId: string) {
+  const c = COLOR_BY[registryId];
+  if (!state.mapReady || !state.map?.getLayer(c.mapLayerId)) return;
+  state.map.setPaintProperty(c.mapLayerId, "line-color", effectiveOverride(registryId).color ?? c.expr(state[c.field]));
+}
+
+/** Switch a colour-by layer (OGF planned lines, WestTEC 10-Yr) to `mode` and
+ *  repaint it; state is written even before the map exists. Returns null, or
+ *  the reason it was rejected — state and map untouched. */
+export function setColorBy(registryId: string, mode: string): string | null {
+  const c = Object.hasOwn(COLOR_BY, registryId) ? COLOR_BY[registryId] : undefined;
+  if (!c) return `"${registryId}" has no colour-by`;
+  if (!c.modes.includes(mode)) return `"${registryId}" has no colour-by mode "${mode}"`;
+  Object.assign(state, { [c.field]: mode });
+  paintColorBy(registryId);
+  return null;
 }
 
 /** Set one registry layer's override (replacing any earlier one; `{}` clears
@@ -233,9 +273,9 @@ export function clearStyle(registryId?: string) {
   paint(registryId);
 }
 
-/** Repaint every override from state — for a whole-view apply (cold boot,
- *  applyView, Reset): call once after state.styleOverrides is written. A layer
- *  whose override vanished returns to its baseline. Returns the keys it
+/** Repaint every override and colour-by from state — for a whole-view apply
+ *  (cold boot, applyView, Reset, undo): call once after state is written. A
+ *  layer whose override vanished returns to its baseline. Returns the keys it
  *  skipped (invalid, or not takeable by that layer) so the caller can say so. */
 export function applyAllStyles(): DroppedStyle[] {
   if (!state.map) return [];
@@ -250,6 +290,7 @@ export function applyAllStyles(): DroppedStyle[] {
     }
     state.styleOverrides = next;
   }
+  for (const id of Object.keys(COLOR_BY)) paintColorBy(id);
   return dropped;
 }
 

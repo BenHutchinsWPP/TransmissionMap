@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LayerDef } from '../src/types.js';
 
 // ─── Mocks (must come before importing the module under test) ─────────────────
@@ -24,8 +24,8 @@ import { state } from './state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
 import {
-  setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes, refetchZoomGatedLayers,
-  wantedLayout, settleExclusiveGroups,
+  setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes,
+  wantedLayout, heatRampShown, settleExclusiveGroups,
 } from './visibility.js';
 import { on } from './state-bus.js';
 
@@ -90,13 +90,11 @@ describe('setLayerVisibility', () => {
     _mockLayerById.mockImplementation(id => _mockLayers.find(l => l.id === id));
     state.mapReady = true;
     state.map = mockMap(['a-fill', 'b-fill', 'c-fill']) as unknown as typeof state.map;
-    document.body.innerHTML = '<input type="checkbox" data-layer-id="a" checked>';
     state.layerVisibility = { a: true, c: true };
 
     setLayerVisibility('b', true);
 
     expect(state.layerVisibility).toEqual({ a: false, b: true, c: true });
-    expect(document.querySelector<HTMLInputElement>('[data-layer-id="a"]')!.checked).toBe(false);
     expect(state.map!.setLayoutProperty).toHaveBeenCalledWith('a-fill', 'visibility', 'none');
   });
 
@@ -116,22 +114,19 @@ describe('setLayerVisibility', () => {
     expect(state.layerVisibility).toEqual({ a: true, b: false });
   });
 
-  it('ticks the panel checkbox and tells subscribers, whoever switched the layer', () => {
-    // The contract weather-live.ts and nws-zone-join.ts rely on: a switch made
-    // in code (Reset, a Map Experience, a stale-feed kill switch) reaches them
-    // the same way a click does.
+  it('tells subscribers, whoever switched the layer', () => {
+    // The contract weather-live.ts, nws-zone-join.ts and the panel mirror rely
+    // on: a switch made in code (Reset, a Map Experience, a stale-feed kill
+    // switch) reaches them the same way a click does.
     const layer = makeLayer('gen', ['gen-circles']);
     _mockLayerById.mockReturnValue(layer);
     state.mapReady = true;
     state.map = mockMap(['gen-circles']) as unknown as typeof state.map;
-    document.body.innerHTML = '<input type="checkbox" data-layer-id="gen">';
     const seen: { id: string; visible: boolean }[] = [];
     on('layer:visibility', e => seen.push(e));
 
     setLayerVisibility('gen', true);
-    expect(document.querySelector<HTMLInputElement>('[data-layer-id="gen"]')!.checked).toBe(true);
     setLayerVisibility('gen', false);
-    expect(document.querySelector<HTMLInputElement>('[data-layer-id="gen"]')!.checked).toBe(false);
     expect(seen).toEqual([{ id: 'gen', visible: true }, { id: 'gen', visible: false }]);
   });
 
@@ -257,9 +252,8 @@ describe('applyGenMode', () => {
     heatLayerId: string;
     visible: boolean;
     mode?: 'icons' | 'heat' | 'both';
-    hasRampEl?: boolean;
   }) {
-    const { layerIds, heatLayerId, visible, mode = 'icons', hasRampEl = false } = opts;
+    const { layerIds, heatLayerId, visible, mode = 'icons' } = opts;
     const layer = makeLayer('gen', layerIds, heatLayerId);
     _mockLayerById.mockReturnValue(layer);
     state.layerVisibility['gen'] = visible;
@@ -267,17 +261,8 @@ describe('applyGenMode', () => {
     const map = mockMap(layerIds);
     state.mapReady = true;
     state.map = map as unknown as typeof state.map;
-    if (hasRampEl) {
-      const el = document.createElement('div');
-      el.id = 'gen-heat-ramp';
-      document.body.appendChild(el);
-    }
     return map;
   }
-
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
 
   it('does nothing when entry not found', () => {
     state.mapReady = true;
@@ -345,20 +330,6 @@ describe('applyGenMode', () => {
     expect(map.setLayoutProperty).toHaveBeenCalledWith('gen-circles', 'visibility', 'visible');
     expect(map.setLayoutProperty).toHaveBeenCalledWith('gen-heat', 'visibility', 'none');
   });
-
-  it('hides ramp element when heat is off', () => {
-    setup({ layerIds: ['gen-circles', 'gen-heat'], heatLayerId: 'gen-heat', visible: true, mode: 'icons', hasRampEl: true });
-    applyGenMode('gen');
-    const el = document.getElementById('gen-heat-ramp');
-    expect(el?.hidden).toBe(true);
-  });
-
-  it('shows ramp element when heat is on', () => {
-    setup({ layerIds: ['gen-circles', 'gen-heat'], heatLayerId: 'gen-heat', visible: true, mode: 'heat', hasRampEl: true });
-    applyGenMode('gen');
-    const el = document.getElementById('gen-heat-ramp');
-    expect(el?.hidden).toBe(false);
-  });
 });
 
 // ─── applyAllGenModes ─────────────────────────────────────────────────────────
@@ -393,79 +364,6 @@ describe('applyAllGenModes', () => {
   });
 });
 
-// ─── refetchZoomGatedLayers ───────────────────────────────────────────────────
-// The fromZoom fetch gate itself lives in ensureLayerData (mocked here), which
-// this module cannot observe directly. These tests cover what visibility.ts
-// controls: which layers it decides to re-call ensureLayerData for on a zoom
-// settle, given the map's current zoom.
-
-describe('refetchZoomGatedLayers', () => {
-  it('does NOT call ensureLayerData for a fromZoom layer below its threshold', () => {
-    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
-    _mockLayers.push(layer);
-    state.layerVisibility['heavy'] = true;
-    state.mapReady = true;
-    state.map = mockMap([], 5) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).not.toHaveBeenCalled();
-  });
-
-  it('calls ensureLayerData for a fromZoom layer once the zoom is at or above it', () => {
-    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
-    _mockLayers.push(layer);
-    state.layerVisibility['heavy'] = true;
-    state.mapReady = true;
-    state.map = mockMap([], 8) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).toHaveBeenCalledWith('heavy');
-  });
-
-  // A layer with no fromZoom keeps today's behaviour — fetched unconditionally
-  // by setLayerVisibility's own "if (visible) ensureLayerData(registryId)"
-  // call (see 'calls ensureLayerData when showing' above), not by this
-  // zoom-settle re-check, which only concerns zoom-gated layers.
-  it('never calls ensureLayerData for a layer with no fromZoom, at any zoom', () => {
-    const layer = makeLayer('plain', ['plain-circles']); // no fromZoom
-    _mockLayers.push(layer);
-    state.layerVisibility['plain'] = true;
-    state.mapReady = true;
-    state.map = mockMap([], 0) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).not.toHaveBeenCalled();
-  });
-
-  it('skips a fromZoom layer that is not visible', () => {
-    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
-    _mockLayers.push(layer);
-    state.layerVisibility['heavy'] = false;
-    state.mapReady = true;
-    state.map = mockMap([], 10) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).not.toHaveBeenCalled();
-  });
-
-  it('skips a fromZoom layer whose data is already loaded', () => {
-    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
-    _mockLayers.push(layer);
-    state.layerVisibility['heavy'] = true;
-    state.sourcesLoaded['heavy'] = true;
-    state.mapReady = true;
-    state.map = mockMap([], 10) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when mapReady is false', () => {
-    const layer = { ...makeLayer('heavy', ['heavy-circles']), fromZoom: 8 };
-    _mockLayers.push(layer);
-    state.layerVisibility['heavy'] = true;
-    state.mapReady = false;
-    state.map = mockMap([], 10) as unknown as typeof state.map;
-    refetchZoomGatedLayers();
-    expect(ensureLayerData).not.toHaveBeenCalled();
-  });
-});
-
 // ─── wantedLayout ─────────────────────────────────────────────────────────────
 
 describe('wantedLayout', () => {
@@ -492,6 +390,34 @@ describe('wantedLayout', () => {
     ['modes: off',        moded, false, 'points',  { 'm-a': 'none', 'm-b': 'none', 'm-heat': 'none' }],
   ] as const)('%s', (_name, entry, on, mode, expected) => {
     expect(wantedLayout(entry, on, mode)).toEqual(expected);
+  });
+});
+
+// ─── heatRampShown ────────────────────────────────────────────────────────────
+
+describe('heatRampShown', () => {
+  const plain = makeLayer('p', ['p-line']);
+  const heat  = makeLayer('g', ['g-icons', 'g-heat'], 'g-heat');
+  const moded = {
+    ...makeLayer('m', ['m-a', 'm-heat'], 'm-heat'),
+    modes: [
+      { id: 'points', label: 'Points', layers: ['m-a'] },
+      { id: 'density', label: 'Density', layers: ['m-heat'] },
+    ],
+  } as LayerDef;
+
+  it.each([
+    ['plain',              plain, true,  'heat',    false],
+    ['heat: icons',        heat,  true,  'icons',   false],
+    ['heat: heat',         heat,  true,  'heat',    true],
+    ['heat: both',         heat,  true,  'both',    true],
+    ['heat: off',          heat,  false, 'heat',    false],
+    ['modes: heat mode',   moded, true,  'density', true],
+    ['modes: other mode',  moded, true,  'points',  false],
+    ['modes: unknown → first', moded, true, 'nope', false],
+    ['modes: off',         moded, false, 'density', false],
+  ] as const)('%s', (_name, entry, on, mode, expected) => {
+    expect(heatRampShown(entry, on, mode)).toBe(expected);
   });
 });
 
