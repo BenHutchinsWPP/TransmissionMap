@@ -181,6 +181,10 @@ existing two:
   there.
 - Still emit `filter:generators` (or your event) **and** `url:write` on every
   change, and persist it in the codec — see [url-state.md](url-state.md).
+- Your `url:write` emit is what puts the control on the undo stack
+  ([ADR-0004](adr/0004-undo-replays-url-write-snapshots.md)). On a range
+  slider, apply on `input` but emit `url:write` on `change`, as the MW, year
+  and smoke sliders do, so one drag is one undo step however slow it is.
 - The year filter also drives playback (`setInterval` stepping the year). If
   your control animates, mirror `toggleYearPlayback`/`stopYearPlayback` and
   make sure playback ticks emit the filter event but **not** `url:write` on

@@ -197,6 +197,25 @@ choice once the app is open. Code: `assets/user-data/view-file.ts`.
 
 ---
 
+## Undo
+
+`assets/undo.ts` records a view snapshot on every `url:write` — the link params,
+`formatUrlState(currentView()).join('&')` — and undo replays one through
+`applyView()`. Why: [ADR-0004](adr/0004-undo-replays-url-write-snapshots.md).
+
+| On the stack | Not on the stack |
+|---|---|
+| every param a control commits with `url:write`: layers, filters, `where`, `style`, basemap, labels, 3D, region | camera — `map.ts` calls `writeUrlState()` on `moveend`, not `url:write` |
+| a whole `applyView()` as one step: Reset, a story, an opened view file | `lang` — not in the snapshot; a language change adds no step |
+| stale-feed switches (`live-staleness.ts`, `odin-outages.ts`) | `exp` — undo never opens or closes a story |
+
+Writes within 400 ms of each other merge into one step (bursts such as
+keyboard steps on a slider). A range slider paints on `input` and emits
+`url:write` only on `change`, so one drag is one step at any speed; the stack
+holds 50. Keys and File ▸ Undo / Redo: `assets/ui/ui-menubar.ts`.
+
+---
+
 ## Adding a new shareable param — checklist
 
 ```
@@ -207,7 +226,8 @@ choice once the app is open. Code: `assets/user-data/view-file.ts`.
 [ ] view-state.ts: if it's a new state field, merge it in resolve(), write it in
     writeState() (or through its setter in both seedView() and applyView(),
     a setter that writes state before its map guard), read it in currentView()
-[ ] Emit 'url:write' wherever the value changes (usually assets/ui/ui-*.ts)
+[ ] Emit 'url:write' wherever the value changes (usually assets/ui/ui-*.ts) —
+    the emit is also what puts the change on the undo stack
 [ ] Add the char to the reserved table in this doc
 ```
 

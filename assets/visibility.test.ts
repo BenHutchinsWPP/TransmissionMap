@@ -4,7 +4,6 @@ import type { LayerDef } from '../src/types.js';
 
 // ─── Mocks (must come before importing the module under test) ─────────────────
 
-vi.mock('./url-state.js', () => ({ writeUrlState: vi.fn() }));
 vi.mock('./layers/layer-init.js', () => ({ ensureLayerData: vi.fn() }));
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
@@ -22,7 +21,6 @@ vi.mock('../src/registry/index.js', () => ({
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import { state } from './state.js';
-import { writeUrlState } from './url-state.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
 import {
@@ -30,6 +28,9 @@ import {
   wantedLayout, settleExclusiveGroups,
 } from './visibility.js';
 import { on } from './state-bus.js';
+
+const urlWrites = vi.fn();
+on('url:write', urlWrites);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -109,9 +110,9 @@ describe('setLayerVisibility', () => {
     state.layerVisibility = { a: true };
 
     setLayerVisibility('b', true);
-    expect(writeUrlState).toHaveBeenCalledTimes(1);
+    expect(urlWrites).toHaveBeenCalledTimes(1);
     setLayerVisibility('a', true, false);
-    expect(writeUrlState).toHaveBeenCalledTimes(1);
+    expect(urlWrites).toHaveBeenCalledTimes(1);
     expect(state.layerVisibility).toEqual({ a: true, b: false });
   });
 
@@ -138,7 +139,7 @@ describe('setLayerVisibility', () => {
     state.mapReady = true;
     state.map = mockMap() as unknown as typeof state.map;
     setLayerVisibility('unknown', true);
-    expect(writeUrlState).not.toHaveBeenCalled();
+    expect(urlWrites).not.toHaveBeenCalled();
   });
 
   it('does nothing when mapReady is false', () => {
@@ -147,7 +148,7 @@ describe('setLayerVisibility', () => {
     state.mapReady = false;
     state.map = mockMap(['gen-circles']) as unknown as typeof state.map;
     setLayerVisibility('gen', true);
-    expect(writeUrlState).not.toHaveBeenCalled();
+    expect(urlWrites).not.toHaveBeenCalled();
   });
 
   it('does nothing when map is null', () => {
@@ -156,7 +157,7 @@ describe('setLayerVisibility', () => {
     state.mapReady = true;
     state.map = null;
     setLayerVisibility('gen', true);
-    expect(writeUrlState).not.toHaveBeenCalled();
+    expect(urlWrites).not.toHaveBeenCalled();
   });
 
   it('sets state.layerVisibility', () => {
@@ -218,13 +219,13 @@ describe('setLayerVisibility', () => {
     expect(map.setLayoutProperty).toHaveBeenCalledWith('gen-circles', 'visibility', 'visible');
   });
 
-  it('calls writeUrlState', () => {
+  it("commits with 'url:write'", () => {
     const layer = makeLayer('gen', ['gen-circles']);
     _mockLayerById.mockReturnValue(layer);
     state.mapReady = true;
     state.map = mockMap(['gen-circles']) as unknown as typeof state.map;
     setLayerVisibility('gen', true);
-    expect(writeUrlState).toHaveBeenCalled();
+    expect(urlWrites).toHaveBeenCalled();
   });
 
   it('calls ensureRasterLut when showing a raster layer', () => {

@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'GeoJSONとして保存…',
   'menu.saveKml': 'KMLとして保存…',
   'menu.saveView': 'ビューを保存…',
+  'menu.undo': '元に戻す',
+  'menu.redo': 'やり直し',
   'viewFile.invalid': '有効な地図ビューファイルではありません。',
   'viewFile.version': 'このビューファイルは新しいバージョンで作成されたため開けません。',
   'viewFile.notReady': '地図を読み込み中です。しばらくしてからもう一度お試しください。',

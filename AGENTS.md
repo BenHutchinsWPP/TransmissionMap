@@ -59,7 +59,7 @@ turns public datasets into PMTiles consumed by the frontend.
 ## Repo map
 
 - `index.html` — single page; Vite entry via `<script type="module" src="/src/main.ts">`
-- `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts`
+- `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts` (and, in dev only, `assets/dev-console.ts`)
 - `src/types.ts` — shared `LayerDef` interface and the registry/view types it
   carries (includes the optional `clickPriority` — map-layer id → click
   hit-test priority — and `fromZoom` — minimum zoom to fetch the layer's data —
@@ -75,8 +75,8 @@ turns public datasets into PMTiles consumed by the frontend.
     - `basemap.ts` — raster + OpenFreeMap basemaps, Map Labels, Esri → USGS aerial fallback,
       projection/atmosphere; `basemapVisibility` is the pure basemap × labels × fallback matrix
     - `state.ts` mutable global singleton and its `AppState` interface (type-only imports); constants live in `constants.ts` — import them from there. The Map Experience link (story id, dirty flag) is not on it — read it through `experience-link.ts`'s `activeExperienceId()` / `experienceIsDirty()`
-    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`; see `Events`); no deps
-    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, URL, then emits `layer:visibility`, which also refreshes the legends), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility) and `settleExclusiveGroups` (one member per exclusive group, for a whole view)
+    - `state-bus.ts` typed pub/sub (events: `filter:*`, `gen:mode`, `layer:visibility`, `view:applied`, `url:write`, `undo:changed`; see `Events`); no deps
+    - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, checkbox, commits with `url:write`, then emits `layer:visibility`, which also refreshes the legends), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility) and `settleExclusiveGroups` (one member per exclusive group, for a whole view)
     - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`;
       `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
       filter each map layer carries, and `setWhere()` sets a layer's field conditions
@@ -88,6 +88,11 @@ turns public datasets into PMTiles consumed by the frontend.
       Map Experiences use it too), `currentView` (for the link); resolves every
       input over the codec's `defaultView()`. `repaintView` is the one repaint both
       paths run (filters incl. `where`, colour-bys, `style` overrides)
+    - `undo.ts` — undo/redo of the view: records `formatUrlState(currentView())` on
+      every `url:write`, restores through `applyView`; `undo`/`redo`/`canUndo`/`canRedo`,
+      emits `undo:changed`; camera and `lang` stay off the stack (ADR-0004)
+    - `dev-console.ts` — dev-only `window.tm` (view API for the console); loaded by
+      `src/main.ts` behind `import.meta.env.DEV`, never in the production bundle
     - `hover.ts` — polygon hover + line click-highlight
     - `map-input.ts` — **the only module allowed to subscribe to MapLibre pointer
       events**; normalises mouse and touch into `onMapTap` / `onMapDoubleTap` /
@@ -225,6 +230,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (silent footguns: the shared `data-branch` concurrency group, and `maxAgeMs` must exceed the worst-case cron gap) |
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: wire `filter:all` too, and claim a unique URL code — see `docs/url-state.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
+| Undo/redo, what goes on the stack | `assets/undo.ts`, `docs/adr/0004-undo-replays-url-write-snapshots.md` (silent footgun: a control that writes the URL without `url:write` — calling `writeUrlState()` directly — updates the link but is not undoable) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
 | Add or edit a curated map view / story | `docs/map-experiences.md` (silent footguns: a legend filter needs its base layers in `layersOn`; and a new `MapExperience.state` field must be representable in `assets/url-state-codec.ts` or it never reaches a shared link — `assets/experiences.test.ts` § 1 fails when it isn't) |
 | Anything that reacts to a click/tap/hover on the map | `assets/map-input.ts` — subscribe there, never `map.on("click"\|"mousemove"\|…)` (silent footgun: a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas) |

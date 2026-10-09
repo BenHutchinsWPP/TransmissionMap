@@ -1,7 +1,8 @@
 // ─── Layer visibility toggle + generator display mode + colour-by ────────────
 // setLayerVisibility() is the one way to switch a layer: it updates state, the
-// map, the panel checkbox and the URL (unless `writeUrl` is false — a caller
-// switching many layers writes the URL once itself), then emits
+// map and the panel checkbox, commits with 'url:write' (the URL write and the
+// undo stack — unless `writeUrl` is false: a caller switching many layers
+// commits once itself), then emits
 // 'layer:visibility' so modules with their own per-layer machinery
 // (weather-live.ts, nws-zone-join.ts) and the legends (ui-legends.ts's
 // updateLegends) follow along. A layer with an `exclusiveGroup` switches the
@@ -23,7 +24,6 @@
 import { state } from './state.js';
 import { ogfColorExpr, westtecColorExpr } from '../src/colors/buckets.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
-import { writeUrlState } from './url-state.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { ensureLayerData } from './layers/layer-init.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
@@ -92,7 +92,7 @@ export function setLayerVisibility(registryId: string, visible: boolean, writeUr
   else applyLayout(wantedLayout(entry, visible, modeOf(entry)));
   const cb = document.querySelector<HTMLInputElement>(`input[type=checkbox][data-layer-id="${registryId}"]`);
   if (cb) cb.checked = visible;
-  if (writeUrl) writeUrlState();
+  if (writeUrl) emit('url:write');
   emit('layer:visibility', { id: registryId, visible });
 
   if (visible && TRIBAL_LAYER_IDS.includes(registryId)) showTribalDisclaimer();

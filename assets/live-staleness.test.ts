@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fmtAge, fmtAgeShort, downFor, feedIssue, initLiveStaleness } from './live-staleness.js';
 import { state } from './state.js';
+import { emit } from './state-bus.js';
 
 vi.mock('./visibility.js', () => ({
   setLayerVisibility: vi.fn((id: string, on: boolean) => { state.layerVisibility[id] = on; }),
@@ -224,6 +225,47 @@ describe('staleness gate', () => {
     expect(state.layerVisibility[t.layerId]).toBe(false);
     const dlg = document.getElementById(t.dialogId) as HTMLDialogElement;
     expect(dlg.open).toBe(true);
+  });
+});
+
+describe('staleness gate on a switch-on (Undo, a link)', () => {
+  // As setLayerVisibility(id, true, false) does: state and the bus, no change event.
+  function switchOn(id: string) {
+    state.layerVisibility[id] = true;
+    emit('layer:visibility', { id, visible: true });
+  }
+
+  it('a stale layer switched on without a change event is switched off with the modal, once', async () => {
+    const t = setupTest();
+    state.layerVisibility[t.layerId] = false;
+    t.init();
+    const old = new Date(Date.now() - 7 * 60 * 60_000).toISOString();
+    state.sourcesData[t.sourceKey] = [
+      { type: 'Feature', properties: { generated_utc: old }, geometry: null } as unknown as GeoJSON.Feature,
+    ];
+    fireLayerData(t.sourceKey);
+    const dlg = document.getElementById(t.dialogId) as HTMLDialogElement;
+    const showModal = vi.spyOn(dlg, 'showModal');
+
+    switchOn(t.layerId);
+    switchOn(t.layerId);
+    expect(state.layerVisibility[t.layerId]).toBe(true);   // vetted after the switch lands
+    await Promise.resolve();
+
+    expect(state.layerVisibility[t.layerId]).toBe(false);
+    expect(showModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('a fresh layer switched on stays on', async () => {
+    const t = setupTest();
+    state.layerVisibility[t.layerId] = false;
+    t.init();
+    state.sourcesData[t.sourceKey] = [
+      { type: 'Feature', properties: { generated_utc: new Date().toISOString() }, geometry: null } as unknown as GeoJSON.Feature,
+    ];
+    switchOn(t.layerId);
+    await Promise.resolve();
+    expect(state.layerVisibility[t.layerId]).toBe(true);
   });
 });
 

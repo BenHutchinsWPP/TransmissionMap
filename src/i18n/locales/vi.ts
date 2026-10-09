@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'Lưu dưới dạng GeoJSON…',
   'menu.saveKml': 'Lưu dưới dạng KML…',
   'menu.saveView': 'Lưu chế độ xem…',
+  'menu.undo': 'Hoàn tác',
+  'menu.redo': 'Làm lại',
   'viewFile.invalid': 'Đây không phải là tệp chế độ xem bản đồ hợp lệ.',
   'viewFile.version': 'Tệp chế độ xem này thuộc phiên bản mới hơn và không thể mở.',
   'viewFile.notReady': 'Bản đồ vẫn đang tải — vui lòng thử lại sau giây lát.',

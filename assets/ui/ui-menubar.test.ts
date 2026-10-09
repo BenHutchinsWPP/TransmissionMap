@@ -1,10 +1,26 @@
 // @vitest-environment jsdom
-// Tests for color-picker menu positioning, z-index, and dismissal behaviors.
-// Deps: ui-menubar.js, user-data-colors.js.
+// Tests for color-picker menu positioning, z-index, and dismissal behaviors,
+// and the Undo / Redo keys and File menu items.
+// Deps: ui-menubar.js, user-data-colors.js, state.js, state-bus.js; undo.js is mocked.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+
+const undoMock = vi.hoisted(() => ({
+  undo: vi.fn(() => true),
+  redo: vi.fn(() => true),
+  canUndo: vi.fn(() => false),
+  canRedo: vi.fn(() => false),
+}));
+vi.mock('../undo.js', () => undoMock);
+
 import { positionColorMenu, wireMenubar } from './ui-menubar.js';
 import { colorPickerInner } from '../user-data/user-data-colors.js';
+import { state } from '../state.js';
+import { emit } from '../state-bus.js';
+
+// Its handlers are delegated on document and window, so wire once: a wire per
+// test would stack a keydown listener per test.
+beforeAll(() => { wireMenubar(); });
 
 describe('ui-menubar color-menu positioning and interaction', () => {
   let picker: HTMLElement;
@@ -32,8 +48,6 @@ describe('ui-menubar color-menu positioning and interaction', () => {
     picker = document.querySelector('.color-picker') as HTMLElement;
     swatch = picker.querySelector('.color-swatch-btn') as HTMLElement;
     menu = picker.querySelector('.color-menu') as HTMLElement;
-
-    wireMenubar();
   });
 
   it('positionColorMenu applies fixed position and high z-index', () => {
@@ -148,5 +162,120 @@ describe('ui-menubar color-menu positioning and interaction', () => {
 
     document.body.click();
     expect(menu.hidden).toBe(true);
+  });
+});
+
+describe('ui-menubar undo / redo', () => {
+  const key = (init: KeyboardEventInit, target: EventTarget = document.body) => {
+    const e = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(e);
+    return e;
+  };
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <button class="menu-item" data-action="undo" type="button" disabled>Undo</button>
+      <button class="menu-item" data-action="redo" type="button" disabled>Redo</button>
+      <input id="field" type="text">
+      <input id="check" type="checkbox">
+      <input id="range" type="range">
+      <select id="pick"><option>a</option></select>
+      <textarea id="area"></textarea>
+      <div id="editable" contenteditable="true"></div>
+    `;
+    Object.values(undoMock).forEach(f => f.mockClear());
+    undoMock.canUndo.mockReturnValue(false);
+    undoMock.canRedo.mockReturnValue(false);
+    state.editMode = 'view';
+    state.measure.active = false;
+  });
+
+  it('Ctrl+Z on the page undoes and claims the key', () => {
+    const e = key({ key: 'z', ctrlKey: true });
+    expect(undoMock.undo).toHaveBeenCalledTimes(1);
+    expect(undoMock.redo).not.toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(true);
+  });
+
+  it('Cmd+Z undoes too', () => {
+    key({ key: 'z', metaKey: true });
+    expect(undoMock.undo).toHaveBeenCalled();
+  });
+
+  it('Ctrl+Shift+Z and Ctrl+Y redo', () => {
+    key({ key: 'Z', ctrlKey: true, shiftKey: true });
+    expect(undoMock.redo).toHaveBeenCalled();
+    undoMock.redo.mockClear();
+    key({ key: 'y', ctrlKey: true });
+    expect(undoMock.redo).toHaveBeenCalled();
+    expect(undoMock.undo).not.toHaveBeenCalled();
+  });
+
+  it('leaves Ctrl+Z to a focused input', () => {
+    const e = key({ key: 'z', ctrlKey: true }, document.getElementById('field')!);
+    expect(undoMock.undo).not.toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  it('undoes from a focused checkbox, range or select, which keep no Ctrl+Z of their own', () => {
+    for (const id of ['check', 'range', 'pick']) {
+      undoMock.undo.mockClear();
+      const e = key({ key: 'z', ctrlKey: true }, document.getElementById(id)!);
+      expect(undoMock.undo, id).toHaveBeenCalledTimes(1);
+      expect(e.defaultPrevented, id).toBe(true);
+    }
+  });
+
+  it('leaves Ctrl+Z to a textarea and a contenteditable', () => {
+    key({ key: 'z', ctrlKey: true }, document.getElementById('area')!);
+    key({ key: 'z', ctrlKey: true }, document.getElementById('editable')!);
+    expect(undoMock.undo).not.toHaveBeenCalled();
+  });
+
+  it('reads the physical key on a non-Latin layout', () => {
+    key({ key: 'я', code: 'KeyZ', ctrlKey: true });   // Russian layout, Z key
+    expect(undoMock.undo).toHaveBeenCalledTimes(1);
+    key({ key: 'н', code: 'KeyY', ctrlKey: true });
+    expect(undoMock.redo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing while a dialog is open', () => {
+    document.body.insertAdjacentHTML('beforeend', '<dialog open></dialog>');
+    key({ key: 'z', ctrlKey: true });
+    expect(undoMock.undo).not.toHaveBeenCalled();
+  });
+
+  it('does nothing in edit mode or while measuring', () => {
+    state.editMode = 'edit';
+    key({ key: 'z', ctrlKey: true });
+    state.editMode = 'view';
+    state.measure.active = true;
+    key({ key: 'z', ctrlKey: true });
+    expect(undoMock.undo).not.toHaveBeenCalled();
+  });
+
+  it('ignores a plain Z', () => {
+    const e = key({ key: 'z' });
+    expect(undoMock.undo).not.toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  it('menu items follow canUndo / canRedo on undo:changed', () => {
+    const undoItem = document.querySelector<HTMLButtonElement>('[data-action="undo"]')!;
+    const redoItem = document.querySelector<HTMLButtonElement>('[data-action="redo"]')!;
+    expect(undoItem.disabled).toBe(true);
+    expect(redoItem.disabled).toBe(true);
+    undoMock.canUndo.mockReturnValue(true);
+    emit('undo:changed');
+    expect(undoItem.disabled).toBe(false);
+    expect(redoItem.disabled).toBe(true);
+  });
+
+  it('clicking the Undo item undoes', async () => {
+    undoMock.canUndo.mockReturnValue(true);
+    emit('undo:changed');
+    document.querySelector<HTMLButtonElement>('[data-action="undo"]')!.click();
+    await Promise.resolve();
+    expect(undoMock.undo).toHaveBeenCalled();
   });
 });

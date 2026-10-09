@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'I-save bilang GeoJSON…',
   'menu.saveKml': 'I-save bilang KML…',
   'menu.saveView': 'I-save ang view…',
+  'menu.undo': 'I-undo',
+  'menu.redo': 'I-redo',
   'viewFile.invalid': 'Hindi ito wastong file ng view ng mapa.',
   'viewFile.version': 'Ang view file na ito ay mula sa mas bagong bersyon at hindi mabubuksan.',
   'viewFile.notReady': 'Naglo-load pa ang mapa — subukan muli sa ilang sandali.',

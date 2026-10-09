@@ -16,3 +16,6 @@ if ('serviceWorker' in navigator) {
 }
 
 init();
+
+// Dev only: `window.tm`, the view API for the console. Dynamic so prod drops it.
+if (import.meta.env.DEV) void import('../assets/dev-console.js');

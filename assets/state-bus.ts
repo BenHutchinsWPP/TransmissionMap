@@ -22,6 +22,7 @@ type Events = {
   'exp:dirty':            void;   // the user edited the view out of its experience
   'exp:ended':            void;   // the active experience was dismissed
   'url:write':            void;   // persist current state to URL / localStorage
+  'undo:changed':         void;   // undo.ts: canUndo()/canRedo() may have changed
 };
 
 type Handler<K extends keyof Events> = (payload: Events[K]) => void;

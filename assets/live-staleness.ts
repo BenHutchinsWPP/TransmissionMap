@@ -21,13 +21,15 @@
 //       visibility.ts (setLayerVisibility — which also ticks the checkbox, writes URL state
 //       and, through 'layer:visibility', refreshes the legends),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the diagnostics panel),
-//       experience-link.ts (rebaselineExperience before the kill switch). Modal DOM ids come from cfg.
+//       experience-link.ts (rebaselineExperience before the kill switch),
+//       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from './state.js';
 import { rebaselineExperience } from './experience-link.js';
 import { setLayerVisibility } from './visibility.js';
+import { on } from './state-bus.js';
 import { recordDiagEvent } from './diag-log.js';
 import { fetchGeojson } from './layers/layer-init.js';
 
@@ -227,11 +229,11 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     checkStaleness();
   });
 
-  // A layer being manually (re-)enabled in the panel must be vetted too,
-  // without waiting up to a full poll interval.
-  document.addEventListener("change", (e) => {
-    const cb = (e.target as Element)?.closest<HTMLInputElement>("input[type=checkbox][data-layer-id]");
-    if (cb?.checked && layerIds.includes(cb.dataset.layerId!)) checkStaleness();
+  // A layer switched on — its checkbox, a link, Undo — is vetted at once, not
+  // up to a poll interval later. A microtask, so the switch-off is its own
+  // URL write after the one that switched the layer on.
+  on('layer:visibility', ({ id, visible }) => {
+    if (visible && layerIds.includes(id)) queueMicrotask(checkStaleness);
   });
 
   // Poll: refetch (which dispatches tm:layerdata → checkStaleness) only while

@@ -12,6 +12,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'حفظ كـ GeoJSON…',
   'menu.saveKml': 'حفظ كـ KML…',
   'menu.saveView': 'حفظ العرض…',
+  'menu.undo': 'تراجع',
+  'menu.redo': 'إعادة',
   'viewFile.invalid': 'هذا ليس ملف عرض خريطة صالحًا.',
   'viewFile.version': 'ملف العرض هذا من إصدار أحدث ولا يمكن فتحه.',
   'viewFile.notReady': 'الخريطة قيد التحميل، حاول مرة أخرى بعد لحظات.',

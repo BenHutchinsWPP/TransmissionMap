@@ -2008,6 +2008,7 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
   &:hover { background: #f1f5f9; color: var(--accent); }
+  &:disabled { opacity: 0.45; cursor: default; background: none; color: var(--text-mid); }
 }
 
 /* ── Mode segmented toggle ───────────────────────────────────────────────── */

@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'Salvar como GeoJSON…',
   'menu.saveKml': 'Salvar como KML…',
   'menu.saveView': 'Salvar visualização…',
+  'menu.undo': 'Desfazer',
+  'menu.redo': 'Refazer',
   'viewFile.invalid': 'Este não é um arquivo de visualização de mapa válido.',
   'viewFile.version': 'Este arquivo de visualização é de uma versão mais recente e não pode ser aberto.',
   'viewFile.notReady': 'O mapa ainda está carregando; tente novamente em instantes.',

@@ -6,6 +6,8 @@
 // ui-mydata.js. Smoke opacity is painted by map-layers-conditions.js. The
 // Data Credits dialog opens its hand-written index.html markup immediately,
 // then lazily loads ui-credits.js once to add the generated manifest's detail.
+// undo.js: its bus subscriptions keep the view's undo history; resetHistory
+// re-baselines it once a ?exp= deep link's story has applied.
 
 import { state } from '../state.js';
 import { activeExperienceId, endExperienceLink } from '../experience-link.js';
@@ -31,6 +33,7 @@ import { wireOpenWith } from './ui-openwith.js';
 import { readUrlState } from '../url-state.js';
 import { splitHash } from '../url-state-codec.js';
 import { applyView } from '../view-state.js';
+import { resetHistory } from '../undo.js';
 import { emit, on } from '../state-bus.js';
 import { loadUnits } from '../units-store.js';
 import { loadLanguage } from '../i18n-store.js';
@@ -350,6 +353,7 @@ function wireExperienceDeepLink() {
     try {
       const m = await import('./ui-experiences.js');
       m.restoreFromUrl();
+      resetHistory();
     } catch (err) {
       // The chunk didn't load, so nothing applied the preset. Drop the id or
       // every later write would keep claiming a story the map isn't showing.

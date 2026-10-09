@@ -301,6 +301,29 @@ describe('odin-outages stale modal', () => {
     expect(dlg().open).toBe(false);
   });
 
+  it('re-runs the gate when Undo switches the layer back on, with one modal', async () => {
+    const { state } = await setupWithDialog();
+    serveAgedHours(8);
+    const mod = await import('./odin-outages.js');
+    mod.initOdinOutages();
+    await vi.advanceTimersByTimeAsync(0);
+    document.getElementById('odinStaleDismiss')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    expect(state.layerVisibility['odin-outages']).toBe(false);
+
+    const showModal = vi.spyOn(dlg(), 'showModal');
+    const { emit } = await import('./state-bus.js');
+    // As setLayerVisibility(id, true, false) does: state, checkbox and the bus, no change event.
+    state.layerVisibility['odin-outages'] = true;
+    document.querySelector<HTMLInputElement>('input[data-layer-id="odin-outages"]')!.checked = true;
+    emit('layer:visibility', { id: 'odin-outages', visible: true });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(state.layerVisibility['odin-outages']).toBe(false);
+    expect(showModal).toHaveBeenCalledTimes(1);
+    expect(dlg().open).toBe(true);
+  });
+
   it('stays silent when the layer is not on screen', async () => {
     const { state } = await setupWithDialog();
     state.layerVisibility['odin-outages'] = false;

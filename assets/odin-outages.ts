@@ -13,7 +13,8 @@
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, layerVisibility), constants (DATA), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel), experience-link.ts
-//       (rebaselineExperience before the kill switch). Legend age chip
+//       (rebaselineExperience before the kill switch), state-bus.ts (on
+//       'layer:visibility' — re-runs the gate as the layer switches on). Legend age chip
 //       = #odinAge in index.html.
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (addOdinOutages); the click popup reads numbers from the feature-state set here, and
@@ -33,6 +34,7 @@ import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer
 import { escapeHtml } from './utils/utils.js';
 import { recordDiagEvent } from './diag-log.js';
 import { setLayerVisibility } from './visibility.js';
+import { on } from './state-bus.js';
 import { fmtAge } from './live-staleness.js';
 
 const REGISTRY_ID = "odin-outages";
@@ -337,6 +339,13 @@ export function initOdinOutages() {
     const cb = (e.target as Element | null)?.closest<HTMLInputElement>(
       `input[type=checkbox][data-layer-id="${REGISTRY_ID}"]`);
     if (cb?.checked) void refetch();
+  });
+
+  // A switch-on that fetches nothing new — Undo, a link — still meets the
+  // gate. A microtask, so the switch-off is its own URL write.
+  on('layer:visibility', ({ id, visible }) => {
+    if (!visible || id !== REGISTRY_ID || !staleBlocked) return;
+    queueMicrotask(() => enterStale(Date.now() - Date.parse(generatedUtc!)));
   });
 
   // Raw-report pager inside the county popup (shell emitted by popup-format.ts).

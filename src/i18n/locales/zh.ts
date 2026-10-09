@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': '保存为 GeoJSON…',
   'menu.saveKml': '保存为 KML…',
   'menu.saveView': '保存视图…',
+  'menu.undo': '撤销',
+  'menu.redo': '重做',
   'viewFile.invalid': '这不是有效的地图视图文件。',
   'viewFile.version': '此视图文件来自较新版本，无法打开。',
   'viewFile.notReady': '地图仍在加载，请稍后再试。',

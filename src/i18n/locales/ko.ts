@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'GeoJSON으로 저장…',
   'menu.saveKml': 'KML로 저장…',
   'menu.saveView': '보기 저장…',
+  'menu.undo': '실행 취소',
+  'menu.redo': '다시 실행',
   'viewFile.invalid': '유효한 지도 보기 파일이 아닙니다.',
   'viewFile.version': '이 보기 파일은 최신 버전에서 만들어져 열 수 없습니다.',
   'viewFile.notReady': '지도를 아직 불러오는 중입니다. 잠시 후 다시 시도하세요.',

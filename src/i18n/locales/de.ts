@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'Als GeoJSON speichern…',
   'menu.saveKml': 'Als KML speichern…',
   'menu.saveView': 'Ansicht speichern…',
+  'menu.undo': 'Rückgängig',
+  'menu.redo': 'Wiederholen',
   'viewFile.invalid': 'Dies ist keine gültige Kartenansichtsdatei.',
   'viewFile.version': 'Diese Ansichtsdatei stammt aus einer neueren Version und kann nicht geöffnet werden.',
   'viewFile.notReady': 'Die Karte lädt noch – bitte gleich noch einmal versuchen.',

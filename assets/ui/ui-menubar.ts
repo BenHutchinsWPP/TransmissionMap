@@ -1,15 +1,17 @@
 // ─── Menubar + color-picker wiring ────────────────────────────────────────────
 // File/Add/Save menu dropdowns, view/edit mode buttons, draw color-picker menus,
 // and the file-open input. onMenubarClick is a single delegated document click
-// handler dispatching to the right action.
+// handler dispatching to the right action. File ▸ Undo / Redo and their keys
+// (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y — onUndoKey) step the view history.
 // Deps: state.js, map-input.js (close menus on a map tap),
+// undo.js (undo/redo, canUndo/canRedo for the items' disabled state),
 // user-data-colors.js (static — lightweight, needed at wire time).
 // draw-chunk.js (lazy — MapboxDraw/toGeoJSON/jszip loaded on first interaction).
 // ui-diagnostics.js (lazy — Diagnostics dialog + probe catalogue, loaded on
 // first File > Diagnostics… click). ui-settings.js (lazy — Settings dialog,
 // loaded on first File > Settings… click). ui-experiences.js (lazy — Map
 // Experiences gallery + story card, loaded on first File > Experiences… click).
-// src/i18n/index.js (t), state-bus.js (on).
+// src/i18n/index.js (t), state-bus.js (on 'lang:changed', 'undo:changed').
 // Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
@@ -17,6 +19,7 @@ import { colorPickerInner } from '../user-data/user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
 import { onMapTap } from '../map-input.js';
+import { undo, redo, canUndo, canRedo } from '../undo.js';
 
 // ─── Lazy draw chunk ──────────────────────────────────────────────────────────
 type DrawChunk = typeof import('../user-data/draw-chunk.js');
@@ -115,6 +118,8 @@ async function onMenubarClick(e: MouseEvent) {
       m.openSettings();
       return;
     }
+    if (menuItem.dataset.action === 'undo') { undo(); return; }
+    if (menuItem.dataset.action === 'redo') { redo(); return; }
     const d = await draw();
     switch (menuItem.dataset.action) {
       case 'file-open':    document.getElementById('fileOpenInput')?.click(); break;
@@ -169,6 +174,42 @@ function closeMenus() {
   document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
 }
 
+function syncUndoItems() {
+  const set = (action: string, enabled: boolean) => {
+    const item = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
+    if (item) item.disabled = !enabled;
+  };
+  set('undo', canUndo());
+  set('redo', canRedo());
+}
+
+// Left to the browser while typing, in a dialog, drawing or measuring — there
+// the keys belong to the field or the tool, not to the view history.
+// Inputs that keep their own Ctrl+Z; a focused checkbox, radio, range or
+// select does not, so the key steps the view.
+const NON_TEXT_INPUTS = new Set(['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file', 'image']);
+
+function isTextEntry(el: EventTarget | null): boolean {
+  if (!(el instanceof Element)) return false;
+  if (el.closest('textarea, [contenteditable]:not([contenteditable="false"])')) return true;
+  return el instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(el.type);
+}
+
+function onUndoKey(e: KeyboardEvent) {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  // A non-Latin layout reports its own character in e.key; e.code is the physical key.
+  const key = /^[a-z]$/i.test(e.key) ? e.key.toLowerCase()
+    : e.code === 'KeyZ' ? 'z' : e.code === 'KeyY' ? 'y' : '';
+  const isUndo = key === 'z' && !e.shiftKey;
+  const isRedo = (key === 'z' && e.shiftKey) || (key === 'y' && e.ctrlKey && !e.shiftKey);
+  if (!isUndo && !isRedo) return;
+  if (isTextEntry(e.target)) return;
+  if (document.querySelector('dialog[open]')) return;
+  if (state.editMode !== 'view' || state.measure.active) return;
+  e.preventDefault();
+  if (isUndo) undo(); else redo();
+}
+
 export function wireMenubar() {
   const fileInput = document.getElementById('fileOpenInput') as HTMLInputElement | null;
   if (fileInput) fileInput.addEventListener('change', async e => {
@@ -188,6 +229,9 @@ export function wireMenubar() {
     document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
   }, { passive: true });
 
+  document.addEventListener('keydown', onUndoKey);
+  syncUndoItems();
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       document.querySelectorAll<HTMLElement>('.color-menu:not([hidden])').forEach(m => { m.hidden = true; });
@@ -203,6 +247,8 @@ export function wireMenubar() {
   const drawColor = document.getElementById('drawColorPicker');
   if (drawColor) drawColor.innerHTML = colorPickerInner(state.drawDefaultColor);
 }
+
+on('undo:changed', syncUndoItems);
 
 on('lang:changed', () => {
   const menuItem = document.querySelector<HTMLElement>('.menu-item[data-action="toggle-legends"]');

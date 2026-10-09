@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'GeoJSON के रूप में सहेजें…',
   'menu.saveKml': 'KML के रूप में सहेजें…',
   'menu.saveView': 'दृश्य सहेजें…',
+  'menu.undo': 'पूर्ववत करें',
+  'menu.redo': 'फिर से करें',
   'viewFile.invalid': 'यह मान्य मानचित्र दृश्य फ़ाइल नहीं है।',
   'viewFile.version': 'यह दृश्य फ़ाइल नए संस्करण की है और खोली नहीं जा सकती।',
   'viewFile.notReady': 'मानचित्र अभी लोड हो रहा है — कृपया थोड़ी देर बाद पुनः प्रयास करें।',

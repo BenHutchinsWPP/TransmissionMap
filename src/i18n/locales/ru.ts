@@ -11,6 +11,8 @@ const locale: LocaleDictionary = {
   'menu.saveGeoJson': 'Сохранить как GeoJSON…',
   'menu.saveKml': 'Сохранить как KML…',
   'menu.saveView': 'Сохранить вид…',
+  'menu.undo': 'Отменить',
+  'menu.redo': 'Повторить',
   'viewFile.invalid': 'Это не файл вида карты.',
   'viewFile.version': 'Этот файл вида создан в более новой версии и не может быть открыт.',
   'viewFile.notReady': 'Карта ещё загружается — повторите попытку через минуту.',

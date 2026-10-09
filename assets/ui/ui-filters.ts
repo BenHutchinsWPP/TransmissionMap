@@ -1,6 +1,10 @@
 // ─── Layer + legend filter wiring, MW/year/smoke controls ──────────────────────
-// Smoke paint comes from
-// map-layers-conditions.js.
+// Each handler writes state, applies it and commits with 'url:write'. A range
+// slider paints live on 'input' and commits once on 'change' (drag end, or one
+// keyboard step), so one drag is one undo step however slow it is; a year
+// drag that switched the filter on or stopped playback also commits on
+// pointer release, since one released at its start value fires no 'change'. Smoke
+// paint comes from map-layers-conditions.js.
 import { state } from '../state.js';
 import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster } from './ui-legends.js';
 import { emit } from '../state-bus.js';
@@ -73,8 +77,10 @@ export function wireMwFilter() {
     mwSliderMin.value = String(mwToPos(state.mwFilter.min));
     mwSliderMax.value = String(mwToPos(state.mwFilter.max));
     updateMwSliderUI();
-    mwSliderMin.addEventListener("input", onMwSliderInput);
-    mwSliderMax.addEventListener("input", onMwSliderInput);
+    for (const el of [mwSliderMin, mwSliderMax]) {
+      el.addEventListener("input", onMwSliderInput);
+      el.addEventListener("change", () => emit('url:write'));
+    }
   }
 
   const mwMinInput = document.getElementById("mwMinInput");
@@ -93,8 +99,8 @@ export function wireSmokeOpacity() {
     state.smokeOpacity = parseInt(slider.value, 10) / 100;
     updateSmokeOpacityUI();
     applySmokeOpacity();
-    emit('url:write');
   });
+  slider.addEventListener("change", () => emit('url:write'));
 }
 
 export function updateSmokeOpacityUI() {
@@ -128,7 +134,6 @@ function onMwSliderInput(e: Event) {
 
   updateMwSliderUI();
   emit('filter:generators');
-  emit('url:write');
 }
 
 export function updateMwSliderUI() {
@@ -273,18 +278,34 @@ export function wireYearFilter() {
   document.addEventListener("input", (e) => {
     if ((e.target as Element | null)?.id === "yearSlider") onYearSliderInput(e);
   });
+  document.addEventListener("change", (e) => {
+    if ((e.target as Element | null)?.id === "yearSlider") commitYearDrag();
+  });
+  // A drag released at its start value fires no `change`, but one that switched
+  // the filter on or stopped playback still changed the view: the release
+  // commits it. When `change` does fire too, undo folds the two into one step.
+  for (const type of ["pointerup", "pointercancel"]) {
+    document.addEventListener(type, () => { if (yearDragPending) commitYearDrag(); });
+  }
 
   updateYearSliderUI();
   updateYearPlayBtn();
 }
 
+let yearDragPending = false;
+
+function commitYearDrag() {
+  yearDragPending = false;
+  emit('url:write');
+}
+
 function onYearSliderInput(e: Event) {
+  if (!state.yearFilter.enabled || state.yearPlayback.active) yearDragPending = true;
   state.yearFilter.year    = parseInt((e.target as HTMLInputElement).value, 10);
   state.yearFilter.enabled = true;
   stopYearPlayback();
   updateYearSliderUI();
   emit('filter:generators');
-  emit('url:write');
 }
 
 export function updateYearSliderUI() {
