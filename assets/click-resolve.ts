@@ -21,6 +21,7 @@ export interface HitFeature {
   layer: { id: string };
   sourceLayer?: string;
   state?: Record<string, unknown>;
+  properties?: Record<string, unknown> | null;
 }
 
 export type ClickResolution<F> =
@@ -49,27 +50,29 @@ export function hitLit(f: HitFeature): boolean {
 export function resolveHits<F extends HitFeature>(
   features: readonly F[], mode: 'view' | 'edit',
 ): ClickResolution<F> {
-  const lit = features.filter(hitLit);
+  // Dedupe tile-boundary duplicates: queryRenderedFeatures repeats a feature once
+  // per tile it straddles, vector tiles and GeoJSON sources alike (MapLibre tiles a
+  // GeoJSON source internally, so a state-sized polygon comes back many times).
+  // A feature with an id is keyed by it; one without (most GeoJSON layers) by its
+  // properties, which every repeat shares and distinct features do not (My Data
+  // features carry a unique __uid).
+  const uniq: F[] = [];
+  const seen = new Set<string>();
+  for (const ft of features) {
+    if (!hitLit(ft)) continue;
+    const key = ft.layer.id + '|' + (ft.id != null ? String(ft.id) : JSON.stringify(ft.properties ?? {}));
+    if (!seen.has(key)) { seen.add(key); uniq.push(ft); }
+  }
 
   if (mode === 'edit') {
     // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
     // borders, so copies would be truncated — only allow GeoJSON-backed features.
-    const copyable = lit.filter(ft => !ft.sourceLayer);
+    const copyable = uniq.filter(ft => !ft.sourceLayer);
     if (copyable.length > 1) return { kind: 'copy-picker', features: copyable };
     if (copyable.length === 1) return { kind: 'copy', feature: copyable[0] };
-    return lit.length ? { kind: 'not-copyable' } : { kind: 'none' };
+    return uniq.length ? { kind: 'not-copyable' } : { kind: 'none' };
   }
 
-  if (!lit.length) return { kind: 'none' };
-  // Dedupe tile-boundary duplicates: queryRenderedFeatures repeats a tiled feature
-  // once per tile it straddles. Tiled features always carry ft.id; GeoJSON features
-  // without explicit IDs do not — so only dedup when ft.id is present.
-  const uniq: F[] = [];
-  const seen = new Set<string>();
-  for (const ft of lit) {
-    if (ft.id == null) { uniq.push(ft); continue; }
-    const key = ft.layer.id + '|' + String(ft.id);
-    if (!seen.has(key)) { seen.add(key); uniq.push(ft); }
-  }
+  if (!uniq.length) return { kind: 'none' };
   return uniq.length > 1 ? { kind: 'picker', features: uniq } : { kind: 'single', feature: uniq[0] };
 }

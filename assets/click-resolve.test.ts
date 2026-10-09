@@ -27,9 +27,21 @@ describe('resolveHits — view mode', () => {
     expect(resolveHits([a, dup], 'view')).toEqual({ kind: 'single', feature: a });
   });
 
-  it('never dedupes features without an id', () => {
-    const a = f('user-1-circle');
-    const b = f('user-1-circle');
+  it('collapses GeoJSON tile repeats of a feature without an id', () => {
+    const a = f('dcm-state-fill', { properties: { kind: 'state', name: 'Arizona' } });
+    const dup = f('dcm-state-fill', { properties: { kind: 'state', name: 'Arizona' } });
+    expect(resolveHits([a, dup, { ...dup }], 'view')).toEqual({ kind: 'single', feature: a });
+  });
+
+  it('keeps distinct features without an id apart', () => {
+    const a = f('user-1-circle', { properties: { __uid: 'u1' } });
+    const b = f('user-1-circle', { properties: { __uid: 'u2' } });
+    expect(resolveHits([a, b], 'view')).toEqual({ kind: 'picker', features: [a, b] });
+  });
+
+  it('keeps the same feature apart when two layers draw it', () => {
+    const a = f('dcm-state-fill', { properties: { name: 'Arizona' } });
+    const b = f('us-states-fill', { properties: { name: 'Arizona' } });
     expect(resolveHits([a, b], 'view')).toEqual({ kind: 'picker', features: [a, b] });
   });
 
@@ -55,6 +67,12 @@ describe('resolveHits — edit mode', () => {
   it('offers Copy for one GeoJSON-backed feature', () => {
     const a = f('user-1-fill');
     expect(resolveHits([a], 'edit')).toEqual({ kind: 'copy', feature: a });
+  });
+
+  it('offers Copy, not a picker, for GeoJSON tile repeats of one feature', () => {
+    const a = f('dcm-state-fill', { properties: { name: 'Arizona' } });
+    const dup = f('dcm-state-fill', { properties: { name: 'Arizona' } });
+    expect(resolveHits([a, dup], 'edit')).toEqual({ kind: 'copy', feature: a });
   });
 
   it('offers a copy picker for several GeoJSON-backed features, skipping tiled ones', () => {
