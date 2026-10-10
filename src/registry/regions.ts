@@ -2,7 +2,10 @@
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
 import { DCM_CLASSES } from '../colors/buckets.js';
 import type { LayerDef } from '../types.js';
-import { convDensity, densityLabel } from '../units.js';export const regionLayers: LayerDef[] = [
+import { OSM_CREDIT, HIFLD_CREDIT, CENSUS_CARTO_CREDIT, GEOBOUNDARIES_CREDIT } from './sources.js';
+import { convDensity, densityLabel } from '../units.js';
+
+export const regionLayers: LayerDef[] = [
   // ── Load context ─────────────────────────────────────────────────────────────
   {
     id:            "osm-datacenters",
@@ -11,7 +14,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:      "layer.osmDatacenters",
     group:         "load",
     sourceId:      "osm",
-    geojson:       "osm_datacenters",
+    data:          { kind: "geojson", key: "osm_datacenters", credit: OSM_CREDIT + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>" },
     swatch:        "#6366f1",
     defaultOn:     false,
     mapLayerIds:   ["osm-dc-circles", "osm-dc-heat", "osm-dc-clusters", "osm-dc-cluster-count", "osm-dc-points", "osm-dc-heat-points"],
@@ -41,7 +44,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:      "layer.dcMoratoriums",
     group:         "load",
     sourceId:      "moratorium-nation",
-    geojson:       "dc_moratoriums",
+    data:          { kind: "geojson", key: "dc_moratoriums", credit: "<a href='https://mjbommar.github.io/moratorium-data-2026/'>Moratorium Nation</a> (CC BY 4.0)" },
     swatch:        DCM_CLASSES[1].color,
     defaultOn:     false,
     mapLayerIds:   ["dcm-state-fill", "dcm-state-line", "dcm-utility-fill", "dcm-utility-line",
@@ -58,6 +61,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:      "layer.popDensity",
     group:         "load",
     sourceId:      "worldpop",
+    data:          { kind: "raster", key: "worldpop_pop_density", credit: '<a href="https://www.worldpop.org/">WorldPop</a>' },
     swatch:        `rgb(${POP_RAMP_STOPS[2][1]})`,
     ramp:          {
       stops: POP_RAMP_STOPS, max: POP_LOG_MAX, minLabel: "0",
@@ -84,8 +88,8 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.nercRegions",
     group:        "regions",
     sourceId:     "hifld-nerc",
+    data:         { kind: "geojson", key: "nerc_regions", credit: HIFLD_CREDIT },
     dataset:      "nerc_regions",
-    geojson:      "nerc_regions",
     swatch:       "#3b82f6",
     defaultOn:    false,
     hoverField:   "sub_nm",
@@ -104,7 +108,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.controlAreas",
     group:        "regions",
     sourceId:     "hifld-ba",
-    geojson:      "control_areas",
+    data:         { kind: "geojson", key: "control_areas", credit: HIFLD_CREDIT },
     swatch:       "#64748b",
     defaultOn:    false,
     hoverField:   "name",
@@ -123,7 +127,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.eiaBa",
     group:        "regions",
     sourceId:     "eia-ba",
-    geojson:      "eia_ba",
+    data:         { kind: "geojson", key: "eia_ba", credit: '<a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33">EIA</a>' },
     swatch:       "#14b8a6",
     defaultOn:    false,
     hoverField:   "name",
@@ -142,6 +146,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.retailTerritories",
     group:        "regions",
     sourceId:     "hifld-retail",
+    data:         { kind: "pmtiles", key: "retail_territories", credit: HIFLD_CREDIT },
     dataset:      "retail_territories",
     swatch:       "#f97316",
     defaultOn:    false,
@@ -161,7 +166,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.countries",
     group:        "regions",
     sourceId:     "cgaz-adm0",
-    geojson:      "countries",
+    data:         { kind: "geojson", key: "countries", credit: GEOBOUNDARIES_CREDIT },
     swatch:       "#8250b0",
     defaultOn:    false,
     hoverField:   "name",
@@ -177,7 +182,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.admin1",
     group:        "regions",
     sourceId:     "cgaz-adm1",
-    geojson:      "admin1_boundaries",
+    data:         { kind: "geojson", key: "admin1_boundaries", credit: GEOBOUNDARIES_CREDIT },
     swatch:       "#1f8f96",
     defaultOn:    false,
     hoverField:   "name",
@@ -193,7 +198,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.usStates",
     group:        "regions",
     sourceId:     "census-states",
-    geojson:      "us_states",
+    data:         { kind: "geojson", key: "us_states", credit: CENSUS_CARTO_CREDIT },
     swatch:       "#2f6fad",
     defaultOn:    false,
     hoverField:   "name",
@@ -224,6 +229,7 @@ import { convDensity, densityLabel } from '../units.js';export const regionLayer
     titleKey:     "layer.usZcta",
     group:        "regions",
     sourceId:     "census-zcta",
+    data:         { kind: "pmtiles", key: "us_zcta", credit: CENSUS_CARTO_CREDIT },
     swatch:       "#c04a5e",
     defaultOn:    false,
     hoverField:   "zcta5",

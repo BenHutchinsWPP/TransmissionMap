@@ -1,22 +1,23 @@
 // ─── HIFLD + region/land layers ──────────────────────────────────────────────
 // Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
+// Sources come from each registry layer's `data` (layer-source.ts); visibility
+// is stamped by applyLayerPlan().
 // Imported by: add-all-layers.ts
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { ogfColorExpr } from '../../src/colors/facets.js';
 import { bucketColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {
   planTransmissionLines, planSubstationPoints, planPolygon,
-  pmtilesUrl, initialVisibility,
 } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 
 export function planHifldTransmission(): LayerPlan {
   return planTransmissionLines({
-    sources: [{ id: "hifld-transmission-lines", url: DATA.hifld_transmission_lines }],
+    sources: [{ id: "hifld-transmission-lines" }],
     sourceLayer: "hifld_transmission_lines",
     registryId: "hifld-transmission-lines", prefix: "hifld-transmission-lines",
     kvExpr: ["to-number", ["get", "VOLTAGE"], -1],
@@ -37,7 +38,7 @@ export function planHifldSubstationPoints(): LayerPlan {
 
 export function planTribalLands(): LayerPlan {
   return planPolygon({
-    sourceId: "tribal-lands", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "tribal-lands",
     prefix: "tribal",
     color: bucketColorExpr("area_type", TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR),
     fillMinzoom: 3, fillOpacity: 0.30,
@@ -47,7 +48,7 @@ export function planTribalLands(): LayerPlan {
 
 export function planBiaTribalLands(): LayerPlan {
   return planPolygon({
-    sourceId: "bia-tribal-lands", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "bia-tribal-lands",
     prefix: "bia-tribal",
     color: "#8b5cf6",
     fillMinzoom: 3, fillOpacity: 0.30,
@@ -61,7 +62,6 @@ export function planHifldNatgasLines(): LayerPlan {
     3, 0.8, 6, 1.5, 9, 2.2, 12, 3.5];
   const dashArray = [4, 3];
 
-  const visI = initialVisibility("hifld-natgas-lines");
   const sublayers = [
     { id: "hifld-natgas-interstate", pipeType: "Interstate", minzoom: 0, opacity: 0.85 },
     { id: "hifld-natgas-intrastate", pipeType: "Intrastate", minzoom: 0, opacity: 0.80 },
@@ -69,13 +69,13 @@ export function planHifldNatgasLines(): LayerPlan {
     { id: "hifld-natgas-gathering",  pipeType: "Gathering",  minzoom: 0, opacity: 0.75 },
   ];
   return [
-    { source: "hifld-natgas-lines", spec: { type: "vector", url: pmtilesUrl(DATA.hifld_natgas_lines) } },
+    layerSource("hifld-natgas-lines"),
     ...sublayers.map(({ id, pipeType, minzoom, opacity }) => ({ layer: {
       id,
       type: "line", source: "hifld-natgas-lines",
       "source-layer": "hifld_natgas_lines", minzoom,
       filter: ["==", ["get", "pipe_type"], pipeType],
-      layout: { visibility: visI, "line-cap": "butt", "line-join": "round" },
+      layout: { "line-cap": "butt", "line-join": "round" },
       paint: { "line-color": NATGAS_LINE_COLOR, "line-width": lineWidth,
                "line-dasharray": dashArray, "line-opacity": opacity },
     } as unknown as LayerSpecification })),
@@ -83,7 +83,6 @@ export function planHifldNatgasLines(): LayerPlan {
 }
 
 export function planHifldNatgasPts(): LayerPlan {
-  const vis = initialVisibility("hifld-natgas-points");
 
   const FAC_ICON = [
     "match", ["get", "fac_type"],
@@ -116,7 +115,7 @@ export function planHifldNatgasPts(): LayerPlan {
   const GAS_BASE   = ["match", ["get", "fac_type"], PETRO_TYPES, false, true] as unknown as ExpressionSpecification;
   const PETRO_BASE = ["match", ["get", "fac_type"], PETRO_TYPES, true, false] as unknown as ExpressionSpecification;
 
-  return [{ source: "hifld-natgas-points", spec: { type: "geojson", data: EMPTY_FC } },
+  return [layerSource("hifld-natgas-points"),
   // Gas facilities (processing, storage, LNG, hubs, border, peak shaving)
   { layer: {
     id: "hifld-natgas-points",
@@ -125,7 +124,6 @@ export function planHifldNatgasPts(): LayerPlan {
     minzoom: 3,
     filter: GAS_BASE,
     layout: {
-      visibility:             vis,
       "icon-image":           FAC_ICON,
       "icon-size":            FAC_SIZE,
       "icon-allow-overlap":   true,
@@ -142,7 +140,6 @@ export function planHifldNatgasPts(): LayerPlan {
     minzoom: 3,
     filter: PETRO_BASE,
     layout: {
-      visibility:             initialVisibility("hifld-petroleum-facilities"),
       "icon-image":           FAC_ICON,
       "icon-size":            FAC_SIZE,
       "icon-allow-overlap":   true,
@@ -155,7 +152,7 @@ export function planHifldNatgasPts(): LayerPlan {
 
 export function planNercRegions(): LayerPlan {
   return planPolygon({
-    sourceId: "nerc-regions", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "nerc-regions",
     prefix: "nerc",
     color: bucketColorExpr("code", NERC_BUCKETS, "#94a3b8"),
     fillMinzoom: 2, fillOpacity: 0.12,
@@ -176,7 +173,7 @@ export function planControlAreas(): LayerPlan {
   ] as unknown as ExpressionSpecification;
 
   return [...planPolygon({
-    sourceId: "control-areas", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "control-areas",
     prefix: "ba", color: BA_COLOR,
     fillMinzoom: 2, fillOpacity: 0.10,
     outlineMinzoom: 2,
@@ -185,7 +182,6 @@ export function planControlAreas(): LayerPlan {
   }), { layer: {
     id: "ba-label", type: "symbol", source: "control-areas",
     minzoom: 4, layout: {
-      visibility: initialVisibility("control-areas"),
       "text-field": ["get", "name"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 4, 8, 7, 11, 10, 13],
@@ -203,12 +199,11 @@ export function planControlAreas(): LayerPlan {
 
 export function planOGFPlannedTransmission(): LayerPlan {
   const OGF_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 3, 2, 7, 3.5, 12, 6];
-  const vis = initialVisibility("ogf-planned-transmission");
 
-  return [{ source: "ogf-planned-transmission", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("ogf-planned-transmission"), { layer: {
     id: "ogf-planned-lines-casing",
     type: "line", source: "ogf-planned-transmission", minzoom: 3,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": "#ffffff",
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 4.5, 7, 6.5, 12, 10],
@@ -217,7 +212,7 @@ export function planOGFPlannedTransmission(): LayerPlan {
   } as unknown as LayerSpecification }, { layer: {
     id: "ogf-planned-lines",
     type: "line", source: "ogf-planned-transmission", minzoom: 3,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": ogfColorExpr(state.ogfColorBy),
       "line-width": OGF_LINE_WIDTH,
@@ -231,7 +226,6 @@ export function planRetailTerritories(): LayerPlan {
   const RETAIL_COLOR = bucketColorExpr("type", RETAIL_TYPE_BUCKETS, "#94a3b8");
   return planPolygon({
     sourceId: "retail-territories",
-    source: { type: "vector", url: pmtilesUrl(DATA.retail_territories) },
     sourceLayer: "retail_territories", prefix: "retail", color: RETAIL_COLOR,
     fillMinzoom: 2, fillOpacity: 0.15,
     outlineMinzoom: 3,

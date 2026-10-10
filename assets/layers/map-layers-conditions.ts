@@ -8,9 +8,10 @@
 //       feature-state pattern; the join lives in ../fema-nri.ts).
 // Each plan* returns a LayerPlan (layer-plan.ts), which add-all-layers.ts
 // applies — that step registers every inline style-layer filter as its base.
-// Deps: layer-init.ts (initialVisibility, countyBoundariesSource, planRaster),
-//       layer-plan.ts (LayerPlan type), state, nexrad-radar.ts (GEOMET_RADAR, geometTiles),
-//       constants (DATA, EMPTY_FC, RADAR_TILE_URL, WEATHER_WASH_OPACITY, COUNTY_SRC*),
+// Deps: layer-init.ts (countyBoundariesSource, planRaster), layer-source.ts
+//       (layerSource), layer-plan.ts (LayerPlan type), state, nexrad-radar.ts
+//       (GEOMET_RADAR, geometTiles), constants (EMPTY_FC, RADAR_TILE_URL,
+//       WEATHER_WASH_OPACITY, COUNTY_SRC*),
 //       src/colors/buckets.ts (NRI_RATINGS; bucketColorExpr over NWS_GROUP_BUCKETS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
@@ -41,9 +42,10 @@
 import type { LayerSpecification, ExpressionSpecification, FilterSpecification, ImageSourceSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import {
-  DATA, EMPTY_FC, RADAR_TILE_URL, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
+  EMPTY_FC, RADAR_TILE_URL, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
 } from '../constants.js';
-import { initialVisibility, countyBoundariesSource, planRaster } from './layer-init.js';
+import { countyBoundariesSource, planRaster } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 import { GEOMET_RADAR, geometTiles } from '../nexrad-radar.js';
 import { NRI_RATINGS, NWS_GROUP_BUCKETS, bucketColorExpr } from '../../src/colors/buckets.js';
@@ -75,13 +77,8 @@ export function applySmokeOpacity() {
 const wildfireType = (t: string) => ["==", ["get", "_type"], t] as FilterSpecification;
 
 export function planWildfireLiveAreas(): LayerPlan {
-  const smokeVis     = initialVisibility("wildfire-smoke");
-  const wildfireVis  = initialVisibility("wildfire-live");
 
-  return [{ source: "wildfire-live", spec: {
-    type: "geojson",
-    data: EMPTY_FC,
-  } },
+  return [layerSource("wildfire-live"),
 
   // ── Smoke layers (bottom — below fire perimeters) ──────────────────────────
   { layer: {
@@ -89,7 +86,6 @@ export function planWildfireLiveAreas(): LayerPlan {
     type: "fill",
     source: "wildfire-live",
     filter: wildfireType("smoke"),
-    layout: { visibility: smokeVis },
     paint: {
       "fill-color": [
         "match", ["get", "density"],
@@ -107,7 +103,6 @@ export function planWildfireLiveAreas(): LayerPlan {
     type: "line",
     source: "wildfire-live",
     filter: wildfireType("smoke"),
-    layout: { visibility: smokeVis },
     paint: {
       "line-color": [
         "match", ["get", "density"],
@@ -127,7 +122,6 @@ export function planWildfireLiveAreas(): LayerPlan {
     type: "fill",
     source: "wildfire-live",
     filter: wildfireType("perimeter"),
-    layout: { visibility: wildfireVis },
     paint: {
       "fill-color": "#ff6600",
       "fill-opacity": 0.12,
@@ -140,7 +134,6 @@ export function planWildfireLiveAreas(): LayerPlan {
     type: "line",
     source: "wildfire-live",
     filter: wildfireType("perimeter"),
-    layout: { visibility: wildfireVis },
     paint: {
       "line-color": [
         "interpolate", ["linear"],
@@ -156,8 +149,6 @@ export function planWildfireLiveAreas(): LayerPlan {
 }
 
 export function planWildfireLivePoints(): LayerPlan {
-  const wildfireVis  = initialVisibility("wildfire-live");
-  const incidentVis  = initialVisibility("wildfire-incidents");
 
   // ── Hotspot heatmap — FRP-weighted, shown at low zoom ─────────────────────
   // The heatmap is a soft area wash at national zoom — slot it below the
@@ -169,7 +160,6 @@ export function planWildfireLivePoints(): LayerPlan {
     source: "wildfire-live",
     filter: wildfireType("hotspot"),
     maxzoom: 9,
-    layout: { visibility: wildfireVis },
     paint: {
       // Weight floor + low-density color stops are deliberately hot: a lone
       // low-FRP hotspot must still glow at national zoom (z3–5), where a
@@ -208,7 +198,6 @@ export function planWildfireLivePoints(): LayerPlan {
     source: "wildfire-live",
     filter: wildfireType("hotspot"),
     minzoom: 8,
-    layout: { visibility: wildfireVis },
     paint: {
       "circle-color": [
         "interpolate", ["linear"],
@@ -233,7 +222,6 @@ export function planWildfireLivePoints(): LayerPlan {
     source: "wildfire-live",
     filter: wildfireType("incident"),
     layout: {
-      visibility: incidentVis,
       "icon-image": [
         "step", ["to-number", ["get", "pct_contained"], 0],
         "fire-incident-low",
@@ -272,13 +260,11 @@ export function planWildfireLivePoints(): LayerPlan {
 const NWS_GROUP_COLOR = bucketColorExpr("_group", NWS_GROUP_BUCKETS, "#9ca3af");
 
 export function planNwsAlerts(): LayerPlan {
-  const vis = initialVisibility("nws-alerts");
 
-  return [{ source: "nws-alerts", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("nws-alerts"), { layer: {
     id: "nws-alerts-fill",
     type: "fill",
     source: "nws-alerts",
-    layout: { visibility: vis },
     paint: {
       "fill-color": NWS_GROUP_COLOR,
       "fill-opacity": 0.25,
@@ -287,7 +273,6 @@ export function planNwsAlerts(): LayerPlan {
     id: "nws-alerts-line",
     type: "line",
     source: "nws-alerts",
-    layout: { visibility: vis },
     paint: {
       "line-color": NWS_GROUP_COLOR,
       "line-width": ["case", ["==", ["get", "severity"], "Extreme"], 2.5, 1.5],
@@ -295,8 +280,7 @@ export function planNwsAlerts(): LayerPlan {
   } as LayerSpecification }];
 }
 
-export const planSeismicHazard = () => planRaster("usgs-seismic-pga", DATA.usgs_seismic_pga,
-  '<a href="https://www.usgs.gov/programs/earthquake-hazards/science/2018-nshm">USGS NSHM</a>');
+export const planSeismicHazard = () => planRaster("usgs-seismic-pga");
 
 // ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
 // The frame poll that keeps every tile on one scan lives in ../nexrad-radar.ts.
@@ -313,7 +297,6 @@ export function planNexradRadar(): LayerPlan {
       id,
       type: "raster",
       source: id,
-      layout: { visibility: initialVisibility("nexrad-radar") },
       paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
     } as LayerSpecification },
   ]);
@@ -349,7 +332,6 @@ function planCountyChoropleth(
   id: string, key: ExpressionSpecification,
   fill: Record<string, unknown>, line: Record<string, unknown>,
 ): LayerPlan {
-  const vis = initialVisibility(id);
   const unlit = ["==", key, null];
   return [countyBoundariesSource(), ...([["fill", fill], ["line", line]] as const).map(([type, paint]) => {
     const color = `${type}-color`;
@@ -358,7 +340,6 @@ function planCountyChoropleth(
       type,
       source: COUNTY_SRC,
       "source-layer": COUNTY_SRC_LAYER,
-      layout: { visibility: vis },
       paint: { ...paint, [color]: ["case", unlit, "rgba(0,0,0,0)", paint[color]] },
     } as LayerSpecification };
   })];
@@ -429,7 +410,6 @@ export function planWeatherLive(): LayerPlan {
       id,
       type: "raster",
       source: id,
-      layout: { visibility: initialVisibility("weather-live") },
       paint: {
         "raster-opacity": opacity,
         "raster-opacity-transition": { duration: 0 },
@@ -452,13 +432,10 @@ export function planWeatherLive(): LayerPlan {
       type: "line",
       source: "weather-admin-lines",
       filter,
-      layout: { visibility: initialVisibility("weather-live") },
       paint: { "line-color": "#ffffff", "line-width": width, "line-opacity": opacity },
     } });
   }
   return plan;
 }
 
-export const planWildfireHazard = () => planRaster("usfs-wildfire-potential", DATA.usfs_wildfire_potential,
-  '<a href="https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential">USFS Fire Lab</a>',
-  { resampling: "nearest" });
+export const planWildfireHazard = () => planRaster("usfs-wildfire-potential", { resampling: "nearest" });

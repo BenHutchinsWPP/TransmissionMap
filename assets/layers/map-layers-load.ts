@@ -11,16 +11,15 @@
 
 import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
-import { DATA, EMPTY_FC } from '../constants.js';
-import { initialVisibility, planRaster } from './layer-init.js';
+import { planRaster } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 import { on } from '../state-bus.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import { DCM_CLASSES } from '../../src/colors/buckets.js';
 import { onMapTap } from '../map-input.js';
 
-export const planPopDensity = () => planRaster("worldpop-pop-density", DATA.worldpop_pop_density,
-  '<a href="https://www.worldpop.org/">WorldPop</a>', { opacity: 0.75 });
+export const planPopDensity = () => planRaster("worldpop-pop-density", { opacity: 0.75 });
 
 // Circle area ∝ facility sqft (radius ∝ √sqft, normalized to the ~135k sq ft
 // median). Clamped ×[0.6, 3] so the 26.6M sq ft campuses don't swamp the map;
@@ -44,22 +43,20 @@ const DC_POINT_PAINT = {
 };
 
 export function planOsmDataCenters(): LayerPlan {
-  return [{ source: "osm-datacenters", spec: {
-    type: "geojson", data: EMPTY_FC,
+  return [layerSource("osm-datacenters", { spec: {
     cluster: true, clusterRadius: 40, clusterMaxZoom: 12,
     // Per-cluster total facility area (sq ft) — sizes cluster circles + feeds heat weight.
     clusterProperties: { sqft_sum: ["+", ["to-number", ["get", "im3_sqft"], 0]] },
-  } },
+  } }),
   // Unclustered twin source for the Points display mode AND the heatmap
   // (heat needs raw point density; clusters collapse it to one dot per metro). (MapLibre cannot
   // toggle clustering on a live source). Data mirrored from the lazy fetch.
-  { source: "osm-datacenters-plain", spec: { type: "geojson", data: EMPTY_FC }, attrib: "osm-datacenters" },
+  layerSource("osm-datacenters", { id: "osm-datacenters-plain" }),
   { layer: {
     id: "osm-dc-circles",
     type: "circle",
     source: "osm-datacenters",
     minzoom: 0,
-    layout: { visibility: initialVisibility("osm-datacenters") },
     paint: DC_POINT_PAINT,
     filter: ["!", ["has", "point_count"]],
   } as unknown as LayerSpecification },
@@ -68,7 +65,6 @@ export function planOsmDataCenters(): LayerPlan {
   { layer: {
     id: "osm-dc-clusters", type: "circle", source: "osm-datacenters",
     filter: ["has", "point_count"],
-    layout: { visibility: initialVisibility("osm-datacenters") },
     paint: {
       "circle-color": "#6366f1",
       "circle-radius": ["max",
@@ -83,7 +79,6 @@ export function planOsmDataCenters(): LayerPlan {
     id: "osm-dc-cluster-count", type: "symbol", source: "osm-datacenters",
     filter: ["has", "point_count"],
     layout: {
-      visibility: initialVisibility("osm-datacenters"),
       "text-field": ["get", "point_count_abbreviated"],
       "text-font": ["Noto Sans Regular"],
       "text-size": 11,
@@ -189,21 +184,18 @@ export function addDcmHatchImages(map: MapLibreMap) {
 // The kind filters below are structural: the status legend filter
 // (FACET_APPLIERS.dcm in filters.ts) is combined with them, never replaces them.
 export function planDcMoratoriumAreas(): LayerPlan {
-  const vis = initialVisibility("dc-moratoriums");
   const isUtility = ["==", ["get", "kind"], "utility"] as ExpressionSpecification;
-  return [{ source: "dc-moratoriums", spec: { type: "geojson", data: EMPTY_FC } },
+  return [layerSource("dc-moratoriums"),
   // States are a light wash under a heavy dashed edge, so the county fills and
   // points inside them stay readable.
   { layer: {
     id: "dcm-state-fill", type: "fill", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "state"],
-    layout: { visibility: vis },
     paint: { "fill-color": DCM_COLOR, "fill-opacity": 0.12 },
   } as LayerSpecification },
   { layer: {
     id: "dcm-state-line", type: "line", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "state"],
-    layout: { visibility: vis },
     paint: { "line-color": DCM_COLOR, "line-width": 2.5, "line-dasharray": [3, 2], "line-opacity": 0.8 },
   } as LayerSpecification },
   // Utility (and grid-operator) service areas: hatched in the class colour under
@@ -212,13 +204,11 @@ export function planDcMoratoriumAreas(): LayerPlan {
   { layer: {
     id: "dcm-utility-fill", type: "fill", source: "dc-moratoriums",
     filter: isUtility,
-    layout: { visibility: vis },
     paint: { "fill-pattern": ["concat", "dcm-hatch-", ["get", "cls"]], "fill-opacity": 0.7 },
   } as LayerSpecification },
   { layer: {
     id: "dcm-utility-line", type: "line", source: "dc-moratoriums",
     filter: isUtility,
-    layout: { visibility: vis },
     paint: {
       "line-color": ["case", dcmRecent(), "#1d4ed8", DCM_COLOR],
       "line-width": ["case", dcmRecent(), 2.5, 1.5],
@@ -228,7 +218,6 @@ export function planDcMoratoriumAreas(): LayerPlan {
   { layer: {
     id: "dcm-county-fill", type: "fill", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "county"],
-    layout: { visibility: vis },
     paint: {
       "fill-color": DCM_COLOR,
       "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 8, 0.45, 11, 0.3],
@@ -237,7 +226,6 @@ export function planDcMoratoriumAreas(): LayerPlan {
   { layer: {
     id: "dcm-county-line", type: "line", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "county"],
-    layout: { visibility: vis },
     paint: {
       "line-color": ["case", dcmRecent(), "#1d4ed8", DCM_COLOR],
       "line-width": ["case", dcmRecent(), 2.5, 0.8],
@@ -246,13 +234,11 @@ export function planDcMoratoriumAreas(): LayerPlan {
 }
 
 export function planDcMoratoriumPoints(): LayerPlan {
-  const vis = initialVisibility("dc-moratoriums");
   const isPoint = ["==", ["get", "kind"], "point"] as ExpressionSpecification;
   // A blue ring marks a point that changed in the last DCM_RECENT_DAYS.
   return [{ layer: {
     id: "dcm-points-recent", type: "circle", source: "dc-moratoriums",
     filter: ["all", isPoint, dcmRecent()],
-    layout: { visibility: vis },
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 6, 8, 10, 12, 14],
       "circle-color": "rgba(0,0,0,0)",
@@ -263,7 +249,6 @@ export function planDcMoratoriumPoints(): LayerPlan {
   { layer: {
     id: "dcm-points", type: "circle", source: "dc-moratoriums",
     filter: isPoint,
-    layout: { visibility: vis },
     paint: {
       "circle-color": DCM_COLOR,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 6, 12, 9],

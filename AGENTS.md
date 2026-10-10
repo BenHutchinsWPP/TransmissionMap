@@ -63,8 +63,8 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/types.ts` — shared `LayerDef` interface and the registry/view types it
   carries (includes the optional `clickPriority` — map-layer id → click
   hit-test priority — `fromZoom` — minimum zoom to fetch the layer's data — and
-  `geojson` — the `DATA` key the lazy loader fetches for a GeoJSON layer —
-  fields), and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
+  `data` — `LayerData` `{ kind, key, credit }`: where the layer's map source gets
+  its data and who it credits — fields) and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
   `assets/state.ts`, `UserLayer` in `assets/user-data/user-data.ts`,
   `RasterMeta` in `assets/raster-probes.ts`
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
@@ -117,7 +117,7 @@ turns public datasets into PMTiles consumed by the frontend.
       `tm-units`, validated against `UNIT_OPTIONS` — a trust boundary, see
       `units-store.test.ts`)
     - `constants.ts` — shared constants, imports nothing: `DATA` paths, `releaseUrl`/`weatherLiveUrl`,
-      `SOURCE_ATTRIB` (keyed by map source id), the external hosts `diagnostics.ts` also probes,
+      the external hosts `diagnostics.ts` also probes,
       `EMPTY_FC`, default viewport, `COUNTY_SRC*`; a single-owner constant lives in its owner
       (`MW_SLIDER_MAX` → `filters.ts`, `BLANK_STYLE`/fog/atmosphere → `basemap.ts`, terrain tuning → `terrain.ts`)
     - `live-poll.ts` — `pollWhileVisible`: **the one refresh loop every live feed runs on**
@@ -179,16 +179,19 @@ turns public datasets into PMTiles consumed by the frontend.
   - **`assets/layers/`** — MapLibre layer builders
     - `layer-plan.ts` — `LayerPlan` (a builder's sources + style layers, in paint order — plain
       data) and `applyLayerPlan(map, plan)`, the one step that puts a plan on the map: sources
-      first, already-there guards, `beforeId`, `SOURCE_ATTRIB` attribution, and each layer's
-      `filter` registered as its base filter
-    - `layer-init.ts` — shared plan helpers: `initialVisibility`, `pmtilesUrl`, `planPolygon`,
+      first, already-there guards, `beforeId`, each style layer's starting visibility from its
+      registry layer's state (unless it pins its own), and each layer's `filter` registered as its base filter
+    - `layer-source.ts` — a registry layer's `data` declaration → its source: `layerSource(id)`
+      (credited vector/raster/GeoJSON spec by `kind`), `layerDataUrl`, `layerSourceId` (layers
+      declaring the same data share one source; `LAYER_SOURCE_ALIAS` for the rest), `SOURCE_DATA_URLS`
+      (source-only GeoJSON), `pmtilesUrl` (non-registry join sources only)
+    - `layer-init.ts` — shared plan helpers: `planPolygon`,
       `planRaster`, `planTransmissionLines`, `planSubstationPoints`, `planPadus`, `planCritHab`,
       `countyBoundariesSource` (+ `ensureCountyBoundaries` for layers added after boot),
       `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
     - `layer-data.ts` — the lazy GeoJSON loader: `ensureLayerData` (with the `fromZoom` gate and
-      zoom-settle retry), `fetchGeojson`, `layerDataUrl` (a registry layer's `geojson` DATA key,
-      else the two-row `SOURCE_DATA_URLS` for source-only ids) and `LAYER_SOURCE_ALIAS`; emits
-      `layer:data` on the bus when a source's features land
+      zoom-settle retry), `fetchGeojson`; which file into which source comes from `layer-source.ts`;
+      emits `layer:data` on the bus when a source's features land
     - `base-filters.ts` — zero-dependency `registerBaseFilter` + `BASE_LAYER_FILTERS`: each style
       layer's own inline filter (registered by `applyLayerPlan`), which `filters.ts`'s `effectiveFilter()` builds on
     - `add-all-layers.ts` — `addAllLayers()`: collects every builder's plan in z-order and applies
@@ -222,7 +225,7 @@ turns public datasets into PMTiles consumed by the frontend.
     derives its applier and `assets/ui/ui-legends.ts` pairs the two into `LEGEND_FILTERS`.
     Also the OGF/WestTEC colour-by (`ogfColorExpr`/`westtecColorExpr`: mode → facet key)
 - `src/registry/` — layer definitions (pure data, no side effects)
-  - `sources.ts` — `LAYER_SOURCES`; `index.ts` — `LAYERS[]`, `layerById`
+  - `sources.ts` — `LAYER_SOURCES` + the shared map credits (`OSM_CREDIT`, `HIFLD_CREDIT`…); `index.ts` — `LAYERS[]`, `layerById`
   - `generators.ts` EIA+OSM; `transmission.ts` lines+substations; `pipelines.ts` natgas
   - `renewable.ts` wind/solar/geo/hydro; `land.ts` PAD-US/tribal/crithab; `regions.ts` NERC/BA/retail
   - `conditions.ts` — hazards + everything live: static WHP & seismic PGA, live wildfire
@@ -299,7 +302,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a field to a dataset's filter schema (types, operators, closed value domains) | `src/registry/field-schema.ts` (`FIELD_SCHEMA`); compiled into filter expressions by `src/registry/condition-compile.ts` |
 | Legends | `assets/ui/ui-legends.ts` |
 | Search behavior | `assets/ui/ui-search.ts` |
-| Layer add order / lazy loading | `assets/layers/add-all-layers.ts` (order), `assets/layers/layer-data.ts` (lazy GeoJSON loading) |
+| Layer add order / lazy loading | `assets/layers/add-all-layers.ts` (order), `assets/layers/layer-data.ts` (lazy GeoJSON loading), `assets/layers/layer-source.ts` (which file / source / credit a layer gets, from `LayerDef.data`) |
 | Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/wildfire-staleness.ts` |
 | Data source facts (URL, license, columns) | `docs/data-sources.md`, `docs/layers/<layer>.md` |
 | Add/fix a layer's provenance (publisher, landing page, licence) | `scripts/data_manifest.yaml` — sourced only from `docs/data-sources.md` and `docs/layers/<id>.md`; a field those docs don't settle is the literal string `UNKNOWN` |

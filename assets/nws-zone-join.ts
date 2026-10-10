@@ -30,9 +30,9 @@
 //       never disappears); features with no matching alert are unpainted.
 //       `nws_multi` feature-state flags >1 matching alert and thickens the
 //       outline.
-// Deps: state-bus (on 'layer:visibility', on 'layer:data'), state (map, layerVisibility), constants (DATA), layers/layer-init.ts
-//       (ensureCountyBoundaries, pmtilesUrl,
-//       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
+// Deps: state-bus (on 'layer:visibility', on 'layer:data'), state (map, layerVisibility), constants (DATA),
+//       layers/layer-init.ts (ensureCountyBoundaries), layers/layer-source.ts
+//       (pmtilesUrl), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
 //       polygons with; reused here, not duplicated).
 // Wired from ui/ui.ts init() via initNwsZoneJoin(), which listens for the
@@ -57,9 +57,8 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from './state.js';
 import { DATA, COUNTY_SRC, COUNTY_SRC_LAYER } from './constants.js';
-import {
-  ensureCountyBoundaries, pmtilesUrl, initialVisibility,
-} from './layers/layer-init.js';
+import { ensureCountyBoundaries } from './layers/layer-init.js';
+import { pmtilesUrl } from './layers/layer-source.js';
 import { NWS_GROUP_BUCKETS } from '../src/colors/buckets.js';
 import { on } from './state-bus.js';
 
@@ -157,18 +156,22 @@ const MULTI_LINE_WIDTH: ExpressionSpecification = [
 const ZONE_FILL_LAYERS = ["nws-zone-fill", "nws-county-fill"];
 const ZONE_LINE_LAYERS = ["nws-zone-line", "nws-county-line"];
 
+// The zone/county layers follow the nws-alerts switch but are not its
+// mapLayerIds (visibility.ts never toggles them), so they read it here.
+const alertsVisibility = () => state.layerVisibility["nws-alerts"] ? "visible" : "none";
+
 // ── Lazy source/layer creation (idempotent — safe to call on every apply) ──
 function ensureZoneLayers() {
   if (!state.map) return;
   if (!state.map.getSource(ZONE_SRC)) {
     state.map.addSource(ZONE_SRC, {
       type: "vector",
-      url: pmtilesUrl(DATA.nws_zones),
+      url: pmtilesUrl("nws_zones"),
       promoteId: { [ZONE_SRC_LAYER]: "key" },
     });
   }
   ensureCountyBoundaries();
-  const vis = initialVisibility("nws-alerts");
+  const vis = alertsVisibility();
   // These layers lazy-add on first data load, which would land them on top of
   // the whole stack — anchor below the storm-polygon layer instead so all
   // area fills stay under infra lines/points (z-order design rule).
@@ -199,7 +202,7 @@ function ensureZoneLayers() {
 
 function syncZoneVisibility() {
   if (!state.map) return;
-  const vis = initialVisibility("nws-alerts");
+  const vis = alertsVisibility();
   for (const id of [...ZONE_FILL_LAYERS, ...ZONE_LINE_LAYERS]) {
     if (state.map.getLayer(id)) state.map.setLayoutProperty(id, "visibility", vis);
   }

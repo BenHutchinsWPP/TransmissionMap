@@ -1,7 +1,7 @@
 // Layer registry entries — natural hazards & live conditions.
 // Role: pure-data LayerDef for the conditions group; consumed by src/registry/index.ts.
-// Deps: ../types (LayerDef). No side effects.
-import type { LayerDef, RampDef } from '../types.js';
+// Deps: ../types (LayerDef, LayerData). No side effects.
+import type { LayerData, LayerDef, RampDef } from '../types.js';
 import {
   SEIS_RAMP_STOPS, SEIS_RAMP_MAX,
   TEMP_RAMP_STOPS, TEMP_RAMP_MIN, TEMP_RAMP_MAX,
@@ -91,6 +91,13 @@ export const WEATHER_VARIABLES: {
   { id: "pressure", label: "Pressure",     labelKey: "weather.pressure", urlCode: "p", ramp: PRESSURE_RAMP, format: fmtPressure },
 ];
 
+// One live file carries all three fire layers (smoke, hotspots/perimeters,
+// incidents), so they declare the same data and draw from one map source.
+const WILDFIRE_LIVE_DATA: LayerData = {
+  kind: "geojson", key: "wildfire_live",
+  credit: '<a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a> · <a href="https://data-nifc.opendata.arcgis.com/">NIFC WFIGS</a> · <a href="https://cwfis.cfs.nrcan.gc.ca/">CWFIS</a> · <a href="https://www.ospo.noaa.gov/Products/land/hms.html">NOAA HMS</a>',
+};
+
 export const conditionLayers: LayerDef[] = [
   {
     id:          "wildfire-live",
@@ -99,7 +106,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:    "layer.wildfireLive",
     group:       "conditions",
     sourceId:    "nasa-firms-nifc",
-    geojson:     "wildfire_live",
+    data:        WILDFIRE_LIVE_DATA,
     swatch:      "#ff4400",
     live:        true,
     defaultOn:   false,
@@ -115,6 +122,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:    "layer.wildfireSmoke",
     group:       "conditions",
     sourceId:    "noaa-hms",
+    data:        WILDFIRE_LIVE_DATA,
     swatch:      "#ff8c00",
     live:        true,
     defaultOn:   false,
@@ -130,6 +138,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:    "layer.wildfireIncidents",
     group:       "conditions",
     sourceId:    "nasa-firms-nifc",
+    data:        WILDFIRE_LIVE_DATA,
     swatch:      "#cc0000",
     live:        true,
     defaultOn:   false,
@@ -145,6 +154,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:     "layer.usfsWildfirePotential",
     group:        "conditions",
     sourceId:     "usfs-firelab",
+    data:         { kind: "raster", key: "usfs_wildfire_potential", credit: '<a href="https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential">USFS Fire Lab</a>' },
     swatch:       "#FF0000",
     defaultOn:    false,
     mapLayerIds:  ["usfs-wildfire-potential"],
@@ -158,7 +168,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:    "layer.nwsAlerts",
     group:       "conditions",
     sourceId:    "noaa-nws",
-    geojson:     "nws_alerts",
+    data:        { kind: "geojson", key: "nws_alerts", credit: '<a href="https://www.weather.gov/alerts">NOAA NWS</a> · <a href="https://api.weather.gc.ca">ECCC MSC GeoMet</a>' },
     swatch:      "#a855f7",
     live:        true,
     defaultOn:   false,
@@ -239,6 +249,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:     "layer.seismicPga",
     group:        "conditions",
     sourceId:     "usgs-nshm",
+    data:         { kind: "raster", key: "usgs_seismic_pga", credit: '<a href="https://www.usgs.gov/programs/earthquake-hazards/science/2018-nshm">USGS NSHM</a>' },
     swatch:       `rgb(${SEIS_RAMP_STOPS[3][1]})`,
     ramp:         { stops: SEIS_RAMP_STOPS, max: SEIS_RAMP_MAX, unit: "g" },
     defaultOn:    false,

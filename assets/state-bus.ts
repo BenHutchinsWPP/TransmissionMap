@@ -10,7 +10,7 @@ type Events = {
   'layer:visibility': { id: string; visible: boolean }; // setLayerVisibility() switched a layer
   'layer:data':       { id: string };  // a GeoJSON source's features landed in state.sourcesData (layer-data.ts load,
                                        // live-staleness.ts auto-refresh); id is the GeoJSON source id (a registry id
-                                       // after LAYER_SOURCE_ALIAS, or a source-only id such as weather-admin-lines)
+                                       // after layerSourceId(), or a source-only id such as weather-admin-lines)
   'view:applied':         void;   // view-state.ts applyView() finished — resync panels + controls
   'style:weather':        void;   // the weather wash's opacity override changed (style-overrides.ts)
                                   // bus: weather-live imports style-overrides, so a direct call would be a cycle

@@ -1,5 +1,6 @@
 // Layer registry entries — natural gas and OSM pipeline layers.
 import type { LayerDef } from '../types.js';
+import { OSM_CREDIT, HIFLD_EIA_CREDIT } from './sources.js';
 
 export const pipelineLayers: LayerDef[] = [
   {
@@ -9,6 +10,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:            "layer.gasPipelines",
     group:               "pipelines",
     sourceId:            "hifld-natgas",
+    data:                { kind: "pmtiles", key: "hifld_natgas_lines", credit: HIFLD_EIA_CREDIT },
     dataset:             "hifld_natgas_lines",
     swatch:              "#f97316",
     defaultOn:           false,
@@ -32,8 +34,8 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:       "layer.gasFacilities",
     group:          "pipelines",
     sourceId:       "hifld-natgas",
+    data:           { kind: "geojson", key: "hifld_natgas_points", credit: HIFLD_EIA_CREDIT },
     dataset:        "hifld_natgas_points",
-    geojson:        "hifld_natgas_points",
     swatch:         "#06b6d4",
     defaultOn:      false,
     mapLayerIds:    ["hifld-natgas-points"],
@@ -71,7 +73,7 @@ export const pipelineLayers: LayerDef[] = [
     label:             "Crude Pipelines",
     group:             "pipelines",
     sourceId:          "eia-atlas",
-    geojson:           "eia_crude_pipelines",
+    data:              { kind: "geojson", key: "eia_crude_pipelines", credit: EIA_ATLAS_CREDIT },
     swatch:            "#7c2d12",
     defaultOn:         false,
     lineHighlightKeys: ["name", "operator"],
@@ -84,7 +86,7 @@ export const pipelineLayers: LayerDef[] = [
     label:             "Refined Oil Pipelines",
     group:             "pipelines",
     sourceId:          "eia-atlas",
-    geojson:           "eia_product_pipelines",
+    data:              { kind: "geojson", key: "eia_product_pipelines", credit: EIA_ATLAS_CREDIT },
     swatch:            "#ca8a04",
     defaultOn:         false,
     lineHighlightKeys: ["name", "operator"],
@@ -99,6 +101,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:          "layer.osmPipelines",
     group:             "pipelines",
     sourceId:          "osm",
+    data:              { kind: "pmtiles", key: "osm_pipelines_lines", credit: OSM_CREDIT },
     dataset:           "osm_pipelines_lines",
     swatch:            "#0d9488",
     defaultOn:         false,
@@ -120,7 +123,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:      "layer.pipelineEquipment",
     group:         "pipelines",
     sourceId:      "osm",
-    geojson:       "osm_pipelines_points",
+    data:          { kind: "geojson", key: "osm_pipelines_points", credit: OSM_CREDIT },
     swatch:        "#64748b",
     defaultOn:     false,
     pipelineLayer: true,

@@ -1,13 +1,13 @@
 // assets/constants.ts — Static constants shared across modules; imports nothing.
 // Holds: where data lives (DATA, releaseUrl, weatherLiveUrl, RELEASES_ORIGIN),
-// per-source map credits (SOURCE_ATTRIB), the external hosts more than one module
+// the external hosts more than one module
 // reads (basemap/terrain/radar/glyph URLs that diagnostics.ts also probes),
 // EMPTY_FC, the default viewport and the county join keys (COUNTY_SRC*).
 // A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
 // filters.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
 // in basemap.ts, terrain exaggeration and credit in terrain.ts.
-// Which registry layer fetches which DATA file is the layer's own LayerDef.geojson
-// (resolved by layers/layer-data.ts's layerDataUrl()).
+// Which registry layer reads which DATA file, and its map credit, is the layer's
+// own LayerDef.data (resolved by layers/layer-source.ts).
 
 // ─── Data URLs ────────────────────────────────────────────────────────────────
 // GeoJSON layers are hosted pre-gzipped (.geojson.gz) and decompressed in the
@@ -155,62 +155,6 @@ export function weatherLiveUrl(file: string): string {
 // Shared by the weather A/B layer pair (map-layers-conditions.ts) and the
 // crossfade in weather-live.ts — the fade's target must equal the wash opacity.
 export const WEATHER_WASH_OPACITY = 0.65;
-
-// ─── Per-source attribution shorthand ─────────────────────────────────────────
-// Short credit strings shown in the MapLibre attribution control. Keyed by the
-// runtime sourceId (NOT the registry source key), or a plan step's `attrib`;
-// layers/layer-plan.ts's applyLayerPlan() attaches them.
-// MapLibre sorts attributions by length and drops any that are a SUBSTRING of a
-// longer one. So OSM-derived layers MUST use a string identical to (a substring
-// of) the basemap's OSM attribution — see OSM_ATTRIB below — or "OpenStreetMap"
-// would appear twice whenever an OSM-derived basemap is active. Sources with
-// bespoke attribution set inline (wind/solar/geo/worldpop/hazards rasters +
-// basemaps) are intentionally omitted here. `&copy;` = ©.
-// MUST stay byte-identical to the osm-tiles basemap attribution in basemap.ts so
-// MapLibre's substring-dedup collapses them into one credit.
-const OSM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
-export const SOURCE_ATTRIB: Record<string, string> = {
-  "hifld-transmission-lines": '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
-  "hifld-substations":        '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
-  "nerc-regions":             '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
-  "eia-ba":                   '<a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33">EIA</a>',
-  "control-areas":            '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
-  "retail-territories":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>',
-  "hifld-natgas-lines":       '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>',
-  "hifld-natgas-points":      '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>',
-  "eia-crude-pipelines":      '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>',
-  "eia-product-pipelines":    '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>',
-  "eia-generators":           '<a href="https://www.eia.gov/electricity/data/eia860/">EIA-860</a>',
-  "ogf-planned-transmission": '<a href="https://ourgridfuture.org">Our Grid Future</a>',
-  "padus":                    '<a href="https://www.usgs.gov/programs/gap-analysis-project">USGS PAD-US</a>',
-  "tribal-lands":             '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html">Census TIGER</a>',
-  "crithab":                  '<a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html">USFWS</a>',
-  "railroads":                '<a href="https://www.bts.gov/ntad">U.S. DOT BTS</a>',
-  "nrel-hydrothermal-points": '<a href="https://gdr.openei.org/submissions/842">NREL/DOE</a>',
-  "osm-transmission-lines":   OSM_ATTRIB,
-  "osm-substations-points":   OSM_ATTRIB,
-  "osm-substations-polygons": OSM_ATTRIB,
-  "osm-plants-points":        OSM_ATTRIB,
-  "osm-plants-polygons":      OSM_ATTRIB,
-  "osm-generators":           OSM_ATTRIB,
-  "osm-pipelines-lines":      OSM_ATTRIB,
-  "osm-pipelines-points":     OSM_ATTRIB,
-  // OSM_ATTRIB prefix stays byte-identical so MapLibre substring-dedup still
-  // collapses it with the basemap credit; IM3 rides behind it.
-  "osm-datacenters":          OSM_ATTRIB + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>",
-  "dc-moratoriums":           "<a href='https://mjbommar.github.io/moratorium-data-2026/'>Moratorium Nation</a> (CC BY 4.0)",
-  "wecc-paths":               '<a href="https://www.wecc.org/">WECC</a>',
-  "westtec-10yr":             '<a href="https://www.westernpowerpool.org/">WestTEC (Western Power Pool)</a>',
-  "boem-wind-leases":         '<a href="https://www.boem.gov/renewable-energy/mapping-and-data">BOEM</a>',
-  "nws-alerts":               '<a href="https://www.weather.gov/alerts">NOAA NWS</a> · <a href="https://api.weather.gc.ca">ECCC MSC GeoMet</a>',
-  "wildfire-live":            '<a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a> · <a href="https://data-nifc.opendata.arcgis.com/">NIFC WFIGS</a> · <a href="https://cwfis.cfs.nrcan.gc.ca/">CWFIS</a> · <a href="https://www.ospo.noaa.gov/Products/land/hms.html">NOAA HMS</a>',
-  "bia-tribal-lands":         '<a href="https://biamaps.geoplatform.gov/biatracts/">Bureau of Indian Affairs</a>',
-  "mines":                    '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>',
-  "countries":                '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
-  "admin1":                   '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
-  "us-states":                '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>',
-  "us-zcta":                  '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>',
-};
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────
 // Read by basemap.ts and probed by diagnostics.ts.

@@ -5,13 +5,11 @@
 // assets/filters.ts (applyMinesFilter); popup in assets/popup-format.ts.
 // planMines() returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 import type { LayerSpecification } from "maplibre-gl";
-import { EMPTY_FC } from '../constants.js';
 import { minesIconExpr } from '../../src/colors/minerals.js';
-import { initialVisibility } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 
 export function planMines(): LayerPlan {
-  const vis = initialVisibility("mines");
   const retired = ["==", ["get", "status"], "retired"];
   // Size scales with mine size (peak employment) — same shape as genIconSize()
   // in src/colors/fuel.ts (small/medium/large buckets per zoom stop).
@@ -19,13 +17,12 @@ export function planMines(): LayerPlan {
   const empBucket = (sm: number, md: number, lg: number) =>
     ["case", [">=", emp, 1000], lg, [">=", emp, 300], md, sm];
 
-  return [{ source: "mines", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("mines"), { layer: {
     id: "mines-icons",
     type: "symbol",
     source: "mines",
     minzoom: 3,
     layout: {
-      visibility: vis,
       "icon-image": minesIconExpr(),
       "icon-size": ["interpolate", ["linear"], ["zoom"],
         4,  empBucket(0.9, 1.2, 1.5),

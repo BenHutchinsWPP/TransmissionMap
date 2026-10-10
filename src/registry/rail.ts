@@ -11,6 +11,7 @@ export const railLayers: LayerDef[] = [
     titleKey:          "layer.railroads",
     group:             "rail",
     sourceId:          "bts-narn",
+    data:              { kind: "pmtiles", key: "railroads", credit: '<a href="https://www.bts.gov/ntad">U.S. DOT BTS</a>' },
     swatch:            "#525252",
     defaultOn:         false,
     lineHighlightKeys: ["RROWNER1", "SUBDIV"],

@@ -75,8 +75,8 @@ export function initMap() {
     recordDiagEvent('map', sourceId ? `${sourceId}: ${e.error?.message ?? e}` : (e.error ?? e));
   });
 
-  // No customAttribution: every layer carries its own per-source attribution
-  // (see SOURCE_ATTRIB), so credits appear/disappear with layer visibility.
+  // No customAttribution: every source carries its own credit (a registry
+  // layer's `data.credit`), so credits appear/disappear with layer visibility.
   state.map.addControl(new maplibregl.AttributionControl({
     compact: true,
   }), "bottom-right");

@@ -2,11 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { state as StateSingleton } from './state.js';
 import type { ZoneAlertEntry } from './nws-zone-join.js';
 
-vi.mock('./layers/layer-init.js', () => ({
-  ensureCountyBoundaries: vi.fn(),
-  pmtilesUrl: (u: string) => `pmtiles://${u}`,
-  initialVisibility: () => 'visible',
-}));
+// The shared county source is layer-init.ts's; this suite's map double has it already.
+vi.mock('./layers/layer-init.js', () => ({ ensureCountyBoundaries: vi.fn() }));
+
 
 const ZONE = { source: 'nws_zones', sourceLayer: 'nws_zones' };
 const COUNTY = { source: 'county_boundaries', sourceLayer: 'county_boundaries' };

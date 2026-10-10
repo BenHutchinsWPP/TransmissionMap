@@ -1,5 +1,6 @@
 // Layer registry entries — substations and transmission lines.
-import type { LayerDef } from '../types.js';
+import type { DataKey, LayerDef } from '../types.js';
+import { OSM_CREDIT, HIFLD_CREDIT } from './sources.js';
 
 // OSM transmission ships as six planet-wide archives split by voltage class —
 // one world file is past the host's 100 MiB per-file ceiling. This table is the
@@ -8,7 +9,7 @@ import type { LayerDef } from '../types.js';
 // ids, so the two cannot drift. `kv` is the half-open [min, max) class the
 // archive holds; `-1` encodes unknown voltage, so it falls into the first band.
 // Ascending order is paint order. See docs/hosting-plan.md.
-export const OSM_TL_BANDS: { suffix: string; dataKey: string; kv: [number, number] }[] = [
+export const OSM_TL_BANDS: { suffix: string; dataKey: DataKey; kv: [number, number] }[] = [
   { suffix: "",       dataKey: "osm_transmission_lines_kv0",   kv: [-Infinity, 50] },
   { suffix: "-kv50",  dataKey: "osm_transmission_lines_kv50",  kv: [50, 100] },
   { suffix: "-kv100", dataKey: "osm_transmission_lines_kv100", kv: [100, 125] },
@@ -72,6 +73,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.osmSubstations",
     group:         "substations",
     sourceId:      "osm",
+    data:          { kind: "pmtiles", key: "osm_substations_points", credit: OSM_CREDIT },
     dataset:       "osm_substations_points",
     swatch:        "#f97316",
     defaultOn:     false,
@@ -92,6 +94,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.osmSubPolygons",
     group:         "substations",
     sourceId:      "osm",
+    data:          { kind: "pmtiles", key: "osm_substations_polygons", credit: OSM_CREDIT },
     dataset:       "osm_substations_polygons",
     swatch:        "#f97316",
     defaultOn:     false,
@@ -114,8 +117,8 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.hifldSubstations",
     group:         "substations",
     sourceId:      "hifld-substations",
+    data:          { kind: "geojson", key: "hifld_substations", credit: HIFLD_CREDIT },
     dataset:       "hifld_substations",
-    geojson:       "hifld_substations",
     swatch:        "#a78bfa",
     defaultOn:     false,
     voltageLayer:  true,
@@ -137,6 +140,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.osmLines",
     group:               "transmission",
     sourceId:            "osm",
+    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT },
     dataset:             "osm_transmission_lines",
     swatch:              "#3b82f6",
     defaultOn:           true,
@@ -159,6 +163,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.hifldLines",
     group:               "transmission",
     sourceId:            "hifld-power",
+    data:                { kind: "pmtiles", key: "hifld_transmission_lines", credit: HIFLD_CREDIT },
     dataset:             "hifld_transmission_lines",
     swatch:              "#ef4444",
     defaultOn:           false,
@@ -184,7 +189,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:          "layer.westtec10yr",
     group:             "transmission",
     sourceId:          "westtec",
-    geojson:           "westtec_10yr",
+    data:              { kind: "geojson", key: "westtec_10yr", credit: '<a href="https://www.westernpowerpool.org/">WestTEC (Western Power Pool)</a>' },
     swatch:            "#0891b2",
     defaultOn:         false,
     westtecColorLayer: true,
@@ -201,7 +206,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:       "layer.ogfPlanned",
     group:          "transmission",
     sourceId:       "ogf",
-    geojson:        "ogf_planned_transmission",
+    data:           { kind: "geojson", key: "ogf_planned_transmission", credit: '<a href="https://ourgridfuture.org">Our Grid Future</a>' },
     swatch:         "#06b6d4",
     defaultOn:      false,
     ogfStatusLayer: true,
@@ -217,7 +222,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:    "layer.weccPaths",
     group:       "transmission",
     sourceId:    "wecc-paths",
-    geojson:     "wecc_paths",
+    data:        { kind: "geojson", key: "wecc_paths", credit: '<a href="https://www.wecc.org/">WECC</a>' },
     swatch:      "#eab308",
     defaultOn:   false,
     mapLayerIds: ["wecc-path-corridors", "wecc-path-corridors-outline",

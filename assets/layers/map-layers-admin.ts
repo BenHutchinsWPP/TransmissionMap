@@ -12,9 +12,8 @@
 // is past what a single fetch should carry, and the county tiles are shared
 // join infrastructure owned by layer-init.ts.
 // Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
-// Deps: layer-init.ts (planPolygon, pmtilesUrl, initialVisibility,
-//       countyBoundariesSource), layer-plan.ts (LayerPlan type),
-//       constants (DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER).
+// Deps: layer-init.ts (planPolygon, countyBoundariesSource), layer-plan.ts
+//       (LayerPlan type), constants (COUNTY_SRC, COUNTY_SRC_LAYER).
 //
 // planUsCounties() does NOT own its source — it mounts on the shared
 // county_boundaries PMTiles (owned by layer-init.ts, also used by the ODIN
@@ -24,9 +23,9 @@
 // planOdinOutages() so the live choropleth paints over these county outlines.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
-import { DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
+import { COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import {
-  planPolygon, pmtilesUrl, initialVisibility, countyBoundariesSource,
+  planPolygon, countyBoundariesSource,
 } from './layer-init.js';
 import type { LayerPlan } from './layer-plan.js';
 
@@ -62,7 +61,7 @@ const LABEL_PAINT = {
 
 export function planCountries(): LayerPlan {
   return [...planPolygon({
-    sourceId: "countries", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "countries",
     prefix: "countries",
     color: paletteColor("color_idx"),
     fillMinzoom: 0, fillOpacity: 0.26,
@@ -73,7 +72,6 @@ export function planCountries(): LayerPlan {
     id: "countries-label", type: "symbol", source: "countries",
     minzoom: 1,
     layout: {
-      visibility: initialVisibility("countries"),
       "text-field": ["get", "name"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 1, 8, 5, 12] as unknown as ExpressionSpecification,
@@ -86,7 +84,7 @@ export function planCountries(): LayerPlan {
 
 export function planAdmin1(): LayerPlan {
   return [...planPolygon({
-    sourceId: "admin1", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "admin1",
     prefix: "admin1",
     color: paletteColor("color_idx"),
     fillMinzoom: 0, fillOpacity: 0.26,
@@ -97,7 +95,6 @@ export function planAdmin1(): LayerPlan {
     id: "admin1-label", type: "symbol", source: "admin1",
     minzoom: 2,
     layout: {
-      visibility: initialVisibility("admin1"),
       "text-field": ["get", "name"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 2, 8, 7, 12] as unknown as ExpressionSpecification,
@@ -110,7 +107,7 @@ export function planAdmin1(): LayerPlan {
 
 export function planUsStates(): LayerPlan {
   return [...planPolygon({
-    sourceId: "us-states", source: { type: "geojson", data: EMPTY_FC },
+    sourceId: "us-states",
     prefix: "us-states", color: paletteColor("color_idx"),
     fillMinzoom: 0, fillOpacity: 0.26,
     outlineMinzoom: 0,
@@ -120,7 +117,6 @@ export function planUsStates(): LayerPlan {
     id: "us-states-label", type: "symbol", source: "us-states",
     minzoom: 3,
     layout: {
-      visibility: initialVisibility("us-states"),
       // Abbreviation reads cleanly zoomed out; the full name earns its space
       // once the state fills more of the screen.
       "text-field": ["step", ["zoom"], ["get", "stusps"], 6, ["get", "name"]] as unknown as ExpressionSpecification,
@@ -134,7 +130,6 @@ export function planUsStates(): LayerPlan {
 }
 
 export function planUsCounties(): LayerPlan {
-  const vis = initialVisibility("us-counties");
   const color = paletteColor("color_idx");
 
   // The source is SHARED infra owned by layer-init.ts; applyLayerPlan adds it
@@ -143,12 +138,10 @@ export function planUsCounties(): LayerPlan {
   return [countyBoundariesSource(), { layer: {
     id: "us-counties-fill", type: "fill", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 2,
-    layout: { visibility: vis },
     paint: { "fill-color": color, "fill-opacity": 0.26 },
   } as LayerSpecification }, { layer: {
     id: "us-counties-outline", type: "line", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 2,
-    layout: { visibility: vis },
     paint: {
       "line-color": color,
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.5, 8, 1.0, 12, 1.4] as unknown as ExpressionSpecification,
@@ -158,7 +151,6 @@ export function planUsCounties(): LayerPlan {
     id: "us-counties-label", type: "symbol", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 7,
     layout: {
-      visibility: vis,
       "text-field": ["get", "NAME"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 7, 9, 12, 12] as unknown as ExpressionSpecification,
@@ -172,7 +164,6 @@ export function planUsCounties(): LayerPlan {
 export function planUsZcta(): LayerPlan {
   return [...planPolygon({
     sourceId: "us-zcta",
-    source: { type: "vector", url: pmtilesUrl(DATA.us_zcta) },
     sourceLayer: "us_zcta", prefix: "us-zcta",
     color: paletteColor("color_idx"),
     // z4 is the ZCTA tileset's floor (tile_manifest.yaml `us_zcta`). 33k
@@ -187,7 +178,6 @@ export function planUsZcta(): LayerPlan {
     // 33k features — a label earlier than z10 is unreadable clutter.
     minzoom: 10,
     layout: {
-      visibility: initialVisibility("us-zcta"),
       "text-field": ["get", "zcta5"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 10, 9, 14, 12] as unknown as ExpressionSpecification,

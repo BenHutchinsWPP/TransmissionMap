@@ -1,17 +1,19 @@
 // ─── OSM-derived layers (transmission, substations, plants, generators, pipelines)
 // Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
+// Sources come from each registry layer's `data` (layer-source.ts); visibility
+// is stamped by applyLayerPlan().
 // Imported by: add-all-layers.ts
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
-import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { OSM_GEN_ICON, OSM_GEN_COLOR, genIconSize } from '../../src/colors/fuel.js';
 import { PIPELINE_LINE_COLOR, PIPELINE_TYPE_BUCKETS, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
 import { HEAT_MW_STOPS, OSM_MW_FLOOR, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import {
   planTransmissionLines, planSubstationPoints, planPolygon,
-  pmtilesUrl, initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
+  genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
 } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 
@@ -22,7 +24,7 @@ export function planOsmTransmission(): LayerPlan {
     // lists. Ascending order is paint order: EHV is added last and draws on top.
     sources: OSM_TL_BANDS.map(b => ({
       id:     `osm-transmission-lines${b.suffix}`,
-      url:    DATA[b.dataKey as keyof typeof DATA],
+      key:    b.dataKey,
       suffix: b.suffix,
       kv:     b.kv,
     })),
@@ -40,7 +42,6 @@ export function planOsmTransmission(): LayerPlan {
 export function planOsmSubstationPoints(): LayerPlan {
   return planSubstationPoints({
     sourceId: "osm-substations-points",
-    url: DATA.osm_substations_points,
     sourceLayer: "osm_substations_points",
     kvField:  "nominal_kv",
     layerIds: { hv: "osm-substations-points-hv", lv: "osm-substations-points-lv", label: "osm-substations-label" },
@@ -50,7 +51,6 @@ export function planOsmSubstationPoints(): LayerPlan {
 export function planOsmSubstationPolygons(): LayerPlan {
   return planPolygon({
     sourceId: "osm-substations-polygons",
-    source: { type: "vector", url: pmtilesUrl(DATA.osm_substations_polygons) },
     sourceLayer: "osm_substations_polygons",
     prefix: "osm-substations-polygons", color: voltageColorExpr("nominal_kv", "#a78bfa"),
     fillMinzoom: 9, fillOpacity: 0.30,
@@ -61,7 +61,6 @@ export function planOsmSubstationPolygons(): LayerPlan {
 export function planOsmPlantPolygons(): LayerPlan {
   return planPolygon({
     sourceId: "osm-plants-polygons",
-    source: { type: "vector", url: pmtilesUrl(DATA.osm_plants_polygons) },
     sourceLayer: "osm_plants_polygons",
     prefix: "osm-plants-polygons", color: OSM_GEN_COLOR,
     fillMinzoom: 5, fillOpacity: 0.20,
@@ -70,17 +69,15 @@ export function planOsmPlantPolygons(): LayerPlan {
 }
 
 export function planOsmPlants(): LayerPlan {
-  const vis      = initialVisibility("osm-plants-points");
   const mwExpr   = ["coalesce", ["to-number", ["get", "output_mw"]], 0] as unknown as ExpressionSpecification;
   const plantName = ["coalesce", ["get", "name"], ""] as unknown as ExpressionSpecification;
 
-  return [{ source: "osm-plants-points", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("osm-plants-points"), { layer: {
     id: "osm-plant-icons",
     type: "symbol",
     source: "osm-plants-points",
     minzoom: 3,
     layout: {
-      visibility:           vis,
       "symbol-sort-key":    ["-", 100000, mwExpr],
       "icon-image":         OSM_GEN_ICON,
       "icon-size":          genIconSize("output_mw"),
@@ -104,7 +101,6 @@ export function planOsmPlants(): LayerPlan {
 }
 
 export function planOsmGenerators(): LayerPlan {
-  const vis      = initialVisibility("osm-generators");
   const osmGenMw = ["coalesce", ["to-number", ["get", "output_mw"]], 0];
 
   const osmGenName = ["match",
@@ -113,14 +109,13 @@ export function planOsmGenerators(): LayerPlan {
     ["coalesce", ["get", "name"], ""]
   ];
 
-  return [{ source: "osm-generators", spec: { type: "vector", url: pmtilesUrl(DATA.osm_generators) } }, { layer: {
+  return [layerSource("osm-generators"), { layer: {
     id: "osm-gen-circles",
     type: "symbol",
     source: "osm-generators",
     "source-layer": "osm_generators",
     minzoom: 5,
     layout: {
-      visibility:           vis,
       "symbol-sort-key":    ["-", 100000, osmGenMw],
       "icon-image":         OSM_GEN_ICON,
       "icon-size":          ["interpolate", ["linear"], ["zoom"], 7, 0.45, 10, 0.70, 13, 1.00, 15, 1.30],
@@ -158,15 +153,14 @@ export function planOsmGenerators(): LayerPlan {
 }
 
 export function planPipelineLines(): LayerPlan {
-  const vis = initialVisibility("osm-pipelines-lines");
 
-  return [{ source: "osm-pipelines-lines", spec: { type: "vector", url: pmtilesUrl(DATA.osm_pipelines_lines) } }, { layer: {
+  return [layerSource("osm-pipelines-lines"), { layer: {
     id: "osm-pipelines-lines",
     type: "line",
     source: "osm-pipelines-lines",
     "source-layer": "osm_pipelines_lines",
     minzoom: 0,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": PIPELINE_LINE_COLOR,
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 5, 1.5, 9, 2.5, 12, 4],
@@ -177,7 +171,6 @@ export function planPipelineLines(): LayerPlan {
 }
 
 export function planPipelinePoints(): LayerPlan {
-  const vis = initialVisibility("osm-pipelines-points");
   const noValve = ["!=", ["get", "pipeline"], "valve"] as unknown as FilterSpecification;
 
   const matchArgs: string[] = [];
@@ -186,14 +179,13 @@ export function planPipelinePoints(): LayerPlan {
   }
   const iconExpr = ["match", ["get", "pipeline"], ...matchArgs, "pipeline-other"];
 
-  return [{ source: "osm-pipelines-points", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("osm-pipelines-points"), { layer: {
     id: "osm-pipelines-points",
     type: "symbol",
     source: "osm-pipelines-points",
     minzoom: 3,
     filter: noValve,
     layout: {
-      visibility: vis,
       "icon-image": iconExpr,
       "icon-size": ["interpolate", ["linear"], ["zoom"], 4, 0.7, 8, 1.0, 12, 1.4],
       "icon-allow-overlap": true,

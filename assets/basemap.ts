@@ -14,7 +14,8 @@
 //       terrain.js (ensureBuildingsLayer after the OFM graft, repositionHillshade
 //       from switchBasemap), diag-log.js (OFM style fetch failures),
 //       state-bus.js (lang:changed → OFM label language, subscribed at import),
-//       src/i18n (getLocale).
+//       src/i18n (getLocale), src/registry/sources.ts (OSM_CREDIT, which every
+//       OSM-derived layer's credit starts with, so MapLibre shows it once).
 // Called from: map.ts (initBasemaps, switchBasemap, switchProjection in the
 //       load handler), ui/ui.ts (basemap/projection/labels controls),
 //       view-state.ts (switchBasemap, switchProjection from seedView and applyView;
@@ -30,6 +31,7 @@ import { on } from './state-bus.js';
 import { getLocale, type SupportedLocale } from '../src/i18n/index.js';
 import { ensureBuildingsLayer, repositionHillshade } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
+import { OSM_CREDIT } from '../src/registry/sources.js';
 import { aerialOverlayLayer, normalizeOfmFilter, type OfmLayer } from './basemap-overlay.js';
 
 // Where the horizon haze begins, as a fraction of the distance from map centre
@@ -170,7 +172,7 @@ const BASEMAP_OVERLAY_ANCHOR = 'basemap-overlay-top';
 function addBasemapSources() {
   if (!state.map) return;
   const sources = [
-    { id: "osm-tiles",             tiles: [OSM_TILE_URL],             attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",                                       maxzoom: 19 },
+    { id: "osm-tiles",             tiles: [OSM_TILE_URL],             attribution: OSM_CREDIT,                                       maxzoom: 19 },
     { id: "usgs-topo-tiles",       tiles: [USGS_TOPO_TILE_URL],      attribution: "USGS The National Map",                                                                                                          maxzoom: 16 },
     // maxzoom 16 is the USGS cache's hard ceiling (z17 is a 404), same as topo;
     // MapLibre overzooms the z16 tile beyond that rather than going blank.
@@ -255,7 +257,7 @@ function ofmStyleForBasemap(basemap: string): OfmGroup | null {
   return null;
 }
 
-const OFM_ATTRIB = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &middot; <a href='https://openfreemap.org'>OpenFreeMap</a>";
+const OFM_ATTRIB = OSM_CREDIT + " &middot; <a href='https://openfreemap.org'>OpenFreeMap</a>";
 
 // Minimal structural view of an OFM style layer — enough to remap id/source and
 // force visibility without modeling the whole LayerSpecification union.

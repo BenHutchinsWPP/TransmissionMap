@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 // applyLayerPlan() against one recording fake map: the guards, source-before-
-// layer order, beforeId, attribution and base-filter registration it owns.
+// layer order, beforeId, starting visibility and base-filter registration it owns.
 // Then the whole boot: every style layer addAllLayers() adds keeps its inline
 // filter through filters.ts's effectiveFilter(), which rebuilds a layer's
 // filter from the registered base whenever a legend filter or a `where` runs.
-// And every source it adds: credited (or on the pinned uncredited list), and,
-// when it starts empty, one the loader knows how to fill.
+// And every source it adds: credited (or on the pinned uncredited list) — each
+// registry layer's with its own `data.credit` — and, when it starts empty, one
+// the loader knows how to fill.
 // Deps: layer-plan.ts, base-filters.ts, add-all-layers.ts, filters.ts, state.ts,
-// layer-data.ts (layerDataUrl), constants.ts (SOURCE_ATTRIB, EMPTY_FC).
+// layer-source.ts (layerDataUrl, layerSourceId), constants.ts (EMPTY_FC),
+// src/registry (LAYERS).
 import { describe, it, expect, vi } from 'vitest';
 import type { FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
@@ -15,8 +17,9 @@ import { applyLayerPlan, type LayerPlan } from './layer-plan.js';
 import { BASE_LAYER_FILTERS } from './base-filters.js';
 import { addAllLayers } from './add-all-layers.js';
 import { effectiveFilter } from '../filters.js';
-import { SOURCE_ATTRIB, EMPTY_FC } from '../constants.js';
-import { layerDataUrl } from './layer-data.js';
+import { EMPTY_FC } from '../constants.js';
+import { layerDataUrl, layerSourceId } from './layer-source.js';
+import { LAYERS } from '../../src/registry/index.js';
 
 /** Fake map recording each addSource/addLayer in call order. */
 function recordingMap() {
@@ -87,20 +90,27 @@ describe('applyLayerPlan', () => {
     expect(calls.slice(1)).toEqual([['layer', 'missing-anchor', undefined], ['layer', 'anchored', 'missing-anchor']]);
   });
 
-  it('credits a source from SOURCE_ATTRIB by `attrib`, else its id, and keeps an inline credit', () => {
-    const { map, sources } = recordingMap();
-    const fc = { type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection;
+  it('starts each layer as its registry layer is in state, unless it pins its own visibility', () => {
+    const { map, layers } = recordingMap();
+    state.layerVisibility = { padus: true, crithab: false };
+    const vis = (id: string) => (layers.get(id) as { layout?: { visibility?: string } }).layout?.visibility;
     applyLayerPlan(map, [
-      { source: 'mines', spec: { type: 'geojson', data: fc } },
-      { source: 'twin', spec: { type: 'geojson', data: fc }, attrib: 'mines' },
-      { source: 'mines-inline', spec: { type: 'geojson', data: fc, attribution: 'own' }, attrib: 'mines' },
-      { source: 'uncredited', spec: { type: 'geojson', data: fc } },
+      { source: 's', spec: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } } },
+      { layer: line('padus-fill', 's') },                                   // padus's mapLayerIds
+      { layer: line('crithab-fill', 's') },
+      { layer: { ...line('padus-outline', 's'), layout: { visibility: 'none', 'line-cap': 'round' } } as LayerSpecification },
+      { layer: { ...line('mines-icons', 's'), layout: { 'line-cap': 'round' } } as LayerSpecification },
+      { layer: line('no-such-layer', 's') },                                // no registry layer: off
     ]);
-    const credit = (id: string) => (sources.get(id) as { attribution?: string }).attribution;
-    expect(credit('mines')).toBe(SOURCE_ATTRIB.mines);
-    expect(credit('twin')).toBe(SOURCE_ATTRIB.mines);
-    expect(credit('mines-inline')).toBe('own');
-    expect(sources.get('uncredited')).not.toHaveProperty('attribution');
+    expect(['padus-fill', 'crithab-fill', 'padus-outline', 'no-such-layer'].map(vis))
+      .toEqual(['visible', 'none', 'none', 'none']);
+    expect((layers.get('mines-icons') as { layout: unknown }).layout).toEqual({ visibility: 'none', 'line-cap': 'round' });
+    state.layerVisibility = {};
+  });
+
+  it('every style layer belongs to at most one registry layer', () => {
+    const ids = LAYERS.flatMap(l => l.mapLayerIds);
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
   });
 });
 
@@ -142,8 +152,10 @@ describe('addAllLayers sources', () => {
     expect([...sources.keys()].filter(id => !spec(id).attribution).sort()).toEqual(UNCREDITED);
   });
 
-  it('keys every SOURCE_ATTRIB row by a source it adds', () => {
-    expect(Object.keys(SOURCE_ATTRIB).filter(id => !sources.has(id))).toEqual([]);
+  it('credits each registry layer\'s source with that layer\'s data.credit', () => {
+    for (const l of LAYERS.filter(l => l.data)) {
+      expect(spec(layerSourceId(l.id))?.attribution, l.id).toBe(l.data!.credit);
+    }
   });
 
   // Empty GeoJSON sources ensureLayerData() never fills: the search highlights

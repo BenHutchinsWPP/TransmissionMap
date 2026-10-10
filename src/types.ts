@@ -1,6 +1,6 @@
 // Shared registry and view types: LayerDef and the shapes it carries (ramps,
 // buckets, scopes, downloads), FuelEntry, LayerSourceDef, StyleOverride and
-// BucketedField (the legend facet record).
+// BucketedField (the legend facet record), LayerData (where a layer's data lives).
 // Types with a single owning module live beside it instead: AppState in
 // assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
 // assets/raster-probes.ts. Imports only the DATA type from assets/constants.ts.
@@ -102,6 +102,19 @@ export interface FuelEntry {
   osmStyle?: Record<string, { icon: string; color: string }>;
 }
 
+export type DataKey = keyof typeof DATA;
+
+// A registry layer's data declaration; assets/layers/layer-source.ts turns it
+// into the MapLibre source. Layers declaring the same `key` share one source,
+// named after the first of them in LAYERS.
+export interface LayerData {
+  // pmtiles: vector tiles; raster: raster tiles (256 px); geojson: a file
+  // ensureLayerData() fetches into an empty source on first enable.
+  kind: "pmtiles" | "raster" | "geojson";
+  key: DataKey;     // DATA path (assets/constants.ts)
+  credit: string;   // attribution HTML, shown while the source's layers are visible
+}
+
 export interface LayerDef {
   id: string;
   urlCode: string;
@@ -111,10 +124,10 @@ export interface LayerDef {
   sourceId: string;
   // FIELD_SCHEMA key (src/registry/field-schema.ts) naming the fields this layer's features carry.
   dataset?: string;
-  // DATA key (assets/constants.ts) of the GeoJSON file ensureLayerData()
-  // (assets/layers/layer-data.ts) fetches into this layer's source on first
-  // enable. Unset for tiled layers, which MapLibre loads itself.
-  geojson?: keyof typeof DATA;
+  // Where this layer's map source gets its data, and who it credits. Absent for
+  // a layer whose builder owns its source outright (external tiles, the weather
+  // image, the shared county boundaries).
+  data?: LayerData;
   swatch: string;
   live?: boolean;
   defaultOn: boolean;

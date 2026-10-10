@@ -1,23 +1,21 @@
 // ─── WestTEC 10-Year Horizon portfolio lines ─────────────────────────────────
 // planWestTEC() returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 // Imported by: add-all-layers.ts
-// Deps: state.js (state.westtecColorBy), constants.js (EMPTY_FC), src/colors/facets.js (westtecColorExpr),
-//       layer-init.js (initialVisibility), layer-plan.js (LayerPlan type)
+// Deps: state.js (state.westtecColorBy), src/colors/facets.js (westtecColorExpr),
+//       layer-source.js (layerSource), layer-plan.js (LayerPlan type)
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { EMPTY_FC } from '../constants.js';
 import { westtecColorExpr } from '../../src/colors/facets.js';
-import { initialVisibility } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 
 export function planWestTEC(): LayerPlan {
-  const vis = initialVisibility("westtec-10yr");
 
-  return [{ source: "westtec-10yr", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
+  return [layerSource("westtec-10yr"), { layer: {
     id: "westtec-lines-casing",
     type: "line", source: "westtec-10yr", minzoom: 3,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": "#ffffff",
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 4.5, 7, 6.5, 12, 10],
@@ -26,7 +24,7 @@ export function planWestTEC(): LayerPlan {
   } as unknown as LayerSpecification }, { layer: {
     id: "westtec-lines",
     type: "line", source: "westtec-10yr", minzoom: 3,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": westtecColorExpr(state.westtecColorBy),
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 7, 3.5, 12, 6],

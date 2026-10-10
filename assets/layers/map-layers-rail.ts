@@ -1,21 +1,19 @@
 // MapLibre builder — BTS NARN rail network lines (PMTiles vector).
 // Role: planRailroads() plans the rail source + single line layer.
-// Deps: ../constants (DATA), ./layer-init (pmtilesUrl, initialVisibility),
-//       ./layer-plan (LayerPlan type). Called from ./add-all-layers.
+// Deps: ./layer-source (layerSource), ./layer-plan (LayerPlan type).
+// Called from ./add-all-layers.
 import type { LayerSpecification } from 'maplibre-gl';
-import { DATA } from '../constants.js';
-import { pmtilesUrl, initialVisibility } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 
 export function planRailroads(): LayerPlan {
-  return [{ source: "railroads", spec: { type: "vector", url: pmtilesUrl(DATA.railroads) } }, { layer: {
+  return [layerSource("railroads"), { layer: {
     id: "railroads",
     type: "line",
     source: "railroads",
     "source-layer": "railroads",
     minzoom: 4,
     layout: {
-      visibility: initialVisibility("railroads"),
       "line-cap": "round", "line-join": "round",
     },
     paint: {

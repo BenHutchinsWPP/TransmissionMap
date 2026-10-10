@@ -77,12 +77,12 @@ pushed and `make validate` reports it as an orphan.
 
 A layer split across several archives (see [hosting-plan.md](hosting-plan.md))
 gets one `DATA` key each, and its builder opens each as a separate MapLibre
-source — see `OSM_TL_BANDS` in `src/registry/transmission.ts` and
-`planTransmissionLines()` in `assets/layers/layer-init.ts`.
+source (`layerSource(id, { id: sourceId, key })`) — see `OSM_TL_BANDS` in
+`src/registry/transmission.ts` and `planTransmissionLines()` in
+`assets/layers/layer-init.ts`.
 Everything keyed off `LayerDef.mapLayerIds` then follows for free; the registries
 keyed on a *source* or *style-layer* id do not (`assets/popup.ts`,
-`assets/popup-format.ts`, `assets/ui/ui-search.ts`, `assets/hover.ts`,
-`SOURCE_ATTRIB`).
+`assets/popup-format.ts`, `assets/ui/ui-search.ts`, `assets/hover.ts`).
 
 For raster layers with a hover LUT, add three entries:
 ```ts
@@ -124,7 +124,9 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   label:       "My Layer",          // shown in the layers panel
   group:       "load",              // panel group — see the `groups` array in assets/ui/ui-layer-rows.ts for the current list
   sourceId:    "my-source",         // key into LAYER_SOURCES (src/registry/sources.ts)
-  geojson:     "my_layer",          // GeoJSON layers only: the DATA key (§4) the loader fetches — see §7
+  // Where the map source's data lives and who it credits — see §6.
+  // kind: "pmtiles" (vector tiles) | "raster" (raster tiles) | "geojson" (fetched on first enable)
+  data:        { kind: "geojson", key: "my_layer", credit: '<a href="https://example.org">My Source</a>' },
   swatch:      "#6366f1",           // color dot shown in panel row
   defaultOn:   false,               // visible on page load?
   mapLayerIds: ["my-layer-circles"],// all MapLibre layer IDs this entry controls
@@ -183,11 +185,7 @@ import type { LayerPlan } from './layer-plan.js';
 
 export function planMyLayer(): LayerPlan {
   return [
-    { source: "my-layer", spec: {
-      type: "geojson",          // or "vector" for PMTiles
-      data: EMPTY_FC,           // GeoJSON starts empty; data fetched lazily
-      // url: pmtilesUrl(DATA.my_layer),  // PMTiles: use this instead
-    } },
+    layerSource("my-layer"),    // from the entry's `data` (./layer-source.js)
     { layer: {
       id: "my-layer-circles",
       type: "circle",           // circle | symbol | fill | line
@@ -195,7 +193,6 @@ export function planMyLayer(): LayerPlan {
       // "source-layer": "my_layer",   // PMTiles vector only — matches tippecanoe -l name
       minzoom: 4,
       // filter: [...],          // optional: a filter this layer always applies
-      layout: { visibility: initialVisibility("my-layer") },
       paint: {
         "circle-color": "#6366f1",
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 6],
@@ -208,29 +205,31 @@ export function planMyLayer(): LayerPlan {
 }
 ```
 
-`initialVisibility(id)` returns `"visible"` or `"none"` based on the layer's `defaultOn` and any URL hash state.
+`layerSource(id)` turns the entry's `data` into the source, under the registry id: `pmtiles` → vector `pmtiles://` source, `raster` → 256 px raster source, `geojson` → empty source the loader fills (§7); every one carries `data.credit` as its attribution. Options cover the rarer shapes: `{ id, key }` for a second source of the same layer (OSM voltage bands, `wecc-path-lines`), `{ spec }` for extra source options (clustering). A source no registry layer owns (the shared county boundaries, external tiles, the weather image) is written inline, credit included.
+
+An OSM-derived credit must start with `OSM_CREDIT` (`src/registry/sources.ts`) byte for byte, so MapLibre folds it into the OSM basemap's credit.
 
 `applyLayerPlan()` (called once by `addAllLayers()`, §7) does the rest:
 
 - adds every source before any layer, and skips a source or layer already on the map, so a plan can name a shared source (e.g. `countyBoundariesSource()` from `./layer-init.js`) that another plan also names;
-- credits the source with `SOURCE_ATTRIB[id]`, or `SOURCE_ATTRIB[attrib]` when the step sets `attrib` (a twin source sharing one credit); a `spec.attribution` of its own wins;
+- starts each style layer as its registry layer is in state (`visible`/`none` from `defaultOn` and the URL): the entry listing it in `mapLayerIds`. Leave `layout.visibility` unset; set it only to pin `"none"` on a display-mode sibling (a heat layer) that `applyGenMode` shows;
 - registers each layer's own `filter` (null without one) as its base filter, which connects the layer to the filter UI: legend and `where` filters are combined with it, never replace it.
 
-Common shapes have helpers in `./layer-init.js` that return plans: `planPolygon` (fill + outline), `planRaster`, `planTransmissionLines`, `planSubstationPoints`. Compose plans by spreading: `[...planPolygon({...}), { layer: labelSpec }]`.
+Common shapes have helpers in `./layer-init.js` that return plans, source included: `planPolygon` (fill + outline), `planRaster`, `planTransmissionLines`, `planSubstationPoints`. Compose plans by spreading: `[...planPolygon({...}), { layer: labelSpec }]`.
 
 A side effect that is not a layer — a tap handler, a bus subscription, a timer — goes in its own exported function that `addAllLayers()` calls after applying the plans (see `wireWeccPaths()`; a live poll gets its own module, like `startNexradRadar()` in `assets/nexrad-radar.ts`); images a layer's paint names are added before the plans (see `addDcmHatchImages()`).
 
 ---
 
-## 7. `assets/layers/layer-data.ts` + `add-all-layers.ts` — connect lazy loading and orchestration
+## 7. `assets/layers/layer-source.ts` + `add-all-layers.ts` — connect lazy loading and orchestration
 
-### For GeoJSON layers: the registry entry's `geojson` names the file
+### For GeoJSON layers: `data.kind: "geojson"` names the file
 
-A GeoJSON layer's builder adds an empty source (`EMPTY_FC`) under the registry id; `ensureLayerData()` fills it on first enable from `layerDataUrl(id)` (`assets/layers/layer-data.ts`), which reads the entry's `geojson: "my_layer"` (§5) as a `DATA` key. When the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). Leave `geojson` unset for PMTiles layers — MapLibre tiles lazily already.
+`layerSource()` adds an empty source under the registry id; `ensureLayerData()` (`assets/layers/layer-data.ts`) fills it on first enable from `layerDataUrl(id)` (`assets/layers/layer-source.ts`), the entry's `data.key`. When the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). PMTiles and raster layers need nothing here — MapLibre tiles lazily already.
 
-Two less common shapes stay in `layer-data.ts`: a registry layer drawn from another layer's source goes in `LAYER_SOURCE_ALIAS` (e.g. `wildfire-smoke` → `wildfire-live`), and a source that is no registry layer at all goes in `SOURCE_DATA_URLS` (e.g. `wecc-path-lines`).
+Registry layers that declare the same `data` (e.g. `wildfire-smoke` and `wildfire-incidents` on `wildfire_live`) share the first one's source: `layerSourceId()` resolves it, so switching any of them on loads it. Two rarer shapes stay as tables in `layer-source.ts`: `LAYER_SOURCE_ALIAS` for a layer loading a source that is not its data (`weather-live` → `weather-admin-lines`), and `SOURCE_DATA_URLS` for a source that is no registry layer at all (`wecc-path-lines`).
 
-`layer-data.test.ts` checks that every `geojson` is a `DATA` key naming a `.geojson[.gz]` file, and `layer-plan.test.ts` that every empty source `addAllLayers()` adds resolves to a URL (or sits on its short pinned list of sources filled another way) — so a missing `geojson` fails `npm test` rather than leaving the layer blank. The same test pins which sources carry no attribution, so a new source without a `SOURCE_ATTRIB` row (§6) fails it too.
+`layer-source.test.ts` checks that every `data.key` is a `DATA` key naming a file of its kind and that every declaration carries a credit; `layer-plan.test.ts` that every empty source `addAllLayers()` adds resolves to a URL (or sits on its short pinned list of sources filled another way), and pins which sources carry no attribution.
 
 ### Add the plan to `addAllLayers()` in `assets/layers/add-all-layers.ts`
 
@@ -416,11 +415,10 @@ Update `docs/data-sources.md`:
 [ ] scripts/<id>_color_ramp.txt            — RASTER ONLY: gdaldem color-relief ramp (value R G B A)
 [ ] src/colors/ramps.ts                    — CONTINUOUS RASTER ONLY: <X>_RAMP_STOPS + <X>_RAMP_MAX (mirror the .txt)
 [ ] assets/constants.ts                    — DATA.my_layer (+ lut/meta if raster)
-[ ] assets/constants.ts                    — SOURCE_ATTRIB row keyed by the map source id (or add it to UNCREDITED in layers/layer-plan.test.ts)
 [ ] src/registry/sources.ts               — LAYER_SOURCES entry (if new source)
-[ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…; geojson for a GeoJSON layer)
+[ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds, data: { kind, key, credit }…)
 [ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
-[ ] assets/layers/map-layers-*.ts         — planMyLayer() builder returning a LayerPlan
+[ ] assets/layers/map-layers-*.ts         — planMyLayer() builder: layerSource(id) + style layers, no visibility
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — ...planMyLayer() in the applyLayerPlan() list
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)

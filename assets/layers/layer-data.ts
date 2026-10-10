@@ -2,15 +2,14 @@
 // Imported by: add-all-layers.ts (ensureLayerData — defaultOn bootstrap),
 //              visibility.ts (ensureLayerData), map-layers-wecc.ts (ensureLayerData),
 //              live-staleness.ts (fetchGeojson, liveGeneratedUtc).
-// Deps: state.ts, constants.ts (DATA), state-bus.ts (emits 'layer:data' after a
-//       source's features land), diag-log.ts (recordDiagEvent — records
-//       ensureLayerData failures for the diagnostics panel); registry/index.ts
-//       (layerById — reads a layer's geojson file and fromZoom threshold).
-// Where a source's data lives is layerDataUrl(): the registry entry's
-// `geojson` DATA key, or SOURCE_DATA_URLS for the two source-only ids.
+// Deps: state.ts, state-bus.ts (emits 'layer:data' after a source's features
+//       land), diag-log.ts (recordDiagEvent — records ensureLayerData failures
+//       for the diagnostics panel); registry/index.ts (layerById — reads a
+//       layer's fromZoom threshold); layer-source.ts (layerDataUrl,
+//       layerSourceId — which file, into which source).
 // ensureLayerData's contract: "fetch this if the zoom allows" — a source
 // whose LayerDef sets fromZoom is withheld below that zoom (for every registry
-// id that shares it through LAYER_SOURCE_ALIAS too), so every caller
+// id that shares it, per layerSourceId(), too), so every caller
 // (bootstrap defaultOn loops included) can call it unconditionally and rely
 // on the gate rather than checking zoom itself. A held id is retried on each
 // 'zoomend' (one listener, attached on the first hold), so a layer switched on
@@ -19,36 +18,10 @@
 
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from '../state.js';
-import { DATA } from '../constants.js';
 import { emit } from '../state-bus.js';
 import { recordDiagEvent } from '../diag-log.js';
 import { layerById } from '../../src/registry/index.js';
-
-// Sources the loader fills that are not registry layers. A registry layer
-// names its file itself, with LayerDef.geojson (a DATA key).
-export const SOURCE_DATA_URLS: Record<string, string> = {
-  "wecc-path-lines":     DATA.wecc_path_lines,  // fetched by map-layers-wecc.ts for the click highlight
-  "weather-admin-lines": DATA.admin_lines,      // loaded via the weather-live alias below
-};
-
-/** The GeoJSON URL ensureLayerData() fetches into source `sourceId`, if any:
- *  its registry entry's `geojson` file, else a SOURCE_DATA_URLS row. */
-export function layerDataUrl(sourceId: string): string | undefined {
-  const key = layerById(sourceId)?.geojson;
-  return key ? DATA[key] : SOURCE_DATA_URLS[sourceId];
-}
-
-// Registry IDs that share a source with another registry ID.
-// Enabling one of these triggers ensureLayerData on the owning source instead.
-export const LAYER_SOURCE_ALIAS: Record<string, string> = {
-  "wildfire-smoke":     "wildfire-live",
-  "wildfire-incidents": "wildfire-live",
-  // weather-live's own source is an image; enabling it lazily loads the
-  // white admin-border lines drawn above the wash instead.
-  "weather-live":       "weather-admin-lines",
-  // petroleum facilities share the HIFLD points source (split by fac_type base filter)
-  "hifld-petroleum-facilities": "hifld-natgas-points",
-};
+import { layerDataUrl, layerSourceId } from './layer-source.js';
 
 const _inflight: Partial<Record<string, Promise<void>>> = {};
 
@@ -72,7 +45,7 @@ function hold(registryId: string) {
 }
 
 export function ensureLayerData(registryId: string): Promise<void> {
-  const sourceId = LAYER_SOURCE_ALIAS[registryId] ?? registryId;
+  const sourceId = layerSourceId(registryId);
   // Fetch gate: the source's fromZoom holds the fetch back below that zoom, so
   // a heavy dataset zoomed-out users never render is never downloaded either.
   // The asking id is remembered and retried on zoom settle, so the caller (a

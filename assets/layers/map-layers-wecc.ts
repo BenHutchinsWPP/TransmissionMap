@@ -13,12 +13,12 @@
 //   (maintained by hand).
 // planWeccPaths() returns a LayerPlan (layer-plan.ts); wireWeccPaths() wires the
 // marker tap. Imported by: add-all-layers.ts. Lazy-loaded by layer-data.ts
-// (wecc-paths from its registry `geojson`, wecc-path-lines from SOURCE_DATA_URLS).
+// (wecc-paths from its registry `data`, wecc-path-lines from layer-source.ts's
+// SOURCE_DATA_URLS).
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { EMPTY_FC } from '../constants.js';
-import { initialVisibility } from './layer-init.js';
+import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
 import { ensureLayerData } from './layer-data.js';
 import { onMapTap } from '../map-input.js';
@@ -38,18 +38,17 @@ const IS_CORRIDOR  = ["==", ["get", "isCorridor"], true] as unknown as FilterSpe
 const NOT_CORRIDOR = ["!=", ["get", "isCorridor"], true] as unknown as FilterSpecification;
 
 export function planWeccPaths(): LayerPlan {
-  const vis = initialVisibility("wecc-paths");
 
   return [
-  { source: "wecc-paths", spec: { type: "geojson", data: EMPTY_FC } },
-  { source: "wecc-path-lines", spec: { type: "geojson", data: EMPTY_FC }, attrib: "wecc-paths" },
+  layerSource("wecc-paths"),
+  layerSource("wecc-paths", { id: "wecc-path-lines", key: "wecc_path_lines" }),
 
   // ── Digitized corridor lines (isCorridor=true) ──────────────────────────────
   // Thick semi-transparent bands showing approximate path extent.
   { layer: {
     id: "wecc-path-corridors", type: "line", source: "wecc-paths",
     filter: IS_CORRIDOR,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": SWATCH,
       "line-width": ["interpolate", ["linear"], ["zoom"], 4, 18, 8, 48, 12, 96],
@@ -62,7 +61,7 @@ export function planWeccPaths(): LayerPlan {
   { layer: {
     id: "wecc-path-corridors-outline", type: "line", source: "wecc-paths",
     filter: IS_CORRIDOR,
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": "#d97706",
       "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 8, 3, 12, 5],
@@ -75,7 +74,7 @@ export function planWeccPaths(): LayerPlan {
   // Highlight lines matched from OSM/HIFLD (shown on click)
   { layer: {
     id: "wecc-path-lines-highlight", type: "line", source: "wecc-path-lines",
-    layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+    layout: { "line-cap": "round", "line-join": "round" },
     filter: NONE_FILTER,
     paint: {
       "line-color": SWATCH,
@@ -90,7 +89,6 @@ export function planWeccPaths(): LayerPlan {
     id: "wecc-paths-circles", type: "circle", source: "wecc-paths",
     filter: NOT_CORRIDOR,
     minzoom: 3,
-    layout: { visibility: vis },
     paint: {
       "circle-color": SWATCH,
       "circle-radius": ["interpolate", ["linear"], ["zoom"],
@@ -107,7 +105,6 @@ export function planWeccPaths(): LayerPlan {
     filter: NOT_CORRIDOR,
     minzoom: 3,
     layout: {
-      visibility: vis,
       "text-field": ["to-string", ["get", "number"]],
       "text-font": ["Noto Sans Bold"],
       "text-size": ["interpolate", ["linear"], ["zoom"],

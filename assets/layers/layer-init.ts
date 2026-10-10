@@ -1,19 +1,25 @@
 // ─── Layer initialisation: shared plan helpers for the map-layers-*.ts builders ─
 // Each plan* helper returns a LayerPlan (layer-plan.ts) and never touches the
 // map; add-all-layers.ts hands the plans to applyLayerPlan().
+// Sources come from the registry layer's `data` through layer-source.ts, and
+// applyLayerPlan() stamps each style layer's starting visibility, so the
+// helpers here only describe style layers.
 // Imported by: add-all-layers.ts (planPadus, planCritHab),
-//              nws-zone-join.ts (ensureCountyBoundaries, pmtilesUrl, initialVisibility),
+//              nws-zone-join.ts (ensureCountyBoundaries),
 //              map-layers-*.ts (planTransmissionLines, planPolygon, planRaster,
-//              planSubstationPoints, countyBoundariesSource, pmtilesUrl,
-//              initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
-// Deps: state.ts, constants.ts (DATA, EMPTY_FC, COUNTY_SRC*),
-//       layer-plan.ts (applyLayerPlan, LayerPlan), src/colors/{voltage,buckets}.ts,
-//       src/registry/transmission.ts (OSM_TL_TIERS).
+//              planSubstationPoints, countyBoundariesSource,
+//              genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
+// Deps: state.ts, constants.ts (COUNTY_SRC*), layer-source.ts (layerSource,
+//       pmtilesUrl), layer-plan.ts (applyLayerPlan, LayerPlan),
+//       src/colors/{voltage,buckets}.ts, src/registry/transmission.ts (OSM_TL_TIERS),
+//       src/types.ts (DataKey).
 // The lazy GeoJSON loader (ensureLayerData, fetchGeojson) lives in layer-data.ts.
 
-import type { ExpressionSpecification, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
+import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
-import { DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
+import { COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
+import { layerSource, pmtilesUrl } from './layer-source.js';
+import type { DataKey } from '../../src/types.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import {
   subRadius, bucketColorExpr, LINE_WIDTH, DC_STRIPE_COLOR, DC_STRIPE_WIDTH, DC_STRIPE_DASH,
@@ -22,14 +28,6 @@ import {
 } from '../../src/colors/buckets.js';
 import { applyLayerPlan, type LayerPlan, type PlanStep } from './layer-plan.js';
 import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
-
-export function pmtilesUrl(path: string): string {
-  return "pmtiles://" + new URL(path, location.href).href;
-}
-
-export function initialVisibility(registryId: string): "visible" | "none" {
-  return state.layerVisibility[registryId] ? "visible" : "none";
-}
 
 // ─── Shared county-boundary source (data-join infra) ──────────────────────────
 // Census TIGER county polygons, added ONCE and reused by every county layer:
@@ -44,7 +42,7 @@ export const countyBoundariesSource = (): PlanStep => ({
   source: COUNTY_SRC,
   spec: {
     type: "vector",
-    url: pmtilesUrl(DATA.county_boundaries),
+    url: pmtilesUrl("county_boundaries"),
     promoteId: { [COUNTY_SRC_LAYER]: "GEOID" },
     // MapLibre attributes SOURCES, not layers, and only while a layer using the
     // source is visible — so this one string credits the geometry (Census) and
@@ -89,15 +87,13 @@ export const GEN_PLANT_TEXT_PAINT = {
 };
 
 // ─── Raster helper ────────────────────────────────────────────────────────────
-// One raster PMTiles source + layer, id == sourceId. Attribution is passed
-// inline (not SOURCE_ATTRIB — see the dedup note in constants.ts).
-export function planRaster(id: string, url: string, attribution: string,
+// A raster registry layer's source + its one layer, id == source id.
+export function planRaster(id: string,
                            { opacity = 0.7, resampling = "linear" }: { opacity?: number; resampling?: "linear" | "nearest" } = {}): LayerPlan {
   return [
-    { source: id, spec: { type: "raster", url: pmtilesUrl(url), tileSize: 256, attribution } },
+    layerSource(id),
     { layer: {
       id, type: "raster", source: id,
-      layout: { visibility: initialVisibility(id) },
       paint: { "raster-opacity": opacity, "raster-resampling": resampling },
     } as LayerSpecification },
   ];
@@ -105,19 +101,19 @@ export function planRaster(id: string, url: string, attribution: string,
 
 // ─── Polygon fill + outline helper ────────────────────────────────────────────
 
-export function planPolygon({ sourceId, source, sourceLayer = undefined as (string | undefined), prefix, color,
+// A polygon registry layer's source (id == registry id) + fill and outline.
+export function planPolygon({ sourceId, sourceLayer = undefined as (string | undefined), prefix, color,
                           fillMinzoom, fillOpacity,
                           outlineMinzoom, outlineWidth, outlineOpacity }: {
-  sourceId: string; source: SourceSpecification; sourceLayer?: string; prefix: string; color: ExpressionSpecification | string;
+  sourceId: string; sourceLayer?: string; prefix: string; color: ExpressionSpecification | string;
   fillMinzoom: number; fillOpacity: number | ExpressionSpecification;
   outlineMinzoom: number; outlineWidth: number | ExpressionSpecification; outlineOpacity: number | ExpressionSpecification;
 }): LayerPlan {
-  const vis = initialVisibility(sourceId);
-  const common: Partial<LayerSpecification> = { source: sourceId, layout: { visibility: vis } };
+  const common: Partial<LayerSpecification> = { source: sourceId };
   if (sourceLayer) (common as Record<string, unknown>)["source-layer"] = sourceLayer;
 
   return [
-    { source: sourceId, spec: source },
+    layerSource(sourceId),
     { layer: {
       ...common, id: `${prefix}-fill`, type: "fill", minzoom: fillMinzoom,
       paint: { "fill-color": color, "fill-opacity": fillOpacity },
@@ -130,7 +126,8 @@ export function planPolygon({ sourceId, source, sourceLayer = undefined as (stri
 }
 
 // ─── Transmission lines helper ────────────────────────────────────────────────
-// `sources` is a list so a layer can span several archives. Every style layer is
+// `sources` is a list so a layer can span several archives; `key` names an
+// archive's DATA file when it is not the registry layer's own `data.key`. Every style layer is
 // added across ALL sources before the next one starts, so paint order stays
 // global: a 765 kV line in one archive draws over a 20 kV line in another, not
 // under it. `suffix` distinguishes the per-source layer ids and is "" when there
@@ -145,16 +142,14 @@ export function planPolygon({ sourceId, source, sourceLayer = undefined as (stri
 export function planTransmissionLines({ sources, sourceLayer, registryId, prefix,
                                kvExpr, color, opacity, nameField = undefined as (string | undefined), undergroundExpr = undefined as (ExpressionSpecification | undefined),
                                dcExpr = undefined as (ExpressionSpecification | undefined) }: {
-  sources: { id: string; url: string; suffix?: string; kv?: [number, number] }[];
+  sources: { id: string; key?: DataKey; suffix?: string; kv?: [number, number] }[];
   sourceLayer: string; registryId: string; prefix: string;
   kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string; undergroundExpr?: ExpressionSpecification;
   dcExpr?: ExpressionSpecification;
 }): LayerPlan {
-  // Attribution keys off the registry id: the six voltage-class sources share
-  // one credit, and MapLibre collapses the byte-identical strings into one.
-  const plan: LayerPlan = sources.map(s =>
-    ({ source: s.id, spec: { type: "vector", url: pmtilesUrl(s.url) }, attrib: registryId }));
-  const vis = initialVisibility(registryId);
+  // Every source carries the registry layer's credit: the six voltage-class
+  // sources share one, and MapLibre collapses the byte-identical strings into one.
+  const plan: LayerPlan = sources.map(s => layerSource(registryId, { id: s.id, key: s.key }));
 
   // Half-open [min, max) overlap. A tier with no range (the DC overlays) applies
   // to every source, since HVDC runs at every voltage class.
@@ -196,7 +191,7 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
     addAcross(t.id, () => ({
       type: "line",
       minzoom: t.minzoom, filter: t.filter,
-      layout: { visibility: vis, "line-cap": "round", "line-join": "round", "line-sort-key": kvExpr },
+      layout: { "line-cap": "round", "line-join": "round", "line-sort-key": kvExpr },
       paint,
     }), t.kv);
   }
@@ -210,7 +205,7 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
     addAcross("dc", () => ({
       type: "line",
       minzoom: 2, filter: dcExpr as FilterSpecification,
-      layout: { visibility: vis, "line-cap": "butt", "line-join": "round" },
+      layout: { "line-cap": "butt", "line-join": "round" },
       paint: {
         "line-color":     DC_STRIPE_COLOR,
         "line-width":     DC_STRIPE_WIDTH,
@@ -225,7 +220,6 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
       type: "symbol",
       minzoom: DC_LABEL_MINZOOM, filter: dcExpr as FilterSpecification,
       layout: {
-        visibility: vis,
         "symbol-placement":        "line",
         "text-field":              "DC",
         "text-font":               ["Noto Sans Regular"],
@@ -254,7 +248,6 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
     type: "symbol",
     minzoom: 9, filter: hasName,
     layout: {
-      visibility: vis,
       "symbol-placement":        "line",
       "text-field":              name,
       "text-font":               ["Noto Sans Regular"],
@@ -278,15 +271,10 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
 }
 
 // ─── Substation points helper ─────────────────────────────────────────────────
-export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceLayer }: {
+export function planSubstationPoints({ sourceId, kvField, layerIds, sourceLayer }: {
   sourceId: string; kvField: string; layerIds: { hv: string; lv: string; label: string };
-  url?: string; sourceLayer?: string;
+  sourceLayer?: string;
 }): LayerPlan {
-  const source: SourceSpecification = url
-    ? { type: "vector", url: pmtilesUrl(url) }
-    : { type: "geojson", data: EMPTY_FC };
-
-  const vis = initialVisibility(sourceId);
   const paint = {
     "circle-color": voltageColorExpr(kvField, "#a78bfa"),
     "circle-radius": subRadius(kvField),
@@ -315,12 +303,11 @@ export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceL
   ] as unknown as FilterSpecification;
 
   return [
-    { source: sourceId, spec: source },
+    layerSource(sourceId),
     { layer: {
       id: layerIds.lv, type: "circle", source: sourceId, ...srcLayerProp,
       minzoom: 7, filter: ["<", kvNum, 200] as unknown as FilterSpecification,
       layout: {
-        visibility: vis,
         "circle-sort-key": kvNum as unknown as ExpressionSpecification,
       },
       paint,
@@ -329,7 +316,6 @@ export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceL
       id: layerIds.hv, type: "circle", source: sourceId, ...srcLayerProp,
       minzoom: 0, filter: [">=", kvNum, 200] as unknown as FilterSpecification,
       layout: {
-        visibility: vis,
         "circle-sort-key": kvNum as unknown as ExpressionSpecification,
       },
       paint,
@@ -338,7 +324,6 @@ export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceL
       id: layerIds.label, type: "symbol", source: sourceId, ...srcLayerProp,
       minzoom: 6, filter: labelFilter,
       layout: {
-        visibility: vis,
         "symbol-sort-key": ["-", 10000, kvNum] as unknown as ExpressionSpecification,
         "text-field": ["step", ["zoom"],
           subName,
@@ -368,7 +353,7 @@ export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceL
 // ─── PAD-US and CritHab ───────────────────────────────────────────────────────
 export function planPadus(): LayerPlan {
   return planPolygon({
-    sourceId: "padus", source: { type: "vector", url: pmtilesUrl(DATA.padus) },
+    sourceId: "padus",
     sourceLayer: "padus", prefix: "padus",
     color: bucketColorExpr("desig", PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT),
     fillMinzoom: 3, fillOpacity: 0.28,
@@ -378,7 +363,7 @@ export function planPadus(): LayerPlan {
 
 export function planCritHab(): LayerPlan {
   return planPolygon({
-    sourceId: "crithab", source: { type: "vector", url: pmtilesUrl(DATA.crithab) },
+    sourceId: "crithab",
     sourceLayer: "crithab", prefix: "crithab",
     color: bucketColorExpr("listing_st", CRITHAB_BUCKETS, "#dc2626"),
     fillMinzoom: 3, fillOpacity: 0.30,

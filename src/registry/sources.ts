@@ -11,6 +11,19 @@ export const REGION_CODE_MAP: Record<DownloadRegion, string> = {
   'antarctica': 'an',
 };
 
+// Map credits shared by several LayerDef `data` declarations (and the basemap).
+// MapLibre drops an attribution that is a substring of a longer one, so every
+// OSM-derived credit starts with OSM_CREDIT byte for byte: it then collapses
+// into the OSM basemap's credit instead of naming OpenStreetMap twice.
+export const OSM_CREDIT = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
+export const HIFLD_CREDIT = '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a>';
+export const HIFLD_EIA_CREDIT = '<a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD/EIA</a>';
+export const EIA_ATLAS_CREDIT = '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>';
+export const CENSUS_CARTO_CREDIT = '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>';
+export const GEOBOUNDARIES_CREDIT = '<a href="https://www.geoboundaries.org/">geoBoundaries</a>';
+
+// >>> ADD-LAYER: layer-sources — see docs/adding-a-layer.md §5 (a credit two or
+// more layers share goes above, beside OSM_CREDIT)
 export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
   "osm": {
     label: "OpenStreetMap",

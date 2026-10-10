@@ -26,7 +26,7 @@ const AUTO_TILT_PITCH = 45;
 // bespoke (non-deduped) attribution while terrain is on. The full wording
 // lives instead in the Data Credits dialog (index.html,
 // data-source-credit="usgs-terrain" — do not reword that entry), matching
-// every other dataset's short-in-map/full-in-dialog split (SOURCE_ATTRIB in constants.ts).
+// every other dataset's short-in-map/full-in-dialog split (LayerDef.data.credit).
 const TERRAIN_ATTRIB_SHORT = "USGS terrain";
 // True to scale: a ridge stands as tall against its valley on screen as it does
 // on the ground, so heights read as measurements rather than as an effect.
