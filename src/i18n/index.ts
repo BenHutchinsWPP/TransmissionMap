@@ -71,9 +71,9 @@ export function applyDocumentDirection(locale: SupportedLocale): void {
 
 export function t(key: string, params?: Record<string, string | number>): string {
   const dict = DICTIONARIES[currentLocale];
-  let val = dict?.[key];
+  let val = dict && Object.hasOwn(dict, key) ? dict[key] : undefined;
   if (val === undefined) {
-    val = DICTIONARIES.en[key] ?? key;
+    val = Object.hasOwn(DICTIONARIES.en, key) ? DICTIONARIES.en[key] : key;
   }
   if (params) {
     return val.replace(/\{([^{}]+)\}/g, (match, paramKey) => {

@@ -5,16 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { UrlStateData, CameraView } from '../url-state-codec.js';
 import type { DroppedStyle } from '../style-overrides.js';
 
-const { applyView, notice, endExperience, restoreFromUrl, addUserLayer } = vi.hoisted(() => ({
+const { applyView, notice, endExperience, restoreFromUrl, addImportedLayer } = vi.hoisted(() => ({
   applyView: vi.fn((_data: Partial<UrlStateData>, _camera?: CameraView): DroppedStyle[] => []),
   notice: vi.fn(),
   endExperience: vi.fn(),
   restoreFromUrl: vi.fn(),
-  addUserLayer: vi.fn(),
+  addImportedLayer: vi.fn(),
 }));
 vi.mock('../experiences.js', () => ({ endExperience }));
 vi.mock('../ui/ui-experiences.js', () => ({ restoreFromUrl }));
-vi.mock('./user-data.js', () => ({ addUserLayer, renderMyDataTab: vi.fn() }));
+vi.mock('./user-data.js', () => ({ addImportedLayer, renderMyDataTab: vi.fn() }));
 vi.mock('../view-state.js', async orig => ({ ...(await orig<object>()), applyView }));
 vi.mock('../url-state.js', async orig => ({ ...(await orig<object>()), showDroppedNotice: notice }));
 vi.mock('./user-data-export.js', () => ({ downloadFile: vi.fn() }));
@@ -36,7 +36,7 @@ const flush = () => new Promise(r => setTimeout(r, 0));
 const asFile = (text: string, name: string) => ({ name, text: () => Promise.resolve(text) }) as unknown as File;
 
 beforeEach(() => {
-  for (const m of [applyView, notice, endExperience, restoreFromUrl, addUserLayer]) m.mockClear();
+  for (const m of [applyView, notice, endExperience, restoreFromUrl, addImportedLayer]) m.mockClear();
   vi.stubGlobal('alert', vi.fn());
   state.mapReady = true;
   endExperienceLink();
@@ -144,7 +144,7 @@ describe('handleFileOpen routing', () => {
   it('sends a GeoJSON .json to the GeoJSON importer, not the view applier', async () => {
     handleFileOpen(asFile(JSON.stringify({ type: 'FeatureCollection', features: [] }), 'data.json'));
     await flush();
-    expect(addUserLayer).toHaveBeenCalledOnce();
+    expect(addImportedLayer).toHaveBeenCalledOnce();
     expect(applyView).not.toHaveBeenCalled();
   });
 
@@ -152,7 +152,7 @@ describe('handleFileOpen routing', () => {
     handleFileOpen(asFile(file(hash), 'v.json'));
     await flush();
     expect(applyView).toHaveBeenCalledOnce();
-    expect(addUserLayer).not.toHaveBeenCalled();
+    expect(addImportedLayer).not.toHaveBeenCalled();
   });
 
   it('keeps the import alert for invalid JSON in a plain .json', async () => {

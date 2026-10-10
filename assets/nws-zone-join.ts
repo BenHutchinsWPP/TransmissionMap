@@ -92,13 +92,13 @@ function endsMs(e: ZoneAlertEntry): number {
   const t = e.ends ? Date.parse(e.ends) : NaN;
   return Number.isNaN(t) ? Infinity : t;
 }
-// Highest severity wins; ties broken by earliest `ends`.
+// Highest severity first; ties broken by earliest `ends`. The popup lists a
+// zone's alerts in this order, so its first entry is the painted winner.
+export function compareZoneAlerts(a: ZoneAlertEntry, b: ZoneAlertEntry): number {
+  return sevRank(b.severity) - sevRank(a.severity) || endsMs(a) - endsMs(b);
+}
 function pickWinner(entries: ZoneAlertEntry[]): ZoneAlertEntry {
-  return entries.reduce((best, e) => {
-    const r = sevRank(e.severity), br = sevRank(best.severity);
-    if (r !== br) return r > br ? e : best;
-    return endsMs(e) < endsMs(best) ? e : best;
-  });
+  return entries.reduce((best, e) => (compareZoneAlerts(e, best) < 0 ? e : best));
 }
 
 // ── Colors, reused from the same palette map-layers-conditions.ts paints the

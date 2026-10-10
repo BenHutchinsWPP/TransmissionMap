@@ -142,6 +142,12 @@ describe('i18n Core Engine', () => {
       expect(t('nonexistent.key.xyz')).toBe('nonexistent.key.xyz');
     });
 
+    it('returns an Object.prototype key as the raw key', () => {
+      setLocale('es');
+      expect(t('constructor')).toBe('constructor');
+      expect(t('__proto__')).toBe('__proto__');
+    });
+
     it('returns raw key when missing in both target locale and English', () => {
       setLocale('es');
       expect(t('totally.unknown.key')).toBe('totally.unknown.key');

@@ -4,7 +4,7 @@
 // feature properties. Deps: state, utils-uid, user-data, src/i18n (no url-state).
 
 import { ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
-import { addUserLayer } from './user-data.js';
+import { addImportedLayer } from './user-data.js';
 import { parseCSV, guessColumn, LAT_NAMES, LNG_NAMES, NAME_NAMES } from './csv-parse.js';
 import { escapeHtml } from '../utils/utils.js';
 import { t } from '../../src/i18n/index.js';
@@ -91,7 +91,7 @@ function showPicker(
     if (!features.length) { alert(t('csv.noValidCoords')); return; }
     const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
     ensureGeoJsonFeatureUids(fc, filename);
-    addUserLayer(filename, fc);
+    addImportedLayer(filename, fc);
     if (skipped) alert(t('csv.importSuccessSkipped', { count: features.length, skipped }));
   });
   dlg.showModal();

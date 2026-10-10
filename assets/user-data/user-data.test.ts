@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { state } from '../state.js';
-import { saveUserData, loadUserData, restoreDrawnFeatures } from './user-data.js';
+import { saveUserData, loadUserData, restoreDrawnFeatures, addImportedLayer } from './user-data.js';
 
 const initDrawMock = vi.fn();
 vi.mock('./draw-chunk.js', () => ({
@@ -90,5 +90,15 @@ describe('drawn-feature persistence', () => {
     loadUserData();
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(initDrawMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('addImportedLayer', () => {
+  it('drops a file-supplied __src so the file cannot pick a main-layer popup', () => {
+    const f = { ...makeFeature('a'), properties: { __src: 'osm-dc-circles', name: 'x' } };
+    addImportedLayer('evil.geojson', { type: 'FeatureCollection', features: [f] });
+    const props = state.userLayers[0].geojson.features[0].properties!;
+    expect(props).not.toHaveProperty('__src');
+    expect(props.name).toBe('x');
   });
 });

@@ -6,7 +6,7 @@ import * as toGeoJSON from '@tmcw/togeojson';
 import JSZip from 'jszip';
 import { state } from '../state.js';
 import { ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
-import { renderMyDataTab, addUserLayer } from './user-data.js';
+import { renderMyDataTab, addImportedLayer } from './user-data.js';
 import { openViewFile } from './view-file.js';
 
 export function handleFileOpen(file: File) {
@@ -48,14 +48,14 @@ function loadGeoJSON(geojson: GeoJSON.GeoJSON & { _tmSource?: string }, filename
     return; // Ignore other GeoJSON types for now or handle them
   }
   ensureGeoJsonFeatureUids(fc, filename);
-  addUserLayer(filename, fc);
+  addImportedLayer(filename, fc);
 }
 
 function loadKML(text: string, filename: string) {
   const dom = new DOMParser().parseFromString(text, 'text/xml');
   const geojson = toGeoJSON.kml(dom);
   ensureGeoJsonFeatureUids(geojson as unknown as GeoJSON.GeoJSON, filename);
-  addUserLayer(filename, geojson as GeoJSON.FeatureCollection);
+  addImportedLayer(filename, geojson as GeoJSON.FeatureCollection);
 }
 
 function loadKMZ(file: File) {

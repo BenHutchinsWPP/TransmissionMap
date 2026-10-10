@@ -80,6 +80,12 @@ describe('websiteRow', () => {
     expect(websiteRow('data:text/html,<script>alert(1)</script>')).toBe('');
     expect(websiteRow('HTTP://example.com')).toContain('href="HTTP://example.com"');
   });
+
+  it('returns empty string for a non-string website, and the OGF popup skips a non-string Link', () => {
+    expect(websiteRow(42)).toBe('');
+    expect(websiteRow(['https://example.com'])).toBe('');
+    expect(buildPopupHtml('ogf-planned-lines', { Project: 'P', Link: 7 })).not.toContain('href');
+  });
 });
 
 // ─── title() ─────────────────────────────────────────────────────────────────
@@ -172,6 +178,12 @@ describe('renderOgfPlanned', () => {
     const out = renderOgfPlanned({ ...base, Link: 'https://horizonenergy.org/project' });
     expect(out).toContain('Project page');
     expect(out).toContain('horizonenergy.org');
+  });
+
+  it('drops a non-http(s) project link', () => {
+    const out = renderOgfPlanned({ ...base, Link: 'java\tscript:alert(1)' });
+    expect(out).not.toContain('Project page');
+    expect(out).not.toContain('alert');
   });
 
   it('renders OGF attribution footer', () => {
@@ -558,7 +570,7 @@ describe('fema-nri-fill renderer', () => {
 
   it('shows no percentile beside an Insufficient Data rating', () => {
     const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 6, nri_s: 12.3, nri_cr: 6, nri_cs: 12.3 });
-    expect(out).toContain('Insufficient Data');
+    expect(out).toContain('Insufficient data');
     expect(out).not.toContain('12.3');
   });
 
@@ -567,7 +579,7 @@ describe('fema-nri-fill renderer', () => {
     setLocale('es');
     try {
       const out = buildPopupHtml('fema-nri-fill', { NAME: 'X', nri_r: 5, nri_s: 99.71, nri_cr: 5, nri_cs: 99.71 });
-      expect(out).toContain('Very High (percentil nacional 99.7)');
+      expect(out).toContain('Muy alto (percentil nacional 99.7)');
       expect(out).toContain('sin el respaldo de FEMA');
     } finally {
       setLocale('en');
@@ -580,6 +592,14 @@ describe('fema-nri-fill renderer', () => {
 });
 
 // ─── data center moratoriums ─────────────────────────────────────────────────
+
+describe('buildPopupHtml inherited keys', () => {
+  it('resolves no renderer for an Object.prototype key', () => {
+    expect(buildPopupHtml('__proto__', {})).toBeNull();
+    expect(buildPopupHtml('constructor', {})).toBeNull();
+    expect(() => buildPopupHtml('user-x', { __src: '__proto__', name: 'n' })).not.toThrow();
+  });
+});
 
 describe('dc-moratoriums popup', () => {
   const items = JSON.stringify([
@@ -636,10 +656,73 @@ describe('withRelativeDate', () => {
     expect(withRelativeDate('2026')).toBe('2026');
   });
 
+  it('renders nothing for a non-string date, and the popup still renders', () => {
+    expect(withRelativeDate(20260930)).toBeUndefined();
+    const items = JSON.stringify([{ name: 'X', cls: 'toString', adopted: 20260930, expires: ['2027'] }]);
+    const html = buildPopupHtml('dcm-points', { name: 'X', items, history: '[]' });
+    expect(html).toContain('X');
+    expect(html).toContain('#9ca3af');
+  });
+
   it('shows both offsets in the moratorium popup', () => {
     const items = JSON.stringify([{ name: 'X', cls: 'active', adopted: '2026-09-30', expires: '2027-09-30' }]);
     const html = buildPopupHtml('dcm-points', { name: 'X', items, history: '[]' });
     expect(html).toContain('6 days ago');
     expect(html).toContain('in 12 months');
+  });
+});
+
+// ─── OSM ID link ─────────────────────────────────────────────────────────────
+
+describe('OSM ID link', () => {
+  it('links a known osm_type', () => {
+    expect(buildPopupHtml('osm-dc-circles', { osm_type: 'way', osm_id: 7 }))
+      .toContain('https://www.openstreetmap.org/way/7');
+  });
+
+  it('omits the link for any other osm_type', () => {
+    const out = buildPopupHtml('osm-dc-circles', { osm_type: 'node" onmouseover="alert(1)', osm_id: 7 });
+    expect(out).not.toContain('openstreetmap.org');
+    expect(out).not.toContain('onmouseover');
+  });
+});
+
+// ─── Review fixes: dates, alerts, moratorium lists, user data ────────────────
+
+describe('popup edge cases', () => {
+  it('shows an unparseable alert time as given', () => {
+    const out = buildPopupHtml('nws-alerts-fill', { event: 'Flood Warning', onset: 'garbage' });
+    expect(out).toContain('garbage');
+    expect(out).not.toContain('Invalid Date');
+  });
+
+  it('omits a missing severity beside the urgency', () => {
+    const out = buildPopupHtml('nws-alerts-fill', { event: 'Flood Warning', urgency: 'Immediate' })!;
+    expect(out).toContain('(Immediate)');
+    expect(out).not.toContain('undefined');
+  });
+
+  it('opens a moratorium popup whatever shape its JSON lists have', () => {
+    for (const items of ['null', '{}', '[null, 3]', '[{"name":"M","src":"https://x"}]']) {
+      expect(() => buildPopupHtml('dcm-points', { name: 'X', items, history: '"x"' })).not.toThrow();
+    }
+  });
+
+  it('translates the default OSM plant title in the active locale', async () => {
+    const en = buildPopupHtml('osm-plant-icons', {});
+    await loadDictionary('es');
+    setLocale('es');
+    try {
+      expect(buildPopupHtml('osm-plant-icons', {})).not.toBe(en);
+    } finally {
+      setLocale('en');
+    }
+  });
+
+  it('keeps zeros and raw column names in a user feature popup', () => {
+    const out = buildUserFeatureHtml({ name: 'Site', capacity_mw: 0, 'popup.fuel': 'coal' });
+    expect(out).toContain('capacity_mw');
+    expect(out).toContain('>0<');
+    expect(out).toContain('popup.fuel');
   });
 });

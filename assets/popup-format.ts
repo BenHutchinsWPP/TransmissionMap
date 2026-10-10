@@ -1,6 +1,6 @@
 // ─── Pure formatting logic for popups ────────────────────────────────────────
 // Deps: utils/utils.js (escapeHtml, isHttpUrl), src/colors/buckets.js (label maps),
-// nws-zone-join.js (alert lookups), fema-nri.js (selected hazard, data version),
+// nws-zone-join.js (alert lookups + ordering), fema-nri.js (selected hazard, data version),
 // src/units.js (every quantity with a unit
 // goes through a fmt* helper so it follows the File ▸ Settings… preference —
 // see docs/settings.md). Row labels must stay unit-neutral ("Area", not
@@ -10,7 +10,7 @@
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP, NRI_RATINGS } from '../src/colors/buckets.js';
-import { lookupByZone, lookupByFips, type ZoneAlertEntry } from './nws-zone-join.js';
+import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
 import { t, getLocale } from '../src/i18n/index.js';
 import { nriHazard, nriHazardLabel, nriVersion } from './fema-nri.js';
@@ -27,12 +27,25 @@ const RAIL_NET_LABELS: Record<string, string> = {
 };
 
 export function row(key: string, val: unknown) {
-  if (val == null || val === "" || val === "0" || val === 0) return "";
-  const label = t(key);
+  if (val === "0" || val === 0) return "";
+  return rawRow(t(key), val);
+}
+
+// A row whose label is shown as given and whose value may be 0.
+function rawRow(label: string, val: unknown) {
+  if (val == null || val === "") return "";
   return `<div class="popup-row"><span class="popup-key">${escapeHtml(label)}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`;
 }
 
-export function websiteRow(url: string) {
+const footer = (text: string) =>
+  `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(text)}</div>`;
+
+const countyHeading = (p: Record<string, unknown>) => {
+  const county = (p.NAME as string) || t("popup.county");
+  return p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
+};
+
+export function websiteRow(url: unknown) {
   if (!url || !isHttpUrl(url)) return "";
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(t('popup.website'))}</a></div>`;
 }
@@ -43,8 +56,9 @@ export function websiteRow(url: string) {
 // substations are overwhelmingly ways (route relations are rare).
 // ponytail: relation-backed substation polygons mislink; add osm_type to the
 // pipeline if that ever matters.
-function osmLink(osmType: "node" | "way" | "relation", id: unknown) {
-  if (id == null || id === "") return "";
+const OSM_TYPES = new Set<unknown>(["node", "way", "relation"]);
+function osmLink(osmType: unknown, id: unknown) {
+  if (id == null || id === "" || !OSM_TYPES.has(osmType)) return "";
   return `<div class="popup-row"><span class="popup-key">OSM ID</span> ` +
     `<span class="popup-val"><a href="https://www.openstreetmap.org/${osmType}/${encodeURIComponent(String(id))}" ` +
     `target="_blank" rel="noopener">${escapeHtml(id)}</a></span></div>`;
@@ -54,8 +68,8 @@ export function title(text: string) {
   return `<div class="popup-title truncate">${escapeHtml(text)}</div>`;
 }
 
-function plantRenderer(defaultTitle: string) {
-  return (p: Record<string, unknown>) => title((p.name as string) || defaultTitle) +
+function plantRenderer(defaultTitleKey: string) {
+  return (p: Record<string, unknown>) => title((p.name as string) || t(defaultTitleKey)) +
     row("popup.fuel", p.source) +
     row("popup.capacity", p.output_mw ? p.output_mw + " MW" : null) +
     row("popup.operator", p.operator) +
@@ -63,7 +77,7 @@ function plantRenderer(defaultTitle: string) {
 }
 
 export function renderOgfPlanned(p: Record<string, unknown>) {
-  const link = (p.Link as string || "").trim();
+  const link = typeof p.Link === "string" ? p.Link.trim() : "";
   const voltStr = p.MinVolt && p.MaxVolt && p.MinVolt !== p.MaxVolt
     ? p.MinVolt + "–" + p.MaxVolt + " kV"
     : (p.MaxVolt || p.MinVolt) ? (p.MaxVolt || p.MinVolt) + " kV" : null;
@@ -83,8 +97,8 @@ export function renderOgfPlanned(p: Record<string, unknown>) {
     row("popup.planAuth", p.PlanAuth) +
     row("popup.portfolio", p.Portfolio) +
     row("popup.length", typeof p.Length_mi === 'number' ? fmtDistanceMi(p.Length_mi) : null) +
-    (link ? `<div class="popup-row"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(t("popup.projectPage"))}</a></div>` : "") +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">Our Grid Future — Horizon Energy Systems, 2026</div>`;
+    (link && isHttpUrl(link) ? `<div class="popup-row"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(t("popup.projectPage"))}</a></div>` : "") +
+    footer("Our Grid Future — Horizon Energy Systems, 2026");
 }
 
 export function renderEiaGen(p: Record<string, unknown>) {
@@ -158,14 +172,14 @@ function renderWeccPath(p: Record<string, unknown>) {
     row("popup.note", p.note) +
     seasonalBlock +
     linesBlock +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml((p.source as string) || "WECC Path Rating Catalog")}</div>`;
+    footer((p.source as string) || "WECC Path Rating Catalog");
 }
 
 export function renderBa(p: Record<string, unknown>) {
   return title((p.name as string) || t("popup.balancingAuthority")) +
     row("popup.state", p.state) +
-    row("popup.totalCapacity", typeof p.tot_cap === 'number' && p.tot_cap > 0 ? p.tot_cap.toLocaleString() + " MW" : null) +
-    row("popup.peakLoad", typeof p.peak_ld === 'number' && p.peak_ld > 0 ? p.peak_ld.toLocaleString() + " MW" : null) +
+    row("popup.totalCapacity", typeof p.tot_cap === 'number' && p.tot_cap > 0 ? p.tot_cap.toLocaleString(getLocale()) + " MW" : null) +
+    row("popup.peakLoad", typeof p.peak_ld === 'number' && p.peak_ld > 0 ? p.peak_ld.toLocaleString(getLocale()) + " MW" : null) +
     row("popup.year", p.year) +
     websiteRow(p.website as string);
 }
@@ -185,8 +199,8 @@ export function renderRetail(p: Record<string, unknown>) {
   return title((p.name as string) || t("popup.retailTerritory")) +
     row("popup.type", p.type) +
     row("popup.state", p.state) +
-    row("popup.customers", typeof p.customers === 'number' && p.customers > 0 ? p.customers.toLocaleString() : null) +
-    row("popup.retailMwh", typeof p.retail_mwh === 'number' && p.retail_mwh > 0 ? p.retail_mwh.toLocaleString() + " MWh" : null) +
+    row("popup.customers", typeof p.customers === 'number' && p.customers > 0 ? p.customers.toLocaleString(getLocale()) : null) +
+    row("popup.retailMwh", typeof p.retail_mwh === 'number' && p.retail_mwh > 0 ? p.retail_mwh.toLocaleString(getLocale()) + " MWh" : null) +
     row("popup.summerPeak", typeof p.sumr_peak === 'number' && p.sumr_peak > 0 ? p.sumr_peak + " MW" : null) +
     row("popup.controlArea", p.ctrl_area) +
     websiteRow(p.website as string);
@@ -196,26 +210,13 @@ const POPUP_RENDERERS: Record<string, (p: Record<string, unknown>) => string> = 
 
 // ── Joined zone/county alert-list popups (nws-zone-fill / nws-county-fill) ──
 // Several alerts can name one zone/county; list all of them (not just the
-// feature-state "winner" nws-zone-join.ts paints with), same severity-desc /
-// earliest-ends-first ordering as that module's pickWinner (replicated here,
-// not imported — nws-zone-join.ts only exports the lookup indexes).
-const _ZONE_SEV_RANK: Record<string, number> = { Extreme: 4, Severe: 3, Moderate: 2, Minor: 1 };
-function _zoneSevRank(sev?: string): number {
-  return sev ? (_ZONE_SEV_RANK[sev] ?? 0) : 0;
-}
-function _zoneEndsMs(e: ZoneAlertEntry): number {
-  const t = e.ends ? Date.parse(e.ends) : NaN;
-  return Number.isNaN(t) ? Infinity : t;
-}
-function sortZoneAlerts(entries: ZoneAlertEntry[]): ZoneAlertEntry[] {
-  return [...entries].sort((a, b) =>
-    _zoneSevRank(b.severity) - _zoneSevRank(a.severity) || _zoneEndsMs(a) - _zoneEndsMs(b));
-}
+// feature-state "winner" nws-zone-join.ts paints with), in that module's order.
+// An unparseable timestamp is shown as given.
 function fmtDt(iso: unknown): string | null {
   if (!iso) return null;
-  try {
-    return new Date(iso as string).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
-  } catch { return iso as string; }
+  const d = new Date(iso as string);
+  return Number.isNaN(d.getTime()) ? String(iso)
+    : d.toLocaleString(getLocale(), { dateStyle: "short", timeStyle: "short" });
 }
 function renderZoneAlertBlock(e: ZoneAlertEntry): string {
   const eccc = e.senderName === "Environment and Climate Change Canada";
@@ -224,7 +225,7 @@ function renderZoneAlertBlock(e: ZoneAlertEntry): string {
     row("popup.ends", fmtDt(e.ends || e.expires));
 }
 function renderZoneAlertList(entries: ZoneAlertEntry[]): string {
-  return sortZoneAlerts(entries).map(renderZoneAlertBlock).join("");
+  return [...entries].sort(compareZoneAlerts).map(renderZoneAlertBlock).join("");
 }
 
 // Data center moratoriums: every measure adopted by this jurisdiction (newest
@@ -237,15 +238,18 @@ interface DcmItem {
 interface DcmEvent { date: string; event: string; name: string; new?: string }
 const DCM_COLOR_BY_ID = Object.fromEntries(DCM_CLASSES.map(c => [c.id, c.color]));
 
+// Only the objects of a JSON array; anything else parses to [].
 function parseJsonList<T>(v: unknown): T[] {
-  if (Array.isArray(v)) return v as T[];
-  try { return typeof v === "string" ? JSON.parse(v) as T[] : []; } catch { return []; }
+  let list = v;
+  if (typeof v === "string") { try { list = JSON.parse(v); } catch { return []; } }
+  return Array.isArray(list) ? list.filter(x => x && typeof x === "object") : [];
 }
 
 // "2026-09-30" → "2026-09-30 (6 days ago)" / "2027-09-30 (in 12 months)",
 // counted from today's date when the popup opens, in the active locale.
-export function withRelativeDate(iso: string | undefined): string | undefined {
-  const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+export function withRelativeDate(iso: unknown): string | undefined {
+  if (typeof iso !== "string") return undefined;
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   const now = new Date();
   const days = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) -
@@ -261,9 +265,9 @@ function renderDcMoratorium(p: Record<string, unknown>) {
   const history = parseJsonList<DcmEvent>(p.history);
   const small = (s: string) => `<span style="opacity:0.7;font-size:0.85em">${s}</span>`;
   const list = items.map(it => {
-    const dot = `<span class="legend-swatch" style="background:${DCM_COLOR_BY_ID[it.cls ?? ""] ?? "#9ca3af"};display:inline-block;margin-right:4px"></span>`;
+    const dot = `<span class="legend-swatch" style="background:${(typeof it.cls === "string" && Object.hasOwn(DCM_COLOR_BY_ID, it.cls) ? DCM_COLOR_BY_ID[it.cls] : "#9ca3af")};display:inline-block;margin-right:4px"></span>`;
     const head = [it.type, it.status].filter(Boolean).map(s => escapeHtml(s)).join(" · ");
-    const links = (it.src ?? []).filter(isHttpUrl).map((u, i) =>
+    const links = (Array.isArray(it.src) ? it.src : []).filter(u => typeof u === "string" && isHttpUrl(u)).map((u, i) =>
       `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">[${i + 1}]</a>`).join(" ");
     return `<div class="popup-row" style="border-top:1px solid rgba(128,128,128,0.25);padding-top:4px">` +
       `${dot}<b>${escapeHtml(it.name)}</b>` +
@@ -281,7 +285,7 @@ function renderDcMoratorium(p: Record<string, unknown>) {
   return title(String(p.name ?? "")) +
     `<div style="max-height:260px;overflow-y:auto">${list}</div>` +
     (recent ? `<div class="popup-row" style="margin-top:4px"><span class="popup-key">${escapeHtml(t("popup.dcmRecent"))}</span>${recent}</div>` : "") +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.dcmFooter", { date: asOf }))}</div>`;
+    footer(t("popup.dcmFooter", { date: asOf }));
 }
 
 // >>> ADD-LAYER: popup-renderers — see docs/adding-a-layer.md §10. Add a
@@ -336,8 +340,8 @@ const _defs = [
     row("popup.type", t("popup.refinedProducts")) +
     row("popup.operator", p.operator)],
   [["wecc-paths-circles"], renderWeccPath],
-  [["osm-plant-icons"], plantRenderer(t("popup.osmPowerPlant"))],
-  [["osm-plants-polygons-fill"], plantRenderer(t("popup.powerPlantSite"))],
+  [["osm-plant-icons"], plantRenderer("popup.osmPowerPlant")],
+  [["osm-plants-polygons-fill"], plantRenderer("popup.powerPlantSite")],
   [["osm-gen-circles"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.osmGenerator")) +
     row("popup.fuel", p.source) +
@@ -377,7 +381,7 @@ const _defs = [
     row("popup.since", p.start_date) +
     row("popup.size", Number(p.im3_sqft) > 0 ? fmtAreaSqFt(Number(p.im3_sqft)) + " (IM3)" : null) +
     // osm_type absent in pre-2026-07 builds; skip the link rather than guess the type
-    (p.osm_type ? osmLink(p.osm_type as "node" | "way" | "relation", p.osm_id) : "")],
+    osmLink(p.osm_type, p.osm_id)],
   [["mines-icons"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.mine")) +
     row("popup.commodity", p.commodity) +
@@ -396,17 +400,17 @@ const _defs = [
     row("popup.area", p.acres ? fmtAreaAcres(Number(p.acres)) : null) +
     row("popup.state", p.state) +
     row("popup.established", p.yr_est) +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.padusFooter"))}</div>`],
+    footer(t("popup.padusFooter"))],
   [["tribal-fill"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.tribalCensus")) +
     row("popup.areaType", p.area_type) +
     row("popup.recognition", p.recognized) +
     row("popup.landArea", p.acres_land ? fmtAreaAcres(Number(p.acres_land)) : null) +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">${escapeHtml(t("popup.tribalCensusFooter"))}</div>`],
+    footer(t("popup.tribalCensusFooter"))],
   [["bia-tribal-fill"], (p: Record<string, unknown>) =>
     title((p.LARNAME as string) || t("popup.tribalBia")) +
     row("popup.agency", p.AGENCY) +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em;padding-top:4px;">${escapeHtml(t("popup.tribalBiaFooter"))}</div>`],
+    footer(t("popup.tribalBiaFooter"))],
   [["crithab-fill"], (p: Record<string, unknown>) =>
     title((p.comname as string) || (p.sciname as string) || t("popup.criticalHabitat")) +
     row("popup.scientificName", p.sciname) +
@@ -440,13 +444,11 @@ const _defs = [
     row("popup.abbreviation", p.stusps) +
     row("popup.geoid", p.geoid)],
   [["us-counties-fill"], (p: Record<string, unknown>) => {
-    const county = (p.NAME as string) || t("popup.county");
-    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
-    return title(heading) + row("popup.geoid", p.GEOID);
+    return title(countyHeading(p)) + row("popup.geoid", p.GEOID);
   }],
   [["us-zcta-fill"], (p: Record<string, unknown>) =>
     title(`ZCTA ${p.zcta5 ?? ""}`) +
-    `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.zctaNote"))}</div>`],
+    footer(t("popup.zctaNote"))],
   [["wildfire-incidents-circle"], (p: Record<string, unknown>) => {
     const typeCat = p.type_cat as string | null;
     const typeLabel = typeCat === "WF" ? t("popup.wildfireWF")
@@ -464,7 +466,7 @@ const _defs = [
       row("popup.currentAsOf", fmtDt(p.modified_dt));
   }],
   [["nws-alerts-fill"], (p: Record<string, unknown>) => {
-    const severity = p.urgency ? `${p.severity} (${p.urgency})` : (p.severity as string | undefined) || null;
+    const severity = [p.severity, p.urgency && `(${p.urgency})`].filter(Boolean).join(" ");
     const eccc = p.country === "CA";
     const eventTitle = ((p.event as string) || t("popup.weatherAlert")) + (eccc ? " (ECCC)" : "");
     return title(eventTitle) +
@@ -480,9 +482,7 @@ const _defs = [
     // county NAME/STATE_NAME come from the county_boundaries tile properties.
     // No join value → unlit county → no popup.
     if (p.odin_out == null) return "";
-    const county = (p.NAME as string) || t("popup.county");
-    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
-    const fmt = (v: unknown) => escapeHtml(Number(v).toLocaleString());
+    const fmt = (v: unknown) => escapeHtml(Number(v).toLocaleString(getLocale()));
     // No "Since" column: the snapshot's per-utility `since` is min(start) across
     // the group, so 1 customer out for 8h dominates 1000 out for 2min — a
     // worst-case time that reads worse than reality. Per-report times live in
@@ -507,38 +507,33 @@ const _defs = [
         `<button type="button" class="odin-raw-btn">${escapeHtml(t("popup.viewIncidentReports"))}</button>` +
         `<div class="odin-raw-body"></div></div>`
       : "";
-    return title(heading) +
-      (hasUtils ? "" : row("popup.customersAffected", typeof p.odin_out === "number" ? Number(p.odin_out).toLocaleString() : p.odin_out)) +
+    return title(countyHeading(p)) +
+      (hasUtils ? "" : row("popup.customersAffected", typeof p.odin_out === "number" ? Number(p.odin_out).toLocaleString(getLocale()) : p.odin_out)) +
       row("popup.activeIncidents", p.odin_n) +
       utilRows +
       rawUi +
-      `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(t("popup.odinFooter"))}</div>`;
+      footer(t("popup.odinFooter"));
   }],
   [["dcm-points", "dcm-county-fill", "dcm-state-fill", "dcm-utility-fill"], renderDcMoratorium],
   [["fema-nri-fill"], (p: Record<string, unknown>) => {
     // Rating/score come from the feature-state join (merged into p by popup.ts);
     // county NAME/STATE_NAME from the county_boundaries tile properties.
     if (p.nri_r == null) return "";
-    const county = (p.NAME as string) || t("popup.county");
-    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
     const rating = (code: unknown, score: unknown) => {
-      const label = NRI_RATINGS.find(r => r.code === code)?.label;
-      if (!label) return null;
+      const key = NRI_RATINGS.find(r => r.code === code)?.labelKey;
+      if (!key) return null;
+      const label = t(key);
       // Codes 1–5 are ratings; 6 ("Insufficient Data") carries no percentile.
       return typeof score === "number" && Number(code) <= 5
         ? t("popup.nriPercentile", { rating: label, score: score.toFixed(1) })
         : label;
     };
-    const nriRow = (label: string, val: string | null) => val
-      ? `<div class="popup-row"><span class="popup-key">${escapeHtml(label)}</span> <span class="popup-val">${escapeHtml(val)}</span></div>`
-      : "";
     const hazard = nriHazard();
     const version = nriVersion();
-    return title(heading) +
-      nriRow(nriHazardLabel(hazard), rating(p.nri_r, p.nri_s)) +
-      (hazard === DEFAULT_NRI_HAZARD ? "" : nriRow(nriHazardLabel(DEFAULT_NRI_HAZARD), rating(p.nri_cr, p.nri_cs))) +
-      `<div class="popup-row" style="opacity:0.6;font-size:0.8em">${escapeHtml(
-        t("popup.nriFooter", { version: version ? ` (${version})` : "" }))}</div>`;
+    return title(countyHeading(p)) +
+      rawRow(nriHazardLabel(hazard), rating(p.nri_r, p.nri_s)) +
+      (hazard === DEFAULT_NRI_HAZARD ? "" : rawRow(nriHazardLabel(DEFAULT_NRI_HAZARD), rating(p.nri_cr, p.nri_cs))) +
+      footer(t("popup.nriFooter", { version: version ? ` (${version})` : "" }));
   }],
   [["nws-zone-fill"], (p: Record<string, unknown>) => {
     // nws_group comes from the feature-state join (merged into p by popup.ts).
@@ -557,9 +552,7 @@ const _defs = [
     const geoid = p.GEOID as string;
     const entries = lookupByFips(geoid);
     if (!entries.length) return "";
-    const county = (p.NAME as string) || t("popup.county");
-    const heading = p.STATE_NAME ? `${county}, ${p.STATE_NAME}` : county;
-    return title(heading) + renderZoneAlertList(entries);
+    return title(countyHeading(p)) + renderZoneAlertList(entries);
   }],
   [["wildfire-smoke-fill"], (p: Record<string, unknown>) =>
     title(t("popup.smokePlume")) +
@@ -609,7 +602,7 @@ export function buildUserFeatureHtml(p: Record<string, unknown>) {
   let html = title(name);
   for (const [k, v] of Object.entries(p)) {
     if (skip.has(k) || v == null || typeof v === "object") continue;
-    html += row(k, v);
+    html += rawRow(k, v);
   }
   return html;
 }
@@ -619,9 +612,8 @@ export function buildPopupHtml(layerId: string, properties: Record<string, unkno
     // Features copied from a main layer carry __src = origin layer id; reuse its
     // formatted popup so the source's data/labels survive the copy.
     const src = properties.__src as string | undefined;
-    if (src && POPUP_RENDERERS[src]) return POPUP_RENDERERS[src](properties);
+    if (typeof src === "string" && Object.hasOwn(POPUP_RENDERERS, src)) return POPUP_RENDERERS[src](properties);
     return buildUserFeatureHtml(properties);
   }
-  const renderer = POPUP_RENDERERS[layerId];
-  return renderer ? renderer(properties) : null;
+  return Object.hasOwn(POPUP_RENDERERS, layerId) ? POPUP_RENDERERS[layerId](properties) : null;
 }

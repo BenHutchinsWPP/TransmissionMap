@@ -407,6 +407,13 @@ export function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollectio
   saveUserData();
 }
 
+// A file from disk: `__src` is set only by copyFeatureToMyData, so a file's own
+// value is dropped rather than let it pick a main layer's popup renderer.
+export function addImportedLayer(filename: string, geojson: GeoJSON.FeatureCollection) {
+  for (const f of geojson.features) if (f.properties) delete f.properties.__src;
+  addUserLayer(filename, geojson);
+}
+
 // ─── Copy a main-map feature into My Data ─────────────────────────────────────
 const COPY_LAYER_NAME = 'Copied from map';
 
