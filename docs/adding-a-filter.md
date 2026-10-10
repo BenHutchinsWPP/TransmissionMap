@@ -79,12 +79,9 @@ Give each bucket in step 1 the feature values it matches
 off it or give it `values: []` (PAD-US and retail do) — both build the same
 filter. A bucket set where no bucket declares `values` matches each bucket id
 as the literal feature value (the moratorium classes do this); an `other`
-bucket there would match the literal string `"other"`. If other code needs the map,
-derive it beside the buckets:
-
-```ts
-export const MYTHING_MAP = bucketValueMap(MYTHING_BUCKETS);   // bucket id → feature values
-```
+bucket there would match the literal string `"other"`. Code that needs the
+bucket id → values map reads it off the facet — `facetValueMap(facet("mything"))`
+(`src/colors/facets.ts`) — rather than a `*_MAP` exported beside the buckets.
 
 ### 3. Register the facet — `src/colors/facets.ts`
 
@@ -161,7 +158,9 @@ facet filters. Write a hand applier and add it to `HAND_APPLIERS` (which feeds
 `FACET_APPLIERS`) when the facet
 
 - shares map layers with another facet — their expressions must be combined in
-  one write, or each clobbers the other (`applyOGFFilters`,
+  one write, or each clobbers the other. One line does it:
+  `applyFacetGroup(["ogfStatus", "ogfRegion", "ogfWork"])` combines the listed
+  facets onto the first one's `mapLayerIds` (`applyOGFFilters`,
   `applyWestTECFilters`, `applyMinesFilter`: several keys, one function);
 - targets registry layers by `filterType`/`group` rather than a fixed list
   (`applyVoltageFilter`, `applyGeneratorFilters`);
@@ -169,8 +168,10 @@ facet filters. Write a hand applier and add it to `HAND_APPLIERS` (which feeds
 - drives something besides `setFilter` (`applyNwsGroupFilter` also sets the
   zone-join feature-state).
 
-Write through `setBucketFilter` (or `applyBucketFilterToLayers`), keep the
-`state.mapReady` guard, and export the function. `applyAllFilters()` runs every
+Read the field, buckets and value map from the record (`facet(key)`,
+`facetValueMap()`) rather than importing a bucket table by name, write through
+`setBucketFilter` (or `applyBucketFilterToLayers`), keep the `state.mapReady`
+guard, and export the function. `applyAllFilters()` runs every
 `FACET_APPLIERS` function once, so there is no separate list to update; the
 drift guard in `assets/filters.test.ts` fails when an exported `apply*Filter`
 is neither in `FACET_APPLIERS` nor called by `applyAllFilters()`, and

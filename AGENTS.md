@@ -78,7 +78,8 @@ turns public datasets into PMTiles consumed by the frontend.
     - `state-bus.ts` typed pub/sub (broadcast events — `layer:visibility`, `layer:data`, `view:applied`, `url:write`, `lang:changed`, `undo:changed` — plus the few one-subscriber events a direct import would cycle or pull into the main bundle; see `Events`). Filters are called directly: `applyAllFilters()`, `applyGeneratorFilters()`; no deps
     - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, commits with `url:write`, then emits `layer:visibility`, which refreshes the legends and the panel row), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility), `heatRampShown` (heat ramp legend rule) and `settleExclusiveGroups` (one member per exclusive group, for a whole view); writes no panel control
     - `filters.ts` — `FACET_APPLIERS` (facet key → applier: one derived `applyFacet()` for a
-      single-field facet, hand appliers for voltage/generators/OGF/WestTEC/mines/NWS) and
+      single-field facet, hand appliers for voltage/generators/OGF/WestTEC/mines/NWS, each reading
+      its field and buckets from the facet record) and
       `applyAllFilters()`, which runs each applier once and is called by `repaintView`; `MW_SLIDER_MAX`;
       `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
       filter each map layer carries, and `setWhere()` sets a layer's field conditions
@@ -196,13 +197,16 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/colors/` — color/style logic (no MapLibre side effects, safe to import anywhere)
   - `voltage.ts` — `voltageColorExpr()`
   - `ramps.ts` — wind/solar/geo/pop/heat ramps + year-filter constants
-  - `fuel.ts` — gen icons, pipeline colors, voltage/fuel legends, OSM/EIA fuel value maps
-  - `buckets.ts` — `bucketColorExpr`, line widths, KV/fuel/region bucket arrays; each
-    bucket's `values` (feature values it matches) and the `*_MAP` derived from them
-    with `bucketValueMap`
+  - `fuel.ts` — `FUEL_LEGEND`, the one fuel table (legend row + OSM `source` values +
+    EIA codes + per-value icon/colour overrides); the gen icon/colour expressions and
+    `OSM_FUEL_MAP`/`EIA_FUEL_MAP` filter maps are derived from it
+  - `buckets.ts` — `bucketColorExpr`, `bucketValueMap`, line widths, KV/fuel/region
+    bucket arrays, each bucket with its `values` (feature values it matches)
   - `facets.ts` — `FACETS`: one `BucketedField` record per legend filter (group code,
-    buckets, field, map layers, defaults, title, swatch); `assets/filters.ts` derives
-    its applier and `assets/ui/ui-legends.ts` pairs the two into `LEGEND_FILTERS`
+    buckets, field, map layers, defaults, title, swatch); `facet(key)` looks one up and
+    `facetValueMap()` is its bucket id → values map (no `*_MAP` exports); `assets/filters.ts`
+    derives its applier and `assets/ui/ui-legends.ts` pairs the two into `LEGEND_FILTERS`.
+    Also the OGF/WestTEC colour-by (`ogfColorExpr`/`westtecColorExpr`: mode → facet key)
 - `src/registry/` — layer definitions (pure data, no side effects)
   - `sources.ts` — `LAYER_SOURCES`; `index.ts` — `LAYERS[]`, `layerById`
   - `generators.ts` EIA+OSM; `transmission.ts` lines+substations; `pipelines.ts` natgas
@@ -271,7 +275,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
 | Fix voltage colors | `src/colors/voltage.ts` |
 | Edit ramp stops (wind/solar/geo/pop/heat) | `src/colors/ramps.ts` |
-| Edit fuel colors / icons / legends | `src/colors/fuel.ts` |
+| Edit fuel colors / icons / legends | `src/colors/fuel.ts` — edit the `FUEL_LEGEND` row; icons, colours and filter maps follow |
 | Edit bucket arrays (PAD-US, Tribal, NERC, etc.) | `src/colors/buckets.ts`; the legend facet record is in `src/colors/facets.ts` |
 | Add/edit a layer registry entry | `src/registry/<group>.ts` — imports in `src/registry/index.ts` list every group file |
 | Add hover highlight to a polygon layer | set `hoverField` on the `LayerDef` in `src/registry/<group>.ts` |

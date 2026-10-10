@@ -6,9 +6,9 @@
 // decodes through these codes, so any drift here is a broken link.
 import { describe, it, expect } from 'vitest';
 import { LEGEND_FILTERS } from '../../assets/ui/ui-legends.js';
+import { FACETS, facet, facetValueMap, OGF_COLOR_BY, WESTTEC_COLOR_BY } from './facets.js';
 import * as F from './fuel.js';
-import * as B from './buckets.js';
-import * as M from './minerals.js';
+import { PIPELINE_TYPE_BUCKETS, bucketValueMap } from './buckets.js';
 
 const LEGEND_ROWS = [
   {"key": "kv", "groupCode": "v", "buckets": [["550+", "H"], ["500-549", "F"], ["300-499", "G"], ["200-299", "T"], ["100-199", "P"], ["<100", "L"], ["unknown", "U"]], "syncBuckets": ["550+", "500-549", "300-499", "200-299", "100-199", "<100", "unknown"], "masterId": "kvAllCb", "legendId": "voltageLegend", "itemsId": "voltageLegendItems", "titleKey": "legend.voltage", "title": "Voltage (kV)", "swatch": "color"},
@@ -45,7 +45,7 @@ const VALUE_MAPS: Record<string, [string, string[]][]> = {
     ["nuclear", ["nuclear"]],
     ["coal", ["coal"]],
     ["gas", ["gas"]],
-    ["oil", ["oil"]],
+    ["oil", ["oil", "diesel"]],   // diesel filters as Oil (FUEL_LEGEND in fuel.ts)
     ["battery", ["battery"]],
     ["geothermal", ["geothermal"]],
     ["biomass", ["biomass", "biogas", "waste"]],
@@ -130,14 +130,15 @@ const VALUE_MAPS: Record<string, [string, string[]][]> = {
     ["coop", ["COOPERATIVE"]],
     ["muni", ["MUNICIPAL", "MUNICIPAL MKTG AUTHORITY"]],
     ["public", ["STATE", "FEDERAL", "POLITICAL SUBDIVISION"]],
+    ["other", []],   // empty: the "other" chip is the catch-all
   ],
   OGF_STATUS_MAP: [
-    ["construction", ["Construction"]],
-    ["permitting", ["Permitting"]],
     ["planning", ["Conceptual / planning", "Planning", "Pre-planning / conceptual"]],
     ["engineering", ["Engineering, design, and routing"]],
-    ["on_hold", ["On hold"]],
+    ["permitting", ["Permitting"]],
+    ["construction", ["Construction"]],
     ["complete", ["Complete"]],
+    ["on_hold", ["On hold"]],
     ["terminated", ["Terminated"]],
   ],
   OGF_REGION_MAP: [
@@ -207,16 +208,21 @@ const VALUE_MAPS: Record<string, [string, string[]][]> = {
   ],
 };
 
+// The fuel maps live in fuel.ts; the pipeline-point icons read the bucket
+// values directly (map-layers-osm.ts); every other map is the facet's.
+const facetMap = (key: string) => facetValueMap(facet(key));
+
 const MAPS: Record<string, Record<string, string[]>> = {
-  OSM_FUEL_MAP: F.OSM_FUEL_MAP, EIA_FUEL_MAP: F.EIA_FUEL_MAP, PIPELINE_TYPE_MAP: B.PIPELINE_TYPE_MAP,
-  NATGAS_PIPE_TYPE_MAP: B.NATGAS_PIPE_TYPE_MAP, NATGAS_FAC_TYPE_MAP: B.NATGAS_FAC_TYPE_MAP,
-  NWS_GROUP_MAP: B.NWS_GROUP_MAP,
-  CRITHAB_MAP: B.CRITHAB_MAP, PADUS_CLASS_MAP: B.PADUS_CLASS_MAP, TRIBAL_MAP: B.TRIBAL_MAP,
-  SUBSTANCE_MAP: B.SUBSTANCE_MAP, SECTOR_MAP: B.SECTOR_MAP, NERC_MAP: B.NERC_MAP,
-  RETAIL_TYPE_MAP: B.RETAIL_TYPE_MAP, OGF_STATUS_MAP: B.OGF_STATUS_MAP, OGF_REGION_MAP: B.OGF_REGION_MAP,
-  OGF_WORK_MAP: B.OGF_WORK_MAP, WESTTEC_SCENARIO_MAP: B.WESTTEC_SCENARIO_MAP,
-  WESTTEC_DATASET_MAP: B.WESTTEC_DATASET_MAP, DCM_CLASS_MAP: B.DCM_CLASS_MAP,
-  MINES_COMMODITY_MAP: M.MINES_COMMODITY_MAP, MINES_STATUS_MAP: M.MINES_STATUS_MAP,
+  OSM_FUEL_MAP: F.OSM_FUEL_MAP, EIA_FUEL_MAP: F.EIA_FUEL_MAP,
+  PIPELINE_TYPE_MAP: bucketValueMap(PIPELINE_TYPE_BUCKETS),
+  NATGAS_PIPE_TYPE_MAP: facetMap("natgasLine"), NATGAS_FAC_TYPE_MAP: facetMap("natgasPts"),
+  NWS_GROUP_MAP: facetMap("nwsGroup"),
+  CRITHAB_MAP: facetMap("crithab"), PADUS_CLASS_MAP: facetMap("padus"), TRIBAL_MAP: facetMap("tribal"),
+  SUBSTANCE_MAP: facetMap("substance"), SECTOR_MAP: facetMap("sector"), NERC_MAP: facetMap("nerc"),
+  RETAIL_TYPE_MAP: facetMap("retail"), OGF_STATUS_MAP: facetMap("ogfStatus"), OGF_REGION_MAP: facetMap("ogfRegion"),
+  OGF_WORK_MAP: facetMap("ogfWork"), WESTTEC_SCENARIO_MAP: facetMap("westtecScenario"),
+  WESTTEC_DATASET_MAP: facetMap("westtecDataset"), DCM_CLASS_MAP: facetMap("dcm"),
+  MINES_COMMODITY_MAP: facetMap("mines"), MINES_STATUS_MAP: facetMap("minesStatus"),
 };
 
 describe('legend facets', () => {
@@ -249,5 +255,21 @@ describe('bucket value maps', () => {
 
   it.each(Object.keys(VALUE_MAPS))('%s keeps its exact entries, in order', name => {
     expect(Object.entries(MAPS[name])).toEqual(VALUE_MAPS[name]);
+  });
+});
+
+describe('facet lookup and colour-by', () => {
+  it('facet(key) returns the FACETS record and throws on an unknown key', () => {
+    for (const f of FACETS) expect(facet(f.key)).toBe(f);
+    expect(() => facet('nope')).toThrow(/unknown facet/);
+  });
+
+  it.each([
+    ...Object.entries(OGF_COLOR_BY).map(([m, k]) => ['ogf', m, k]),
+    ...Object.entries(WESTTEC_COLOR_BY).map(([m, k]) => ['westtec', m, k]),
+  ])('%s colour-by mode %s resolves to facet %s with a field and coloured buckets', (_l, _m, key) => {
+    const f = facet(key);
+    expect(f.field).toBeTruthy();
+    expect(f.buckets.length).toBeGreaterThan(0);
   });
 });

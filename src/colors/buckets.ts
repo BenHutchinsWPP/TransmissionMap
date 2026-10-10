@@ -3,11 +3,17 @@ import { FUEL_LEGEND } from './fuel.js';
 import type { BucketDef } from '../types.js';
 
 // ─── Categorical fill from buckets ────────────────────────────────────────────
+// ["match", ["get", field], ...] over each bucket's `values`. First bucket wins
+// a value listed under several (e.g. "MISO, SPP" under both spp and miso for
+// filtering) — match branches must be unique.
 export function bucketColorExpr(field: string, buckets: BucketDef[], defaultColor: string): ExpressionSpecification {
   const expr: unknown[] = ["match", ["get", field]];
+  const seen = new Set<string>();
   for (const b of buckets) {
-    if (!b.values || !b.values.length) continue;
-    expr.push(b.values.length === 1 ? b.values[0] : b.values, b.color);
+    const vals = (b.values ?? []).filter(v => !seen.has(v));
+    if (!vals.length) continue;
+    vals.forEach(v => seen.add(v));
+    expr.push(vals.length === 1 ? vals[0] : vals, b.color);
   }
   expr.push(defaultColor);
   return expr as unknown as ExpressionSpecification;
@@ -135,7 +141,6 @@ export const PADUS_CLASS_BUCKETS: BucketDef[] = [
   { id: "other",   urlCode: "O", label: "Other / unknown",         color: PADUS_CLASS_DEFAULT,
     values: [] },
 ];
-export const PADUS_CLASS_MAP = bucketValueMap(PADUS_CLASS_BUCKETS);
 
 // ─── Tribal lands ─────────────────────────────────────────────────────────────
 export const TRIBAL_DEFAULT_COLOR = "#64748b";
@@ -156,7 +161,6 @@ export const TRIBAL_BUCKETS: BucketDef[] = [
   { id: "statereserv", urlCode: "J", label: "State Reservation",          color: "#65a30d",
     values: ["State American Indian Reservation"] },
 ];
-export const TRIBAL_MAP = bucketValueMap(TRIBAL_BUCKETS);
 
 // ─── Critical Habitat ─────────────────────────────────────────────────────────
 export const CRITHAB_BUCKETS: BucketDef[] = [
@@ -169,7 +173,6 @@ export const CRITHAB_BUCKETS: BucketDef[] = [
   { id: "prop-threatened",     urlCode: "Q", label: "Proposed Threatened", color: "#fcd34d",
     values: ["Proposed Threatened"] },
 ];
-export const CRITHAB_MAP = bucketValueMap(CRITHAB_BUCKETS);
 
 // ─── Natural gas pipeline types ───────────────────────────────────────────────
 export const NATGAS_PIPE_TYPE_BUCKETS: BucketDef[] = [
@@ -178,7 +181,6 @@ export const NATGAS_PIPE_TYPE_BUCKETS: BucketDef[] = [
   { id: "hgl",        urlCode: "H", label: "HGL / NGL",   color: "#38bdf8", values: ["HGL"] },
   { id: "gathering",  urlCode: "G", label: "Gathering",   color: "#a78bfa", values: ["Gathering"] },
 ];
-export const NATGAS_PIPE_TYPE_MAP = bucketValueMap(NATGAS_PIPE_TYPE_BUCKETS);
 
 export const NATGAS_FAC_TYPE_BUCKETS: BucketDef[] = [
   { id: "lng_terminal",  urlCode: "L", label: "LNG Terminal",               color: "#06b6d4", icon: "natgas-lng_terminal", values: ["lng_terminal"] },
@@ -191,7 +193,6 @@ export const NATGAS_FAC_TYPE_BUCKETS: BucketDef[] = [
   { id: "lng_storage",   urlCode: "N", label: "Above-Ground LNG",            color: "#0ea5e9", icon: "natgas-lng_storage", values: ["lng_storage"] },
   { id: "pol_terminal",  urlCode: "O", label: "Petroleum Terminal",          color: "#94a3b8", icon: "natgas-pol_terminal", values: ["pol_terminal"] },
 ];
-export const NATGAS_FAC_TYPE_MAP = bucketValueMap(NATGAS_FAC_TYPE_BUCKETS);
 
 export const PIPELINE_TYPE_BUCKETS: BucketDef[] = [
   { id: "pig_launcher", urlCode: "P", label: "Pig launcher",    color: "#64748b", icon: "pipeline-pig_launcher",
@@ -206,7 +207,6 @@ export const PIPELINE_TYPE_BUCKETS: BucketDef[] = [
     values: ["end"] },
   { id: "other",        urlCode: "O", label: "Other",           color: "#d1d5db", icon: "pipeline-other" },
 ];
-export const PIPELINE_TYPE_MAP = bucketValueMap(PIPELINE_TYPE_BUCKETS);
 
 // ─── OSM pipeline substance → generator-fuel type ─────────────────────────────
 // Only generator fuels survive the data strip (scripts/enrich_osm_tags.py);
@@ -230,7 +230,6 @@ export const SUBSTANCE_BUCKETS: BucketDef[] = [
     values: ["coal"] },
   { id: "other",    urlCode: "u", label: "Unknown",          color: "#9ca3af" },
 ];
-export const SUBSTANCE_MAP = bucketValueMap(SUBSTANCE_BUCKETS);
 
 // Pipeline line color by generator-fuel type. Derived from SUBSTANCE_BUCKETS so
 // the palette and the legend never drift. Untagged → "Unknown" grey.
@@ -250,7 +249,6 @@ export const SECTOR_BUCKETS: BucketDef[] = [
   { id: "industrial", label: "Industrial",       color: "#9ca3af", urlCode: "n",
     values: ["Industrial Non-CHP", "Industrial CHP"] },
 ];
-export const SECTOR_MAP = bucketValueMap(SECTOR_BUCKETS);
 
 // ─── NERC regions ─────────────────────────────────────────────────────────────
 export const NERC_BUCKETS: BucketDef[] = [
@@ -263,12 +261,11 @@ export const NERC_BUCKETS: BucketDef[] = [
   { id: "TRE",   urlCode: "T", label: "TRE — Texas (ERCOT)",    color: "#ef4444", values: ["TRE"]   },
   { id: "FRCC",  urlCode: "F", label: "FRCC — Florida",         color: "#ec4899", values: ["FRCC"]  },
 ];
-export const NERC_MAP = bucketValueMap(NERC_BUCKETS);
 
 // ─── NWS active weather alert groups ─────────────────────────────────────────
-// Mirrors NWS_GROUP_COLOR in assets/layers/map-layers-conditions.ts — keep colors
-// in sync (that expression paints the map; this bucket set drives the legend
-// filter chips over the same `_group` field).
+// Paints the alerts (NWS_GROUP_COLOR in assets/layers/map-layers-conditions.ts,
+// derived from these buckets) and drives the legend filter chips over the same
+// `_group` field.
 export const NWS_GROUP_BUCKETS: BucketDef[] = [
   { id: "convective", label: "Convective",     color: "#a855f7", urlCode: "c", values: ["convective"] },
   { id: "flood",       label: "Flood",          color: "#22c55e", urlCode: "l", values: ["flood"] },
@@ -279,7 +276,6 @@ export const NWS_GROUP_BUCKETS: BucketDef[] = [
   { id: "tropical",    label: "Tropical",       color: "#14b8a6", urlCode: "t", values: ["tropical"] },
   { id: "other",       label: "Other",          color: "#9ca3af", urlCode: "o" },
 ];
-export const NWS_GROUP_MAP = bucketValueMap(NWS_GROUP_BUCKETS);
 
 // ─── Retail service territory types ──────────────────────────────────────────
 export const RETAIL_TYPE_BUCKETS: BucketDef[] = [
@@ -294,33 +290,30 @@ export const RETAIL_TYPE_BUCKETS: BucketDef[] = [
   { id: "other",   urlCode: "O", label: "Other / Unknown",    color: "#94a3b8",
     values: [] },
 ];
-export const RETAIL_TYPE_MAP = bucketValueMap(RETAIL_TYPE_BUCKETS.filter(b => b.values?.length));
 
 // ─── OGF planned transmission status ─────────────────────────────────────────
 // Lifecycle hue ramp: cool = early, warm = late, green = in service. The layer
 // reads as "planned" via its white casing, so hue is free to encode status
 // (mirrors ourgridfuture.org's own status palette semantics).
 export const OGF_STATUS_BUCKETS: BucketDef[] = [
-  { id: "planning",     urlCode: "L", label: "Conceptual / planning",     color: "#60a5fa" },
-  { id: "engineering",  urlCode: "E", label: "Engineering & routing",     color: "#22d3ee" },
-  { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#eab308" },
-  { id: "construction", urlCode: "C", label: "Construction",              color: "#f97316" },
-  { id: "complete",     urlCode: "D", label: "Complete",                  color: "#16a34a" },
-  { id: "on_hold",      urlCode: "H", label: "On hold",                   color: "#94a3b8" },
-  { id: "terminated",   urlCode: "T", label: "Terminated",                color: "#ef4444" },
-  { id: "other",        urlCode: "O", label: "Unknown",                   color: "#d1d5db" },
-];
-export const OGF_STATUS_MAP = {
-  construction: ["Construction"],
-  permitting:   ["Permitting"],
   // "Planning" and "Pre-planning / conceptual" are the source labels before
   // extract_ogf.py merged them; matched too so either build of the data draws.
-  planning:     ["Conceptual / planning", "Planning", "Pre-planning / conceptual"],
-  engineering:  ["Engineering, design, and routing"],
-  on_hold:      ["On hold"],
-  complete:     ["Complete"],
-  terminated:   ["Terminated"],
-};
+  { id: "planning",     urlCode: "L", label: "Conceptual / planning",     color: "#60a5fa",
+    values: ["Conceptual / planning", "Planning", "Pre-planning / conceptual"] },
+  { id: "engineering",  urlCode: "E", label: "Engineering & routing",     color: "#22d3ee",
+    values: ["Engineering, design, and routing"] },
+  { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#eab308",
+    values: ["Permitting"] },
+  { id: "construction", urlCode: "C", label: "Construction",              color: "#f97316",
+    values: ["Construction"] },
+  { id: "complete",     urlCode: "D", label: "Complete",                  color: "#16a34a",
+    values: ["Complete"] },
+  { id: "on_hold",      urlCode: "H", label: "On hold",                   color: "#94a3b8",
+    values: ["On hold"] },
+  { id: "terminated",   urlCode: "T", label: "Terminated",                color: "#ef4444",
+    values: ["Terminated"] },
+  { id: "other",        urlCode: "O", label: "Unknown",                   color: "#d1d5db" },
+];
 
 // ─── OGF region (derived Region field) ──────────────────────────────────────
 // extract_ogf.py sets Region = "WECC" for Western lines (by the WECC boundary,
@@ -346,7 +339,6 @@ export const OGF_REGION_BUCKETS: BucketDef[] = [
     values: ["None (Southeast)"] },
   { id: "other",     urlCode: "O", label: "Other / none",        color: "#94a3b8" },
 ];
-export const OGF_REGION_MAP = bucketValueMap(OGF_REGION_BUCKETS);
 
 // ─── OGF type of work (derived Work field) ──────────────────────────────────
 // Solid = a new circuit; dashed = rebuild / reconductor / upgrade of an
@@ -357,85 +349,24 @@ export const OGF_WORK_BUCKETS: BucketDef[] = [
   { id: "existing", urlCode: "E", label: "Existing line (rebuild, reconductor, upgrade)", color: "#64748b",
     values: ["existing"] },
 ];
-export const OGF_WORK_MAP = bucketValueMap(OGF_WORK_BUCKETS);
 export const OGF_DASH_EXPR = [
   "match", ["get", "Work"], "existing", ["literal", [2, 1.5]], ["literal", [1, 0]],
 ] as unknown as ExpressionSpecification;
 
-// ─── OGF "color by" line-color expressions ────────────────────────────────────
-// Drives ogf-planned-lines paint; selected via state.ogfColorBy.
-export type OgfColorMode = "region" | "status";
-const OGF_COLOR_CFG: Record<OgfColorMode, {
-  field: string;
-  buckets: { id: string; color: string }[];
-  map: Record<string, string[]>;
-}> = {
-  region: { field: "Region", buckets: OGF_REGION_BUCKETS, map: OGF_REGION_MAP },
-  status: { field: "Status", buckets: OGF_STATUS_BUCKETS, map: OGF_STATUS_MAP },
-};
-export const OGF_COLOR_MODES = Object.keys(OGF_COLOR_CFG) as OgfColorMode[];
-
-// Shared ["match", ["get", field], ...] builder for categorical "color by"
-// expressions. First bucket wins combo values (e.g. "MISO, SPP" listed under
-// both spp and miso for filtering) — match branches must be unique. Falls
-// back to the "other" bucket's color if present.
-function bucketMatchExpr(
-  field: string,
-  buckets: { id: string; color: string }[],
-  map: Record<string, string[]>
-): ExpressionSpecification {
-  const expr: unknown[] = ["match", ["get", field]];
-  const seen = new Set<string>();
-  for (const b of buckets) {
-    const vals = (map[b.id] ?? []).filter(v => !seen.has(v));
-    if (!vals.length) continue;
-    vals.forEach(v => seen.add(v));
-    expr.push(vals.length === 1 ? vals[0] : vals, b.color);
-  }
-  // MapLibre "match" requires a trailing fallback; buckets without an "other"
-  // (WestTEC — every row has a real value) fall back to neutral gray, which
-  // is never hit in practice.
-  expr.push(buckets.find(b => b.id === "other")?.color ?? "#94a3b8");
-  return expr as unknown as ExpressionSpecification;
-}
-
-export function ogfColorExpr(mode: OgfColorMode): ExpressionSpecification {
-  const { field, buckets, map } = OGF_COLOR_CFG[mode];
-  return bucketMatchExpr(field, buckets, map);
-}
-
-// ─── WestTEC 10-Year Plan color-by ───────────────────────────────────────────
-// Drives westtec-10yr line color; selected via state.westtecColorBy. Every
-// feature has a real value for both fields — no "other"/catch-all bucket.
+// ─── WestTEC 10-Year Plan ────────────────────────────────────────────────────
+// Also the westtec-10yr colour-by (facets.ts westtecColorExpr). Every feature
+// has a real value for both fields — no "other"/catch-all bucket.
 export const WESTTEC_SCENARIO_BUCKETS: BucketDef[] = [
   { id: "base_case",  urlCode: "B", label: "Planned Projects",        color: "#1e40af", values: ["Base Case"] },
   { id: "sra",        urlCode: "R", label: "Reliability-Driven (SRA)", color: "#4ade80", values: ["SRA"] },
   { id: "ida",        urlCode: "D", label: "Deliverability (IDA)",     color: "#38bdf8", values: ["IDA"] },
   { id: "congestion", urlCode: "C", label: "Congestion",               color: "#dc2626", values: ["Congestion"] },
 ];
-export const WESTTEC_SCENARIO_MAP = bucketValueMap(WESTTEC_SCENARIO_BUCKETS);
 
 export const WESTTEC_DATASET_BUCKETS: BucketDef[] = [
   { id: "planned",    urlCode: "P", label: "Planned Projects",    color: "#2563eb", values: ["planned"] },
   { id: "identified", urlCode: "I", label: "Identified Upgrades", color: "#16a34a", values: ["identified"] },
 ];
-export const WESTTEC_DATASET_MAP = bucketValueMap(WESTTEC_DATASET_BUCKETS);
-
-export type WesttecColorMode = "scenario" | "dataset";
-const WESTTEC_COLOR_CFG: Record<WesttecColorMode, {
-  field: string;
-  buckets: { id: string; color: string }[];
-  map: Record<string, string[]>;
-}> = {
-  scenario: { field: "scenario", buckets: WESTTEC_SCENARIO_BUCKETS, map: WESTTEC_SCENARIO_MAP },
-  dataset:  { field: "dataset",  buckets: WESTTEC_DATASET_BUCKETS,  map: WESTTEC_DATASET_MAP },
-};
-export const WESTTEC_COLOR_MODES = Object.keys(WESTTEC_COLOR_CFG) as WesttecColorMode[];
-
-export function westtecColorExpr(mode: WesttecColorMode): ExpressionSpecification {
-  const { field, buckets, map } = WESTTEC_COLOR_CFG[mode];
-  return bucketMatchExpr(field, buckets, map);
-}
 
 // ─── FEMA National Risk Index rating classes ──────────────────────────────────
 // Codes match scripts/extract_fema_nri.py: 1–5 = FEMA's five ratings, 6 =
@@ -460,4 +391,3 @@ export const DCM_CLASSES: BucketDef[] = [
   { id: "pending", urlCode: "P", label: "Proposed",                   color: "#f59e0b" },
   { id: "ended",   urlCode: "E", label: "Expired, lifted or replaced", color: "#9ca3af" },
 ];
-export const DCM_CLASS_MAP = Object.fromEntries(DCM_CLASSES.map(c => [c.id, [c.id]]));

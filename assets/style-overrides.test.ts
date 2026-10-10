@@ -9,7 +9,7 @@ import { createPropertyExpression, latest, type StylePropertySpecification } fro
 import { state } from './state.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
-import { ogfColorExpr, westtecColorExpr } from '../src/colors/buckets.js';
+import { ogfColorExpr, westtecColorExpr } from '../src/colors/facets.js';
 import { setStyle, clearStyle, applyAllStyles, listStylable, scaleBy, effectiveOverride, setColorBy } from './style-overrides.js';
 import { validateStyleOverride } from '../src/registry/view-validate.js';
 import { initPolygonHover, initLineHighlight, highlightLine } from './hover.js';

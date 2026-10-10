@@ -9,7 +9,7 @@
 
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
-import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP, NRI_RATINGS } from '../src/colors/buckets.js';
+import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
 import { t, getLocale } from '../src/i18n/index.js';
@@ -293,8 +293,7 @@ function renderDcMoratorium(p: Record<string, unknown>) {
 // Raw scenario value → legend label, derived from the legend buckets so the
 // popup can never drift from the legend.
 const WESTTEC_SCENARIO_LABELS: Record<string, string> = Object.fromEntries(
-  WESTTEC_SCENARIO_BUCKETS.flatMap(b =>
-    (WESTTEC_SCENARIO_MAP[b.id as keyof typeof WESTTEC_SCENARIO_MAP] ?? []).map(v => [v, b.label])));
+  WESTTEC_SCENARIO_BUCKETS.flatMap(b => (b.values ?? []).map(v => [v, b.label])));
 
 const OSM_TL_POPUP_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown", "dc");
 

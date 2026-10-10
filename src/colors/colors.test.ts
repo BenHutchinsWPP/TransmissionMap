@@ -4,7 +4,9 @@ import {
   bucketColorExpr, subRadius,
   NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, NWS_GROUP_BUCKETS,
 } from './buckets.js';
-import { genIconSize } from './fuel.js';
+import {
+  genIconSize, OSM_GEN_ICON, OSM_GEN_COLOR, EIA_GEN_ICON, OSM_FUEL_MAP, EIA_FUEL_MAP,
+} from './fuel.js';
 import type { BucketDef } from '../types.js';
 
 describe('voltageColorExpr', () => {
@@ -132,5 +134,37 @@ describe('genIconSize', () => {
     const zooms = [result[3], result[5], result[7]];
     expect(zooms).toHaveLength(3);
     expect(zooms.every(z => typeof z === 'number')).toBe(true);
+  });
+});
+
+// The labels a ["match", input, label, out, ..., fallback] expression styles.
+function matchLabels(expr: unknown): string[] {
+  const m = expr as unknown[];
+  const labels: string[] = [];
+  for (let i = 2; i < m.length - 1; i += 2) labels.push(...[m[i] as string | string[]].flat());
+  return labels;
+}
+
+// Every value the map draws with its own icon or colour must be one the fuel
+// filter classes into a bucket — otherwise the filter files it under "Other".
+describe('generator styling and the fuel filter agree', () => {
+  const eiaMatch = (EIA_GEN_ICON as unknown[])[3];
+  const cases: [string, unknown, Record<string, string[]>][] = [
+    ['OSM_GEN_ICON', OSM_GEN_ICON, OSM_FUEL_MAP],
+    ['OSM_GEN_COLOR', OSM_GEN_COLOR, OSM_FUEL_MAP],
+    ['EIA_GEN_ICON', eiaMatch, EIA_FUEL_MAP],
+  ];
+  for (const [name, expr, valueMap] of cases) {
+    it(`${name} styles exactly the values the filter classes`, () => {
+      const styled = matchLabels(expr);
+      expect(new Set(styled).size, `${name} repeats a label`).toBe(styled.length);
+      expect([...styled].sort()).toEqual(Object.values(valueMap).flat().sort());
+    });
+  }
+
+  it('OSM diesel filters as Oil while keeping its own icon', () => {
+    expect(OSM_FUEL_MAP.oil).toContain('diesel');
+    const m = OSM_GEN_ICON as unknown[];
+    expect(m[m.indexOf('diesel') + 1]).toBe('gen-diesel');
   });
 });

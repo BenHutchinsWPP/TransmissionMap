@@ -6,7 +6,8 @@ import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import { bucketColorExpr, ogfColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
+import { ogfColorExpr } from '../../src/colors/facets.js';
+import { bucketColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {
   planTransmissionLines, planSubstationPoints, planPolygon,
   pmtilesUrl, initialVisibility,

@@ -94,6 +94,10 @@ export interface FuelEntry {
   icon: string;
   osmBucket: string;
   eiaBucket: string;
+  osmValues: string[];   // OSM `source` values classed as this fuel
+  eiaCodes: string[];    // EIA Form 860 `energy_source` codes classed as this fuel
+  // OSM values that draw with their own icon and colour while filtering as this fuel.
+  osmStyle?: Record<string, { icon: string; color: string }>;
 }
 
 export interface LayerDef {

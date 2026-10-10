@@ -10,20 +10,20 @@ import {
 } from './condition-compile.js';
 import { FIELD_SCHEMA } from './field-schema.js';
 import {
-  buildValueFilterExpr, compileBucketExpr, facetValueMap,
+  buildValueFilterExpr, compileBucketExpr,
   BUCKET_FILTER_DATASETS,
 } from '../../assets/filters.js';
 import { OSM_FUEL_MAP } from '../colors/fuel.js';
 import {
   NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS, PIPELINE_TYPE_BUCKETS,
   SUBSTANCE_BUCKETS, NERC_BUCKETS,
-  RETAIL_TYPE_BUCKETS, SECTOR_BUCKETS, SECTOR_MAP,
+  RETAIL_TYPE_BUCKETS, SECTOR_BUCKETS,
   OSM_FUEL_BUCKETS,
 } from '../colors/buckets.js';
-import { FACETS } from '../colors/facets.js';
+import { facet, facetValueMap } from '../colors/facets.js';
 
 // The value map the facet's legend applier filters with.
-const facetMap = (key: string) => facetValueMap(FACETS.find(f => f.key === key)!);
+const facetMap = (key: string) => facetValueMap(facet(key));
 
 describe('validateConditions', () => {
   it('accepts a condition drawn from the schema', () => {
@@ -120,7 +120,7 @@ const ROUTED: { field: string; buckets: { id: string }[]; valueMap: Record<strin
   { field: 'substance',   buckets: SUBSTANCE_BUCKETS,        valueMap: facetMap('substance'),     via: 'FACET_APPLIERS.substance' },
   { field: 'code',        buckets: NERC_BUCKETS,             valueMap: facetMap('nerc'),          via: 'FACET_APPLIERS.nerc' },
   { field: 'type',        buckets: RETAIL_TYPE_BUCKETS,      valueMap: facetMap('retail'),   via: 'FACET_APPLIERS.retail' },
-  { field: 'sector_name', buckets: SECTOR_BUCKETS,           valueMap: SECTOR_MAP,        via: 'applyGeneratorFilters (sector)' },
+  { field: 'sector_name', buckets: SECTOR_BUCKETS,           valueMap: facetMap('sector'), via: 'applyGeneratorFilters (sector)' },
   { field: 'source',      buckets: OSM_FUEL_BUCKETS,         valueMap: OSM_FUEL_MAP,      via: 'applyGeneratorFilters (OSM fuel)' },
 ];
 

@@ -8,8 +8,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { state } from './state.js';
 import * as filters from './filters.js';
-import { compileBucketExpr, facetValueMap, FACET_APPLIERS } from './filters.js';
-import { FACETS } from '../src/colors/facets.js';
+import { compileBucketExpr, FACET_APPLIERS } from './filters.js';
+import { FACETS, facetValueMap } from '../src/colors/facets.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { layerById } from '../src/registry/index.js';
 

@@ -12,8 +12,10 @@
 // `select:` list, so every entry here has a build-time guarantee the field
 // reaches the tiles/GeoJSON the frontend reads.
 //
-// Deps: src/colors/buckets.ts, for the four closed value-sets it already
-// exports (substance, NERC code, retail territory type, EIA sector) — kept
+// Deps: src/colors/facets.ts, for four closed value-sets flattened from the
+// legend facets' value maps (substance, NERC code, retail territory type, EIA
+// sector), and
+// src/colors/fuel.ts for the OSM source / EIA energy_source fuel values — kept
 // in sync with the legend filters and their map colors by construction
 // instead of a second, driftable copy.
 //
@@ -30,7 +32,11 @@
 // (MSHA) and NWS live-alert `_group` field aren't built via
 // tile_manifest.yaml at all.
 
-import { SUBSTANCE_MAP, NERC_MAP, RETAIL_TYPE_MAP, SECTOR_MAP } from '../colors/buckets.js';
+import { facet, facetValueMap } from '../colors/facets.js';
+import { OSM_FUEL_MAP, EIA_FUEL_MAP } from '../colors/fuel.js';
+
+// Every value a legend facet's buckets match: the field's closed domain.
+const facetValues = (key: string): string[] => Object.values(facetValueMap(facet(key))).flat();
 
 type FieldType = 'string' | 'number' | 'boolean';
 export type FieldOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'not_in' | 'contains' | 'has';
@@ -55,7 +61,7 @@ const KV_FIELD: FieldDef = {
 const OSM_SOURCE_FIELD: FieldDef = {
   type: 'string',
   ops: CATEGORY_OPS,
-  values: ['wind', 'solar', 'hydro', 'nuclear', 'coal', 'gas', 'oil', 'battery', 'geothermal', 'biomass', 'biogas', 'waste'],
+  values: Object.values(OSM_FUEL_MAP).flat(),
   description: 'OSM power-generation source tag.',
 };
 
@@ -70,7 +76,7 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     energy_source: {
       type: 'string',
       ops: CATEGORY_OPS,
-      values: ['WND', 'SUN', 'WAT', 'NUC', 'BIT', 'SUB', 'LIG', 'PC', 'NG', 'OG', 'DFO', 'RFO', 'KER', 'MWH', 'ES', 'GEO', 'WDS', 'WDL', 'MSW', 'BLQ'],
+      values: Object.values(EIA_FUEL_MAP).flat(),
       description: 'EIA Form 860 fuel-type code.',
     },
     gen_status: {
@@ -82,7 +88,7 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     sector_name: {
       type: 'string',
       ops: CATEGORY_OPS,
-      values: Object.values(SECTOR_MAP).flat(),
+      values: facetValues('sector'),
       description: 'EIA Form 860 ownership sector.',
     },
     nameplate_mw: OUTPUT_MW_FIELD,
@@ -132,7 +138,7 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     substance: {
       type: 'string',
       ops: CATEGORY_OPS,
-      values: Object.values(SUBSTANCE_MAP).flat(),
+      values: facetValues('substance'),
       description: 'OSM pipeline contents tag, grouped by generator-fuel type.',
     },
   },
@@ -141,7 +147,7 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     code: {
       type: 'string',
       ops: CATEGORY_OPS,
-      values: Object.values(NERC_MAP).flat(),
+      values: facetValues('nerc'),
       description: 'NERC reliability region abbreviation.',
     },
   },
@@ -149,7 +155,7 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     type: {
       type: 'string',
       ops: CATEGORY_OPS,
-      values: Object.values(RETAIL_TYPE_MAP).flat(),
+      values: facetValues('retail'),
       description: 'Retail electric service territory ownership type.',
     },
   },

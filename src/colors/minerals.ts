@@ -1,9 +1,10 @@
 // Mine commodity categories + status buckets for the MSHA Large Mines layer.
 // The extract script (scripts/extract_mines.py) pre-computes each mine's `cat`
 // (commodity category) and `status` (active|retired), so matching here is a
-// simple property equality — no runtime code-list parsing.
-// Used by: assets/filters.ts (applyMinesFilter), src/colors/facets.ts
-//          (legend chips), assets/layers/map-layers-mines.ts (colors).
+// simple property equality — bucket id IS the field value (no `values`; see
+// facets.ts facetValueMap).
+// Used by: src/colors/facets.ts (the mines / minesStatus facets, which
+//          assets/filters.ts applyMinesFilter reads), assets/layers/map-layers-mines.ts.
 import type { BucketDef } from '../types.js';
 import type { ExpressionSpecification } from 'maplibre-gl';
 
@@ -25,12 +26,6 @@ export const MINES_STATUS_BUCKETS: BucketDef[] = [
   { id: "active",  label: "Active", color: "#16a34a", urlCode: "1" },
   { id: "retired", label: "Retired / idled", color: "#d97706", urlCode: "2" },
 ];
-
-// Exact match on the `cat` / `status` fields — bucket id IS the field value.
-export const MINES_COMMODITY_MAP: Record<string, string[]> = Object.fromEntries(
-  MINES_COMMODITY_BUCKETS.map(b => [b.id, [b.id]]));
-export const MINES_STATUS_MAP: Record<string, string[]> = Object.fromEntries(
-  MINES_STATUS_BUCKETS.map(b => [b.id, [b.id]]));
 
 // Icon name per category — see MINE_ICON_DEFS in assets/icons.ts.
 export function minesIconExpr(): ExpressionSpecification {

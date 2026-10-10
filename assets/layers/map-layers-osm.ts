@@ -6,7 +6,7 @@ import type { ExpressionSpecification, FilterSpecification, LayerSpecification }
 import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { OSM_GEN_ICON, OSM_GEN_COLOR, genIconSize } from '../../src/colors/fuel.js';
-import { PIPELINE_LINE_COLOR, PIPELINE_TYPE_MAP, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
+import { PIPELINE_LINE_COLOR, PIPELINE_TYPE_BUCKETS, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
 import { HEAT_MW_STOPS, OSM_MW_FLOOR, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import {
   planTransmissionLines, planSubstationPoints, planPolygon,
@@ -181,8 +181,8 @@ export function planPipelinePoints(): LayerPlan {
   const noValve = ["!=", ["get", "pipeline"], "valve"] as unknown as FilterSpecification;
 
   const matchArgs: string[] = [];
-  for (const [bucketId, values] of Object.entries(PIPELINE_TYPE_MAP)) {
-    for (const v of values) matchArgs.push(v, `pipeline-${bucketId}`);
+  for (const b of PIPELINE_TYPE_BUCKETS) {
+    for (const v of b.values ?? []) matchArgs.push(v, `pipeline-${b.id}`);
   }
   const iconExpr = ["match", ["get", "pipeline"], ...matchArgs, "pipeline-other"];
 

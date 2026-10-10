@@ -18,7 +18,8 @@
 // FACET_APPLIERS maps each legend facet (src/colors/facets.ts FACETS) to its
 // applier: applyFacet() derived from the record for a facet that is one field
 // on its own map layers, a hand applier (voltage, generators, OGF, WestTEC,
-// mines, NWS) otherwise. ui/ui-legends.ts hands them to the legend rows; other
+// mines, NWS) otherwise. Every applier reads field, buckets and value map
+// from the facet record (facet(), facetValueMap()). ui/ui-legends.ts hands them to the legend rows; other
 // UI controls call the appliers directly (ui/ui-filters.ts); applyAllFilters()
 // (bottom of file) runs every one.
 // Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts), condition-compile.ts,
@@ -31,22 +32,10 @@ import type { FilterSpecification } from 'maplibre-gl';
 import type { BucketDef, BucketedField } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { FUEL_LEGEND, OSM_FUEL_MAP, EIA_FUEL_MAP } from '../src/colors/fuel.js';
-import { FACETS } from '../src/colors/facets.js';
+import { FACETS, facet, facetValueMap } from '../src/colors/facets.js';
 import {
-  bucketValueMap, KV_BUCKETS, OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS,
-  OGF_STATUS_BUCKETS, OGF_STATUS_MAP,
-  OGF_REGION_BUCKETS, OGF_REGION_MAP,
-  OGF_WORK_BUCKETS, OGF_WORK_MAP,
-  SECTOR_BUCKETS, SECTOR_MAP,
-  OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, LINE_PLACEMENT_BUCKETS,
-  NWS_GROUP_BUCKETS, NWS_GROUP_MAP,
-  WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP,
-  WESTTEC_DATASET_BUCKETS, WESTTEC_DATASET_MAP,
+  OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS, OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR,
 } from '../src/colors/buckets.js';
-import {
-  MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP,
-  MINES_STATUS_BUCKETS, MINES_STATUS_MAP,
-} from '../src/colors/minerals.js';
 import { setZoneGroupFilter } from './nws-zone-join.js';
 import { toMapLibreFilter, ConditionError, type Condition } from '../src/registry/condition-compile.js';
 import { recordDiagEvent } from './diag-log.js';
@@ -122,44 +111,24 @@ function applyBucketFilterToLayers(layerIds: string[], field: string, activeSet:
   setBucketFilter(layerIds, bucketExpr);
 }
 
-// Status + region + type of work all target the same two OGF map
-// layers, so they must be combined in one setFilter call — applying them via
-// separate applyBucketFilterToLayers calls would clobber each other.
-export function applyOGFFilters() {
+// Facets that target the same map layers (the first facet's mapLayerIds) must
+// be combined into one setFilter call — separate applyBucketFilterToLayers
+// calls would clobber each other. Parts combine in the order the keys list.
+function applyFacetGroup(keys: string[]) {
   if (!state.mapReady) return;
-  const expr = combineFilters(
-    buildValueFilterExpr("Status",    state.legendFilters.ogfStatus,   OGF_STATUS_BUCKETS,   OGF_STATUS_MAP),
-    buildValueFilterExpr("Region",    state.legendFilters.ogfRegion,   OGF_REGION_BUCKETS,   OGF_REGION_MAP),
-    buildValueFilterExpr("Work",      state.legendFilters.ogfWork,     OGF_WORK_BUCKETS,     OGF_WORK_MAP));
-  setBucketFilter(["ogf-planned-lines-casing", "ogf-planned-lines"], expr);
+  const facets = keys.map(facet);
+  const expr = combineFilters(...facets.map(f =>
+    buildValueFilterExpr(f.field!, state.legendFilters[f.key], f.buckets, facetValueMap(f))));
+  setBucketFilter(facets[0].mapLayerIds!, expr);
 }
 
-// Scenario + dataset both target the same two WestTEC map layers, so they must
-// be combined into one setFilter call — applying them via separate
-// applyBucketFilterToLayers calls would clobber each other (same footgun as
-// applyOGFFilters above).
-export function applyWestTECFilters() {
-  if (!state.mapReady) return;
-  const expr = combineFilters(
-    buildValueFilterExpr("scenario", state.legendFilters.westtecScenario, WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP),
-    buildValueFilterExpr("dataset",  state.legendFilters.westtecDataset,  WESTTEC_DATASET_BUCKETS,  WESTTEC_DATASET_MAP));
-  setBucketFilter(["westtec-lines-casing", "westtec-lines"], expr);
-}
-
-// Commodity + status both target the same two mine layers, so combine into one
-// setFilter call (like applyOGFFilters).
-export function applyMinesFilter() {
-  if (!state.mapReady) return;
-  const expr = combineFilters(
-    buildValueFilterExpr("cat",    state.legendFilters.mines,       MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP),
-    buildValueFilterExpr("status", state.legendFilters.minesStatus, MINES_STATUS_BUCKETS,    MINES_STATUS_MAP));
-  setBucketFilter(["mines-icons"], expr);
-}
+export const applyOGFFilters     = () => applyFacetGroup(["ogfStatus", "ogfRegion", "ogfWork"]);
+export const applyWestTECFilters = () => applyFacetGroup(["westtecScenario", "westtecDataset"]);
+export const applyMinesFilter    = () => applyFacetGroup(["mines", "minesStatus"]);
 
 export function applyNwsGroupFilter() {
-  applyBucketFilterToLayers(
-    ["nws-alerts-fill", "nws-alerts-line"],
-    "_group", state.legendFilters.nwsGroup, NWS_GROUP_BUCKETS, NWS_GROUP_MAP);
+  const nws = facet("nwsGroup");
+  applyFacet(nws);
 
   // Joined zone/county layers (nws-zone-join.ts) paint via feature-state, which
   // setFilter/BucketFilterToLayers above can't see — drive their opacity
@@ -167,7 +136,7 @@ export function applyNwsGroupFilter() {
   // ("all groups on", uses the default null-guard paint); otherwise the exact
   // active bucket ids (possibly empty → nothing visible).
   const active = state.legendFilters.nwsGroup;
-  setZoneGroupFilter(active.size === NWS_GROUP_BUCKETS.length ? null : [...active]);
+  setZoneGroupFilter(active.size === nws.buckets.length ? null : [...active]);
 }
 
 // osm/hifld transmission lines carry an overhead/underground placement flag;
@@ -181,7 +150,7 @@ function buildUndergroundExpr(entryId: string): FilterSpecification | null {
 
   const active = state.legendFilters.underground;
   if (!active) return null;
-  if (active.size === LINE_PLACEMENT_BUCKETS.length) return null; // both on → no filter
+  if (active.size === facet("underground").buckets.length) return null; // both on → no filter
   if (active.size === 0) return anyOfConds([]); // none active → match nothing
   if (active.has("underground")) return undergroundExpr as unknown as FilterSpecification;
   return ["!", undergroundExpr] as unknown as FilterSpecification;
@@ -191,7 +160,7 @@ export function applyVoltageFilter() {
   if (!state.mapReady) return;
   for (const entry of LAYERS) {
     if (entry.filterType !== "kv") continue;
-    const bucketExpr = buildKvFilterExpr(entry.filterField!, state.legendFilters.kv, KV_BUCKETS);
+    const bucketExpr = buildKvFilterExpr(entry.filterField!, state.legendFilters.kv, facet("kv").buckets);
     const ugExpr = buildUndergroundExpr(entry.id);
     setBucketFilter(entry.mapLayerIds, combineFilters(bucketExpr, ugExpr));
   }
@@ -245,6 +214,7 @@ function buildGenFuelExpr(entry: (typeof LAYERS)[number]) {
 
 export function applyGeneratorFilters() {
   if (!state.mapReady || !state.map) return;
+  const sector = facet("sector");
   for (const entry of LAYERS) {
     if (entry.group !== "generators") continue;
 
@@ -252,7 +222,7 @@ export function applyGeneratorFilters() {
     const yearExpr = entry.yearFilterLayer ? buildYearFilterExpr() : null;
     // sector_name only exists on EIA data; OSM generators are untouched
     const sectorExpr = entry.filterType === "fuel_eia"
-      ? compileBucketExpr("sector_name", state.legendFilters.sector, SECTOR_BUCKETS, SECTOR_MAP)
+      ? compileBucketExpr(sector.field!, state.legendFilters.sector, sector.buckets, facetValueMap(sector))
       : null;
 
     let statusExpr: FilterSpecification | null = null;
@@ -483,17 +453,10 @@ function applyFacet(f: BucketedField) {
   applyBucketFilterToLayers(mapLayerIds, f.field!, state.legendFilters[f.key], f.buckets, facetValueMap(f));
 }
 
-/** A facet's bucket id → feature values: the buckets' `values`, or, when no
- *  bucket declares any, each bucket id as its own literal value. */
-export function facetValueMap(f: BucketedField): Record<string, string[]> {
-  return f.buckets.some(b => b.values)
-    ? bucketValueMap(f.buckets)
-    : Object.fromEntries(f.buckets.map(b => [b.id, [b.id]]));
-}
-
 // Facets whose filter is more than one field on its own layers: shared map
-// layers (OGF, WestTEC, mines), registry-wide targets (kv, underground, fuel,
-// sector) or a feature-state half (nwsGroup).
+// layers (OGF, WestTEC, mines — applyFacetGroup), registry-wide targets (kv,
+// underground, fuel, sector) or a feature-state half (nwsGroup). Each reads
+// its field and buckets from the facet record.
 const HAND_APPLIERS: Record<string, () => void> = {
   kv: applyVoltageFilter, underground: applyVoltageFilter,
   fuel: applyGeneratorFilters, sector: applyGeneratorFilters,

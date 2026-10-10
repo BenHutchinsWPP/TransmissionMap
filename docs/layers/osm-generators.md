@@ -39,7 +39,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 |---|---:|---|---|
 | `osm_id` | 100% | `9982693538` | OSM element ID |
 | `name` | ~98% | "Bonanza Power Plant", "W. A. Parish Unit 1", "Tower 144" | Often repeats site name across all turbines/panels |
-| `source` | 99% | wind (87,462), solar (58,715), gas (4,514), diesel (1,791), oil (1,143), hydro (978), coal (464), battery (464), biogas (348), nuclear (135) | Fuel type |
+| `source` | 99% | wind (87,462), solar (58,715), gas (4,514), diesel (1,791), oil (1,143), hydro (978), coal (464), battery (464), biogas (348), nuclear (135) | Fuel type. The fuel filter classes `diesel` as Oil (it keeps its own icon); see `FUEL_LEGEND` in `src/colors/fuel.ts` |
 | `gen_method` | 98% | wind_turbine (87,122), photovoltaic (58,411), combustion (7,981), water-storage (366), run-of-the-river (219), fission (120), thermal (93) | |
 | `gen_type` | ~88% | solar_photovoltaic_panel, V17, open_cycle | Vendor model where mapped |
 | `output_mw` | ~49% | 0.8, 2.5, 556.2 | Per-unit nameplate. ~Half blank — use EIA join when needed |

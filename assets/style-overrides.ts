@@ -22,7 +22,7 @@
 // (keys, ranges, colours, barred keys) live in src/registry/view-validate.ts;
 // effectiveOverride() is the one validated read of state for other writers.
 // Deps: state.ts, registry (LAYERS, layerById), view-validate.ts,
-// src/colors/buckets.ts (ogfColorExpr, westtecColorExpr and their mode lists
+// src/colors/facets.ts (ogfColorExpr, westtecColorExpr and their mode lists
 // OGF_COLOR_MODES, WESTTEC_COLOR_MODES), state-bus.js. The
 // weather wash repaints on the 'style:weather' event, so this module never
 // imports weather-live.ts (that chain reaches filters.ts). It imports no UI
@@ -36,7 +36,7 @@ import type { StyleOverride } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import {
   ogfColorExpr, westtecColorExpr, OGF_COLOR_MODES, WESTTEC_COLOR_MODES, type OgfColorMode, type WesttecColorMode,
-} from '../src/colors/buckets.js';
+} from '../src/colors/facets.js';
 import type { ExpressionSpecification } from 'maplibre-gl';
 import { emit } from './state-bus.js';
 import { STYLE_KEYS, barredReason, keyError, validateStyleOverride, type StyleKey } from '../src/registry/view-validate.js';

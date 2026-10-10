@@ -19,7 +19,7 @@
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
-import type { RampDef, BucketDef, BucketedField } from '../../src/types.js';
+import type { RampDef, BucketedField } from '../../src/types.js';
 import { FACETS } from '../../src/colors/facets.js';
 import { FACET_APPLIERS } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
@@ -29,29 +29,19 @@ import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
 
-export interface LegendFilter {
-  key: string;
-  groupCode: string;
-  buckets: BucketDef[];
-  syncBuckets?: BucketDef[];
+export interface LegendFilter
+  extends Omit<BucketedField, 'masterId' | 'legendId' | 'field' | 'mapLayerIds' | 'layerRef'> {
   masterId: string;
   legendId: string;
   itemsId: string;
-  title: string;
-  titleKey: string;
-  swatch: BucketedField["swatch"];
-  defaultActive?: string[];
   apply: () => void;
 }
 
 export const LEGEND_FILTERS: LegendFilter[] = FACETS.map(f => {
   const legendId = f.legendId ?? `${f.key}Legend`;
   return {
-    key: f.key, groupCode: f.groupCode, buckets: f.buckets,
-    ...(f.syncBuckets && { syncBuckets: f.syncBuckets }),
+    ...f,
     masterId: f.masterId ?? `${f.key}AllCb`, legendId, itemsId: `${legendId}Items`,
-    title: f.title, titleKey: f.titleKey, swatch: f.swatch,
-    ...(f.defaultActive && { defaultActive: f.defaultActive }),
     apply: FACET_APPLIERS[f.key],
   };
 });

@@ -1,13 +1,13 @@
 // ─── WestTEC 10-Year Horizon portfolio lines ─────────────────────────────────
 // planWestTEC() returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 // Imported by: add-all-layers.ts
-// Deps: state.js (state.westtecColorBy), constants.js (EMPTY_FC), src/colors/buckets.js (westtecColorExpr),
+// Deps: state.js (state.westtecColorBy), constants.js (EMPTY_FC), src/colors/facets.js (westtecColorExpr),
 //       layer-init.js (initialVisibility), layer-plan.js (LayerPlan type)
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC } from '../constants.js';
-import { westtecColorExpr } from '../../src/colors/buckets.js';
+import { westtecColorExpr } from '../../src/colors/facets.js';
 import { initialVisibility } from './layer-init.js';
 import type { LayerPlan } from './layer-plan.js';
 

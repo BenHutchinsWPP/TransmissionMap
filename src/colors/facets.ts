@@ -1,13 +1,20 @@
 // Legend facets: one BucketedField record per legend filter, in legend order.
-// Each record carries the facet's URL group code, buckets (with their URL codes
-// and `values`), default active set, title key, swatch and target map layers.
-// assets/filters.ts derives each facet's applier (FACET_APPLIERS) and
-// assets/ui/ui-legends.ts pairs record and applier into LEGEND_FILTERS.
+// Each record carries the facet's URL group code, field, buckets (with their
+// URL codes and `values`), default active set, title key, swatch and target map
+// layers. facet(key) looks one up; facetValueMap() is its bucket id → feature
+// values map, the one every filter and value domain reads.
+// assets/filters.ts derives each facet's applier (FACET_APPLIERS),
+// assets/ui/ui-legends.ts pairs record and applier into LEGEND_FILTERS and
+// src/registry/field-schema.ts flattens value domains from facetValueMap().
+// Also owns the OGF / WestTEC colour-by: each mode names the facet whose field
+// and bucket colours paint the line (ogfColorExpr, westtecColorExpr).
 // Pure data: imports src/colors/* and types only, never assets/ or
 // src/registry/.
+import type { ExpressionSpecification } from 'maplibre-gl';
 import type { BucketedField } from '../types.js';
 import { FUEL_LEGEND } from './fuel.js';
 import {
+  bucketColorExpr, bucketValueMap,
   KV_BUCKETS, VOLTAGE_LEGEND, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
   TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
   NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS, DCM_CLASSES,
@@ -89,3 +96,41 @@ export const FACETS: BucketedField[] = [
     mapLayerIds: WESTTEC_LINES,
     title: "Project Type", titleKey: "legend.projectType", swatch: "color" },
 ];
+
+const BY_KEY: Record<string, BucketedField> = Object.fromEntries(FACETS.map(f => [f.key, f]));
+
+/** The facet record for a state.legendFilters key; throws on an unknown key. */
+export function facet(key: string): BucketedField {
+  const f = BY_KEY[key];
+  if (!f) throw new Error(`unknown facet "${key}"`);
+  return f;
+}
+
+/** A facet's bucket id → feature values: the buckets' `values`, or, when no
+ *  bucket declares any, each bucket id as its own literal value. */
+export function facetValueMap(f: BucketedField): Record<string, string[]> {
+  return f.buckets.some(b => b.values)
+    ? bucketValueMap(f.buckets)
+    : Object.fromEntries(f.buckets.map(b => [b.id, [b.id]]));
+}
+
+// ─── Colour-by: mode → the facet that paints the line ─────────────────────────
+// ogf-planned-lines / westtec-lines take line-color from state.ogfColorBy /
+// state.westtecColorBy (assets/style-overrides.ts validates the mode). The
+// fallback is the facet's "other" bucket colour; buckets without one (WestTEC —
+// every row has a real value) fall back to neutral gray, never hit in practice.
+export type OgfColorMode = "region" | "status";
+export type WesttecColorMode = "scenario" | "dataset";
+export const OGF_COLOR_BY: Record<OgfColorMode, string> = { region: "ogfRegion", status: "ogfStatus" };
+export const WESTTEC_COLOR_BY: Record<WesttecColorMode, string> = {
+  scenario: "westtecScenario", dataset: "westtecDataset",
+};
+export const OGF_COLOR_MODES = Object.keys(OGF_COLOR_BY) as OgfColorMode[];
+export const WESTTEC_COLOR_MODES = Object.keys(WESTTEC_COLOR_BY) as WesttecColorMode[];
+
+function facetColorExpr(key: string): ExpressionSpecification {
+  const { field, buckets } = facet(key);
+  return bucketColorExpr(field!, buckets, buckets.find(b => b.id === "other")?.color ?? "#94a3b8");
+}
+export const ogfColorExpr = (mode: OgfColorMode) => facetColorExpr(OGF_COLOR_BY[mode]);
+export const westtecColorExpr = (mode: WesttecColorMode) => facetColorExpr(WESTTEC_COLOR_BY[mode]);
