@@ -243,7 +243,7 @@ const OFM_LIGHT_TEXT_REMAP: Record<string, string> = {
 // Darken them (light style only), reusing the same slate-gray palette as the
 // label remap above so the basemap reads as one coherent set of grays.
 // boundary_3 (state/province) also ships with minzoom:8 — invisible at this
-// app's DEFAULT_ZOOM (4, a national view), so drop the floor to 0 as well.
+// app's DEFAULT_ZOOM (map.ts: 4, a national view), so drop the floor to 0 as well.
 const OFM_LIGHT_BOUNDARY_REMAP: Record<string, { color: string; minzoom?: number }> = {
   boundary_2: { color: "#8a929c" },              // country
   boundary_3: { color: "#9aa0a6", minzoom: 0 },  // state/province

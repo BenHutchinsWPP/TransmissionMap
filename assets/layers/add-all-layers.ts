@@ -3,7 +3,7 @@
 // applyLayerPlan() call (layer-plan.ts); then runs the few non-layer side
 // effects (hatch images first, then the radar poll (../nexrad-radar.ts) and
 // the data-centre and WECC tap wiring) and starts the data fetches for layers already on.
-// Imports from layer-init.ts (helpers), layer-plan.ts (applyLayerPlan),
+// Imports from layer-plan.ts (applyLayerPlan),
 // layer-data.ts (ensureLayerData), map-layers-*.ts (builders) and
 // ../nexrad-radar.ts (startNexradRadar).
 // Isolated here so layer-init.ts has no back-imports from map-layers-*.ts.
@@ -11,7 +11,7 @@
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
-import { planPadus, planCritHab } from './layer-init.js';
+import { planPadus, planCritHab } from './map-layers-land.js';
 import { applyLayerPlan } from './layer-plan.js';
 import { ensureLayerData } from './layer-data.js';
 import { RASTER_PROBES, ensureRasterLut } from '../raster-probes.js';

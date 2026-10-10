@@ -118,8 +118,8 @@ turns public datasets into PMTiles consumed by the frontend.
       `units-store.test.ts`)
     - `constants.ts` — shared constants, imports nothing: `DATA` paths, `releaseUrl`/`weatherLiveUrl`,
       the external hosts `diagnostics.ts` also probes,
-      `EMPTY_FC`, default viewport, `COUNTY_SRC*`; a single-owner constant lives in its owner
-      (`MW_SLIDER_MAX` → `filters.ts`, `BLANK_STYLE`/fog/atmosphere → `basemap.ts`, terrain tuning → `terrain.ts`)
+      `EMPTY_FC`, `COUNTY_SRC*`; a single-owner constant lives in its owner
+      (`MW_SLIDER_MAX` → `filters.ts`, default viewport → `map.ts`, `BLANK_STYLE`/fog/atmosphere → `basemap.ts`, terrain tuning → `terrain.ts`)
     - `live-poll.ts` — `pollWhileVisible`: **the one refresh loop every live feed runs on**
       (interval while the layer is on, plus an instant refetch on return to the tab /
       bfcache restore, at most once per 60 s); zero deps
@@ -187,7 +187,7 @@ turns public datasets into PMTiles consumed by the frontend.
       declaring the same data share one source; `LAYER_SOURCE_ALIAS` for the rest), `SOURCE_DATA_URLS`
       (source-only GeoJSON), `pmtilesUrl` (non-registry join sources only)
     - `layer-init.ts` — shared plan helpers: `planPolygon`,
-      `planRaster`, `planTransmissionLines`, `planSubstationPoints`, `planPadus`, `planCritHab`,
+      `planRaster`, `planTransmissionLines`, `planSubstationPoints`,
       `countyBoundariesSource` (+ `ensureCountyBoundaries` for layers added after boot),
       `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
     - `layer-data.ts` — the lazy GeoJSON loader: `ensureLayerData` (with the `fromZoom` gate and
@@ -197,10 +197,11 @@ turns public datasets into PMTiles consumed by the frontend.
       layer's own inline filter (registered by `applyLayerPlan`), which `filters.ts`'s `effectiveFilter()` builds on
     - `add-all-layers.ts` — `addAllLayers()`: collects every builder's plan in z-order and applies
       them in one `applyLayerPlan` call, then runs the builders' non-layer side effects
-    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,westtec,admin}.ts` — per-source
+    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,westtec,admin,land}.ts` — per-source
       `plan*()` builders, each returning a `LayerPlan`
       (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/FEMA NRI/NEXRAD radar — all the live + hazard layers;
-      `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1)
+      `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1;
+      `land` = PAD-US/Critical Habitat)
   - **`assets/user-data/`** — user-imported/drawn layers
     - `user-data.ts` — core (add/remove/render; `commitUserData` = save + render); `user-data-draw.ts` draw mode
     - `user-data-store.ts` — `createUserDataStore` over a `getItem`/`setItem` adapter: the `tm-user-data`
@@ -218,7 +219,7 @@ turns public datasets into PMTiles consumed by the frontend.
   - `fuel.ts` — `FUEL_LEGEND`, the one fuel table (legend row + OSM `source` values +
     EIA codes + per-value icon/colour overrides); the gen icon/colour expressions and
     `OSM_FUEL_MAP`/`EIA_FUEL_MAP` filter maps are derived from it
-  - `buckets.ts` — `bucketColorExpr`, `bucketValueMap`, line widths, KV/fuel/region
+  - `buckets.ts` — `bucketColorExpr`, `bucketValueMap`, KV/fuel/region
     bucket arrays, each bucket with its `values` (feature values it matches)
   - `facets.ts` — `FACETS`: one `BucketedField` record per legend filter (group code,
     buckets, field, map layers, defaults, title, swatch); `facet(key)` looks one up and

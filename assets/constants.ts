@@ -2,9 +2,9 @@
 // Holds: where data lives (DATA, releaseUrl, weatherLiveUrl, RELEASES_ORIGIN),
 // the external hosts more than one module
 // reads (basemap/terrain/radar/glyph URLs that diagnostics.ts also probes),
-// EMPTY_FC, the default viewport and the county join keys (COUNTY_SRC*).
+// EMPTY_FC and the county join keys (COUNTY_SRC*).
 // A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
-// filters.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
+// filters.ts, the default viewport in map.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
 // in basemap.ts, terrain exaggeration and credit in terrain.ts.
 // Which registry layer reads which DATA file, and its map credit, is the layer's
 // own LayerDef.data (resolved by layers/layer-source.ts).
@@ -211,11 +211,6 @@ export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{rang
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layers/*.ts)
 // and the search-highlight sources (highlights.ts).
 export const EMPTY_FC = { type: "FeatureCollection" as const, features: [] as GeoJSON.Feature[] };
-
-// ─── Default map viewport ─────────────────────────────────────────────────────
-// Contiguous US overview
-export const DEFAULT_CENTER: [number, number] = [-95.7, 37.1];
-export const DEFAULT_ZOOM   = 4;
 
 // US county boundaries source, shared by the feature-state joins (ODIN, NRI, NWS).
 // Kept here, in a module that imports nothing, so every county-joined module reads

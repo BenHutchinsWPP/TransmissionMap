@@ -4,14 +4,13 @@
 // Sources come from the registry layer's `data` through layer-source.ts, and
 // applyLayerPlan() stamps each style layer's starting visibility, so the
 // helpers here only describe style layers.
-// Imported by: add-all-layers.ts (planPadus, planCritHab),
-//              nws-zone-join.ts (ensureCountyBoundaries),
+// Imported by: nws-zone-join.ts (ensureCountyBoundaries),
 //              map-layers-*.ts (planTransmissionLines, planPolygon, planRaster,
 //              planSubstationPoints, countyBoundariesSource,
 //              genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
 // Deps: state.ts, constants.ts (COUNTY_SRC*), layer-source.ts (layerSource,
 //       pmtilesUrl), layer-plan.ts (applyLayerPlan, LayerPlan),
-//       src/colors/{voltage,buckets}.ts, src/registry/transmission.ts (OSM_TL_TIERS),
+//       src/colors/voltage.ts, src/registry/transmission.ts (OSM_TL_TIERS),
 //       src/types.ts (DataKey).
 // The lazy GeoJSON loader (ensureLayerData, fetchGeojson) lives in layer-data.ts.
 
@@ -21,11 +20,6 @@ import { COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import { layerSource, pmtilesUrl } from './layer-source.js';
 import type { DataKey } from '../../src/types.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import {
-  subRadius, bucketColorExpr, LINE_WIDTH, DC_STRIPE_COLOR, DC_STRIPE_WIDTH, DC_STRIPE_DASH,
-  DC_LABEL_MINZOOM, DC_LABEL_COLOR, DC_LABEL_HALO,
-  PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS,
-} from '../../src/colors/buckets.js';
 import { applyLayerPlan, type LayerPlan, type PlanStep } from './layer-plan.js';
 import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
 
@@ -126,6 +120,33 @@ export function planPolygon({ sourceId, sourceLayer = undefined as (string | und
 }
 
 // ─── Transmission lines helper ────────────────────────────────────────────────
+const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"],
+  4, 1.0,
+  7, 1.5,
+  10, 2.2,
+  13, 3.5
+];
+
+// HVDC: colour is spoken for (kV) and dashes are spoken for (overhead/underground),
+// so DC circuits get two marks that use neither:
+//   1. white dashes over the base stroke — the far-out cue, visible from z0
+//   2. a repeating "DC" label along the route from z6 — the unambiguous cue
+// The stripe carries its own width ramp rather than a fraction of LINE_WIDTH:
+// at z3-5 the base line is ~1px, so a 0.4x stripe rounded to a sub-pixel ghost
+// and DC was indistinguishable when zoomed out.  This floors it at 0.9px.
+const DC_STRIPE_COLOR = "#f8fafc";
+const DC_STRIPE_WIDTH = ["interpolate", ["linear"], ["zoom"],
+  3, 0.9,
+  7, 1.1,
+  10, 1.5,
+  13, 2.0
+] as unknown as ExpressionSpecification;
+// Dash lengths are multiples of line-width, so this stays ~even on/off at any zoom.
+const DC_STRIPE_DASH = [2, 1.8];
+const DC_LABEL_MINZOOM = 6;
+const DC_LABEL_COLOR = "#0f172a";
+const DC_LABEL_HALO = "#f8fafc";
+
 // `sources` is a list so a layer can span several archives; `key` names an
 // archive's DATA file when it is not the registry layer's own `data.key`. Every style layer is
 // added across ALL sources before the next one starts, so paint order stays
@@ -271,6 +292,25 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
 }
 
 // ─── Substation points helper ─────────────────────────────────────────────────
+// Circle radius by zoom, stepped by kV class. Exported for layer-init.test.ts.
+export function subRadius(kvField: string): ExpressionSpecification {
+  const kv = ["to-number", ["get", kvField], -1];
+  function kvBucket(lo: number, mid: number, hi: number, vhi: number) {
+    return ["case",
+      [">=", kv, 400], vhi,
+      [">=", kv, 200], hi,
+      [">=", kv, 100], mid,
+      lo
+    ];
+  }
+  return ["interpolate", ["linear"], ["zoom"],
+    2,  kvBucket(1, 1.5, 2, 2.5),
+    5,  kvBucket(1.5, 2.5, 3.5, 4.5),
+    10, kvBucket(2.5, 4.5, 6.5, 8.5),
+    15, kvBucket(3.5, 6.5, 9.5, 12.5),
+  ] as unknown as ExpressionSpecification;
+}
+
 export function planSubstationPoints({ sourceId, kvField, layerIds, sourceLayer }: {
   sourceId: string; kvField: string; layerIds: { hv: string; lv: string; label: string };
   sourceLayer?: string;
@@ -349,25 +389,3 @@ export function planSubstationPoints({ sourceId, kvField, layerIds, sourceLayer 
     } as LayerSpecification },
   ];
 }
-
-// ─── PAD-US and CritHab ───────────────────────────────────────────────────────
-export function planPadus(): LayerPlan {
-  return planPolygon({
-    sourceId: "padus",
-    sourceLayer: "padus", prefix: "padus",
-    color: bucketColorExpr("desig", PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT),
-    fillMinzoom: 3, fillOpacity: 0.28,
-    outlineMinzoom: 6, outlineWidth: 0.6, outlineOpacity: 0.5,
-  });
-}
-
-export function planCritHab(): LayerPlan {
-  return planPolygon({
-    sourceId: "crithab",
-    sourceLayer: "crithab", prefix: "crithab",
-    color: bucketColorExpr("listing_st", CRITHAB_BUCKETS, "#dc2626"),
-    fillMinzoom: 3, fillOpacity: 0.30,
-    outlineMinzoom: 5, outlineWidth: 0.7, outlineOpacity: 0.6,
-  });
-}
-

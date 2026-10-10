@@ -27,63 +27,20 @@ export function bucketValueMap(buckets: BucketDef[]): Record<string, string[]> {
   return Object.fromEntries(buckets.flatMap(b => b.values ? [[b.id, b.values]] : []));
 }
 
-// ─── Line / circle geometry helpers ──────────────────────────────────────────
-export const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"],
-  4, 1.0,
-  7, 1.5,
-  10, 2.2,
-  13, 3.5
-];
-
 // ─── Underground transmission line detection ────────────────────────────────
 export const OSM_UNDERGROUND_EXPR = ["==", ["coalesce", ["get", "is_undergrnd"], 0], 1] as ExpressionSpecification;
 export const HIFLD_UNDERGROUND_EXPR = ["!=", ["index-of", "UNDERGROUND", ["coalesce", ["get", "TYPE"], ""]], -1] as ExpressionSpecification;
 
 // ─── HVDC detection ──────────────────────────────────────────────────────────
-// Colour is spoken for (kV) and dashes are spoken for (overhead/underground),
-// so DC circuits get two marks that use neither:
-//   1. white dashes over the base stroke — the far-out cue, visible from z0
-//   2. a repeating "DC" label along the route from z6 — the unambiguous cue
-// The stripe carries its own width ramp rather than a fraction of LINE_WIDTH:
-// at z3-5 the base line is ~1px, so a 0.4x stripe rounded to a sub-pixel ghost
-// and DC was indistinguishable when zoomed out.  This floors it at 0.9px.
+// Which features are DC circuits; the stripe and label that mark them are
+// styled in assets/layers/layer-init.ts (planTransmissionLines).
 export const OSM_DC_EXPR = ["==", ["coalesce", ["get", "is_dc"], 0], 1] as ExpressionSpecification;
 export const HIFLD_DC_EXPR = ["==", ["index-of", "DC", ["coalesce", ["get", "TYPE"], ""]], 0] as ExpressionSpecification;
-export const DC_STRIPE_COLOR = "#f8fafc";
-export const DC_STRIPE_WIDTH = ["interpolate", ["linear"], ["zoom"],
-  3, 0.9,
-  7, 1.1,
-  10, 1.5,
-  13, 2.0
-] as unknown as ExpressionSpecification;
-// Dash lengths are multiples of line-width, so this stays ~even on/off at any zoom.
-export const DC_STRIPE_DASH = [2, 1.8];
-export const DC_LABEL_MINZOOM = 6;
-export const DC_LABEL_COLOR = "#0f172a";
-export const DC_LABEL_HALO = "#f8fafc";
 
 export const LINE_PLACEMENT_BUCKETS: BucketDef[] = [
   { id: "overhead",    label: "Overhead",    color: "#a78bfa", urlCode: "o" },
   { id: "underground", label: "Underground", color: "#a78bfa", urlCode: "u" },
 ];
-
-export function subRadius(kvField: string): ExpressionSpecification {
-  const kv = ["to-number", ["get", kvField], -1];
-  function kvBucket(lo: number, mid: number, hi: number, vhi: number) {
-    return ["case",
-      [">=", kv, 400], vhi,
-      [">=", kv, 200], hi,
-      [">=", kv, 100], mid,
-      lo
-    ];
-  }
-  return ["interpolate", ["linear"], ["zoom"],
-    2,  kvBucket(1, 1.5, 2, 2.5),
-    5,  kvBucket(1.5, 2.5, 3.5, 4.5),
-    10, kvBucket(2.5, 4.5, 6.5, 8.5),
-    15, kvBucket(3.5, 6.5, 9.5, 12.5),
-  ] as unknown as ExpressionSpecification;
-}
 
 // ─── Voltage filter buckets ───────────────────────────────────────────────────
 export const KV_BUCKETS: BucketDef[] = [

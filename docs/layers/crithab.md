@@ -13,7 +13,7 @@ Threatened and endangered species critical habitat designations under the US End
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | U.S. Fish & Wildlife Service |
 | **Served** | Pre-baked `data/layers/crithab.pmtiles`, hosted alongside the map |
-| **Built by** | `extract_crithab.py` → `build_tiles.py` (`planCritHab()` in `layer-init.ts`) |
+| **Built by** | `extract_crithab.py` → `build_tiles.py` (`planCritHab()` in `assets/layers/map-layers-land.ts`) |
 
 ## Download pack
 

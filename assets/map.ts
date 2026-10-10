@@ -16,7 +16,6 @@ import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as pmtiles from 'pmtiles';
 import { state } from './state.js';
-import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants.js';
 import { loadIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
@@ -32,6 +31,10 @@ import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
 import { BLANK_STYLE, initBasemaps, switchBasemap, switchProjection } from './basemap.js';
+
+// Default viewport, used when the hash names no camera: a contiguous-US overview.
+const DEFAULT_CENTER: [number, number] = [-95.7, 37.1];
+const DEFAULT_ZOOM   = 4;
 
 maplibregl.setWorkerUrl(workerUrl);
 

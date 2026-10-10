@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { voltageColorExpr } from './voltage.js';
 import {
-  bucketColorExpr, subRadius,
+  bucketColorExpr,
   NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, NWS_GROUP_BUCKETS,
 } from './buckets.js';
 import {
@@ -106,19 +106,6 @@ describe('bucketColorExpr layer palettes', () => {
       "tropical",   "#14b8a6",
       /* other */   "#9ca3af",
     ]);
-  });
-});
-
-describe('subRadius', () => {
-  it('returns an interpolate expression', () => {
-    const result = subRadius('nominal_kv') as unknown[];
-    expect(result[0]).toBe('interpolate');
-  });
-
-  it('has numeric zoom stops', () => {
-    const result = subRadius('nominal_kv') as unknown[];
-    // structure: ["interpolate", ["linear"], ["zoom"], stop, value, ...]
-    expect(typeof result[3]).toBe('number');
   });
 });
 

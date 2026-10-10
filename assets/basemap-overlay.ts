@@ -99,7 +99,7 @@ export function aerialOverlayLayer(layer: OfmLayer): OfmLayer | null {
     }
   } else if (sourceLayer === 'boundary') {
     spec.paint = { ...layer.paint, 'line-color': 'rgba(255,255,255,0.75)' };
-    // Ships at minzoom 8, above this app's DEFAULT_ZOOM of 4 — state lines
+    // Ships at minzoom 8, above this app's DEFAULT_ZOOM (map.ts) of 4 — state lines
     // would be missing on the national view.
     if (layer.id === 'boundary_3') spec.minzoom = 0;
   }
