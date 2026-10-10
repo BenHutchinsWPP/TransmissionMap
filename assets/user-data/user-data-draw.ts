@@ -9,7 +9,7 @@ import type { IControl, GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
 import { showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { renderMyDataTab, clearUserHighlight, saveUserData, restoreDrawnFeatures } from './user-data.js';
-import { deactivateMeasureTool, registerEditExit } from '../tool-mode.js';
+import { toolHooks } from '../tool-mode.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 
 type DrawFeature = GeoJSON.Feature & { id: string };
@@ -89,7 +89,7 @@ const StaticMode = {
 
 export function initDraw() {
   if (!state.map) return;
-  registerEditExit(() => setMode('view'));
+  toolHooks.exitEdit = () => setMode('view');
   state.draw = new MapboxDraw({
     displayControlsDefault: false,
     controls: {},
@@ -146,7 +146,7 @@ function onDrawChange() {
 }
 
 export function setMode(mode: string) {
-  if (mode === 'edit' && state.measure.active) deactivateMeasureTool();
+  if (mode === 'edit' && state.measure.active) toolHooks.deactivateMeasure();
   state.editMode = mode;
   document.getElementById('modeViewBtn')?.classList.toggle('mode-btn--active', mode === 'view');
   document.getElementById('modeEditBtn')?.classList.toggle('mode-btn--active', mode === 'edit');

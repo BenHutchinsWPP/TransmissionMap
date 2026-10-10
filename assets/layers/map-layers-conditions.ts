@@ -296,10 +296,7 @@ const NWS_GROUP_COLOR: ExpressionSpecification = [
 export function addNwsAlerts() {
   if (!state.map || state.map.getSource("nws-alerts")) return;
 
-  state.map.addSource("nws-alerts", {
-    type: "geojson",
-    data: EMPTY_FC,
-  });
+  state.map.addSource("nws-alerts", { type: "geojson", data: EMPTY_FC });
 
   const vis = initialVisibility("nws-alerts");
 
@@ -376,36 +373,22 @@ async function refreshRadarFrame() {
 export function addNexradRadar() {
   if (!state.map || state.map.getSource("nexrad-radar")) return;
 
+  const eccc = '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>';
   // GeoMet (Canada) first so the IEM layer draws on top where coverage overlaps.
-  for (const [srcId, wmsLayer] of GEOMET_RADAR) {
-    state.map.addSource(srcId, {
-      type: "raster",
-      tiles: geometTiles(wmsLayer, "0"),
-      tileSize: 256,
-      attribution: '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>',
-    });
+  for (const [id, tiles, attribution] of [
+    ...GEOMET_RADAR.map(([srcId, wmsLayer]) => [srcId, geometTiles(wmsLayer, "0"), eccc] as const),
+    // "-0" alias until the first tms.json answer
+    ["nexrad-radar", [RADAR_TILE_URL], '<a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>'] as const,
+  ]) {
+    state.map.addSource(id, { type: "raster", tiles: [...tiles], tileSize: 256, attribution });
     state.map.addLayer({
-      id: srcId,
+      id,
       type: "raster",
-      source: srcId,
+      source: id,
       layout: { visibility: initialVisibility("nexrad-radar") },
       paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
     } as LayerSpecification);
   }
-
-  state.map.addSource("nexrad-radar", {
-    type: "raster",
-    tiles: [RADAR_TILE_URL],   // "-0" alias until the first tms.json answer
-    tileSize: 256,
-    attribution: '<a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
-  });
-  state.map.addLayer({
-    id: "nexrad-radar",
-    type: "raster",
-    source: "nexrad-radar",
-    layout: { visibility: initialVisibility("nexrad-radar") },
-    paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
-  } as LayerSpecification);
 
   void refreshRadarFrame();
   radarTimer ??= setInterval(() => void refreshRadarFrame(), 60_000);
@@ -420,54 +403,43 @@ export function addNexradRadar() {
 // feature-state value poisons the whole expression. The join + refresh logic
 // lives in ../odin-outages.ts.
 export function addOdinOutages() {
-  if (!state.map || state.map.getLayer("odin-outages-fill")) return;
-  // The source is SHARED infra owned by layer-init.ts — guard on our own layer
-  // above, never on the source, or a future county layer that adds it first
-  // would silently suppress these layers.
-  ensureCountyBoundaries();
-
-  const vis = initialVisibility("odin-outages");
-
+  const out = ["feature-state", "odin_out"] as ExpressionSpecification;
   // YlOrRd choropleth — customers-out buckets: <100 / 100–1k / 1k–5k / 5k+.
-  // Guard null FIRST (no feature-state → transparent), else step by count.
-  state.map.addLayer({
-    id: "odin-outages-fill",
-    type: "fill",
-    source: COUNTY_SRC,
-    "source-layer": COUNTY_SRC_LAYER,
-    layout: { visibility: vis },
-    paint: {
-      "fill-color": [
-        "case",
-        ["==", ["feature-state", "odin_out"], null], "rgba(0,0,0,0)",
-        ["step", ["feature-state", "odin_out"],
-          "#fed976",          // <100
-          100,  "#fd8d3c",    // 100–1k
-          1000, "#e31a1c",    // 1k–5k
-          5000, "#800026",    // 5k+
-        ],
-      ],
-      "fill-opacity": 0.6,
-    },
-  } as LayerSpecification);
+  addCountyChoropleth("odin-outages", out, {
+    "fill-color": ["step", out,
+      "#fed976",          // <100
+      100,  "#fd8d3c",    // 100–1k
+      1000, "#e31a1c",    // 1k–5k
+      5000, "#800026",    // 5k+
+    ],
+    "fill-opacity": 0.6,
+  }, { "line-color": "#800026", "line-width": 0.6, "line-opacity": 0.7 });
+}
 
-  // Thin outline, only where there's data (transparent otherwise).
-  state.map.addLayer({
-    id: "odin-outages-line",
-    type: "line",
-    source: COUNTY_SRC,
-    "source-layer": COUNTY_SRC_LAYER,
-    layout: { visibility: vis },
-    paint: {
-      "line-color": [
-        "case",
-        ["==", ["feature-state", "odin_out"], null], "rgba(0,0,0,0)",
-        "#800026",
-      ],
-      "line-width": 0.6,
-      "line-opacity": 0.7,
-    },
-  } as LayerSpecification);
+// A fill + thin outline pair on the shared county_boundaries tiles, painting
+// only counties whose feature-state `key` is set. The null guard comes first
+// (no feature-state → transparent). The source is SHARED infra owned by
+// layer-init.ts — guard on our own layer, never on the source, or a county
+// layer that adds it first would silently suppress these layers.
+function addCountyChoropleth(
+  id: string, key: ExpressionSpecification,
+  fill: Record<string, unknown>, line: Record<string, unknown>,
+) {
+  if (!state.map || state.map.getLayer(`${id}-fill`)) return;
+  ensureCountyBoundaries();
+  const vis = initialVisibility(id);
+  const unlit = ["==", key, null];
+  for (const [type, paint] of [["fill", fill], ["line", line]] as const) {
+    const color = `${type}-color`;
+    state.map.addLayer({
+      id: `${id}-${type}`,
+      type,
+      source: COUNTY_SRC,
+      "source-layer": COUNTY_SRC_LAYER,
+      layout: { visibility: vis },
+      paint: { ...paint, [color]: ["case", unlit, "rgba(0,0,0,0)", paint[color]] },
+    } as LayerSpecification);
+  }
 }
 
 // ─── FEMA National Risk Index county choropleth ───────────────────────────────
@@ -478,40 +450,11 @@ export function addOdinOutages() {
 // guard first, as in addOdinOutages(). Fill fades as you zoom in so the
 // infrastructure drawn over it stays legible.
 export function addFemaNri() {
-  if (!state.map || state.map.getLayer("fema-nri-fill")) return;
-  ensureCountyBoundaries();
-  const vis = initialVisibility("fema-nri");
   const rating = ["feature-state", "nri_r"] as ExpressionSpecification;
-  const color = [
-    "match", rating,
-    ...NRI_RATINGS.flatMap(r => [r.code, r.color]),
-    "rgba(0,0,0,0)",
-  ] as ExpressionSpecification;
-
-  state.map.addLayer({
-    id: "fema-nri-fill",
-    type: "fill",
-    source: COUNTY_SRC,
-    "source-layer": COUNTY_SRC_LAYER,
-    layout: { visibility: vis },
-    paint: {
-      "fill-color": ["case", ["==", rating, null], "rgba(0,0,0,0)", color],
-      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 0.55, 11, 0.35],
-    },
-  } as LayerSpecification);
-
-  state.map.addLayer({
-    id: "fema-nri-line",
-    type: "line",
-    source: COUNTY_SRC,
-    "source-layer": COUNTY_SRC_LAYER,
-    layout: { visibility: vis },
-    paint: {
-      "line-color": ["case", ["==", rating, null], "rgba(0,0,0,0)", "#6b2150"],
-      "line-width": 0.4,
-      "line-opacity": 0.5,
-    },
-  } as LayerSpecification);
+  addCountyChoropleth("fema-nri", rating, {
+    "fill-color": ["match", rating, ...NRI_RATINGS.flatMap(r => [r.code, r.color]), "rgba(0,0,0,0)"],
+    "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 0.55, 11, 0.35],
+  }, { "line-color": "#6b2150", "line-width": 0.4, "line-opacity": 0.5 });
 }
 
 // ─── Live weather fields (baked-color images, every ~3 h) ──────────────────────
@@ -564,24 +507,20 @@ export function addWeatherLive() {
   // lines, lazily loaded via the weather-live alias in layer-init.ts and
   // toggled by the same registry row (mapLayerIds).
   state.map.addSource("weather-admin-lines", { type: "geojson", data: EMPTY_FC });
-  state.map.addLayer({
-    id: "weather-admin-lines-states",
-    type: "line",
-    source: "weather-admin-lines",
-    filter: ADMIN_STATE_LINES,
-    layout: { visibility: initialVisibility("weather-live") },
-    paint: { "line-color": "#ffffff", "line-width": 0.8, "line-opacity": 0.45 },
-  });
-  registerBaseFilter("weather-admin-lines-states", ADMIN_STATE_LINES);
-  state.map.addLayer({
-    id: "weather-admin-lines-countries",
-    type: "line",
-    source: "weather-admin-lines",
-    filter: ADMIN_COUNTRY_LINES,
-    layout: { visibility: initialVisibility("weather-live") },
-    paint: { "line-color": "#ffffff", "line-width": 1.4, "line-opacity": 0.7 },
-  });
-  registerBaseFilter("weather-admin-lines-countries", ADMIN_COUNTRY_LINES);
+  for (const [id, filter, width, opacity] of [
+    ["weather-admin-lines-states", ADMIN_STATE_LINES, 0.8, 0.45],
+    ["weather-admin-lines-countries", ADMIN_COUNTRY_LINES, 1.4, 0.7],
+  ] as const) {
+    state.map.addLayer({
+      id,
+      type: "line",
+      source: "weather-admin-lines",
+      filter,
+      layout: { visibility: initialVisibility("weather-live") },
+      paint: { "line-color": "#ffffff", "line-width": width, "line-opacity": opacity },
+    });
+    registerBaseFilter(id, filter);
+  }
 }
 
 export const addWildfireHazard = () => addRasterLayer("usfs-wildfire-potential", DATA.usfs_wildfire_potential,

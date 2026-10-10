@@ -17,7 +17,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as pmtiles from 'pmtiles';
 import { state } from './state.js';
 import { BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from './constants.js';
-import { loadGenIcons, loadPipelineIcons, loadNatgasPtIcons, loadMineIcons, loadFireIcons } from './icons.js';
+import { loadIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
 import { initMapInput } from './map-input.js';
@@ -104,10 +104,9 @@ export function initMap() {
     initBasemaps();
     switchBasemap(state.basemap);
     switchProjection(state.projection);
-    // Icon loads must never block layer creation — a failed rasterize would
-    // otherwise skip addAllLayers() and blank every layer. Degrade to no-icon.
-    await Promise.all([loadGenIcons(), loadPipelineIcons(), loadNatgasPtIcons(), loadMineIcons(), loadFireIcons()]
-      .map(p => p.catch(err => console.warn('[TransmissionMap] icon load failed', err))));
+    // Icon loads never block layer creation: loadIcons() settles every icon
+    // and skips a failed one, so the layers build with whatever registered.
+    await loadIcons();
     let built = false;
     try { addAllLayers(); built = true; } finally {
       // The same repaint as applyView() and the Reset button (repaintView):

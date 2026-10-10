@@ -113,19 +113,18 @@ const ZONE_GROUP_COLOR: ExpressionSpecification = [
   OTHER_COLOR,
 ] as unknown as ExpressionSpecification;
 
-// ── Indexes for the popup ───────────────────────────────────────────────────
-// Exact (type,ugc) -> entries that explicitly named that zone.
-let zoneIndex = new Map<string, ZoneAlertEntry[]>();
+// ── Indexes ─────────────────────────────────────────────────────────────────
+// Tile `key` ("z"/"f"/"m"+ugc, i.e. exact (type,ugc)) -> entries that named
+// that zone: drives both the feature-state winner and the popup lookup. Its
+// keys (and fipsIndex's) are exactly the feature ids we hold feature-state on,
+// so a refresh (or clear) unpaints exactly what was painted last time — never
+// a bare removeFeatureState (the county source's state bag is shared with
+// odin-outages.ts).
+let keyGroups = new Map<string, ZoneAlertEntry[]>();
 // fips -> entries.
 let fipsIndex = new Map<string, ZoneAlertEntry[]>();
-// tile `key` ("z"/"f"+ugc, i.e. (type,ugc)) -> entries, used to compute the
-// feature-state winner per exact zone (same keying as zoneIndex, just tile-
-// key-shaped for setFeatureState/removeFeatureState targets).
-let keyGroups = new Map<string, ZoneAlertEntry[]>();
-
-function zoneKey(type: string, ugc: string): string {
-  return `${type}|${ugc}`;
-}
+// The current snapshot, so an expiry prune can rebuild the indexes from it.
+let allEntries: ZoneAlertEntry[] = [];
 
 // The tile `key` property extract_nws_zones.py computes: single-char type
 // prefix + ugc. Load-bearing contract — keep in sync with that script.
@@ -133,14 +132,8 @@ function tileKey(type: string, ugc: string): string {
   return `${type === "fire" ? "f" : type === "marine" ? "m" : "z"}${ugc}`;
 }
 
-// Feature ids we currently hold feature-state on, so a refresh (or clear) can
-// unpaint exactly what we painted last time — never a bare removeFeatureState
-// (the county source's state bag is shared with odin-outages.ts).
-let appliedKeys = new Set<string>();
-let appliedFips = new Set<string>();
-
 export function lookupByZone(type: string, ugc: string): ZoneAlertEntry[] {
-  return zoneIndex.get(zoneKey(type, ugc)) ?? [];
+  return keyGroups.get(tileKey(type, ugc)) ?? [];
 }
 export function lookupByFips(fips: string): ZoneAlertEntry[] {
   return fipsIndex.get(fips) ?? [];
@@ -250,18 +243,14 @@ function clearFeature(tgt: typeof ZONE_TGT, id: string) {
   state.map.removeFeatureState(target, "nws_sev");
   state.map.removeFeatureState(target, "nws_multi");
 }
-const clearKey  = (key: string)  => clearFeature(ZONE_TGT, key);
-const clearFips = (fips: string) => clearFeature(COUNTY_TGT, fips);
 
 // Removes ONLY this module's feature-state keys, from both sources.
 export function clearZoneAlerts() {
-  for (const key of appliedKeys) clearKey(key);
-  for (const fips of appliedFips) clearFips(fips);
-  appliedKeys = new Set();
-  appliedFips = new Set();
-  zoneIndex = new Map();
-  fipsIndex = new Map();
+  for (const key of keyGroups.keys()) clearFeature(ZONE_TGT, key);
+  for (const fips of fipsIndex.keys()) clearFeature(COUNTY_TGT, fips);
   keyGroups = new Map();
+  fipsIndex = new Map();
+  allEntries = [];
 }
 
 // ── Expiry pruning ──────────────────────────────────────────────────────────
@@ -278,39 +267,26 @@ function isExpired(entry: ZoneAlertEntry, now: number): boolean {
 }
 
 export function pruneExpiredZoneAlerts(nowMs: number = Date.now()): void {
-  if (!appliedKeys.size && !appliedFips.size && !zoneIndex.size && !fipsIndex.size) return;
+  const kept = allEntries.filter(e => !isExpired(e, nowMs));
+  if (kept.length !== allEntries.length) rebuild(kept);
+}
 
-  let removed = false;
-  const nextZoneIndex = new Map<string, ZoneAlertEntry[]>();
-  for (const [key, entries] of zoneIndex) {
-    const kept = entries.filter(e => !isExpired(e, nowMs));
-    if (kept.length !== entries.length) removed = true;
-    if (kept.length) nextZoneIndex.set(key, kept);
-  }
-  const nextFipsIndex = new Map<string, ZoneAlertEntry[]>();
-  for (const [fips, entries] of fipsIndex) {
-    const kept = entries.filter(e => !isExpired(e, nowMs));
-    if (kept.length !== entries.length) removed = true;
-    if (kept.length) nextFipsIndex.set(fips, kept);
-  }
+// Re-index `entries`, unpaint the keys/fips that dropped out (else they'd stay
+// painted forever, same trap odin-outages.ts guards against), and repaint.
+function rebuild(entries: ZoneAlertEntry[]) {
   const nextKeyGroups = new Map<string, ZoneAlertEntry[]>();
-  for (const [key, entries] of keyGroups) {
-    const kept = entries.filter(e => !isExpired(e, nowMs));
-    if (kept.length) nextKeyGroups.set(key, kept);
+  const nextFipsIndex = new Map<string, ZoneAlertEntry[]>();
+  const add = (m: Map<string, ZoneAlertEntry[]>, k: string, e: ZoneAlertEntry) =>
+    (m.get(k) ?? m.set(k, []).get(k)!).push(e);
+  for (const entry of entries) {
+    for (const [type, ugc] of entry.zones ?? []) add(nextKeyGroups, tileKey(type, ugc), entry);
+    for (const fips of entry.fips ?? []) add(nextFipsIndex, fips, entry);
   }
-
-  if (!removed) return;
-
-  // Clear keys/fips that dropped out entirely, same as applyZoneAlerts.
-  for (const key of appliedKeys) if (!nextKeyGroups.has(key)) clearKey(key);
-  for (const fips of appliedFips) if (!nextFipsIndex.has(fips)) clearFips(fips);
-
-  zoneIndex = nextZoneIndex;
-  fipsIndex = nextFipsIndex;
+  for (const key of keyGroups.keys()) if (!nextKeyGroups.has(key)) clearFeature(ZONE_TGT, key);
+  for (const fips of fipsIndex.keys()) if (!nextFipsIndex.has(fips)) clearFeature(COUNTY_TGT, fips);
   keyGroups = nextKeyGroups;
-  appliedKeys = new Set(nextKeyGroups.keys());
-  appliedFips = new Set(nextFipsIndex.keys());
-
+  fipsIndex = nextFipsIndex;
+  allEntries = entries;
   repaint();
 }
 
@@ -322,8 +298,6 @@ function paintFeature(tgt: typeof ZONE_TGT, id: string, kept: ZoneAlertEntry[]) 
     { nws_group: winner._group, nws_sev: winner.severity ?? null, nws_multi: kept.length > 1 },
   );
 }
-const paintKey  = (key: string,  kept: ZoneAlertEntry[]) => paintFeature(ZONE_TGT, key, kept);
-const paintFips = (fips: string, kept: ZoneAlertEntry[]) => paintFeature(COUNTY_TGT, fips, kept);
 
 // Re-paint everything from the current indexes, applying the active legend
 // filter: winner picked among matching alerts only; features whose alerts
@@ -334,11 +308,11 @@ function repaint() {
   if (!state.map) return;
   for (const [key, entries] of keyGroups) {
     const kept = entries.filter(matchesFilter);
-    if (kept.length) paintKey(key, kept); else clearKey(key);
+    if (kept.length) paintFeature(ZONE_TGT, key, kept); else clearFeature(ZONE_TGT, key);
   }
   for (const [fips, entries] of fipsIndex) {
     const kept = entries.filter(matchesFilter);
-    if (kept.length) paintFips(fips, kept); else clearFips(fips);
+    if (kept.length) paintFeature(COUNTY_TGT, fips, kept); else clearFeature(COUNTY_TGT, fips);
   }
 }
 
@@ -350,35 +324,7 @@ function applyZoneAlerts(fc: { zone_alerts?: ZoneAlertEntry[] } | null | undefin
 
   ensureZoneLayers();
   ensureCountyBoundaries();
-
-  const nextZoneIndex = new Map<string, ZoneAlertEntry[]>();
-  const nextFipsIndex = new Map<string, ZoneAlertEntry[]>();
-  const nextKeyGroups = new Map<string, ZoneAlertEntry[]>();
-
-  for (const entry of entries) {
-    for (const [type, ugc] of entry.zones ?? []) {
-      const zk = zoneKey(type, ugc);
-      const tk = tileKey(type, ugc);
-      (nextZoneIndex.get(zk) ?? nextZoneIndex.set(zk, []).get(zk)!).push(entry);
-      (nextKeyGroups.get(tk) ?? nextKeyGroups.set(tk, []).get(tk)!).push(entry);
-    }
-    for (const fips of entry.fips ?? []) {
-      (nextFipsIndex.get(fips) ?? nextFipsIndex.set(fips, []).get(fips)!).push(entry);
-    }
-  }
-
-  // Clear keys/fips that dropped out of the new snapshot (else they'd stay
-  // painted forever, same trap odin-outages.ts guards against).
-  for (const key of appliedKeys) if (!nextKeyGroups.has(key)) clearKey(key);
-  for (const fips of appliedFips) if (!nextFipsIndex.has(fips)) clearFips(fips);
-
-  zoneIndex = nextZoneIndex;
-  fipsIndex = nextFipsIndex;
-  keyGroups = nextKeyGroups;
-  appliedKeys = new Set(nextKeyGroups.keys());
-  appliedFips = new Set(nextFipsIndex.keys());
-
-  repaint();
+  rebuild(entries);
   syncZoneVisibility();
 }
 

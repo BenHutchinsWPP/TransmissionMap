@@ -6,7 +6,7 @@
 import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { state } from './state.js';
 import { haversineMeters, clearFeatureInfo } from './user-data/user-data-geom.js';
-import { exitEdit, registerMeasureDeactivator } from './tool-mode.js';
+import { toolHooks } from './tool-mode.js';
 import { onMapTap, onMapDoubleTap, onMapHover, onMapContextMenu,
          type MapPointerEvent, type Unsubscribe } from './map-input.js';
 import { fmtDistance } from '../src/units.js';
@@ -135,7 +135,7 @@ function setMeasureActive(on: boolean) {
 
   const canvas = state.map.getCanvas();
   if (on) {
-    if (state.editMode === 'edit') exitEdit();
+    if (state.editMode === 'edit') toolHooks.exitEdit();
     ensureMeasureLayers();
     // Also disables tap-to-zoom, so a double tap finishes the line rather than
     // zooming the map.
@@ -161,7 +161,7 @@ function setMeasureActive(on: boolean) {
 }
 
 export function initMeasure() {
-  registerMeasureDeactivator(() => setMeasureActive(false));
+  toolHooks.deactivateMeasure = () => setMeasureActive(false);
   document.getElementById('measureBtn')?.addEventListener('click', () => {
     setMeasureActive(!state.measure.active);
   });

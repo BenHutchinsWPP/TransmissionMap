@@ -39,7 +39,7 @@ mineplant (2003 snapshot). MSHA refreshes continuously.
 - **One symbol layer** on one source: `mines-icons` (SVG icon per commodity
   category, z3+, overlap allowed; retired = dimmed). **Icon size scales with
   peak employment** (small/med/large buckets, same shape as `genIconSize`).
-- Icons: `MINE_ICON_DEFS` / `loadMineIcons` in `assets/icons.ts`
+- Icons: `MINE_ICON_DEFS` in `assets/icons.ts` (loaded by `loadIcons`)
   (ingot/nut/gear/battery/bolt/gem/bricks/pickaxe). Category logic:
   `src/colors/minerals.ts`.
 - Two legend chip filters (commodity `k`, status `d`) — `applyMinesFilter` in

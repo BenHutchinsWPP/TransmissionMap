@@ -99,21 +99,18 @@ function _makeSvgIcon(svgBody: string) {
   });
 }
 
-function _loadIcons(defs: string[][]) {
-  if (!state.map) return Promise.resolve();
+// Flat name → svgBody lookup, also used by the legend renderer and popups.
+export const ICON_SVG: Record<string, string> = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS, ...MINE_ICON_DEFS, ...FIRE_ICON_DEFS]);
+
+// Settles once every icon has registered or failed; a failed icon is logged
+// and skipped, so it never resolves the wait while others are still loading.
+export async function loadIcons() {
+  if (!state.map) return;
   const map = state.map;
-  return Promise.all(defs.map(async ([name, svgBody]) => {
+  const results = await Promise.allSettled(Object.entries(ICON_SVG).map(async ([name, svgBody]) => {
     if (map.hasImage(name)) map.removeImage(name);
     const { imageData, pixelRatio } = await _makeSvgIcon(svgBody);
     map.addImage(name, imageData, { pixelRatio });
   }));
+  for (const r of results) if (r.status === 'rejected') console.warn('[TransmissionMap] icon load failed', r.reason);
 }
-
-export function loadGenIcons()      { return _loadIcons(GEN_ICON_DEFS);      }
-export function loadPipelineIcons() { return _loadIcons(PIPELINE_ICON_DEFS); }
-export function loadNatgasPtIcons() { return _loadIcons(NATGAS_PT_ICON_DEFS); }
-export function loadMineIcons()     { return _loadIcons(MINE_ICON_DEFS);      }
-export function loadFireIcons()     { return _loadIcons(FIRE_ICON_DEFS);      }
-
-// Flat name → svgBody lookup used by legend renderer.
-export const ICON_SVG = Object.fromEntries([...GEN_ICON_DEFS, ...PIPELINE_ICON_DEFS, ...NATGAS_PT_ICON_DEFS, ...MINE_ICON_DEFS, ...FIRE_ICON_DEFS]);
