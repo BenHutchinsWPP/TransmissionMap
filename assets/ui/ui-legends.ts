@@ -15,7 +15,10 @@
 // updateLegends() also dims the OGF/WestTEC legend that is not the active
 // colour key (state.ogfColorBy / state.westtecColorBy), via LEGEND_VISIBILITY's
 // `colorKey`.
-// The live-feed age chips refresh on the 'layer:data' bus event (state-bus.ts).
+// The live-feed age chips refresh on the 'layer:data' bus event (state-bus.ts);
+// their stale edge is each feed's kill-switch maxAgeMs, read from the configs
+// ../wildfire-staleness.js (WILDFIRE_LIVE) and ../nws-staleness.js (NWS_LIVE)
+// export, so the chip turns red exactly when the kill switch fires.
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -24,6 +27,8 @@ import { FACETS } from '../../src/colors/facets.js';
 import { FACET_APPLIERS } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
 import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
+import { WILDFIRE_LIVE } from '../wildfire-staleness.js';
+import { NWS_LIVE } from '../nws-staleness.js';
 import { ICON_SVG } from '../icons.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import { t } from '../../src/i18n/index.js';
@@ -174,7 +179,7 @@ const CHIP_FEEDS: Record<string, string[]> = {
   smokeAge:    ["smoke"],
 };
 
-function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: string; level: string; abs: string } {
+function relAge(tsIso: string, freshMaxMin: number, maxAgeMs: number): { short: string; level: string; abs: string } {
   const then = Date.parse(tsIso);
   if (Number.isNaN(then)) return { short: "", level: "", abs: "" };
   // Show the pull time in the viewer's local timezone (e.g. "Pulled Jun 28, 7:30 AM PDT").
@@ -185,15 +190,13 @@ function relAge(tsIso: string, freshMaxMin = 180, agingMaxMin = 360): { short: s
   // Compact on purpose — the chip widens the whole legend; the verbose pull
   // time lives in the title attribute.
   const short = min < 1 ? t("age.now") : fmtAgeShort(Date.now() - then);
-  // Wildfire defaults: cron misses of 1–3h are routine and VIIRS obs are hours
-  // old anyway — warn only when meaningfully behind; "stale" aligns with the
-  // 6h kill-switch. Faster feeds (NWS alerts) pass tighter thresholds.
-  const level = min <= freshMaxMin ? "fresh" : min <= agingMaxMin ? "aging" : "stale";
+  // "fresh" up to the caller's threshold, "stale" past the feed's kill-switch
+  // maxAgeMs, "aging" between.
+  const level = min <= freshMaxMin ? "fresh" : min <= maxAgeMs / 60_000 ? "aging" : "stale";
   return { short, level, abs };
 }
 
-// NWS alerts: ~10 min cadence, 3 h kill-switch — tighter thresholds than
-// wildfire. feed_status carries per-feed degradation (e.g. {"eccc":"failed"}
+// NWS alerts: ~10 min cadence — a tighter fresh threshold than wildfire. feed_status carries per-feed degradation (e.g. {"eccc":"failed"}
 // when the Canada pull failed and the file shipped US-only).
 let nwsGeneratedUtc: string | undefined;
 let nwsFeedStatus: Record<string, string> | undefined;
@@ -213,7 +216,7 @@ function renderNwsAge() {
   if (!nwsGeneratedUtc) return;
   const el = document.getElementById("nwsAge");
   if (!el) return;
-  const { short, level, abs } = relAge(nwsGeneratedUtc, 60, 180);
+  const { short, level, abs } = relAge(nwsGeneratedUtc, 60, NWS_LIVE.maxAgeMs);
   const issues = nwsIssues();
   el.textContent = issues.length ? `${short} · ${issues.join(", ")}` : short;
   el.title = abs + t("age.nwsTip") + (issues.length ? t("age.degradedTip") : "");
@@ -223,7 +226,9 @@ function renderNwsAge() {
 
 function renderLiveAge() {
   if (!liveGeneratedUtc) return;
-  const { short, level, abs } = relAge(liveGeneratedUtc);
+  // Cron misses of 1–3h are routine and VIIRS obs are hours old anyway — the
+  // chip stays fresh for 3 h.
+  const { short, level, abs } = relAge(liveGeneratedUtc, 180, WILDFIRE_LIVE.maxAgeMs);
   for (const id of ["smokeAge", "wildfireAge", "incidentAge"]) {
     const el = document.getElementById(id);
     if (!el) continue;

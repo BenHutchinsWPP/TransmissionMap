@@ -5,7 +5,17 @@ import { join } from 'node:path';
 import { fmtAge, fmtAgeShort, downFor, feedIssue, initLiveStaleness } from './live-staleness.js';
 import { state } from './state.js';
 import { emit, on } from './state-bus.js';
+import { WILDFIRE_LIVE } from './wildfire-staleness.js';
+import { NWS_LIVE } from './nws-staleness.js';
+import { layerSourceId } from './layers/layer-source.js';
+import { LAYERS } from '../src/registry/index.js';
 
+// nws-staleness.ts's zone join pulls the layer-init chain; the configs need none of it.
+vi.mock('./nws-zone-join.js', () => ({
+  pruneExpiredZoneAlerts: vi.fn(),
+  clearZoneAlerts: vi.fn(),
+  refetchZoneAlerts: vi.fn(),
+}));
 vi.mock('./visibility.js', () => ({
   setLayerVisibility: vi.fn((id: string, on: boolean) => { state.layerVisibility[id] = on; }),
 }));
@@ -360,20 +370,26 @@ describe('refetchLive (via the refresh-interval timer)', () => {
   });
 });
 
-describe('DOM-id drift-guard', () => {
-  // Ids mirrored from the config shells (not imported — importing them pulls
-  // their full dependency chain). Keep these in sync with:
-  //   assets/wildfire-staleness.ts (dialogId/ageElId/reenableId/dismissId)
-  //   assets/nws-staleness.ts      (dialogId/ageElId/reenableId/dismissId, + nwsStaleReenable listener)
-  const expectedIds = [
-    'wildfireStaleDialog', 'wildfireStaleAge', 'wildfireStaleReenable', 'wildfireStaleDismiss',
-    'nwsStaleDialog', 'nwsStaleAge', 'nwsStaleReenable', 'nwsStaleDismiss',
-  ];
+const LIVE_CONFIGS = { WILDFIRE_LIVE, NWS_LIVE };
 
-  it('every id referenced by the wildfire/nws staleness config shells exists in index.html', () => {
+describe('DOM-id drift-guard', () => {
+  it('every id referenced by the wildfire/nws staleness configs exists in index.html', () => {
     const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
-    for (const id of expectedIds) {
-      expect(html.includes(`id="${id}"`), `missing id="${id}" in index.html`).toBe(true);
+    for (const cfg of Object.values(LIVE_CONFIGS)) {
+      for (const id of [cfg.dialogId, cfg.ageElId, cfg.reenableId, cfg.dismissId]) {
+        expect(html.includes(`id="${id}"`), `missing id="${id}" in index.html`).toBe(true);
+      }
     }
   });
+});
+
+// The kill switch hides only the layers a config lists; a registry layer added
+// on the same source but left out of layerIds would keep drawing stale data.
+describe('live config layerIds', () => {
+  for (const [name, cfg] of Object.entries(LIVE_CONFIGS)) {
+    it(`${name}.layerIds is every registry layer on the ${cfg.sourceKey} source`, () => {
+      const onSource = LAYERS.filter(l => layerSourceId(l.id) === cfg.sourceKey).map(l => l.id);
+      expect([...cfg.layerIds].sort()).toEqual(onSource.sort());
+    });
+  }
 });

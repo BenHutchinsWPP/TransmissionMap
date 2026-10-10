@@ -125,7 +125,8 @@ turns public datasets into PMTiles consumed by the frontend.
       bfcache restore, at most once per 60 s); zero deps
     - `live-staleness.ts` — **shared factory** for every live GeoJSON feed: auto-refresh
       (through `live-poll.ts`) + stale-data kill-switch modal. `wildfire-staleness.ts` /
-      `nws-staleness.ts` are thin config shells over it. Raster/feature-state feeds
+      `nws-staleness.ts` are thin config shells over it that export their config (`WILDFIRE_LIVE`,
+      `NWS_LIVE`), whose `maxAgeMs` the legend age chips and diagnostics read. Raster/feature-state feeds
       wire their own fetch and staleness on the same poll loop (see `odin-outages.ts`,
       `weather-live.ts`).
     - `weather-live.ts` — live GFS weather raster: image swap + hover-LUT

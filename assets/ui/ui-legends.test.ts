@@ -48,6 +48,8 @@ describe('rampLegendHtml', () => {
 });
 
 import { buildLegends, updateLegends } from './ui-legends.js';
+import { WILDFIRE_LIVE } from '../wildfire-staleness.js';
+import { NWS_LIVE } from '../nws-staleness.js';
 import { setLocale, loadDictionary } from '../../src/i18n/index.js';
 import { emit } from '../state-bus.js';
 import { state } from '../state.js';
@@ -119,4 +121,21 @@ describe('colour-by legend dimming', () => {
     expect([dimmed('ogfRegionLegend'), dimmed('ogfStatusLegend')]).toEqual([false, true]);
     state.westtecColorBy = 'scenario';
   });
+});
+
+// The chip turns stale exactly where the feed's kill switch fires.
+describe('live age chip stale edge', () => {
+  const chip = (sourceKey: string, elId: string, ageMs: number) => {
+    document.body.innerHTML = `<span id="${elId}"></span>`;
+    const iso = new Date(Date.now() - ageMs).toISOString();
+    state.sourcesData[sourceKey] = [{ type: 'Feature', geometry: null, properties: { generated_utc: iso } }];
+    emit('layer:data', { id: sourceKey });
+    return document.getElementById(elId)!.className;
+  };
+  for (const [cfg, elId] of [[WILDFIRE_LIVE, 'wildfireAge'], [NWS_LIVE, 'nwsAge']] as const) {
+    it(`${cfg.sourceKey}: stale just past maxAgeMs, not just under`, () => {
+      expect(chip(cfg.sourceKey, elId, cfg.maxAgeMs - 2 * 60_000)).toBe('legend-age legend-age--aging');
+      expect(chip(cfg.sourceKey, elId, cfg.maxAgeMs + 2 * 60_000)).toBe('legend-age legend-age--stale');
+    });
+  }
 });

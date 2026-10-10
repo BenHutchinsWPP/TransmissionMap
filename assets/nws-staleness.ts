@@ -18,16 +18,15 @@
 //       cheaper than modifying the shared factory for a single caller. The
 //       modal's re-enable button gets a matching click listener that calls
 //       refetchZoneAlerts(), since the factory only restores polygon layers.
+// Exports NWS_LIVE, the config itself: ui/ui-legends.ts reads its maxAgeMs for
+//       the age chip's stale edge and diagnostics.ts for the feed check.
 // Deps: live-staleness.ts (factory), constants (DATA), nws-zone-join.ts
 //       (pruneExpiredZoneAlerts, clearZoneAlerts). Modal DOM in index.html.
 // Wired from ui/ui.ts init() via initNwsStaleness().
 
 import { DATA } from './constants.js';
-import { initLiveStaleness } from './live-staleness.js';
+import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
 import { pruneExpiredZoneAlerts, clearZoneAlerts, refetchZoneAlerts } from './nws-zone-join.js';
-
-const NWS_REFRESH_MS = 5 * 60_000;        // 5 minutes (feed cadence ~10 min)
-export const NWS_MAX_AGE_MS = 3 * 60 * 60_000;   // 3 hours = many missed cycles
 
 function pruneExpiredAlerts(features: GeoJSON.Feature[]): GeoJSON.Feature[] {
   const now = Date.now();
@@ -66,18 +65,20 @@ function watchKillSwitch(): void {
   });
 }
 
+export const NWS_LIVE: LiveStalenessConfig = {
+  sourceKey: "nws-alerts",
+  layerIds: ["nws-alerts"],
+  dataUrl: () => DATA.nws_alerts,
+  refreshMs: 5 * 60_000,          // 5 minutes (feed cadence ~10 min)
+  maxAgeMs: 3 * 60 * 60_000,      // 3 hours = many missed cycles
+  dialogId: STALE_DIALOG_ID,
+  ageElId: "nwsStaleAge",
+  reenableId: "nwsStaleReenable",
+  dismissId: "nwsStaleDismiss",
+  pruneExpired: pruneExpiredAlerts,
+};
+
 export function initNwsStaleness() {
-  initLiveStaleness({
-    sourceKey: "nws-alerts",
-    layerIds: ["nws-alerts"],
-    dataUrl: () => DATA.nws_alerts,
-    refreshMs: NWS_REFRESH_MS,
-    maxAgeMs: NWS_MAX_AGE_MS,
-    dialogId: STALE_DIALOG_ID,
-    ageElId: "nwsStaleAge",
-    reenableId: "nwsStaleReenable",
-    dismissId: "nwsStaleDismiss",
-    pruneExpired: pruneExpiredAlerts,
-  });
+  initLiveStaleness(NWS_LIVE);
   watchKillSwitch();
 }

@@ -157,6 +157,10 @@ Then wire it in `assets/ui/ui-legends.ts` (see the "Live-data age readout"
 block). If the feed has a `feed_status` map, add the chip → upstream mapping to
 `CHIP_FEEDS` so a degraded upstream is visible.
 
+The chip's stale edge is the feed's kill-switch cutoff: pass `relAge()` the
+exported config's `maxAgeMs` (`<NAME>_LIVE.maxAgeMs`, step 7), never a literal,
+so the chip turns red exactly when the kill switch fires.
+
 #### Two clocks: pull time vs valid time
 
 A live feed has **two** ages and they are not the same number:
@@ -192,18 +196,25 @@ For a GeoJSON feed, don't hand-roll this. Use the shared factory:
 
 ```ts
 // assets/<name>-staleness.ts
-import { initLiveStaleness } from './live-staleness.js';
+import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
 
-initLiveStaleness({
+export const <NAME>_LIVE: LiveStalenessConfig = {
   sourceKey: '<registry id>',
   layerIds:  ['<registry id>'],
   dataUrl:   () => DATA.<name>,
   refreshMs: 15 * 60_000,
   maxAgeMs:  6 * 60 * 60_000,
-  dialogId: '<name>StaleDialog', ageElId: '<name>Age',
+  dialogId: '<name>StaleDialog', ageElId: '<name>StaleAge',
   reenableId: '…', dismissId: '…',
-});
+};
+
+export function init<Name>Staleness() { initLiveStaleness(<NAME>_LIVE); }
 ```
+
+Export the config: the legend chip (step 6) and `assets/diagnostics.ts` read
+its `maxAgeMs`. `layerIds` must list every registry layer on the source — add
+the config to `LIVE_CONFIGS` in `assets/live-staleness.test.ts`, which checks
+that and the dialog ids.
 
 It auto-refetches on an interval and on return-to-page (mobile browsers freeze
 background timers) — through `pollWhileVisible()` in `assets/live-poll.ts` — and when the data is older than `maxAgeMs` it **auto-hides
@@ -272,8 +283,10 @@ Frontend (both shapes):
 - [ ] Registry entry with `live: true`, unique `urlCode`
 - [ ] Layer builder in `assets/layers/map-layers-conditions.ts`, added in `add-all-layers.ts`
 - [ ] Legend + age pill (`<span class="legend-age" id="…Age">`), wired in `ui-legends.ts`
-- [ ] Refresh loop: `initLiveStaleness()` for GeoJSON, `pollWhileVisible()` (`assets/live-poll.ts`) around your own fetch otherwise
+- [ ] Chip's stale edge reads the config's `maxAgeMs`, not a literal
+- [ ] Refresh loop: `initLiveStaleness(<NAME>_LIVE)` for GeoJSON, `pollWhileVisible()` (`assets/live-poll.ts`) around your own fetch otherwise
 - [ ] Stale `<dialog>` in `index.html` (GeoJSON feeds)
+- [ ] `layerIds` lists every registry layer on the source (config added to `LIVE_CONFIGS` in `live-staleness.test.ts`)
 - [ ] Raster only: `.i16.gz` LUT + `.json` meta emitted, wired into `RASTER_PROBES`
 - [ ] `maxAgeMs` > worst-case cron gap
 - [ ] Source + licence + attribution in `docs/data-sources.md` and `docs/layers/<name>.md`

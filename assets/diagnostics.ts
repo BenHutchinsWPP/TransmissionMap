@@ -14,7 +14,7 @@
 // Deps: state (live feed caches), constants (DATA, tile URLs, GLYPHS_URL,
 //       ESRI_TOKEN), diag-log.ts (getDiagLog),
 //       live-staleness.ts (fmtAge, feedIssue, liveAgeMs), wildfire-staleness.ts +
-//       nws-staleness.ts (the same max-age cutoffs the kill-switches use, so
+//       nws-staleness.ts (WILDFIRE_LIVE/NWS_LIVE: the configs the kill-switches run on, so
 //       this panel can never disagree with them), odin-outages.ts +
 //       weather-live.ts (odinFreshness/weatherFreshness — those two feeds keep
 //       their own snapshot and cutoff rather than using state.sourcesData).
@@ -27,8 +27,8 @@ import {
 } from './constants.js';
 import { getDiagLog } from './diag-log.js';
 import { fmtAge, feedIssue, liveAgeMs } from './live-staleness.js';
-import { WILDFIRE_MAX_AGE_MS } from './wildfire-staleness.js';
-import { NWS_MAX_AGE_MS } from './nws-staleness.js';
+import { WILDFIRE_LIVE } from './wildfire-staleness.js';
+import { NWS_LIVE } from './nws-staleness.js';
 import { odinFreshness } from './odin-outages.js';
 import { weatherFreshness } from './weather-live.js';
 
@@ -405,10 +405,10 @@ export const DIAG_CHECKS: DiagCheck[] = [
 
   // ── Live feed freshness: read from state, no refetch ──
   check('wildfire-live', 'Live wildfire feed', 'live', async () =>
-    liveCheck('wildfire-live', WILDFIRE_MAX_AGE_MS)),
+    liveCheck(WILDFIRE_LIVE.sourceKey, WILDFIRE_LIVE.maxAgeMs)),
 
   check('nws-alerts', 'Live NWS alert feed', 'live', async () =>
-    liveCheck('nws-alerts', NWS_MAX_AGE_MS)),
+    liveCheck(NWS_LIVE.sourceKey, NWS_LIVE.maxAgeMs)),
 
   // ODIN and weather keep their own snapshots rather than state.sourcesData,
   // so each reports its own age against its own cutoff.
