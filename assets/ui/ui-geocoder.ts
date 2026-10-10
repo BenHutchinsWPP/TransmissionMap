@@ -8,13 +8,13 @@
 //       explicit searches but not for per-keystroke autocomplete.
 // Deps: state (map, draw), map-input (close results on a map tap),
 //       constants (ESRI_TOKEN), utils (escapeHtml),
-//       user-data (pin + My Data refresh). DOM: #geocoderInput/#geocoderResults.
+//       user-data (commitUserData: save + My Data refresh after the pin). DOM: #geocoderInput/#geocoderResults.
 
 import { state } from '../state.js';
 import { onMapTap } from '../map-input.js';
 import { ESRI_TOKEN } from '../constants.js';
 import { escapeHtml } from '../utils/utils.js';
-import { renderMyDataTab, saveUserData } from '../user-data/user-data.js';
+import { commitUserData } from '../user-data/user-data.js';
 
 interface EsriCandidate {
   address: string;                                              // "Yosemite National Park, CA, USA"
@@ -41,8 +41,7 @@ async function placeGeocoderPin(label: string, lon: number, lat: number) {
   } as GeoJSON.Feature);
   if (ids[0]) draw.setFeatureProperty(ids[0], 'color', state.drawDefaultColor);
   draw.set(draw.getAll());
-  renderMyDataTab();
-  saveUserData();
+  commitUserData();
 }
 
 export function wireGeocoder() {

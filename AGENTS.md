@@ -167,7 +167,9 @@ turns public datasets into PMTiles consumed by the frontend.
       (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/FEMA NRI/NEXRAD radar — all the live + hazard layers;
       `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1)
   - **`assets/user-data/`** — user-imported/drawn layers
-    - `user-data.ts` — core (add/remove/save/render); `user-data-draw.ts` draw mode
+    - `user-data.ts` — core (add/remove/render; `commitUserData` = save + render); `user-data-draw.ts` draw mode
+    - `user-data-store.ts` — `createUserDataStore` over a `getItem`/`setItem` adapter: the `tm-user-data`
+      payload (validated by `parsePayload`), saves held back until `load()`, then flushed once; drawn-feature cache
     - `user-data-import.ts` GeoJSON/KML/KMZ import; `user-data-export.ts` export
     - `user-data-csv.ts` CSV point import + column picker; `csv-parse.ts` pure CSV parser (unit-tested)
     - `view-file.ts` — `*.tmview.json` view files: Save view… / Open… of a view's hash through the link codec

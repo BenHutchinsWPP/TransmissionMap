@@ -1,20 +1,35 @@
 // ─── User data: layer management + My Data tab + selection highlight ──────────
-// Deps: state, constants, utils, user-data-geom, user-data-colors (no back-imports from url-state)
+// Deps: state, utils, user-data-geom, user-data-colors, user-data-store (the
+// persistence store: key, hold-back, flush, drawn cache) (no back-imports from url-state)
 // Exports the UserLayer type (state.userLayers); state.ts imports it type-only.
-// Caches loaded drawnFeatures in `_cachedDrawnFeatures` so a save that happens
-// before MapboxDraw is loaded (lazy chunk; see user-data-draw.ts) doesn't
-// overwrite localStorage with an empty FeatureCollection. `restoreDrawnFeatures()`
-// is called by `initDraw()` (user-data-draw.ts) once `state.draw` exists, to
-// replay features loaded before draw was ready.
+// Builds the one store over window.localStorage, with the "storage full" alert
+// as its write-error handler.
+// Every edit ends in one `commit()` (save + re-render the My Data tab),
+// exported as `commitUserData()` for draw, import and the geocoder.
+// `loadUserData()` restores without writing: layers mount without a commit, the
+// drawings restore, and the tab renders once; a save held back until the read
+// is flushed by the store afterwards.
+// `restoreDrawnFeatures()` is called by `initDraw()` (user-data-draw.ts) once
+// `state.draw` and its listeners exist, to replay the store's drawn features
+// loaded before draw was ready; a stored feature MapboxDraw rejects is skipped,
+// the rest restore.
 
 import type { GeoJSONSource, FilterSpecification, LayerSpecification, MapGeoJSONFeature } from 'maplibre-gl';
 import { state } from '../state.js';
-import { USER_FEATURE_THRESHOLD, USER_LAYER_COLORS } from '../constants.js';
 import { ensureFeatureUid, ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
 import { escapeHtml } from '../utils/utils.js';
 import { collectCoords, coordsBounds, showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
+import { createUserDataStore } from './user-data-store.js';
+
+// ─── User-layer palette + threshold ──────────────────────────────────────────
+const USER_LAYER_COLORS = [
+  '#e74c3c', '#3498db', '#2ecc71', '#f39c12',
+  '#9b59b6', '#1abc9c', '#e67e22', '#16a085',
+];
+// Files with at most this many features can be expanded to a per-feature list.
+const USER_FEATURE_THRESHOLD = 20;
 
 // One drawn or file-loaded layer in the My Data tab (state.userLayers).
 export interface UserLayer {
@@ -103,21 +118,24 @@ export function removeUserLayer(id: string) {
   }
   if (state.map?.getSource(id)) state.map.removeSource(id);
   state.userLayers.splice(idx, 1);
-  renderMyDataTab();
-  saveUserData();
+  commit();
+}
+
+function applyLayerVisibility(layer: UserLayer, visible: boolean) {
+  layer.visible = visible;
+  const viz = visible ? 'visible' : 'none';
+  for (const suffix of USER_SUBLAYER_SUFFIXES) {
+    if (state.map?.getLayer(layer.id + suffix)) {
+      state.map.setLayoutProperty(layer.id + suffix, 'visibility', viz);
+    }
+  }
 }
 
 export function toggleUserLayerVisibility(id: string, visible: boolean) {
   const layer = state.userLayers.find(l => l.id === id);
   if (!layer) return;
-  layer.visible = visible;
-  const viz = visible ? 'visible' : 'none';
-  for (const suffix of USER_SUBLAYER_SUFFIXES) {
-    if (state.map?.getLayer(id + suffix)) {
-      state.map.setLayoutProperty(id + suffix, 'visibility', viz);
-    }
-  }
-  saveUserData();
+  applyLayerVisibility(layer, visible);
+  commit();
 }
 
 export function removeUserFeature(layerId: string, featureUid: string) {
@@ -127,8 +145,7 @@ export function removeUserFeature(layerId: string, featureUid: string) {
     f => String(f.id) !== featureUid && String(f.properties?.__uid) !== featureUid
   );
   (state.map?.getSource(layerId) as GeoJSONSource)?.setData(layer.geojson);
-  renderMyDataTab();
-  saveUserData();
+  commit();
 }
 
 function zoomToUserLayer(layer: UserLayer) {
@@ -313,7 +330,7 @@ function saveFeatureName(span: HTMLElement, newName: string) {
       }
     }
   }
-  renderMyDataTab();
+  commit();
 }
 
 // ─── Feature highlight ────────────────────────────────────────────────────────
@@ -394,17 +411,23 @@ export function selectUserFeature(span: HTMLElement) {
 export { startInlineEdit };
 
 // ─── User layer add ───────────────────────────────────────────────────────────
-export function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollection, { color, visible = true, skipZoom = false }: { color?: string; visible?: boolean; skipZoom?: boolean } = {}) {
+type AddLayerOpts = { color?: string; visible?: boolean; skipZoom?: boolean };
+
+// Adds the layer to state and the map; writes nothing (the restore path uses it directly).
+function mountLayer(filename: string, geojson: GeoJSON.FeatureCollection, { color, visible = true, skipZoom = false }: AddLayerOpts) {
   const id = 'user-' + state.userLayerCounter++;
   const layerColor = color ?? USER_LAYER_COLORS[state.userLayers.length % USER_LAYER_COLORS.length];
   ensureGeoJsonFeatureUids(geojson, filename);
-  const layer = { id, filename, geojson, visible: true, color: layerColor };
+  const layer: UserLayer = { id, filename, geojson, visible: true, color: layerColor };
   state.userLayers.push(layer);
   addUserLayerToMap(layer);
-  if (!visible) toggleUserLayerVisibility(id, false);
+  if (!visible) applyLayerVisibility(layer, false);
   if (!skipZoom) zoomToUserLayer(layer);
-  renderMyDataTab();
-  saveUserData();
+}
+
+export function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollection, opts: AddLayerOpts = {}) {
+  mountLayer(filename, geojson, opts);
+  commit();
 }
 
 // A file from disk: `__src` is set only by copyFeatureToMyData, so a file's own
@@ -434,79 +457,79 @@ export function copyFeatureToMyData(f: MapGeoJSONFeature) {
   ensureGeoJsonFeatureUids({ type: 'FeatureCollection', features: [clean] }, layer.id);
   layer.geojson.features.push(clean);
   (state.map?.getSource(layer.id) as GeoJSONSource)?.setData(layer.geojson);
-  renderMyDataTab();
-  saveUserData();
+  commit();
 }
 
-// ─── localStorage persistence ─────────────────────────────────────────────────
-const _STORAGE_KEY = 'tm-user-data';
+// ─── Persistence (user-data-store.ts) ─────────────────────────────────────────
 let _storageQuotaAlertShown = false;
 
-// Cache of the last-known drawn FeatureCollection, kept in sync whenever
-// state.draw is available. Lets saveUserData() preserve drawn shapes even
-// when called while MapboxDraw's lazy chunk hasn't loaded yet (state.draw is
-// null), and lets restoreDrawnFeatures() replay them once draw does load.
-let _cachedDrawnFeatures: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+// Reaches window.localStorage inside each call, so an access that throws
+// (storage blocked) lands in the store's error handling.
+const _store = createUserDataStore(
+  {
+    getItem: k => localStorage.getItem(k),
+    setItem: (k, v) => localStorage.setItem(k, v),
+  },
+  () => ({ layers: state.userLayers, drawn: state.draw ? state.draw.getAll() : null }),
+  () => {
+    if (_storageQuotaAlertShown) return;
+    _storageQuotaAlertShown = true;
+    alert('Storage full: could not save your data. Please delete some layers or drawings.');
+  },
+);
 
+// Persists without re-rendering (a colour pick repaints its swatch in place).
 export function saveUserData() {
-  try {
-    if (state.draw) _cachedDrawnFeatures = state.draw.getAll();
-    const payload = {
-      userLayers: state.userLayers.map(l => ({
-        filename: l.filename,
-        geojson:  l.geojson,
-        color:    l.color,
-        visible:  l.visible,
-      })),
-      drawnFeatures: _cachedDrawnFeatures,
-    };
-    localStorage.setItem(_STORAGE_KEY, JSON.stringify(payload));
-  } catch (e: unknown) {
-    console.warn('[TransmissionMap] saveUserData failed:', (e as Error).message);
-    if (!_storageQuotaAlertShown) {
-      _storageQuotaAlertShown = true;
-      alert('Storage full: could not save your data. Please delete some layers or drawings.');
-    }
-  }
+  _store.save();
 }
 
+// The one ending of every My Data edit: persist, then re-render the tab.
+function commit() {
+  saveUserData();
+  renderMyDataTab();
+}
+export { commit as commitUserData };
+
+// Restores the stored payload alongside any edits made before it ran. Writes
+// nothing to localStorage unless such an edit was held back; the store then
+// saves once, after the restore.
 export function loadUserData() {
-  let payload;
-  try {
-    const raw = localStorage.getItem(_STORAGE_KEY);
-    if (!raw) return;
-    payload = JSON.parse(raw);
-  } catch (e: unknown) {
-    console.warn('[TransmissionMap] loadUserData parse failed:', (e as Error).message);
-    return;
-  }
-  const { userLayers = [], drawnFeatures } = payload;
-  for (const l of userLayers) {
-    try {
-      addUserLayer(l.filename, l.geojson, { color: l.color, visible: l.visible, skipZoom: true });
-    } catch (e) {
-      console.warn('[TransmissionMap] loadUserData: failed to restore layer', l.filename, e);
+  _store.load(({ layers, drawn }) => {
+    if (!layers.length && !drawn.features.length) return;
+    for (const l of layers) {
+      try {
+        mountLayer(l.filename, l.geojson, { color: l.color, visible: l.visible, skipZoom: true });
+      } catch (e) {
+        console.warn('[TransmissionMap] loadUserData: failed to restore layer', l.filename, e);
+      }
     }
-  }
-  if (drawnFeatures?.features?.length) {
-    _cachedDrawnFeatures = drawnFeatures;
-    if (state.draw) {
-      state.draw.add(drawnFeatures);
-      renderMyDataTab();
-    } else if (state.map) {
-      import('./draw-chunk.js').then(chunk => {
-        if (!state.draw) chunk.initDraw();
-      }).catch(err => console.warn('[TransmissionMap] lazy draw load failed:', err));
+    if (drawn.features.length) {
+      if (state.draw) {
+        restoreDrawnFeatures();
+      } else if (state.map) {
+        import('./draw-chunk.js').then(chunk => {
+          if (!state.draw) chunk.initDraw();
+        }).catch(err => console.warn('[TransmissionMap] lazy draw load failed:', err));
+      }
     }
-  }
+    renderMyDataTab();
+  });
 }
 
-// Called by initDraw() (user-data-draw.ts) right after MapboxDraw is attached
-// to the map, to replay any drawn features that were loaded from storage
-// before the lazy draw chunk was ready.
+// Called by initDraw() (user-data-draw.ts) once MapboxDraw and its listeners
+// are attached, to replay any drawn features that were loaded from storage
+// before the lazy draw chunk was ready. Adds them one at a time: a feature
+// MapboxDraw rejects is skipped with a warning and the rest are restored.
 export function restoreDrawnFeatures() {
-  if (state.draw && _cachedDrawnFeatures.features.length) {
-    state.draw.add(_cachedDrawnFeatures);
+  const drawn = _store.drawn();
+  if (state.draw && drawn.features.length) {
+    for (const f of drawn.features) {
+      try {
+        state.draw.add(f);
+      } catch (e) {
+        console.warn('[TransmissionMap] restoreDrawnFeatures: skipped a stored drawing', e);
+      }
+    }
     renderMyDataTab();
   }
 }

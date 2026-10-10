@@ -113,8 +113,11 @@ export function initMap() {
       // applies every registered filter, gen mode, colour-by and the link's
       // style overrides in one shot. A failed layer build is recorded instead,
       // so the link is not blamed for it; the build error still propagates.
-      if (!built) recordDiagEvent('map', 'layer build failed; the link view was not painted');
-      else {
+      // My Data still loads, so its saves (held back until then) reach storage.
+      if (!built) {
+        recordDiagEvent('map', 'layer build failed; the link view was not painted');
+        loadUserData();
+      } else {
         try { paintLinkedView(); } catch (err) {
           console.error('[TransmissionMap] view paint failed', err);
           recordDiagEvent('map', `view paint failed: ${err instanceof Error ? err.message : String(err)}`);

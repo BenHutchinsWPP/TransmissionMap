@@ -2,14 +2,15 @@
 // Click / keydown / dblclick wiring for the My Data panel: select & highlight
 // user features, inline-rename, toggle/expand/delete layers and features, and
 // Delete-key trashing of the selected drawn feature.
-// Deps: state.js, user-data.js (render + selection + mutation helpers).
+// Deps: state.js, user-data.js (render + selection + mutation helpers; every
+// mutation ends in commitUserData, which saves and re-renders).
 // Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
 import {
   renderMyDataTab, clearUserHighlight, removeUserLayer,
   removeUserFeature, toggleUserLayerVisibility, selectUserFeature,
-  startInlineEdit,
+  startInlineEdit, commitUserData,
 } from '../user-data/user-data.js';
 
 export function wireMyData() {
@@ -59,7 +60,6 @@ function onMyDataClick(e: MouseEvent) {
     case 'toggle-layer': {
       const layer = state.userLayers.find(l => l.id === btn.dataset.layerId);
       if (layer) toggleUserLayerVisibility(layer.id, !layer.visible);
-      renderMyDataTab();
       break;
     }
     case 'toggle-expand': {
@@ -77,7 +77,7 @@ function onMyDataClick(e: MouseEvent) {
       break;
     case 'delete-drawn':
       clearUserHighlight();
-      if (state.draw) { state.draw.delete(btn.dataset.featureId!); renderMyDataTab(); }
+      if (state.draw) { state.draw.delete(btn.dataset.featureId!); commitUserData(); }
       break;
   }
 }

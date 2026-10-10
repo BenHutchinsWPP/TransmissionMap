@@ -1,12 +1,5 @@
 // assets/constants.ts — Static, non-mutable app-wide constants.
 
-// ─── User-layer palette + threshold ──────────────────────────────────────────
-export const USER_LAYER_COLORS = [
-  '#e74c3c', '#3498db', '#2ecc71', '#f39c12',
-  '#9b59b6', '#1abc9c', '#e67e22', '#16a085',
-];
-export const USER_FEATURE_THRESHOLD = 20;
-
 export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
 
 // ─── Data URLs ────────────────────────────────────────────────────────────────

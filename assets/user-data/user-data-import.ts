@@ -1,12 +1,12 @@
 // ─── File import (GeoJSON / KML / KMZ) ───────────────────────────────────────
 // A .json that is a view file (view-file.ts) is applied as a view first.
-// Deps: togeojson, jszip, state, utils, user-data, view-file
+// Deps: togeojson, jszip, state, utils, user-data (addImportedLayer, commitUserData), view-file
 
 import * as toGeoJSON from '@tmcw/togeojson';
 import JSZip from 'jszip';
 import { state } from '../state.js';
 import { ensureGeoJsonFeatureUids } from '../utils/utils-uid.js';
-import { renderMyDataTab, addImportedLayer } from './user-data.js';
+import { commitUserData, addImportedLayer } from './user-data.js';
 import { openViewFile } from './view-file.js';
 
 export function handleFileOpen(file: File) {
@@ -35,7 +35,7 @@ function loadGeoJSON(geojson: GeoJSON.GeoJSON & { _tmSource?: string }, filename
   if (geojson._tmSource === 'TransmissionMap') {
     if (state.draw) {
       state.draw.add(geojson as GeoJSON.FeatureCollection);
-      renderMyDataTab();
+      commitUserData();
     }
     return;
   }

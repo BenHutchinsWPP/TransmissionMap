@@ -1,14 +1,19 @@
 // ─── Draw + edit mode + color-picker wiring ───────────────────────────────────
-// Deps: state.js, user-data-geom.js, user-data.js (also calls restoreDrawnFeatures()
-// after attaching MapboxDraw, to replay shapes loaded from storage before this
-// lazy chunk was ready), user-data-colors.js, tool-mode.js (deactivate measure
-// tool without importing measure.js → avoids a circular dep).
+// Deps: state.js, user-data-geom.js, user-data.js (commitUserData() after every
+// draw edit; saveUserData() after a colour pick, which repaints its swatch in
+// place so an open picker survives a drag; restoreDrawnFeatures() once
+// MapboxDraw and its draw.* listeners are attached, to replay shapes loaded
+// from storage before this lazy chunk was ready), user-data-colors.js,
+// tool-mode.js (deactivate measure tool without importing measure.js → avoids
+// a circular dep). MapboxDraw API calls fire no draw.* events, so an edit
+// made through the API saves explicitly.
+// initDraw() is idempotent.
 
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import type { IControl, GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
 import { showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
-import { renderMyDataTab, clearUserHighlight, saveUserData, restoreDrawnFeatures } from './user-data.js';
+import { clearUserHighlight, commitUserData, saveUserData, restoreDrawnFeatures } from './user-data.js';
 import { toolHooks } from '../tool-mode.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 
@@ -88,7 +93,7 @@ const StaticMode = {
 };
 
 export function initDraw() {
-  if (!state.map) return;
+  if (!state.map || state.draw) return;
   toolHooks.exitEdit = () => setMode('view');
   state.draw = new MapboxDraw({
     displayControlsDefault: false,
@@ -98,7 +103,6 @@ export function initDraw() {
     modes: { ...MapboxDraw.modes, static: StaticMode as unknown as MapboxDraw.DrawCustomMode },
   });
   state.map.addControl(state.draw as unknown as IControl);
-  restoreDrawnFeatures();
   if (state.map.loaded()) {
     if (state.editMode === 'view') state.draw.changeMode('static');
   } else {
@@ -113,8 +117,7 @@ export function initDraw() {
       const updated = state.draw!.get(f.id);
       if (updated) state.draw!.add(updated);
     }
-    renderMyDataTab();
-    saveUserData();
+    commitUserData();
   });
   state.map.on('draw.update', onDrawChange);
   state.map.on('draw.delete', onDrawChange);
@@ -129,11 +132,13 @@ export function initDraw() {
     setDefaultPickerDisplay(f ? drawnFeatureColor(f) : state.drawDefaultColor);
     if (f) showFeatureInfo(f.geometry); else clearFeatureInfo();
   });
+
+  // After the listeners, so drawing saves even if a stored shape is rejected.
+  restoreDrawnFeatures();
 }
 
 function onDrawChange() {
-  renderMyDataTab();
-  saveUserData();
+  commitUserData();
   if (state.selectedDrawId && state.draw) {
     const f = state.draw.get(state.selectedDrawId);
     if (f) showFeatureInfo(f.geometry); else clearFeatureInfo();
@@ -199,4 +204,5 @@ function setDrawnFeatureColor(id: string, hex: string) {
   state.draw.setFeatureProperty(id, 'color', hex);
   const f = state.draw.get(id);
   if (f) state.draw.add(f);
+  saveUserData();
 }
