@@ -7,13 +7,15 @@
 //       the same per-feature state bag. Feature-state only sticks to features in currently-loaded
 //       tiles, so we keep the parsed snapshot in module scope and RE-APPLY it on
 //       the source's `sourcedata` event, so panning/zooming into new tiles paints.
-//       Refreshes every 15 min while the layer is visible; a snapshot older than
-//       6 h is not painted (console warning only — no modal, unlike
-//       wildfire-staleness.ts).
+//       Refreshes every 15 min while the layer is visible, and on return-to-page
+//       (live-poll.ts); a snapshot older than 6 h is not painted, the layer is
+//       switched off and #odinStaleDialog explains why (the same kill switch as
+//       live-staleness.ts, until the reader accepts the risk).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, layerVisibility), constants (DATA, COUNTY_SRC*), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel), experience-link.ts
-//       (rebaselineExperience before the kill switch), state-bus.ts (on
+//       (rebaselineExperience before the kill switch), live-poll.ts
+//       (pollWhileVisible — the refresh loop), state-bus.ts (on
 //       'layer:visibility' — re-runs the gate as the layer switches on), i18n (t,
 //       for the legend age chip = #odinAge in index.html).
 //       The map source/layers are built by layers/map-layers-conditions.ts
@@ -35,6 +37,7 @@ import { recordDiagEvent } from './diag-log.js';
 import { setLayerVisibility } from './visibility.js';
 import { on } from './state-bus.js';
 import { fmtAge } from './live-staleness.js';
+import { pollWhileVisible } from './live-poll.js';
 import { t } from '../src/i18n/index.js';
 
 const REGISTRY_ID = "odin-outages";
@@ -365,8 +368,8 @@ export function initOdinOutages() {
   // URL-restored default-on (or already-visible) at load time.
   if (isVisible()) void refetch();
 
-  // Poll only while something is on screen — no point refetching for a hidden layer.
-  setInterval(() => { if (isVisible()) void refetch(); }, REFRESH_MS);
+  // Poll only while something is on screen — on the interval and on return-to-page.
+  pollWhileVisible({ intervalMs: REFRESH_MS, active: isVisible, run: refetch });
   // Keep the displayed age accurate while the page sits open.
   setInterval(renderOdinAge, 60_000);
 }

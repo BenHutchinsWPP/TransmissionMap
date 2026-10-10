@@ -206,15 +206,33 @@ initLiveStaleness({
 ```
 
 It auto-refetches on an interval and on return-to-page (mobile browsers freeze
-background timers), and when the data is older than `maxAgeMs` it **auto-hides
+background timers) — through `pollWhileVisible()` in `assets/live-poll.ts` — and when the data is older than `maxAgeMs` it **auto-hides
 every layer on that source** and shows a blocking modal until the user
 explicitly accepts the risk. Add the `<dialog>` to `index.html` — copy
 `#wildfireStaleDialog`.
 
-The factory does `setData` on a `GeoJSONSource`. **A raster can't use it** —
-do what `odin-outages.ts` does: own refresh timer, own age chip, console
-warning instead of a modal (there's no "wrong evacuation decision" risk from a
-stale temperature field).
+The factory does `setData` on a `GeoJSONSource`. **A raster or feature-state
+feed can't use it** — write your own fetch, but drive it with the same poll
+loop, so it also refreshes the moment a tab comes back:
+
+```ts
+import { pollWhileVisible } from './live-poll.js';
+
+pollWhileVisible({ intervalMs: 10 * 60_000, active: isVisible, run: refetch });
+```
+
+`run` keeps its own in-flight guard; `active` is "is the layer on?", so a
+hidden layer never polls. Pick the staleness response by risk:
+
+- **Safety-relevant** (outages): copy `odin-outages.ts` — not painted past
+  `MAX_AGE_MS`, layer switched off, `#odinStaleDialog` modal until the user
+  accepts the risk.
+- **Cosmetic** (a temperature field): copy `weather-live.ts` — keep painting,
+  turn the age chip red, console warning only. There's no "wrong evacuation
+  decision" risk from a stale temperature field.
+
+A Shape B tile feed polls the same way — see `assets/nexrad-radar.ts`, which
+also refreshes when its layer is switched on.
 
 ### 8. Raster only — hover value readout
 
@@ -254,7 +272,7 @@ Frontend (both shapes):
 - [ ] Registry entry with `live: true`, unique `urlCode`
 - [ ] Layer builder in `assets/layers/map-layers-conditions.ts`, added in `add-all-layers.ts`
 - [ ] Legend + age pill (`<span class="legend-age" id="…Age">`), wired in `ui-legends.ts`
-- [ ] Refresh loop: `initLiveStaleness()` for GeoJSON, hand-rolled for raster
+- [ ] Refresh loop: `initLiveStaleness()` for GeoJSON, `pollWhileVisible()` (`assets/live-poll.ts`) around your own fetch otherwise
 - [ ] Stale `<dialog>` in `index.html` (GeoJSON feeds)
 - [ ] Raster only: `.i16.gz` LUT + `.json` meta emitted, wired into `RASTER_PROBES`
 - [ ] `maxAgeMs` > worst-case cron gap

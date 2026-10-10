@@ -131,10 +131,11 @@ describe('addAllLayers sources', () => {
   state.map = null;
   const spec = (id: string) => sources.get(id) as { attribution?: string; data?: unknown };
 
-  // Sources that carry no credit today, from SOURCE_ATTRIB or inline.
+  // Sources with no attribution of their own: the search highlights draw app
+  // data, the weather images credit GFS beside the timebar (image sources take
+  // no attribution), and the borders under the wash are public-domain Natural Earth.
   const UNCREDITED = [
-    'boem-wind-leases', 'highlight-lines', 'highlight-pts', 'nws-alerts', 'weather-admin-lines',
-    'weather-live', 'weather-live-b', 'westtec-10yr', 'wildfire-live',
+    'highlight-lines', 'highlight-pts', 'weather-admin-lines', 'weather-live', 'weather-live-b',
   ];
 
   it('credits every source but the pinned uncredited ones', () => {

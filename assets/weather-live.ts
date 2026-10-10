@@ -13,7 +13,8 @@
 //       says nothing about pipeline health; only pull age tells us the feed
 //       died.
 // Why not initLiveStaleness(): that factory setData()s a GeoJSONSource. This is a
-//       raster. Same shape as odin-outages.ts instead — own timer, own chip, and a
+//       raster. Wired by hand instead, like odin-outages.ts — the shared poll loop
+//       (live-poll.ts: interval + return-to-page), own chip — but with only a
 //       console warning (never a blocking modal) when the feed goes stale: a stale
 //       weather field is cosmetic, not a safety call like a fire perimeter.
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
@@ -24,7 +25,7 @@
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
-//       diagnostics panel).
+//       diagnostics panel), live-poll.ts (pollWhileVisible).
 //       Dynamically import()s weather-particles.ts (the
 //       lazy chunk boundary — see that file's header) to start/stop the wind
 //       particle animation; never a static import, or the chunk split breaks.
@@ -47,6 +48,7 @@ import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';
+import { pollWhileVisible } from './live-poll.js';
 import { on } from './state-bus.js';
 import { effectiveOverride } from './style-overrides.js';
 import { t } from '../src/i18n/index.js';
@@ -114,6 +116,7 @@ async function syncWindParticles(): Promise<void> {
   particleBakeKey = bakeKey;
   particleSuffix = suffix;
   particlesModule ??= await import('./weather-particles.js');
+  if (particleBakeKey !== bakeKey) return;  // switched off or retargeted during the import
   particlesModule.setParticleOpacity(styleOpacity());
   // generatedUtc rides along as the cache-busting query so the particle field
   // and the wash always come from the same bake.
@@ -643,7 +646,9 @@ export function initWeatherLive() {
   };
   bootFetch();
 
-  setInterval(() => { if (isVisible()) void refetch(); }, REFRESH_MS);
+  // Poll while the layer is on — on the interval and on return-to-page. A
+  // refetch keeps a scrubbed timebar where the user left it (see refetch()).
+  pollWhileVisible({ intervalMs: REFRESH_MS, active: isVisible, run: refetch });
   setInterval(() => {
     renderWeatherAge();
     trackNow();

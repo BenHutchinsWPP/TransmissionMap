@@ -115,6 +115,22 @@ describe('ensureLayerData layer:data emission', () => {
     expect(emitted).toEqual(['hifld-natgas-points']);
     expect(state.sourcesData['hifld-natgas-points']).toHaveLength(1);
   });
+
+  it('keeps a newer pull that landed while the lazy fetch was in flight', async () => {
+    fakeMap(4);
+    const pull = (utc: string) => [{ type: 'Feature' as const, properties: { generated_utc: utc }, geometry: null }];
+    const fresher = pull('2026-10-10T12:00:00Z');
+    state.sourcesData['hifld-natgas-points'] = fresher;
+    const emitted: string[] = [];
+    on('layer:data', ({ id }) => emitted.push(id));
+    const fc = { type: 'FeatureCollection', features: pull('2026-10-10T11:55:00Z') };
+    fetchMock.mockResolvedValueOnce(new Response(gzipSync(strToU8(JSON.stringify(fc)))) as never);
+    await ensureLayerData('hifld-natgas-points');
+    expect(state.sourcesData['hifld-natgas-points']).toBe(fresher);
+    expect(state.sourcesLoaded['hifld-natgas-points']).toBe(true);
+    expect(emitted).toEqual([]);
+    delete state.sourcesData['hifld-natgas-points'];
+  });
 });
 
 describe('layerDataUrl', () => {

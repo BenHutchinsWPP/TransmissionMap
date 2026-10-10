@@ -120,14 +120,23 @@ turns public datasets into PMTiles consumed by the frontend.
       `SOURCE_ATTRIB` (keyed by map source id), the external hosts `diagnostics.ts` also probes,
       `EMPTY_FC`, default viewport, `COUNTY_SRC*`; a single-owner constant lives in its owner
       (`MW_SLIDER_MAX` → `filters.ts`, `BLANK_STYLE`/fog/atmosphere → `basemap.ts`, terrain tuning → `terrain.ts`)
+    - `live-poll.ts` — `pollWhileVisible`: **the one refresh loop every live feed runs on**
+      (interval while the layer is on, plus an instant refetch on return to the tab /
+      bfcache restore, at most once per 60 s); zero deps
     - `live-staleness.ts` — **shared factory** for every live GeoJSON feed: auto-refresh
-      poll + stale-data kill-switch modal. `wildfire-staleness.ts` / `nws-staleness.ts`
-      are thin config shells over it. Raster/feature-state feeds opt out and
-      hand-roll (see `odin-outages.ts`, `weather-live.ts`).
-    - `weather-live.ts` — live 2 m-temperature raster: hourly image swap + hover-LUT
-      reload + age chip (hand-rolled; the factory only does GeoJSON sources)
+      (through `live-poll.ts`) + stale-data kill-switch modal. `wildfire-staleness.ts` /
+      `nws-staleness.ts` are thin config shells over it. Raster/feature-state feeds
+      wire their own fetch and staleness on the same poll loop (see `odin-outages.ts`,
+      `weather-live.ts`).
+    - `weather-live.ts` — live GFS weather raster: image swap + hover-LUT
+      reload + age chip + timebar (own fetch on `live-poll.ts`; the factory only does
+      GeoJSON sources; a stale feed warns in the console, no modal)
+    - `nexrad-radar.ts` — NEXRAD/GeoMet radar frame poll (`startNexradRadar`, called from
+      `add-all-layers.ts`): keeps every tile on one scan, refreshes on switch-on and on
+      return to the tab; owns the GeoMet source table the builder reads
     - `weather-particles.ts` — wind particle animation over the weather wash (lazy-loaded canvas layer)
-    - `odin-outages.ts` — ODIN county outage feature-state join (hand-rolled live feed)
+    - `odin-outages.ts` — ODIN county outage feature-state join (own fetch on `live-poll.ts`;
+      stale-data modal `#odinStaleDialog`, like the factory's)
     - `fema-nri.ts` — FEMA National Risk Index county feature-state join (static table; the hazard picker's `setNriHazard`)
     - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)

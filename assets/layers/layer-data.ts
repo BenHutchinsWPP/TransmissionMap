@@ -1,7 +1,7 @@
 // ─── Layer data: lazy GeoJSON loading for GeoJSON-backed layers ──────────────
 // Imported by: add-all-layers.ts (ensureLayerData — defaultOn bootstrap),
 //              visibility.ts (ensureLayerData), map-layers-wecc.ts (ensureLayerData),
-//              live-staleness.ts (fetchGeojson).
+//              live-staleness.ts (fetchGeojson, liveGeneratedUtc).
 // Deps: state.ts, constants.ts (DATA), state-bus.ts (emits 'layer:data' after a
 //       source's features land), diag-log.ts (recordDiagEvent — records
 //       ensureLayerData failures for the diagnostics panel); registry/index.ts
@@ -35,7 +35,7 @@ export const SOURCE_DATA_URLS: Record<string, string> = {
  *  its registry entry's `geojson` file, else a SOURCE_DATA_URLS row. */
 export function layerDataUrl(sourceId: string): string | undefined {
   const key = layerById(sourceId)?.geojson;
-  return key ? DATA[key as keyof typeof DATA] : SOURCE_DATA_URLS[sourceId];
+  return key ? DATA[key] : SOURCE_DATA_URLS[sourceId];
 }
 
 // Registry IDs that share a source with another registry ID.
@@ -88,6 +88,15 @@ export function ensureLayerData(registryId: string): Promise<void> {
   });
 }
 
+// Pull timestamp of a live source: the first feature's `generated_utc`, falling
+// back to the FeatureCollection-level value stashed in state.liveFcMeta (needed
+// when `features` is empty).
+export function liveGeneratedUtc(sourceKey: string): string | undefined {
+  const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
+  return (f?.properties?.generated_utc as string | undefined)
+    ?? state.liveFcMeta[sourceKey]?.generated_utc;
+}
+
 function fetchSource(registryId: string): Promise<void> {
   const url = layerDataUrl(registryId);
   if (!url || state.sourcesLoaded[registryId]) return Promise.resolve();
@@ -96,7 +105,11 @@ function fetchSource(registryId: string): Promise<void> {
   _inflight[registryId] = (async () => {
     try {
       const geojson = await fetchGeojson(url);
+      // A live feed's poll may have landed a newer pull while this one was in flight.
+      const incoming = (geojson.features?.[0]?.properties?.generated_utc ?? geojson.generated_utc) as string | undefined;
+      const current = liveGeneratedUtc(registryId);
       state.sourcesLoaded[registryId] = true;
+      if (current && incoming && incoming < current) return;
       state.sourcesData[registryId] = geojson.features || [];
       // Stash FeatureCollection-level metadata (generated_utc/feed_status) as a
       // fallback for live layers when `features` is empty — harmless no-op for

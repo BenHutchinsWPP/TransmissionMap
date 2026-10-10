@@ -88,7 +88,7 @@ label.
 | Upstream cadence | NOAA/NCEP GFS 00/06/12/18 UTC cycles, published ~3.5–4.5 h after cycle time, hourly steps f000–f120 |
 | Primary trigger | `workflow_dispatch`, fired **every 3 h** (`:22`) by cron-job.org |
 | Insurance cron | `schedule: 48 */6 * * *` — **6 h**, disaster insurance if cron-job.org dies |
-| Frontend poll | 10 min (the ~300 B meta JSON only; raster reload only when `generated_utc` moves) |
+| Frontend poll | 10 min while the layer is on, and at once on return to the tab (at most once per 60 s; `assets/live-poll.ts`) — the ~300 B meta JSON only; raster reload only when `generated_utc` moves. A refetch keeps a scrubbed timebar where the user left it |
 | Now-tracking | 60 s tick: a display parked on the auto-selected step advances to the step nearest wall-clock "now" (flip lands at half past the hour); a scrubbed-away position or running playback is never touched |
 | Stale threshold | **12 h** (`MAX_AGE_MS` in `assets/weather-live.ts`) — must stay **larger than the 6 h insurance cron**. Change one, change the other. |
 | On stale | Console warning + red age chip. **No blocking modal** — a stale forecast is advisory, not a safety call like a fire perimeter. The layer keeps displaying. |

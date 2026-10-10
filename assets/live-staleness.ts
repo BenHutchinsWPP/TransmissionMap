@@ -1,11 +1,10 @@
 // ─── Live-layer staleness safety (shared factory) ─────────────────────────────
 // Role: shared factory for live-feed safety behavior, plus the shared age/
 //       status-text helpers every live-feed display uses.
-//       Auto-refreshes a shared live GeoJSON source on an interval (and on
-//       return-to-page, since mobile browsers freeze timers in background
-//       tabs) and, when the data's pull age exceeds a hard cutoff, auto-
-//       disables every layer sharing that source and warns the user with a
-//       full-screen modal. An explicit "I understand the risk" action
+//       Auto-refreshes a shared live GeoJSON source on an interval and on
+//       return-to-page (live-poll.ts) and, when the data's pull age exceeds a
+//       hard cutoff, auto-disables every layer sharing that source and warns
+//       the user with a full-screen modal. An explicit "I understand the risk" action
 //       re-enables them. Optionally prunes expired features (e.g. NWS alerts
 //       past their `ends`/`expires` time) before every setData.
 // Source of truth for age = the `generated_utc` property on the first
@@ -16,14 +15,14 @@
 //       formatters with no DOM or state deps (feedIssue's words come from the
 //       active locale via i18n's t()), consumed by ui/ui-legends.ts
 //       (legend age chips) and any other per-feed status display — plus
-//       liveGeneratedUtc/liveAgeMs, the single reader for a live source's pull
-//       age, used by the gate below and by diagnostics.ts.
+//       liveAgeMs, the single reader for a live source's pull age (over
+//       layer-data.ts's liveGeneratedUtc), used by the gate below and by diagnostics.ts.
 // Deps: state (DATA via cfg.dataUrl, sourcesData, layerVisibility),
 //       visibility.ts (setLayerVisibility — which writes URL state and, through
 //       'layer:visibility', refreshes the legends and the panel checkbox),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the diagnostics panel),
 //       experience-link.ts (rebaselineExperience before the kill switch),
-//       layers/layer-data.ts (fetchGeojson),
+//       layers/layer-data.ts (fetchGeojson, liveGeneratedUtc), live-poll.ts (pollWhileVisible),
 //       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on;
 //       on/emit 'layer:data' — re-checks on fresh data, announces each refetch). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
@@ -34,7 +33,8 @@ import { rebaselineExperience } from './experience-link.js';
 import { setLayerVisibility } from './visibility.js';
 import { on, emit } from './state-bus.js';
 import { recordDiagEvent } from './diag-log.js';
-import { fetchGeojson } from './layers/layer-data.js';
+import { fetchGeojson, liveGeneratedUtc } from './layers/layer-data.js';
+import { pollWhileVisible } from './live-poll.js';
 import { t } from '../src/i18n/index.js';
 
 // Age → short human string ("42m", "3h 5m", "2d 1h"). Shared by the stale
@@ -73,15 +73,6 @@ export function feedIssue(feed: string, status: string, lastOk?: string | null):
   const name = key ? t(key) : feed;
   const m = status.match(/^fallback-(\d+)d$/);
   return m ? `${name} ${t("age.old", { age: `${m[1]}d` })}` : t("age.feedDown", { name, age: downFor(lastOk) });
-}
-
-// Pull timestamp of a live source: the first feature's `generated_utc`, falling
-// back to the FeatureCollection-level value stashed in state.liveFcMeta (needed
-// when `features` is empty).
-function liveGeneratedUtc(sourceKey: string): string | undefined {
-  const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
-  return (f?.properties?.generated_utc as string | undefined)
-    ?? state.liveFcMeta[sourceKey]?.generated_utc;
 }
 
 // Pull age in ms (now − generated_utc), or null if unknown/unparseable. The
@@ -159,8 +150,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   // Re-fetch the feed and push it onto the existing source. `no-cache`
   // revalidates against the browser's HTTP cache so we never re-read a stale
   // copy (the service worker never sees data requests — see sw.js).
-  let lastFetchMs = 0;   // last refetch attempt — guards the return-to-page path
-  let inflight = false;  // concurrent-call guard (interval + visibilitychange + pageshow)
+  let inflight = false;  // concurrent-call guard (poll ticks, return-to-page)
 
   async function refetchLive(): Promise<void> {
     if (!state.map) return;
@@ -168,7 +158,6 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     if (!src) return;   // source not added yet (no layer ever enabled)
     if (inflight) return; // already fetching
     inflight = true;
-    lastFetchMs = Date.now();
     const url = dataUrl();
     try {
       const geojson = await fetchGeojson(url, { cache: "no-cache" });
@@ -192,6 +181,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
         };
       }
       src.setData({ ...geojson, features });
+      state.sourcesLoaded[sourceKey] = true;
       // Same event the legend age chip listens for → it (and checkStaleness) refresh.
       emit('layer:data', { id: sourceKey });
     } catch (err) {
@@ -242,11 +232,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   });
 
   // Poll: refetch (which emits 'layer:data' → checkStaleness) only while
-  // something is actually on screen — no point polling for hidden layers.
-  setInterval(() => {
-    if (visibleLayers().length === 0) return;
-    void refetchLive();
-  }, refreshMs);
+  // something is actually on screen — on the interval and on return-to-page.
+  pollWhileVisible({ intervalMs: refreshMs, active: () => visibleLayers().length > 0, run: refetchLive });
 
   // Periodically check staleness while layers are visible, in case the time exceeds the threshold
   // without a new feed fetch/load. Also re-runs expiry pruning so features expiring
@@ -255,22 +242,4 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     if (visibleLayers().length > 0) checkStaleness();
     pruneAndSetData();
   }, 60_000);
-
-  // Mobile browsers freeze setInterval while the tab is backgrounded, so the
-  // poll never fires at the moment of return — refetch on the "page is visible
-  // again" signals instead. 60s guard so rapid app-switching doesn't spam the
-  // feed (refetchLive itself dedupes real data via generated_utc anyway).
-  const refetchOnReturn = () => {
-    if (visibleLayers().length === 0) return;
-    if (Date.now() - lastFetchMs < 60_000) return;
-    void refetchLive();
-  };
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refetchOnReturn();
-  });
-  // Back/forward-cache restore (common iOS Safari path) doesn't always emit a
-  // visibilitychange — pageshow with persisted=true covers it.
-  window.addEventListener("pageshow", (e) => {
-    if (e.persisted) refetchOnReturn();
-  });
 }

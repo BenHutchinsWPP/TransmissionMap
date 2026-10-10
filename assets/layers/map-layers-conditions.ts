@@ -8,10 +8,9 @@
 //       feature-state pattern; the join lives in ../fema-nri.ts).
 // Each plan* returns a LayerPlan (layer-plan.ts), which add-all-layers.ts
 // applies — that step registers every inline style-layer filter as its base.
-// startNexradRadar() starts the radar frame poll once the plan is applied.
 // Deps: layer-init.ts (initialVisibility, countyBoundariesSource, planRaster),
-//       layer-plan.ts (LayerPlan type), state,
-//       constants (DATA, EMPTY_FC, radar URLs, WEATHER_WASH_OPACITY, COUNTY_SRC*),
+//       layer-plan.ts (LayerPlan type), state, nexrad-radar.ts (GEOMET_RADAR, geometTiles),
+//       constants (DATA, EMPTY_FC, RADAR_TILE_URL, WEATHER_WASH_OPACITY, COUNTY_SRC*),
 //       src/colors/buckets.ts (NRI_RATINGS; bucketColorExpr over NWS_GROUP_BUCKETS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
@@ -34,18 +33,19 @@
 //
 // planNexradRadar() is a live external raster tile source ("nexrad-radar") —
 // IEM NEXRAD composite reflectivity; no data pipeline. Frame consistency comes
-// from polling IEM's tms.json for the current timestamped layer name. Canada
+// from polling IEM's tms.json for the current timestamped layer name — the
+// poll lives in ../nexrad-radar.ts, with the GeoMet source table. Canada
 // coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
 // -snow) added underneath and toggled by the same registry row.
 
-import type { LayerSpecification, ExpressionSpecification, FilterSpecification, RasterTileSource, ImageSourceSpecification } from "maplibre-gl";
+import type { LayerSpecification, ExpressionSpecification, FilterSpecification, ImageSourceSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import {
-  DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
-  GEOMET_RADAR_TILE_TEMPLATE, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
+  DATA, EMPTY_FC, RADAR_TILE_URL, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
 } from '../constants.js';
 import { initialVisibility, countyBoundariesSource, planRaster } from './layer-init.js';
 import type { LayerPlan } from './layer-plan.js';
+import { GEOMET_RADAR, geometTiles } from '../nexrad-radar.js';
 import { NRI_RATINGS, NWS_GROUP_BUCKETS, bucketColorExpr } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
@@ -299,49 +299,7 @@ export const planSeismicHazard = () => planRaster("usgs-seismic-pga", DATA.usgs_
   '<a href="https://www.usgs.gov/programs/earthquake-hazards/science/2018-nshm">USGS NSHM</a>');
 
 // ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
-// IEM's "-0" latest-frame alias resolves per tile inside their cache, so during
-// a frame rollover adjacent tiles can come from different volume scans (visible
-// seams). tms.json names the current frame atomically (ridge::USCOMP-N0Q-
-// YYYYMMDDHHMM); polling it and swapping in the timestamped layer name keeps
-// every tile on the same scan. New frames land ~5 min apart; the 60s poll of
-// the tiny JSON keeps swap lag low, and setTiles only fires on a frame change.
-let radarTimer: ReturnType<typeof setInterval> | undefined;
-let radarFrame = "";   // last applied timestamped layer name
-
-// Canada: ECCC GeoMet WMS, one source per product (GeoMet rejects multi-layer
-// GetMap). Both toggle with the nexrad-radar row via the registry mapLayerIds.
-const GEOMET_RADAR = [
-  ["geomet-radar-rain", "RADAR_1KM_RRAI"],
-  ["geomet-radar-snow", "RADAR_1KM_RSNO"],
-] as const;
-
-const geometTiles = (wmsLayer: string, bust: string) =>
-  [GEOMET_RADAR_TILE_TEMPLATE.replace("{layer}", wmsLayer).replace("{bust}", bust)];
-
-async function refreshRadarFrame() {
-  const map = state.map;
-  if (!map?.getLayer("nexrad-radar")) return;
-  if (map.getLayoutProperty("nexrad-radar", "visibility") !== "visible") return;
-  try {
-    const res = await fetch(RADAR_TMS_JSON_URL);
-    if (!res.ok) return;
-    const tms = await res.json() as { services?: { id: string; layername: string }[] };
-    const layername = tms.services?.find(s => s.id === "ridge_uscomp_n0q")?.layername;
-    if (!layername || layername === radarFrame || !map.getSource("nexrad-radar")) return;
-    radarFrame = layername;
-    (map.getSource("nexrad-radar") as RasterTileSource)
-      .setTiles([RADAR_TILE_TEMPLATE.replace("{layer}", layername)]);
-    // GeoMet has no frame index we poll; TIME-less GetMap always serves the
-    // latest frame, so cache-busting on the IEM frame change (~5 min) is enough.
-    for (const [srcId, wmsLayer] of GEOMET_RADAR) {
-      const src = map.getSource(srcId) as RasterTileSource | undefined;
-      src?.setTiles(geometTiles(wmsLayer, layername));
-    }
-  } catch {
-    // transient network failure — keep showing the current frame
-  }
-}
-
+// The frame poll that keeps every tile on one scan lives in ../nexrad-radar.ts.
 export function planNexradRadar(): LayerPlan {
   const eccc = '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>';
   // GeoMet (Canada) first so the IEM layer draws on top where coverage overlaps.
@@ -359,11 +317,6 @@ export function planNexradRadar(): LayerPlan {
       paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
     } as LayerSpecification },
   ]);
-}
-
-export function startNexradRadar() {
-  void refreshRadarFrame();
-  radarTimer ??= setInterval(() => void refreshRadarFrame(), 60_000);
 }
 
 // ─── ODIN live county-outage choropleth ───────────────────────────────────────
