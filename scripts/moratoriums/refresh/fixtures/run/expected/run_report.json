@@ -9,7 +9,9 @@
     "rate": 0.923
   },
   "hits": {
-    "total": 13,
+    "not_fetched_blocked_host": 0,
+    "not_fetched_snippet": 2,
+    "total": 15,
     "unique_urls": 13
   },
   "items": {
@@ -28,6 +30,10 @@
       "seed citation not in page": 1
     },
     "total": 6
+  },
+  "ledger": {
+    "not_fetched_idle": 0,
+    "not_read_unchanged": 0
   },
   "llm": {
     "by_model": {
@@ -68,7 +74,7 @@
   },
   "queries": {
     "by_kind": {
-      "discovery": 20,
+      "discovery": 26,
       "expiring": 1,
       "pending": 1,
       "rotating": 2,
@@ -76,9 +82,9 @@
     },
     "error_ids": [],
     "errors": 0,
-    "planned": 25,
+    "planned": 31,
     "rows_queried": 5,
-    "run": 25,
+    "run": 31,
     "stopped_on_http": 0
   },
   "refresh_state_updated": 5,
@@ -96,11 +102,13 @@
     "utilities": 1
   },
   "run_date": "2026-10-08",
-  "search_requests": 25,
+  "search_requests": 31,
   "seeds": {
     "cited_urls_dropped": 1,
     "cited_urls_kept": 2,
+    "failed": 8,
     "pages": 9,
+    "paused": 0,
     "read": 1
   },
   "upstream_sha": "0123456789abcdef0123456789abcdef01234567"

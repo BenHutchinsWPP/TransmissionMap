@@ -83,7 +83,7 @@ changes reach the map without review. A run dispatched with
 | Step | What runs |
 |---|---|
 | Follow-up | Searches for rows already in the dataset: pending measures, measures expiring within 21 days, utilities, and a rotating slice of measures with no end date |
-| Discovery | A fixed list of general queries for new moratoriums, bans and utility pauses |
+| Discovery | A rotating set of general queries for new moratoriums, bans and utility pauses, plus state-by-state queries for the states with the fewest measures per county, searched from the previous run's date and given their own share of the page budget |
 | Sources | [Brave Search](https://brave.com/search/api/) (news and web), tracker seed pages (savrn.com, datacenterbans.com, dcmap.us, servercountry.org, strisker briefings, the NJ Pinelands ordinance log) and SEC full-text search for utilities |
 | Extraction | A cheap model (Claude Haiku) reads one fetched page at a time and fills a fixed JSON schema; a stronger one (Claude Sonnet) re-reads the harder pages. Neither chooses queries, URLs or files |
 | Review | Every new row and every change to a tracked row is checked in code (duplicates, a change about a different place) and by Claude Opus against the page before it is written; a rejected change is only listed, with its reasons |
@@ -91,10 +91,12 @@ changes reach the map without review. A run dispatched with
 
 Verification rule: a row is kept only when its quote (at least 40
 characters) appears in the fetched page text, the place is named on that
-page, the dates are valid, and the review accepts it: same place, not a
+page (as whole words, in its headline or within 1,500 characters of the quote), the dates are valid, and the review accepts it: same place, not a
 duplicate, actually adopted rather than proposed, and dates the page supports
 at least as precisely as the tracked ones. Anything else is listed as a lead in
-`inputs/research/weekly/<date>/notes.md`. Every new row is marked
+`inputs/research/weekly/<date>/notes.md`. A row a reviewer dropped, and a change the
+review rejected from an unchanged page, stay out on later runs
+(`inputs/refresh_ledger.json`). Every new row is marked
 unconfirmed, with its source attached.
 
 Each run's report, as the commit message (or the pull request body), lists

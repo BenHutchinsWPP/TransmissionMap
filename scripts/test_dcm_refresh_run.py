@@ -2,7 +2,7 @@
 
 Runs moratoriums.refresh.run over the fixture work dir (fixtures/run/work) with fixture search,
 fixture pages and canned model answers, and compares the weekly CSVs, notes.md,
-refresh_state.json and run_report.json with fixtures/run/expected/. The report has no volatile
+refresh_state.json, refresh_ledger.json and run_report.json with fixtures/run/expected/. The report has no volatile
 fields (no timestamps or absolute paths), so it is compared whole.
 Rule-level tests drive run.Verifier on in-memory pages (notes vs build_research.REPL, page ties,
 extensions, replacements, status moves), and pipeline-level tests drive run.research with fake
@@ -58,6 +58,7 @@ def outputs(copy: Path, report: dict) -> dict:
     """name -> text for every file the run writes, plus the report."""
     out = {p.name: p.read_text(encoding="utf-8") for p in sorted((copy / WEEKLY).iterdir())}
     out["refresh_state.json"] = (copy / "inputs" / "refresh_state.json").read_text(encoding="utf-8")
+    out["refresh_ledger.json"] = (copy / "inputs" / "refresh_ledger.json").read_text(encoding="utf-8")
     out["run_report.json"] = json.dumps(report, indent=2, sort_keys=True) + "\n"
     return out
 
@@ -153,6 +154,122 @@ class DryRun(unittest.TestCase):
         self.assertEqual(rot, ["nm-oh-washington-township-2026", "add-pa-birch-hollow-2026"])
 
 
+class PageLedger(unittest.TestCase):
+    """A page read before, unchanged and with no claim, is not read again; one idle for two runs is not fetched."""
+
+    def test_second_run_skips_known_pages(self):
+        from moratoriums.refresh import ledger
+        with tempfile.TemporaryDirectory() as d:
+            first, r1 = run.dry_run(WORK, DATASET, RUN, Config(), copy_root=Path(d))
+            led = ledger.load(first / "inputs" / ledger.NAME)
+            quiet = {k for k, e in led["pages"].items() if not e["claims"]}
+            self.assertTrue(quiet and len(quiet) < len(led["pages"]))
+            _, r2 = run.dry_run(first, DATASET, RUN, Config(), copy_root=Path(d))
+            self.assertEqual(r2["ledger"], {"not_fetched_idle": 0, "not_read_unchanged": len(quiet)})
+            self.assertEqual(r2["rows"], r1["rows"])  # every page that gave a claim is read again
+            self.assertLess(r2["llm"]["calls"], r1["llm"]["calls"])
+            for k in quiet:
+                led["pages"][k]["idle"] = ledger.IDLE_RUNS
+            ledger.save(first / "inputs" / ledger.NAME, led, RUN)
+            _, r3 = run.dry_run(first, DATASET, RUN, Config(), copy_root=Path(d))
+            inp = run.load_inputs(WORK, DATASET, RUN)
+            watched = {q.row_id for q in plan_queries(inp.dataset, RUN, inp.county_names, Config())
+                       if q.kind in ("pending", "expiring")}
+            kept = {k for k in quiet if watched & set(led["pages"][k]["ctx"])}  # always fetched
+            self.assertTrue(kept and kept < quiet)
+            self.assertEqual(r3["ledger"], {"not_fetched_idle": len(quiet - kept), "not_read_unchanged": len(kept)})
+            self.assertEqual(r3["fetch"]["pages"], r1["fetch"]["pages"] - len(quiet - kept))
+            self.assertEqual(r3["rows"], r1["rows"])
+
+    def test_idle_rules(self):
+        from datetime import timedelta
+        from moratoriums.refresh import ledger
+        led = ledger.empty()
+        ledger.note_page(led, "u", "s", ["a"], False, RUN - timedelta(days=30))
+        self.assertFalse(ledger.idle(led, "u", ["a"], RUN))  # one quiet run is not enough
+        ledger.note_page(led, "u", "s", ["a"], False, RUN - timedelta(days=15))
+        self.assertTrue(ledger.idle(led, "u", ["a"], RUN))
+        self.assertFalse(ledger.idle(led, "u", ["a", "b"], RUN))  # wanted for a row it was not read for
+        self.assertFalse(ledger.idle(led, "u", ["a"], RUN + timedelta(days=ledger.REFETCH_DAYS)))  # due a re-read
+        self.assertTrue(ledger.unchanged(led, "u", "s", []))
+        self.assertFalse(ledger.unchanged(led, "u", "s2", []))
+        ledger.note_page(led, "u", "s", ["a"], True, RUN)
+        self.assertEqual(led["pages"]["u"]["idle"], 0)
+        self.assertFalse(ledger.unchanged(led, "u", "s", []))
+
+
+class HitFilter(unittest.TestCase):
+    def test_snippet_needs_a_keyword_and_the_row_name(self):
+        ok = run.snippet_ok
+        self.assertTrue(ok("Owen County pauses <strong>data center</strong> permits", "", ["Owen County"]))
+        self.assertTrue(ok("Council vote", "Town of Owen adopts a moratorium", ["Owen County"]))
+        self.assertFalse(ok("Owen County fair opens", "Rides and food.", ["Owen County"]))  # no keyword
+        self.assertFalse(ok("Bowen moratorium", "", ["Owen County"]))  # another place
+        self.assertTrue(ok("Council bans data centers", "", []))  # discovery: the keyword is enough
+        self.assertFalse(ok("ICE detention center contract", "", []))
+
+    def test_hosts_that_refuse_every_fetch_are_blocked_for_a_while(self):
+        from datetime import timedelta
+        from moratoriums.refresh import ledger
+        led = ledger.empty()
+        pages = [Page("https://www.shut.example.com/a", "https://www.shut.example.com/a", 403, "", "", "http_403"),
+                 Page("https://mixed.example.com/a", "https://mixed.example.com/a", 403, "", "", "http_403"),
+                 page("text", "https://mixed.example.com/b")]
+        ledger.note_hosts(led, pages, RUN)
+        self.assertEqual(list(led["hosts"]), ["shut.example.com"])
+        self.assertTrue(ledger.blocked(led, "https://shut.example.com/other", RUN + timedelta(days=14)))
+        self.assertFalse(ledger.blocked(led, "https://shut.example.com/other", RUN + timedelta(days=ledger.BLOCK_DAYS)))
+        ledger.note_hosts(led, [page("text", "https://shut.example.com/c")], RUN)
+        self.assertEqual(led["hosts"], {})
+
+    def test_blocked_host_is_not_fetched(self):
+        from moratoriums.refresh import ledger
+        with tempfile.TemporaryDirectory() as d:
+            w = Path(d) / "w"
+            run.copy_inputs(WORK, w)
+            led = ledger.empty()
+            led["hosts"]["northjerseyledger.example.com"] = {"date": "2026-10-01"}
+            ledger.save(w / "inputs" / ledger.NAME, led, RUN)
+            fetched = []
+            report = run.research(w, DATASET, RUN, Config(seed_pages=()), FakeSearch([LAKE_URL]),
+                                  lambda u: fetched.append(u) or page(LAKE, u), FakeLlm({}))
+        self.assertEqual(fetched, [])
+        self.assertEqual(report["hits"]["not_fetched_blocked_host"], 1)
+
+
+class SeedPause(unittest.TestCase):
+    def test_seed_without_citations_pauses_after_three_runs(self):
+        from datetime import timedelta
+        from moratoriums.refresh import ledger
+        led = ledger.empty()
+        sec = "https://efts.sec.gov/LATEST/search-index?q=x&dateRange=custom&startdt=2026-09-20&enddt=2026-10-08"
+        for i in range(ledger.SEED_ZERO_RUNS):
+            self.assertFalse(ledger.seed_paused(led, sec, RUN))
+            ledger.note_seed(led, sec.replace("2026-09-20", f"2026-0{i + 1}-01"), 0, RUN)  # dates differ per run
+        self.assertTrue(ledger.seed_paused(led, sec, RUN + timedelta(days=14)))
+        self.assertFalse(ledger.seed_paused(led, sec, RUN + timedelta(days=ledger.REFETCH_DAYS)))  # tried again
+        ledger.note_seed(led, sec, 2, RUN)
+        self.assertFalse(ledger.seed_paused(led, sec, RUN))
+
+    def test_paused_seed_is_not_fetched(self):
+        from moratoriums.refresh import ledger
+        tracker = "https://tracker.example.com/list/"
+        with tempfile.TemporaryDirectory() as d:
+            w = Path(d) / "w"
+            run.copy_inputs(WORK, w)
+            led = ledger.empty()
+            led["seeds"][tracker] = {"date": "2026-10-01", "zero": 3}
+            ledger.save(w / "inputs" / ledger.NAME, led, RUN)
+            fetched = []
+            with contextlib.redirect_stderr(io.StringIO()):
+                report = run.research(w, DATASET, RUN, Config(seed_pages=(tracker,)), FakeSearch(),
+                                      lambda u: fetched.append(u) or Page(u, u, 404, "", "", "http_404"), FakeLlm({}))
+            notes = (w / WEEKLY / "notes.md").read_text(encoding="utf-8")
+        self.assertNotIn(tracker, fetched)
+        self.assertEqual((report["seeds"]["paused"], report["seeds"]["pages"]), (1, 0))
+        self.assertIn(f"- {tracker}: paused (no cited URL in 3 runs running)", notes)
+
+
 class Budget(unittest.TestCase):
     def test_search_budget_stops_cleanly(self):
         class Limited(FixtureSearch):
@@ -245,6 +362,11 @@ class Schemas(unittest.TestCase):
         self.assertEqual(run.source_quality("https://www.cityofx.org/a.pdf", "pdf"), "primary")
         self.assertEqual(run.source_quality("https://www.cityofx.org/a", "html"), "secondary")
         self.assertEqual(run.source_quality("https://news.example.com/a.pdf", "pdf"), "secondary")
+        for host in ("www.electricity-news.com", "hometowndaily.com", "foo.us", "www.example.us",
+                     "www.countyoffice.org", "townofficials.com", "cityofficialsonline.com"):
+            self.assertEqual(run.source_quality(f"https://{host}/a.pdf", "pdf"), "secondary", host)
+        for host in ("www.kingcounty.org", "harriscountytx.org", "www.townofx.com"):
+            self.assertEqual(run.source_quality(f"https://{host}/a.pdf", "pdf"), "primary", host)
 
     def test_page_markers_cannot_be_forged(self):
         class P:
@@ -346,6 +468,44 @@ class CheckClean(unittest.TestCase):
                 (site / "events.csv").write_text("changed\n")
                 self.assertEqual(run.check_clean(site), 1)
 
+    def test_inputs_in_another_checkout(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name in ("site/moratoriums.csv", "data/inputs/upstream.sha"):
+                (Path(d) / name).parent.mkdir(parents=True, exist_ok=True)
+                (Path(d) / name).write_text("x\n")
+            for repo in ("site", "data"):
+                self.git(Path(d) / repo, "init", "-q")
+                self.git(Path(d) / repo, "add", ".")
+                self.git(Path(d) / repo, "commit", "-qm", "seed")
+            work = Path(d) / "work"
+            work.mkdir()
+            (work / "inputs").symlink_to(Path(d) / "data" / "inputs")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(run.check_clean(Path(d) / "site", work), 0)
+                (Path(d) / "data" / "inputs" / "upstream.sha").write_text("changed\n")
+                self.assertEqual(run.check_clean(Path(d) / "site", work), 1)
+
+    def test_inputs_outside_any_checkout_is_skipped(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as w:
+            (Path(d) / "moratoriums.csv").write_text("x\n")
+            self.git(d, "init", "-q")
+            self.git(d, "add", ".")
+            self.git(d, "commit", "-qm", "seed")
+            (Path(w) / "inputs").mkdir()
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(run.check_clean(Path(d), Path(w)), 0)
+
+    def test_inputs_with_a_broken_git_link_fails(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as w:
+            (Path(d) / "moratoriums.csv").write_text("x\n")
+            self.git(d, "init", "-q")
+            self.git(d, "add", ".")
+            self.git(d, "commit", "-qm", "seed")
+            (Path(w) / "inputs").mkdir()
+            (Path(w) / "inputs" / ".git").write_text("gitdir: /nonexistent/worktree\n")  # a dangling worktree link
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(run.check_clean(Path(d), Path(w)), 2)
+
 
 # ---------------------------------------------------------------- rule-level harness
 
@@ -409,6 +569,17 @@ class PageTies(unittest.TestCase):
         self.assertEqual(reasons(v), ["jurisdiction not named on page"])
         self.assertFalse(any(v.rows.values()))
 
+    def test_name_must_be_near_the_quote_or_in_the_headline(self):
+        quote = "voted on October 5, 2026 to adopt a one-year moratorium on new data center applications"
+        far = "Owenby County news. " + "Filler sentence about other business. " * 100 + "The council " + quote + "."
+        self.assertTrue(run.named_on_page("Owenby County", far, quote))  # in the headline
+        tail = "Other news. " + "Filler sentence about other business. " * 100 + "The council " + quote + ". " \
+               + "More filler about nothing. " * 100 + "Fairbrook residents spoke."
+        self.assertFalse(run.named_on_page("Fairbrook", tail, quote))  # only far from the quote
+        near = "Other news. " + "Filler sentence about other business. " * 100 + "Fairbrook: the council " + quote + "."
+        self.assertTrue(run.named_on_page("Fairbrook", near, quote))
+        self.assertFalse(run.named_on_page("Ada", "Canada and Nevada: the council " + quote, quote))
+
     def test_county_and_town_of_forms_match(self):
         self.assertTrue(run.named_on_page("Owen County", "the Owen board of commissioners voted"))
         self.assertTrue(run.named_on_page("Town of Owen", "OWEN COUNTY commissioners"))
@@ -427,6 +598,55 @@ class PageTies(unittest.TestCase):
             self.assertEqual(row["eia_id"], want, eia)
             self.assertEqual(v.counts["eia_id_blanked"], 0 if want else 1)
             self.assertEqual("blanked" in row["notes"], not want)
+
+
+class Dropped(unittest.TestCase):
+    """A research row a reviewer removed with field=DROP stays removed when its page comes back."""
+    FAIR_TEXT = "the Fairbrook City Council voted 6-1 on October 5, 2026 to adopt a one-year moratorium on data centers."
+
+    def drop_inputs(self, row):
+        with tempfile.TemporaryDirectory() as d:
+            w = Path(d) / "w"
+            run.copy_inputs(WORK, w)
+            wk = w / "inputs" / "research" / "weekly" / "2026-09-15"
+            wk.mkdir(parents=True)
+            from moratoriums.refresh.schema import write_rows
+            write_rows(wk / "moratoriums.csv", "moratoriums", [row])
+            write_rows(wk / "updates.csv", "updates", [dict(file="moratoriums.csv", id=row["id"], field="DROP", old="",
+                                                           new="", source_urls="", source_quality="", notes="not a measure")])
+            return run.load_inputs(w, DATASET, RUN)
+
+    def row(self, **kw):
+        base = dict(id="add-in-fairbrook-2026", jurisdiction_name="Fairbrook", jurisdiction_level="city", state="IN",
+                    county="Owenby", type="temporary moratorium", sectors="data center", status="active",
+                    date_adopted="2026-10-05", date_expires="", duration="", summary="s", source_urls="https://x.example/1",
+                    source_quality="secondary", upstream_id="", kind="new", notes="n")
+        return {**base, **kw}
+
+    def test_dropped_new_measure_is_a_lead(self):
+        inp = self.drop_inputs(self.row())
+        self.assertEqual(list(inp.dropped), ["add-in-fairbrook-2026"])
+        self.assertEqual(inp.last_run, date(2026, 9, 15))
+        v = run.Verifier(inp, RUN)
+        c = item(quote="the Fairbrook City Council voted 6-1 on October 5, 2026 to adopt a one-year moratorium")
+        self.assertFalse(v.would_claim(run._clean_item(c)))
+        v.take(c, page(self.FAIR_TEXT), "secondary", TRIAGE)
+        self.assertEqual(reasons(v), ["dropped by a reviewer (add-in-fairbrook-2026)"])
+        self.assertEqual(v.rows["moratoriums"], [])
+        self.assertEqual(v._dropped({**run._clean_item(c), "date_adopted": "2025-03-01"}), "")  # another year's measure
+
+    def test_dropped_upstream_extension_is_a_lead(self):
+        inp = self.drop_inputs(self.row(id="add-oh-washington-township-2026-ext", jurisdiction_name="Washington Township",
+                                        jurisdiction_level="township", state="OH", county="Pickett", status="extended",
+                                        date_adopted="", upstream_id="oh-washington-township-2026", kind="extension"))
+        text = "Washington Township trustees in Pickett County voted on October 6, 2026 to extend the data center moratorium by six months."
+        v = run.Verifier(inp, RUN)
+        v.take(item(kind="extension", jurisdiction_name="Washington Township", jurisdiction_level="township",
+                    state="OH", county="Pickett", status="extended", date_adopted="2026-10-06",
+                    quote="voted on October 6, 2026 to extend the data center moratorium by six months"),
+               page(text), "secondary", ESCALATION)
+        self.assertEqual(reasons(v), ["dropped by a reviewer (add-oh-washington-township-2026-ext)"])
+        self.assertEqual(v.rows["moratoriums"], [])
 
 
 class Changes(unittest.TestCase):
@@ -584,7 +804,7 @@ class FakeSearch:
         self.ids.append(query_id)
         if self.error:
             raise self.error
-        return [Hit(u, "", "", "", query_id) for u in self.urls] if self.requests == 1 else []
+        return [Hit(u, text, "", "", query_id) for u in self.urls] if self.requests == 1 else []  # the query names its row
 
 
 class FakeLlm:
@@ -641,6 +861,26 @@ class Escalation(unittest.TestCase):
         self.assertEqual(report["rows"]["bans"], 1)
         self.assertEqual(report["rows"]["moratoriums"], 0)
         self.assertIn("- dropped on escalation re-read: IN Fairbrook |", notes)
+
+
+    NF = "Northfork PUD paused new large-load service requests on March 3, 2025, for every data center customer."
+    NF_URL = "https://www.northforkpud.example.org/news/2026"
+
+    def nf(self, **kw):
+        return item(measure_type="interconnection pause", jurisdiction_name="Northfork PUD", jurisdiction_level="utility",
+                    state="WA", county="Northfork", date_adopted="2025-03-03",
+                    quote="paused new large-load service requests on March 3, 2025, for every data center customer", **kw)
+
+    def test_confirmation_not_escalated(self):
+        pages = {self.NF_URL: page(self.NF, self.NF_URL)}
+        report, _, llm, _ = pipeline(pages, {TRIAGE: {"items": [self.nf()]}})
+        self.assertNotIn(ESCALATION, llm.calls)
+        self.assertEqual(report["items"]["confirmed_unchanged"], 1)
+
+    def test_change_still_escalated(self):
+        pages = {self.NF_URL: page(self.NF, self.NF_URL)}
+        _, _, llm, _ = pipeline(pages, {TRIAGE: {"items": [self.nf(kind="lift", status="lifted")]}})
+        self.assertEqual(llm.calls.count(ESCALATION), 1)
 
 
 class PipelineNits(unittest.TestCase):
@@ -710,7 +950,7 @@ class SeedLinks(unittest.TestCase):
 
     def test_links_inside_the_untrusted_block(self):
         p = self.tracker()
-        prompt = run.seed_prompt(p, RUN)
+        prompt = run.seed_prompt(p, RUN, RUN)
         block = prompt.split(run.BEGIN, 1)[1].split(run.END, 1)[0]
         self.assertIn("LINKS:\n- https://tracker.example.com/2026/10/glenwood | council story", block)
         self.assertEqual(prompt.count(run.BEGIN), 1)
@@ -718,7 +958,7 @@ class SeedLinks(unittest.TestCase):
     def test_seed_prompt_links_capped(self):
         p = self.tracker()
         links = tuple((f"https://t.example.com/p{i}", "a" * 200) for i in range(400))
-        prompt = run.seed_prompt(dataclasses.replace(p, links=links), RUN)
+        prompt = run.seed_prompt(dataclasses.replace(p, links=links), RUN, RUN)
         self.assertEqual(prompt.count("\n- https://"), 150)
         self.assertIn("/p149 |", prompt)
         self.assertNotIn("/p150", prompt)
@@ -727,6 +967,153 @@ class SeedLinks(unittest.TestCase):
     def test_link_count_capped(self):
         html = "".join(f"<a href='/p{i}'>x</a>" for i in range(500)).encode()
         self.assertEqual(len(_page_from_bytes(self.BASE, self.BASE, 200, "text/html", html, "utf-8", None).links), 400)
+
+
+class ReviewFixes(unittest.TestCase):
+    """Matching, dedupe and refresh_state fixes from the run.py review."""
+
+    TAM = ("Tamarack Township's board voted on October 6, 2026 to extend its data center moratorium "
+           "until April 14, 2027, the township clerk said.")
+    TAM_QUOTE = "board voted on October 6, 2026 to extend its data center moratorium until April 14, 2027"
+
+    def tam_ext(self, **kw):
+        return item(kind="extension", measure_type="permit pause", jurisdiction_name="Tamarack Township",
+                    jurisdiction_level="township", state="MI", county="Tamarack", status="extended",
+                    date_adopted="2026-10-06", quote=self.TAM_QUOTE, **kw)
+
+    def test_unmatched_replacement_keeps_its_own_status(self):
+        text = "Fairbrook City Council adopted a permanent ban on data centers on October 5, 2026, in every zoning district."
+        v = verifier()
+        v.take(item(kind="replacement", measure_type="permanent ban", status="replaced",
+                    quote="adopted a permanent ban on data centers on October 5, 2026, in every zoning district"),
+               page(text), "secondary", ESCALATION)
+        row, = v.rows["bans"]
+        self.assertEqual(row["status"], "active")
+
+    def test_new_utility_measure_is_not_a_change_to_another(self):
+        text = ("Northfork PUD commissioners voted on September 24, 2026 to cap new large-load service at 50 MW "
+                "for every new data center customer.")
+        v = verifier()
+        v.take(item(measure_type="load cap", jurisdiction_name="Northfork PUD", jurisdiction_level="utility",
+                    state="WA", county="Northfork", date_adopted="2026-09-24",
+                    quote="voted on September 24, 2026 to cap new large-load service at 50 MW"),
+               page(text), "secondary", ESCALATION)
+        self.assertEqual(len(v.rows["utilities"]), 1, v.leads)
+        self.assertEqual(v.rows["updates"], [])
+
+    def test_new_then_replacement_writes_one_row(self):
+        text = ("Tamarack Township's board adopted a permanent ban on data centers on October 6, 2026, which "
+                "replaces the township's one-year moratorium.")
+        quote = "adopted a permanent ban on data centers on October 6, 2026, which replaces the township's one-year moratorium"
+        ban = dict(measure_type="permanent ban", jurisdiction_name="Tamarack Township", jurisdiction_level="township",
+                   state="MI", county="Tamarack", date_adopted="2026-10-06", quote=quote)
+        v = verifier()
+        v.take(item(**ban), page(text, "https://a.example.com/1"), "secondary", ESCALATION)
+        v.take(item(kind="replacement", **ban), page(text, "https://b.example.com/2"), "secondary", ESCALATION)
+        row, = v.rows["bans"]
+        self.assertEqual(row["source_urls"], "https://a.example.com/1|https://b.example.com/2")
+        self.assertEqual(v.rows["updates"], [])
+        self.assertEqual(reasons(v), ["replacement of a measure already written as new"])
+
+    def test_extension_tie_goes_to_the_extendable_measure(self):
+        inp = run.load_inputs(WORK, DATASET, RUN)
+        lifted = {**inp.by_id["sweep-mi-tamarack-township-2026"], "id": "add-mi-tamarack-township-2026b",
+                  "type": "permit pause", "status": "lifted", "date_adopted": "2026-05-01", "date_expires": ""}
+        inp.dataset.append(lifted)
+        inp.by_id[lifted["id"]] = lifted
+        v = run.Verifier(inp, RUN)
+        v.take(self.tam_ext(date_expires="2027-04-14"), page(self.TAM), "secondary", TRIAGE)
+        self.assertEqual(v.leads, [])
+        self.assertEqual({r["id"] for r in v.rows["updates"]}, {"sweep-mi-tamarack-township-2026"})
+
+    def test_utility_lift_matches_outside_its_type_family(self):
+        inp = run.load_inputs(WORK, DATASET, RUN)
+        v = run.Verifier(inp, RUN)
+        (key, ids), = [(k, i) for k, i in v.util_index.items() if len(i) == 1][:1]
+        row = inp.by_id[ids[0]]
+        other = next(t for t in run.TYPES if t not in run._family(row["type"]))
+        c = item(kind="lift", measure_type=other, jurisdiction_name=row["jurisdiction_name"] if "jurisdiction_name" in row
+                 else row["name"], jurisdiction_level="utility", state=row["state"], status="lifted")
+        self.assertEqual(v.match(c), f"match:{row['id']}")
+
+    def test_second_source_with_a_further_change_is_a_lead(self):
+        v = verifier()
+        v.take(self.tam_ext(), page(self.TAM, "https://a.example.com/1"), "secondary", TRIAGE)
+        v.take(self.tam_ext(date_expires="2027-04-14"), page(self.TAM, "https://b.example.com/2"), "secondary", TRIAGE)
+        self.assertEqual(reasons(v), ["further change from a second source"])
+        self.assertIn("date_expires 2027-04-14", v.leads[0]["detail"])
+
+    def test_full_page_cap_stops_searching(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, full = run.dry_run(WORK, DATASET, RUN, Config(), copy_root=Path(d))
+        with tempfile.TemporaryDirectory() as d:
+            copy, report = run.dry_run(WORK, DATASET, RUN, Config(max_pages=3), copy_root=Path(d))
+            state = json.loads((copy / "inputs" / "refresh_state.json").read_text())
+        self.assertIn("max_pages", report["caps_hit"])
+        self.assertLess(report["queries"]["rows_queried"], full["queries"]["rows_queried"])
+        self.assertEqual(report["refresh_state_updated"], report["queries"]["rows_queried"])
+        self.assertEqual(sum(v == "2026-10-08" for v in state.values()), report["refresh_state_updated"])
+
+
+    def test_discovery_keeps_its_page_slots(self):
+        follow = [f"https://f.example.com/{i}" for i in range(30)]
+        found = [f"https://d.example.com/{i}" for i in range(10)]
+
+        class Search(FakeSearch):
+            def search(self, text, freshness=None, query_id="", endpoint="news"):
+                self.requests += 1
+                self.ids.append(query_id)
+                urls = found if query_id.startswith("q-disc") else follow
+                return [Hit(u, text, "", "", query_id) for u in urls]
+
+        s = Search()
+        report, notes, _, _ = pipeline({}, {}, search=s, cfg=Config(seed_pages=(), max_pages=20, discovery_pages=5))
+        self.assertTrue(any(i.startswith("q-disc") for i in s.ids))
+        self.assertEqual(report["fetch"]["pages"], 20)
+        cut = [l.rsplit(" ", 1)[1] for l in notes.splitlines() if l.startswith("- not fetched (max_pages)")]
+        self.assertEqual(sum(u.startswith("https://d.") for u in cut), 5)  # 5 reserved, the other 5 cut
+        self.assertEqual(len(cut), 20)  # follow-ups keep 15 of 30
+        self.assertIn("max_pages", report["caps_hit"])
+
+    def test_unused_discovery_slots_go_to_follow_ups(self):
+        follow = [f"https://f.example.com/{i}" for i in range(30)]
+
+        class Search(FakeSearch):
+            def search(self, text, freshness=None, query_id="", endpoint="news"):
+                self.requests += 1
+                return [] if query_id.startswith("q-disc") else [Hit(u, text, "", "", query_id) for u in follow]
+
+        report, notes, _, _ = pipeline({}, {}, search=Search(), cfg=Config(seed_pages=(), max_pages=20, discovery_pages=5))
+        self.assertEqual(report["fetch"]["pages"], 20)
+
+    def test_failed_pages_leave_their_rows_due(self):
+        good = "https://ok.example.com/1"
+
+        def first_row_stamped(pages, answers):
+            s = FakeSearch(list(pages))
+            _, _, _, state = pipeline(pages, answers, search=s)
+            return state.get(s.ids[0].removeprefix("q-")) == RUN.isoformat()  # only the first query has hits
+
+        cases = {"timeout": Page("u", "u", 0, "", "", "timeout"), "http_503": Page("u", "u", 503, "", "", "http_503"),
+                 "http_403": Page("u", "u", 403, "", "", "http_403")}
+        for name, failed in cases.items():
+            with self.subTest(name):  # a passing failure keeps the row due, a 403 does not
+                pages = {good: page(LAKE, good), "https://bad.example.com/2": failed}
+                self.assertEqual(first_row_stamped(pages, {}), name == "http_403")
+        self.assertTrue(first_row_stamped({good: page(LAKE, good)}, {}))
+        for answer in (LlmRefusal("refused", usage=Usage(1, 1)), run.LlmError("HTTP 429")):
+            with self.subTest(type(answer).__name__):
+                self.assertFalse(first_row_stamped({good: page(LAKE, good)}, {TRIAGE: answer}))
+
+    def test_page_cap_keeps_seed_citations(self):
+        cited = ("https://www.glenwoodtribune.example.com/2026/10/03/glenwood-moratorium",
+                 "https://news.example.com/2026/10/06/lafayette-council-moratorium")
+        with tempfile.TemporaryDirectory() as d:
+            copy, report = run.dry_run(WORK, DATASET, RUN, Config(max_pages=2), copy_root=Path(d))
+            notes = next(copy.glob("inputs/research/weekly/*/notes.md")).read_text(encoding="utf-8")
+        cut = [l for l in notes.splitlines() if l.startswith("- not fetched (max_pages)")]
+        self.assertFalse([l for l in cut if l.endswith(cited)])
+        self.assertEqual(report["queries"]["rows_queried"], 0)  # the seeds fill the cap: no paid query is wasted
 
 
 if __name__ == "__main__":

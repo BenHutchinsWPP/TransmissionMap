@@ -261,29 +261,14 @@ jobs:
 
       - name: Check the published files
         # The frontend reads these four files at the branch root; a malformed
-        # one must never reach a PR. events.csv is append-only.
+        # one must never reach a PR. events.csv is append-only, and a rebuild
+        # that loses more than 2% of the rows or features, or any upstream
+        # (nm-) row, stops here (pr.py check).
         if: steps.mode.outputs.mode != 'dry_run'
-        working-directory: work/site
-        run: |
-          python3 - <<'PY'
-          import csv, json, subprocess, sys
-          g = json.load(open("dc_moratoriums.geojson", encoding="utf-8"))
-          assert g.get("type") == "FeatureCollection" and g.get("generated_utc"), "geojson header"
-          assert g["features"], "geojson has no features"
-          assert open("README.md", encoding="utf-8").read().strip(), "README.md empty"
-          for name in ("moratoriums.csv", "events.csv"):
-              base = subprocess.run(["git", "show", f"origin/data-moratoriums:{name}"], capture_output=True, text=True)
-              new = open(name, encoding="utf-8", newline="").read()
-              head = next(csv.reader(new.splitlines()))
-              if base.returncode == 0:
-                  assert head == next(csv.reader(base.stdout.splitlines())), f"{name}: header changed: {head}"
-                  if name == "events.csv":
-                      assert new.startswith(base.stdout), "events.csv: base history was rewritten"
-              print(f"{name}: {len(new.splitlines()) - 1} rows, header ok")
-          print(f"dc_moratoriums.geojson: {len(g['features'])} features as of {g['generated_utc']}")
-          PY
+        run: python3 -m moratoriums.refresh.pr check --checkout "$W/site"
 
       - name: Publish to data-moratoriums, or open or update the refresh PR
+        id: publish
         if: steps.mode.outputs.mode != 'rebuild_only'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
@@ -297,8 +282,47 @@ jobs:
           export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
             GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
           direct=(); [ "$PUBLISH" = direct ] && direct=(--direct)
+          rc=0
           python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
-            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE" "${direct[@]}"
+            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE" "${direct[@]}" || rc=$?
+          # Exit 4: data-moratoriums moved during the run (a human push), so the plain push was
+          # rejected. The next three steps rebuild this run's inputs on the new tip and push once more.
+          if [ "$rc" = 4 ]; then
+            echo "::warning::data-moratoriums moved during the run; rebuilding this run's rows on the new tip."
+            echo "retry=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$rc"
+
+      - name: Move onto the new data-moratoriums tip
+        if: steps.publish.outputs.retry == 'true'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: python3 -m moratoriums.refresh.pr rebase --checkout "$W/site" --run-date "$RUN_DATE"
+
+      - name: Rebuild and check on the new tip
+        if: steps.publish.outputs.retry == 'true'
+        env:
+          AS_OF: ${{ steps.asof.outputs.as_of }}
+        run: |
+          set -o pipefail
+          bash scripts/moratoriums/rebuild.sh --work "$W" --dataset "$W/site" --build "$W/build" \
+            --as-of "$AS_OF" 2>&1 | tee "$W/build/logs/rebuild.log"
+          python3 -m moratoriums.refresh.pr check --checkout "$W/site"
+
+      - name: Publish again on the new tip
+        if: steps.publish.outputs.retry == 'true'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Push credentials for this step only, as above.
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"; echo "::add-mask::$auth"
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
+            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode "$MODE" --direct
 
       - name: rebuild_only — no-diff check, or push the open PR's rebuild
         if: steps.mode.outputs.mode == 'rebuild_only'
@@ -342,6 +366,8 @@ jobs:
           print(f"| leads | {r.get('leads', {}).get('total', 0)} |")
           print(f"| search requests | {r.get('search_requests', 0)} |")
           print(f"| pages fetched (rate) | {r.get('fetch', {}).get('pages', 0)} ({r.get('fetch', {}).get('rate', 0)}) |")
+          seeds = r.get("seeds", {})
+          print(f"| seed pages read / failed / paused | {seeds.get('read', 0)} / {seeds.get('failed', 0)} / {seeds.get('paused', 0)} |")
           print(f"| model calls (escalated, refusals) | {llm.get('calls', 0)} ({llm.get('escalated', 0)}, {llm.get('refusals', 0)}) |")
           print(f"| est. model cost (USD) | {llm.get('est_cost_usd', 0)} |")
           print(f"| caps hit | {', '.join(r.get('caps_hit') or []) or 'none'} |")

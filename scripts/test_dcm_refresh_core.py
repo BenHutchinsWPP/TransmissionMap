@@ -26,6 +26,17 @@ class TextNorm(unittest.TestCase):
         self.assertEqual(textnorm.norm("St. Louis County"), "saintlouis")
         self.assertEqual(textnorm.jn("Louisville/Jefferson County metropolitan government"), "louisvillejefferson")
 
+    def test_name_in_text(self):
+        f = textnorm.name_in_text
+        self.assertTrue(f("Owen County", "the Town of Owen voted"))
+        self.assertTrue(f("Town of Owen", "Owen County commissioners"))
+        self.assertTrue(f("City of St. Charles", "St Charles aldermen"))
+        self.assertTrue(f("Prince George's County", "Prince Georges planners"))
+        self.assertTrue(f("Winston-Salem", "Winston Salem council"))
+        self.assertFalse(f("Ada", "Canada and Nevada"))
+        self.assertFalse(f("Owen", "Bowen Township"))
+        self.assertFalse(f("Town", "the town council"))  # a name that is all generic words matches nothing
+
     def test_normalize_text(self):
         n = textnorm.normalize_text
         self.assertEqual(n("It’s a “ban” – now"), "it's a \"ban\" - now")
@@ -198,17 +209,44 @@ class Planner(unittest.TestCase):
         self.assertEqual(ids, ["p-never", "p-old", "p-new", "exp-past", "exp-in", "u1", "r-old", "r-new"])
         self.assertEqual([q.kind for q in qs][:3], ["pending"] * 3)
         by = {q.row_id: q for q in qs}
-        self.assertEqual(by["p-new"].freshness, "2026-09-30to2026-10-08")
+        self.assertEqual(by["p-new"].freshness, "2026-09-28to2026-10-08")  # last_verified less 2 days
         self.assertEqual(by["p-never"].freshness, "2026-07-10to2026-10-08")  # 90 days back
         self.assertEqual(by["p-old"].freshness, "2026-07-10to2026-10-08")  # older than 90 days
         self.assertEqual(by["p-new"].text, '"P-NEW" Ohio data center moratorium')
         self.assertEqual(by["u1"].text, '"U1" data center OR cryptocurrency load moratorium')
         disc = [q for q in qs if q.kind == "discovery"]
-        self.assertEqual(len(disc), len(config.DISCOVERY_QUERIES))
-        self.assertTrue(all(q.freshness == "pw" for q in disc))
+        self.assertEqual(len(disc), len(config.DISCOVERY_QUERIES) + 6)  # carry runs every fixed query, plus 6 states
+        self.assertTrue(all(q.freshness == "2026-09-20to2026-10-08" for q in disc))  # no earlier run: 16 + 2 days
         self.assertEqual(qs[-len(disc):], disc)
         self.assertNotIn("done", ids)
         self.assertNotIn("exp-far", ids)
+
+    def test_discovery_window_starts_at_the_last_run(self):
+        from datetime import date
+        qs = queries.plan_queries(self.rows(), RUN, {}, config.Config(), last_run=date(2026, 9, 15))
+        self.assertEqual({q.freshness for q in qs if q.kind == "discovery"}, {"2026-09-13to2026-10-08"})
+        self.assertEqual(queries.since_last_run(RUN, date(2026, 1, 1)), date(2026, 7, 10))  # at most 90 days back
+        self.assertEqual(queries.since_last_run(RUN, RUN), date(2026, 10, 6))
+
+    def test_discovery_rotates_and_targets_thin_states(self):
+        rows = [row(f"oh{i}") for i in range(30)] + [row("nj1", state="NJ")]
+        cfg = config.Config(shares=(("pending", 0), ("expiring", 0), ("utility", 0), ("rotating", 0)))
+        first = [q for q in queries.plan_queries(rows, RUN, {}, cfg, counties_per_state={"OH": 88, "NJ": 21}) if q.kind == "discovery"]
+        self.assertEqual(len(first), 20)
+        fixed, states = [q for q in first if q.id[-1].isdigit()], [q for q in first if not q.id[-1].isdigit()]
+        self.assertEqual([q.id for q in fixed], [f"q-disc-{i:02d}" for i in range(1, 15)])
+        self.assertEqual(len(states), 6)
+        self.assertEqual(states[0].text, "data center moratorium Alaska")  # no rows: thinnest, by code
+        self.assertNotIn("q-disc-oh", {q.id for q in first})
+        seen = {q.text: "2026-09-24" for q in first}
+        second = [q for q in queries.plan_queries(rows, RUN, {}, cfg, counties_per_state={"OH": 88, "NJ": 21},
+                                                  discovery_seen=seen) if q.kind == "discovery"]
+        self.assertTrue({f"q-disc-{i:02d}" for i in range(15, 21)} <= {q.id for q in second})
+        self.assertFalse({q.id for q in states} & {q.id for q in second})
+        # half the states are candidates, so OH (30 rows over 88 counties) and NJ (1 over 21) are not
+        cands = queries._state_order(rows, {"OH": 88, "NJ": 21})
+        self.assertEqual(len(cands), (len(config.US_STATES) + 1) // 2)
+        self.assertNotIn("OH", cands)
 
     def test_caps_cut_from_bottom_and_deterministic(self):
         full = queries.plan_queries(self.rows(), RUN, {}, config.Config())
@@ -246,7 +284,7 @@ class Planner(unittest.TestCase):
                 + self.many("r", 60))
         k = self.kinds(queries.plan_queries(rows, RUN, {}, config.Config()))
         # expiring's unused 50 flows to utility (20 + 50 >= 30), then rotating (30 + 40 >= 60)
-        self.assertEqual(k, {"pending": 80, "utility": 30, "rotating": 60, "discovery": 20})
+        self.assertEqual(k, {"pending": 80, "utility": 30, "rotating": 60, "discovery": 26})
 
     def test_utility_oversized_uses_carry(self):
         rows = self.many("p", 10, status="pending") + self.many("u", 200, level="utility") + self.many("r", 100)
@@ -277,7 +315,13 @@ class Planner(unittest.TestCase):
         qs = queries.plan_queries([row("future", status="pending", last_verified="2026-10-20"),
                                    row("today", status="pending", last_verified="2026-10-08")], RUN, {}, config.Config())
         self.assertEqual({q.row_id: q.freshness for q in qs if q.row_id},
-                         {"future": "2026-10-07to2026-10-08", "today": "2026-10-07to2026-10-08"})
+                         {"future": "2026-10-07to2026-10-08", "today": "2026-10-06to2026-10-08"})
+
+    def test_freshness_starts_at_the_last_query(self):
+        rows = [row("p-new", status="pending", last_verified="2026-09-30"), row("p-never", status="pending")]
+        state = {"p-new": "2026-09-24", "p-never": "2026-09-24"}
+        by = {q.row_id: q.freshness for q in queries.plan_queries(rows, RUN, {}, config.Config(), state) if q.row_id}
+        self.assertEqual(by, {"p-new": "2026-09-28to2026-10-08", "p-never": "2026-09-22to2026-10-08"})
 
     def test_county_name_in_followup_text(self):
         rows = [row("a", level="city", name="Washington Township", county_fips="39049", status="pending"),

@@ -232,8 +232,13 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(closed, [1])
 
     def test_user_agent_contact(self):
-        self.assertIn(F.REPO_URL, F.user_agent({}))
-        self.assertIn("ops@example.org", F.user_agent({"DCM_CONTACT": "ops@example.org"}))
+        env = {"DCM_CONTACT": "ops@example.org"}
+        sec = "https://efts.sec.gov/LATEST/search-index?q=x"
+        self.assertIn(F.REPO_URL, F.user_agent(sec, {}))
+        self.assertIn("ops@example.org", F.user_agent(sec, env))
+        self.assertIn(F.REPO_URL, F.user_agent("https://example.gov/a", env))
+        self.assertNotIn("ops@example.org", F.user_agent("https://example.gov/a", env))
+        self.assertNotIn("ops@example.org", F.user_agent("https://notsec.gov/a", env))
 
     def test_html_to_text_table_cells_separated(self):
         text = F.html_to_text("<table><tr><td>Mesa</td><td>CO</td></tr><tr><th>Dell</th><dd>TX</dd></tr></table>")
@@ -271,7 +276,7 @@ class FetchTests(unittest.TestCase):
         op = Opener(FakeResp((FIX / "page.html").read_bytes(), url="https://final.test/p"))
         p = F.fetch("https://x.test/p", opener=op)
         req, timeout = op.requests[0]
-        self.assertEqual(req.get_header("User-agent"), F.user_agent())
+        self.assertEqual(req.get_header("User-agent"), F.user_agent(req.full_url))
         self.assertEqual(timeout, 15)
         self.assertEqual((p.status, p.error, p.final_url), (200, "", "https://final.test/p"))
         self.assertIn("moratorium", p.text)

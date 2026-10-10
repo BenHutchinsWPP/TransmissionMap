@@ -5,6 +5,7 @@ No network and no real git or gh: a fake runner records argument lists and answe
 import contextlib
 import io
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -35,9 +36,9 @@ def row(i):
 class Fake:
     """Fake runner: reads answered from `answers` (by argv prefix), writes recorded and not run."""
 
-    def __init__(self, answers=None, dry=False, fail=None, staged=True):
+    def __init__(self, answers=None, dry=False, fail=None, staged=True, codes=None, on=None):
         self.answers, self.dry, self.fail, self.calls = answers or {}, dry, fail or {}, []
-        self.staged = staged
+        self.staged, self.codes, self.on = staged, codes or {}, on or {}
 
     def __call__(self, argv, *, write=False, check=True):
         self.calls.append((list(argv), write))
@@ -45,6 +46,12 @@ class Fake:
             return subprocess.CompletedProcess(argv, 0, "", "")
         if argv[:4] == ["git", "diff", "--cached", "--quiet"]:
             return subprocess.CompletedProcess(argv, 1 if self.staged else 0, "", "")
+        for key, fn in self.on.items():
+            if argv[: len(key)] == list(key):
+                fn()
+        for key, (rc, err) in self.codes.items():
+            if argv[: len(key)] == list(key):
+                return subprocess.CompletedProcess(argv, rc, "", err)
         for key, err in self.fail.items():
             if argv[: len(key)] == list(key):
                 raise pr.PrError(err)
@@ -78,6 +85,12 @@ class Body(unittest.TestCase):
         self.assertIn("git revert", body)
         self.assertIn("unconfirmed", body)
         self.assertIn("WARNING add-1", body)
+
+    def test_seed_line(self):
+        body = pr.build_body({**REPORT, "seeds": {"read": 5, "failed": 4, "paused": 2, "cited_urls_kept": 0}},
+                             "", [], [], [], [], "2026-10-08", "research")
+        self.assertIn("## Seed pages\n\n5 read, 4 failed to fetch, 2 paused", body)
+        self.assertNotIn("## Seed pages", pr.build_body(REPORT, "", [], [], [], [], "2026-10-08", "research"))
 
     def test_truncation(self):
         rows = [row(i) for i in range(3000)]
@@ -236,6 +249,18 @@ class Publish(unittest.TestCase):
         self.assertIn("| new on the map | 1 |", commit[-1])
         self.assertFalse(any("refresh/weekly" in " ".join(a) for a in w))
 
+    def test_rejected_direct_push_exits_4(self):
+        self.args.direct = True
+        push = ("git", "push", "origin")
+        moved = Fake(self.answers(), codes={push: (1, " ! [rejected]        HEAD -> data-moratoriums (fetch first)\n")})
+        with self.assertRaises(pr.PrError) as e:
+            self.run_publish(moved)
+        self.assertEqual(e.exception.code, 4)
+        other = Fake(self.answers(), codes={push: (128, "fatal: unable to access: 403")})
+        with self.assertRaises(pr.PrError) as e:
+            self.run_publish(other)
+        self.assertEqual(e.exception.code, 1)
+
     def test_open_pr_edits(self):
         f = Fake(self.answers({PR_LIST: json.dumps([{"number": 9, "headRefName": "refresh/weekly"}])}))
         self.run_publish(f)
@@ -307,3 +332,90 @@ class Publish(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Check(unittest.TestCase):
+    """pr.check: the rebuilt files against the base tip before anything is pushed."""
+    HEAD = "id,name,status\n"
+    EV = "recorded_at,id,event,event_date,field,old,new,note\n2026-10-01,a,adopted,,,,,\n"
+
+    def files(self, n_rows=100, nm=True, features=100, events=None):
+        rows = "".join(f"add-{i},T{i},active\n" for i in range(n_rows)) + ("nm-1,Up,active\n" if nm else "")
+        geo = json.dumps({"type": "FeatureCollection", "generated_utc": "2026-10-08", "features": [{}] * features})
+        return {"moratoriums.csv": self.HEAD + rows, "events.csv": events or self.EV,
+                "dc_moratoriums.geojson": geo, "README.md": "# r\n"}
+
+    def test_unchanged_and_small_drift_pass(self):
+        self.assertEqual(pr.published_problems(self.files(), self.files())[0], [])
+        self.assertEqual(pr.published_problems(self.files(), self.files(n_rows=99, features=98))[0], [])
+
+    def test_shrink_and_lost_upstream_row_fail(self):
+        problems, _ = pr.published_problems(self.files(), self.files(n_rows=96, features=90, nm=False))
+        self.assertEqual(len(problems), 3, problems)
+        self.assertTrue(problems[0].startswith("moratoriums.csv rows: 101 -> 96"))
+        self.assertIn("upstream rows gone: nm-1", problems[1])
+        self.assertTrue(problems[2].startswith("dc_moratoriums.geojson features: 100 -> 90"))
+
+    def test_headers_and_append_only(self):
+        new = self.files(events="recorded_at,id,event,event_date,field,old,new,note\n")
+        new["moratoriums.csv"] = new["moratoriums.csv"].replace("id,name,status", "id,name,state", 1)
+        new["README.md"] = " "
+        problems, _ = pr.published_problems(self.files(), new)
+        self.assertEqual(sorted(p.split(":")[0] for p in problems), ["README.md", "events.csv", "moratoriums.csv"])
+
+    def test_no_base_checks_shape_only(self):
+        base = dict.fromkeys(pr.ROOT_FILES)
+        self.assertEqual(pr.published_problems(base, self.files())[0], [])
+        bad = self.files(features=0)
+        bad["dc_moratoriums.geojson"] = "{"
+        self.assertEqual(len(pr.published_problems(base, bad)[0]), 2)
+
+    def test_check_reads_base_with_git_show(self):
+        with tempfile.TemporaryDirectory() as d:
+            co = Path(d)
+            for n, t in self.files(n_rows=50).items():
+                (co / n).write_text(t)
+            base = self.files()
+            fake = Fake({("git", "show", f"origin/data-moratoriums:{n}"): t for n, t in base.items()})
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                rc = pr.check(fake, co, "data-moratoriums")
+        self.assertEqual(rc, 1)
+        self.assertIn("::error::moratoriums.csv rows: 101 -> 51", out.getvalue())
+        self.assertFalse(fake.argvs(write=True))
+
+
+class Rebase(unittest.TestCase):
+    """pr.rebase: onto the moved base tip, keeping only this run's own inputs."""
+
+    def test_keeps_own_inputs_over_the_new_tip(self):
+        with tempfile.TemporaryDirectory() as d:
+            co = Path(d)
+            wk = co / "inputs/research/weekly/2026-10-15"
+            wk.mkdir(parents=True)
+            (wk / "notes.md").write_text("ours")
+            (co / "inputs/refresh_state.json").write_text("{}")
+            (co / "moratoriums.csv").write_text("rebuilt by this run")
+
+            def reset():  # what `git reset --hard origin/<base>` does to the tree
+                shutil.rmtree(co / "inputs")
+                (co / "inputs/research/weekly/2026-10-01").mkdir(parents=True)
+                (co / "inputs/refresh_state.json").write_text('{"theirs": 1}')
+                (co / "moratoriums.csv").write_text("the new tip")
+
+            fake = Fake(on={("git", "reset", "--hard"): reset})
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pr.rebase(fake, co, "data-moratoriums", "2026-10-15"), 0)
+            self.assertEqual((wk / "notes.md").read_text(), "ours")
+            self.assertEqual((co / "inputs/refresh_state.json").read_text(), "{}")
+            self.assertTrue((co / "inputs/research/weekly/2026-10-01").is_dir())
+            self.assertEqual((co / "moratoriums.csv").read_text(), "the new tip")  # the rebuild regenerates it
+            self.assertIn(["git", "reset", "--hard", "origin/data-moratoriums"], fake.argvs(write=True))
+
+    def test_same_date_already_published_exits_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            co = Path(d)
+            (co / "inputs/research/weekly/2026-10-15").mkdir(parents=True)
+            fake = Fake()  # the reset leaves the tree as is: the tip has this date's folder too
+            with self.assertRaises(pr.PrError) as e:
+                pr.rebase(fake, co, "data-moratoriums", "2026-10-15")
+            self.assertEqual(e.exception.code, 2)

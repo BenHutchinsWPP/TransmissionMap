@@ -96,10 +96,17 @@ class Config:
     # Hard stop on search requests (retries count). 220 = 200 planned + 20 slack for 429/5xx retries.
     max_requests: int = 220
     max_pages: int = 300
+    # Page slots kept for discovery hits: follow-up queries stop once seeds and follow-ups fill the
+    # rest, so discovery, which runs last, always reads new pages. Unused slots go back to follow-ups.
+    discovery_pages: int = 60
     max_llm_calls: int = 400
     max_escalation_calls: int = 40
     max_review_calls: int = 60
     discovery_reserved: int = 20
+    # Of the discovery requests, this many go to "data center moratorium <State>" for the less covered
+    # half of the states (fewest rows per county), the longest unsearched first; the fixed
+    # DISCOVERY_QUERIES rotate through the rest the same way (queries.py).
+    discovery_state_queries: int = 6
     # Stop issuing searches, fetches and model calls after this long, so the job's own timeout
     # never ends a run after its credits are spent; what was gathered is still verified and written.
     wall_clock_minutes: int = 90

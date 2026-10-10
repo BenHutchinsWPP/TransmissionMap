@@ -3,7 +3,8 @@
 Mode: dry_run. Rows are AI-extracted, each checked against a quote on its page; every new row is unconfirmed until reviewed.
 
 Rows: 4 moratoriums, 1 bans, 1 utilities, 3 updates. Leads: 6. Confirmed unchanged: 1.
-Search requests: 25. Pages fetched: 13 (rate 0.923). Model calls: 23, refusals 1.
+Search requests: 31. Pages fetched: 13 (rate 0.923). Model calls: 23, refusals 1.
+Known pages skipped (refresh_ledger.json): 0 not fetched (no claim in 2 runs), 0 fetched but unchanged, not read.
 
 ## Caps hit
 
@@ -21,9 +22,9 @@ Search requests: 25. Pages fetched: 13 (rate 0.923). Model calls: 23, refusals 1
 - https://servercountry.org/: fetch failed (http_404)
 - https://writing.strisker.com/: fetch failed (http_404)
 - https://www.nj.gov/pinelands/landuse/amend/ords.shtml: fetch failed (http_404)
-- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20moratorium&dateRange=custom&startdt=2026-09-24&enddt=2026-10-08: fetch failed (http_404)
-- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20%22pause%22%20%22new%20load%22&dateRange=custom&startdt=2026-09-24&enddt=2026-10-08: fetch failed (http_404)
-- https://efts.sec.gov/LATEST/search-index?q=%22large%20load%22%20moratorium%20%22data%20center%22&dateRange=custom&startdt=2026-09-24&enddt=2026-10-08: fetch failed (http_404)
+- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20moratorium&dateRange=custom&startdt=2026-09-20&enddt=2026-10-08: fetch failed (http_404)
+- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20%22pause%22%20%22new%20load%22&dateRange=custom&startdt=2026-09-20&enddt=2026-10-08: fetch failed (http_404)
+- https://efts.sec.gov/LATEST/search-index?q=%22large%20load%22%20moratorium%20%22data%20center%22&dateRange=custom&startdt=2026-09-20&enddt=2026-10-08: fetch failed (http_404)
 
 ## Leads
 
@@ -39,6 +40,17 @@ Search requests: 25. Pages fetched: 13 (rate 0.923). Model calls: 23, refusals 1
 7 changes reviewed, 7 accepted. A rejected change is not written; publish it by adding its row to this folder's CSVs, citing a page.
 
 - none
+
+## By state
+
+Leads (rejected changes included), new measures written, changes rejected in review.
+
+- IN: 0 leads, 1 new, 0 rejected
+- KS: 0 leads, 1 new, 0 rejected
+- MI: 1 leads, 0 new, 0 rejected
+- NJ: 0 leads, 1 new, 0 rejected
+- OH: 2 leads, 1 new, 0 rejected
+- PA: 0 leads, 1 new, 0 rejected
 
 ## Utilities without an EIA id
 

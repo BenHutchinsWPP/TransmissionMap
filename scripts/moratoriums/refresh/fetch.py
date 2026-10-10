@@ -44,10 +44,12 @@ KEYWORDS = ("moratorium", "data center", "ban", "prohibit", "pause", "ordinance"
             "cryptocurrency", "large load")
 
 
-def user_agent(env=None) -> str:
-    """UA with a contact (SEC EDGAR requires one): env DCM_CONTACT, default the repo URL."""
-    contact = (os.environ if env is None else env).get("DCM_CONTACT") or REPO_URL
-    return f"TransmissionMap-moratorium-refresh/1 (+{contact})"
+def user_agent(url: str = "", env=None) -> str:
+    """UA naming the repo; SEC hosts also get env DCM_CONTACT (EDGAR requires an e-mail)."""
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    sec = host == "sec.gov" or host.endswith(".sec.gov")
+    contact = sec and (os.environ if env is None else env).get("DCM_CONTACT")
+    return f"TransmissionMap-moratorium-refresh/1 (+{REPO_URL}{'; ' + contact if contact else ''})"
 
 
 @dataclass(frozen=True)
@@ -180,6 +182,11 @@ def _keyword_re() -> re.Pattern:
 _KW = _keyword_re()
 
 
+def has_keyword(text: str) -> bool:
+    """A KEYWORDS word (moratorium, data center, ban, ...) occurs in `text`."""
+    return bool(_KW.search(text or ""))
+
+
 def truncate_for_prompt(text: str, limit: int = MAX_CHARS, window: int = WINDOW) -> str:
     """Prompt text only, never for quote checks: the whole text when it fits, otherwise merged
     keyword windows in page order, up to `limit`."""
@@ -264,7 +271,7 @@ def fetch(url: str, opener: Callable | None = None,
     if not _is_web_url(url):
         return Page(url, url, 0, "", "", "bad_scheme")
     req = urllib.request.Request(url, headers={
-        "User-Agent": user_agent(),
+        "User-Agent": user_agent(url),
         "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.5",
     })
     try:

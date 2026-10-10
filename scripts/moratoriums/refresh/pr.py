@@ -2,15 +2,24 @@
 
 Role: turns one refresh run into one commit on `data-moratoriums` (--direct), or one rolling pull
 request (`refresh/weekly` -> `data-moratoriums`, plan D8). Subcommands:
+  check       the rebuilt published files against the base branch tip, before anything is pushed:
+              well-formed headers, events.csv append-only, and no silent loss (moratoriums.csv
+              rows or geojson features down more than MAX_SHRINK, or an nm- row gone); exits 1
+              naming each problem.
   carry-over  with an open refresh PR, copy its inputs/research/weekly/** and
-              inputs/refresh_state.json into the checkout (which sits at the base tip); exits 3
+              inputs/refresh_{state,ledger}.json into the checkout (which sits at the base tip); exits 3
               when the PR head changed anything a rebuild would overwrite (a reviewer edit there
               would be lost).
   publish     stage the four root files and inputs/, commit as github-actions[bot], force-push
               the refresh branch only, then `gh pr create` or `gh pr edit`. No staged change
               means no commit and no PR. With --direct: no branch and no PR; the commit, its
               message carrying the PR body, is pushed straight to the base branch (a plain
-              push, so it fails rather than overwrite a base that moved).
+              push, so it fails rather than overwrite a base that moved: exit 4 when the push is
+              rejected that way).
+  rebase      after an exit 4: fetch the base, reset the checkout to its new tip, and put back this
+              run's own inputs (its weekly folder, refresh_state.json, refresh_ledger.json), ready for
+              the workflow to rebuild, check and publish once more. Exits 2 when the new tip already
+              has a weekly folder for the run date.
 Reads run_report.json (refresh/run.py), BUILD/qa_research.csv (build_research.py) and
 BUILD/logs/rebuild.log (else build_layer.log) for build_layer.py territory WARNING lines. Writes BUILD/pr_body.md.
 The title and tables come from the events the rebuild appended to events.csv (`added` = new on
@@ -22,6 +31,8 @@ Dependencies: stdlib, and the git and gh CLIs.
 Usage: python -m moratoriums.refresh.pr publish --checkout D --build B --report R
          --run-date YYYY-MM-DD --mode research|dry_run|rebuild_only [--base data-moratoriums]
          [--branch refresh/weekly] [--log-dir B/logs] [--direct]
+       python -m moratoriums.refresh.pr rebase --checkout D --run-date YYYY-MM-DD [--base data-moratoriums]
+       python -m moratoriums.refresh.pr check --checkout D [--base data-moratoriums]
 """
 from __future__ import annotations
 
@@ -31,16 +42,19 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 MAX_BODY = 60_000
+MAX_SHRINK = 0.02  # a rebuild that loses more than this share of rows or features never publishes
 ROOT_FILES = ("moratoriums.csv", "events.csv", "dc_moratoriums.geojson", "README.md")
 ADD_PATHS = ROOT_FILES + ("inputs",)
-CARRY_PATHS = ("inputs/research/weekly", "inputs/refresh_state.json")
+CARRY_PATHS = ("inputs/research/weekly", "inputs/refresh_state.json", "inputs/refresh_ledger.json")
 WEEKLY_PREFIX = "inputs/research/weekly/"
-ALLOWED_EXACT = frozenset(ROOT_FILES) | {"inputs/refresh_state.json"}
+ALLOWED_EXACT = frozenset(ROOT_FILES) | {"inputs/refresh_state.json", "inputs/refresh_ledger.json"}
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 PERMISSION_HINT = (
@@ -63,10 +77,10 @@ def outside_paths(paths: list[str]) -> list[str]:
 
 
 def carry_over_paths(ls_tree_output: str) -> list[str]:
-    """Carry-over files from `git ls-tree -r --name-only`: weekly folders and refresh_state.json."""
+    """Carry-over files from `git ls-tree -r --name-only`: weekly folders, refresh_state.json and the ledger."""
     out = []
     for p in (x.strip() for x in ls_tree_output.splitlines()):
-        if p == "inputs/refresh_state.json" or p.startswith(WEEKLY_PREFIX):
+        if p in CARRY_PATHS[1:] or p.startswith(WEEKLY_PREFIX):
             out.append(p)
     return sorted(out)
 
@@ -172,6 +186,12 @@ def _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, r
     outcomes = fetch.get("outcomes", {})
     L += ["## Fetch outcomes", "", f"{fetch.get('pages', 0)} pages" + (f", success rate {fetch['rate']}" if "rate" in fetch else "")
           + (": " + ", ".join(f"{k} {outcomes[k]}" for k in sorted(outcomes)) if outcomes else ""), ""]
+    seeds = report.get("seeds") or {}
+    if seeds:
+        L += ["## Seed pages", "",
+              f"{seeds.get('read', 0)} read, {seeds.get('failed', 0)} failed to fetch, {seeds.get('paused', 0)} paused"
+              f" (no cited URL three runs running), {seeds.get('cited_urls_kept', 0)} cited URLs kept;"
+              f" each page's result is in `inputs/research/weekly/{run_date}/notes.md`.", ""]
     L += ["## QA flags for this run's rows", ""]
     L += _table(["id", "issue", "detail"], [[_cell(r.get("id")), _cell(r.get("issue")), _cell(r.get("detail"))] for r in qa_rows], limit)
     L += ["## Territory warnings", ""]
@@ -299,6 +319,110 @@ def new_events(run, checkout: Path, base: str) -> list[dict]:
     return head[old_n:]
 
 
+# ---------------------------------------------------------------- rebase
+
+PUSH_REJECTED = re.compile(r"\[rejected\]|non-fast-forward|fetch first|failed to push some refs", re.I)
+
+
+def own_paths(run_date: str) -> list[str]:
+    """What a research run adds to the base branch's inputs/, which a rebase carries onto a new tip."""
+    return [f"{WEEKLY_PREFIX}{run_date}", "inputs/refresh_state.json", "inputs/refresh_ledger.json"]
+
+
+def rebase(run, checkout: Path, base: str, run_date: str) -> int:
+    """Reset the checkout to the base branch's new tip, keeping this run's own inputs (own_paths)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        kept = []
+        for rel in own_paths(run_date):
+            src = checkout / rel
+            if src.is_dir():
+                shutil.copytree(src, Path(tmp) / rel)
+            elif src.is_file():
+                (Path(tmp) / rel).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, Path(tmp) / rel)
+            else:
+                continue
+            kept.append(rel)
+        run(["git", "fetch", "--no-tags", "origin", f"+refs/heads/{base}:refs/remotes/origin/{base}"])
+        run(["git", "reset", "--hard", f"origin/{base}"], write=True)
+        if (checkout / own_paths(run_date)[0]).exists():
+            raise PrError(f"origin/{base} already has {own_paths(run_date)[0]}: another run published this date", 2)
+        for rel in kept:
+            src, dst = Path(tmp) / rel, checkout / rel
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+    print(f"rebase: on origin/{base}, kept {', '.join(kept) or 'nothing'}")
+    return 0
+
+
+# ---------------------------------------------------------------- check
+
+def _csv_rows(text: str) -> list[dict]:
+    return list(csv.DictReader(io.StringIO(text)))
+
+
+def published_problems(base: dict, new: dict) -> tuple[list[str], list[str]]:
+    """(problems, summary lines) for the rebuilt ROOT_FILES `new` ({name: text}) against `base`
+    ({name: text, or None when the base branch has no such file})."""
+    problems, info = [], []
+    try:
+        g = json.loads(new["dc_moratoriums.geojson"])
+    except ValueError:
+        g = None
+    if not (isinstance(g, dict) and g.get("type") == "FeatureCollection" and g.get("generated_utc")):
+        problems.append("dc_moratoriums.geojson: not a FeatureCollection with generated_utc")
+        g = {"features": []}
+    features = g.get("features") or []
+    if not features:
+        problems.append("dc_moratoriums.geojson: no features")
+    if not new["README.md"].strip():
+        problems.append("README.md: empty")
+    for name in ("moratoriums.csv", "events.csv"):
+        head = next(csv.reader(new[name].splitlines()), [])
+        old = base.get(name)
+        if old is not None and head != next(csv.reader(old.splitlines()), []):
+            problems.append(f"{name}: header changed: {head}")
+        if name == "events.csv" and old is not None and not new[name].startswith(old):
+            problems.append("events.csv: base history was rewritten")
+        info.append(f"{name}: {len(_csv_rows(new[name]))} rows")
+    info.append(f"dc_moratoriums.geojson: {len(features)} features as of {g.get('generated_utc', '')}")
+
+    def shrink(what, before, after):
+        if before and after < before * (1 - MAX_SHRINK):
+            problems.append(f"{what}: {before} -> {after}, down more than {MAX_SHRINK:.0%}")
+
+    if base.get("moratoriums.csv") is not None:
+        old_rows, new_rows = _csv_rows(base["moratoriums.csv"]), _csv_rows(new["moratoriums.csv"])
+        shrink("moratoriums.csv rows", len(old_rows), len(new_rows))
+        have = {r.get("id") for r in new_rows}
+        gone = sorted(r["id"] for r in old_rows if r.get("id", "").startswith("nm-") and r["id"] not in have)
+        if gone:
+            problems.append(f"moratoriums.csv: upstream rows gone: {', '.join(gone[:20])}" + (" …" if len(gone) > 20 else ""))
+    if base.get("dc_moratoriums.geojson") is not None:
+        try:
+            before = len(json.loads(base["dc_moratoriums.geojson"]).get("features") or [])
+        except (ValueError, AttributeError):
+            before = 0
+        shrink("dc_moratoriums.geojson features", before, len(features))
+    return problems, info
+
+
+def check(run, checkout: Path, base: str) -> int:
+    new = {n: (checkout / n).read_text(encoding="utf-8") if (checkout / n).is_file() else "" for n in ROOT_FILES}
+    old = {}
+    for n in ROOT_FILES:
+        p = run(["git", "show", f"origin/{base}:{n}"], check=False)
+        old[n] = p.stdout if p.returncode == 0 else None
+    problems, info = published_problems(old, new)
+    print("\n".join(info))
+    for x in problems:
+        print(f"::error::{x}")
+    return 1 if problems else 0
+
+
 # ---------------------------------------------------------------- publish
 
 def publish(run, a) -> int:
@@ -337,7 +461,10 @@ def publish(run, a) -> int:
          f"Weekly refresh of the data center moratorium layer, run date {a.run_date}, mode {a.mode}.",
          *(["-m", body] if direct else [])], write=True)
     if direct:
-        run(["git", "push", "origin", f"HEAD:refs/heads/{a.base}"], write=True)
+        p = run(["git", "push", "origin", f"HEAD:refs/heads/{a.base}"], write=True, check=False)
+        if p.returncode != 0:
+            moved = PUSH_REJECTED.search(p.stderr or "")
+            raise PrError(f"git push to {a.base} failed ({p.returncode}): {(p.stderr or '').strip()[:500]}", 4 if moved else 1)
         return 0
     run(["git", "push", "--force", "origin", f"HEAD:refs/heads/{a.branch}"], write=True)
     if number is not None:
@@ -353,11 +480,13 @@ def publish(run, a) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Weekly moratorium refresh: pull request step")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("publish", "carry-over"):
+    for name in ("publish", "carry-over", "check", "rebase"):
         p = sub.add_parser(name)
         p.add_argument("--checkout", type=Path, required=True)
         p.add_argument("--base", default="data-moratoriums")
         p.add_argument("--branch", default="refresh/weekly")
+        if name == "rebase":
+            p.add_argument("--run-date", required=True)
         if name == "publish":
             p.add_argument("--build", type=Path, required=True)
             p.add_argument("--report", type=Path, required=True)
@@ -374,6 +503,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if a.cmd == "publish":
             return publish(run, a)
+        if a.cmd == "check":
+            return check(run, a.checkout, a.base)
+        if a.cmd == "rebase":
+            return rebase(run, a.checkout, a.base, a.run_date)
         check_branches(a.base, a.branch)
         carry_over(run, a.base, a.branch)
         return 0

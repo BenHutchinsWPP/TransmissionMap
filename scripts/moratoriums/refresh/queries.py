@@ -3,7 +3,13 @@
 Role: turn the published dataset rows into an ordered, capped list of search
 `Query` records. Priority: pending rows, rows expiring near the run date,
 utilities, a rotating slice of open-ended active rows, then discovery. Within a
-group, rows go oldest max(last_verified, last_queried) first.
+group, rows go oldest max(last_verified, last_queried) first, and each row's
+window starts at that date less OVERLAP_DAYS. Discovery (and the
+seed pages, through `since_last_run`) searches from the previous run's date, less
+OVERLAP_DAYS for search-index lag, so no day between two runs goes unsearched.
+Discovery is the fixed `discovery_queries` plus `discovery_state_queries` state queries for the
+less covered half of the states (fewest dataset rows per county); within each kind the query
+searched longest ago (the ledger's discovery dates) goes first, so both rotate between runs.
 Dates go through `verify._parse`: YYYY-MM-DD or YYYY-MM. A month-only expiry
 spans the whole month, so the row counts as expiring when any day of it falls
 inside the window.
@@ -16,6 +22,8 @@ from .config import Config, US_STATES
 from .verify import _parse
 
 ACTIVE = ("active", "extended")
+OVERLAP_DAYS = 2  # search engines index a story a day or two after it runs
+DEFAULT_GAP_DAYS = 16  # the longest gap between runs (the 15th to the 1st), used when no earlier run is known
 
 
 @dataclass(frozen=True)
@@ -23,7 +31,7 @@ class Query:
     id: str
     text: str
     kind: str  # pending | expiring | utility | rotating | discovery
-    freshness: str  # Brave: "pw" or "YYYY-MM-DDtoYYYY-MM-DD"
+    freshness: str  # Brave: "YYYY-MM-DDtoYYYY-MM-DD"
     row_id: str = ""
     endpoint: str = "news"  # Brave endpoint: utility rows use "web", everything else "news"
 
@@ -50,21 +58,45 @@ def _text(row, county_names):
     return f'"{name}" {state} data center moratorium'.replace("  ", " ")
 
 
-def _freshness(row, run_date, stale_days):
+def _freshness(row, run_date, stale_days, last_queried=""):
+    """From the row's last check, max(last_verified, last_queried) less OVERLAP_DAYS, so a row searched
+    last run is not searched over the same days again; at most `stale_days` back, and never after
+    the day before the run."""
     floor = run_date - timedelta(days=stale_days)
-    lv = _date(row.get("last_verified"))
-    start = floor if lv is None or lv < floor else lv
-    start = min(start, run_date - timedelta(days=1))
+    checked = [d for d in (_date(row.get("last_verified")), _date(last_queried)) if d is not None]
+    start = max(checked) - timedelta(days=OVERLAP_DAYS) if checked else floor
+    start = min(max(start, floor), run_date - timedelta(days=1))
     return f"{start.isoformat()}to{run_date.isoformat()}"
 
 
-def plan_queries(dataset_rows, run_date, county_names=None, caps=None, refresh_state=None):
+def since_last_run(run_date, last_run=None, stale_days=90):
+    """First day a run-wide search window covers: the previous run's date less OVERLAP_DAYS
+    (DEFAULT_GAP_DAYS back when there was none), never more than `stale_days` back and never
+    after the day before the run."""
+    start = (last_run or run_date - timedelta(days=DEFAULT_GAP_DAYS)) - timedelta(days=OVERLAP_DAYS)
+    return min(max(start, run_date - timedelta(days=stale_days)), run_date - timedelta(days=1))
+
+
+def _state_order(rows, counties_per_state):
+    """The less covered half of the states, fewest rows per county first."""
+    n = {}
+    for r in rows:
+        n[r.get("state", "")] = n.get(r.get("state", ""), 0) + 1
+    cover = sorted(US_STATES, key=lambda st: (n.get(st, 0) / max(1, (counties_per_state or {}).get(st, 0)), st))
+    return cover[:(len(cover) + 1) // 2]
+
+
+def plan_queries(dataset_rows, run_date, county_names=None, caps=None, refresh_state=None, last_run=None,
+                 counties_per_state=None, discovery_seen=None):
     """Ordered queries within `caps.max_requests_for_planning`.
 
     Each priority group takes its share (`caps.shares`) plus whatever the groups above it
     left unused; discovery gets `discovery_reserved` plus the remaining carry. A candidate
     group longer than its allowance is cut from its bottom. `refresh_state` ({row id:
     last_queried}) rotates a row that was searched without a find to the back of its group.
+    `last_run` (the previous run's date) starts the discovery window (`since_last_run`).
+    `counties_per_state` ({state: county count}) ranks the states for state discovery queries, and
+    `discovery_seen` ({query text: last run date}) rotates the discovery queries.
     """
     cfg = caps or Config()
     rows = sorted(dataset_rows, key=lambda r: r["id"])
@@ -95,10 +127,19 @@ def plan_queries(dataset_rows, run_date, county_names=None, caps=None, refresh_s
         for r in members[:take]:
             seen.add(r["id"])
             out.append(Query(f"q-{r['id']}", _text(r, county_names), kind,
-                             _freshness(r, run_date, cfg.stale_days), r["id"], endpoint))
+                             _freshness(r, run_date, cfg.stale_days, (refresh_state or {}).get(r["id"], "")),
+                             r["id"], endpoint))
 
-    n_disc = min(len(cfg.discovery_queries), cfg.discovery_reserved + carry)
-    for i, text in enumerate(cfg.discovery_queries[:n_disc], 1):
-        out.append(Query(f"q-disc-{i:02d}", text, "discovery", "pw"))
+    disc_window = f"{since_last_run(run_date, last_run, cfg.stale_days).isoformat()}to{run_date.isoformat()}"
+    seen = discovery_seen or {}
+    states = [(f"q-disc-{st.lower()}", f"data center moratorium {US_STATES[st]}")
+              for st in _state_order(rows, counties_per_state)]
+    states.sort(key=lambda q: seen.get(q[1], ""))  # stable: the least covered first among equals
+    fixed = [(f"q-disc-{i:02d}", t) for i, t in enumerate(cfg.discovery_queries, 1)]
+    n_disc = min(len(fixed) + len(states), cfg.discovery_reserved + carry)
+    n_state = min(cfg.discovery_state_queries, len(states), n_disc)
+    fixed = sorted(sorted(fixed, key=lambda q: seen.get(q[1], ""))[:n_disc - n_state])
+    for qid, text in fixed + states[:n_state]:
+        out.append(Query(qid, text, "discovery", disc_window))
 
     return out[:cfg.max_requests_for_planning]

@@ -21,7 +21,7 @@ Every script takes `--work WORK` (env `DCM_WORK`), `--dataset DATASET` and
 
 | Name | Default | Holds |
 |---|---|---|
-| `WORK/inputs/` | | `research/`, `additions.csv`, `state_additions.csv`, `territories/`, `county_names.csv`, `upstream.sha`, `upstream_as_of`, `refresh_state.json` |
+| `WORK/inputs/` | | `research/`, `additions.csv`, `state_additions.csv`, `territories/`, `county_names.csv`, `upstream.sha`, `upstream_as_of`, `refresh_state.json`, `refresh_ledger.json` |
 | `WORK/upstream` | | Moratorium Nation clone at the commit in `inputs/upstream.sha` |
 | `WORK/census` | | `cb_2023_us_{county,place,cousub}_500k.zip` (Census cartographic boundaries) |
 | `DATASET` | `WORK/dataset` | Published files: `README.md`, `moratoriums.csv`, `events.csv` (append-only), `dc_moratoriums.geojson`. On the runner this is the `data-moratoriums` checkout root |
@@ -44,7 +44,9 @@ inputs/
   county_names.csv                         county_fips,state,county_name
   upstream.sha                             pinned Moratorium Nation commit
   upstream_as_of                           that snapshot's date (build.py's TODAY, for expiry status)
-  refresh_state.json                       row id -> last_queried, rotates follow-up checks
+  refresh_state.json                       row id -> last_queried: rotates follow-up checks and starts each row's search window
+  refresh_ledger.json                      what later runs remember (refresh/ledger.py): rejected claims, pages read,
+                                           refusing hosts, discovery query dates; entries kept 180 days
 ```
 
 The branch has real history. `events.csv` is only ever appended to, and the
@@ -69,14 +71,25 @@ the rolling refresh PR); `max_requests` (Brave request cap, default 220);
 default; sets `DCM_TRIAGE_MODEL`, `DCM_ESCALATION_MODEL` and `DCM_REVIEW_MODEL`).
 
 Pipeline per run: seed pages and planned queries, search, fetch, extract,
-verify, review, write `inputs/research/weekly/<date>/`, rebuild, schema check,
-publish. Three models split the work:
+verify, review, write `inputs/research/weekly/<date>/`, rebuild, publish check,
+publish. Discovery queries and the seed pages search from the previous run's date
+(the latest earlier weekly folder) less two days, so no day between runs goes
+unsearched; with no earlier run they reach back 18 days. A follow-up query
+searches from the row's last check, the later of its `last_verified` and its
+`last_queried` in `refresh_state.json`, less the same two days, and at most
+90 days back, so a row searched last run is not searched over the same days
+again. Three models split the work:
 
 | Role | Default | What it does |
 |---|---|---|
 | Triage | Claude Haiku 5.5 | Reads every fetched page and fills the extraction schema |
-| Escalation | Claude Sonnet 5.5 | Re-reads a page when an item's confidence is below 0.7, or it is a ban, a utility measure or a change to an upstream row |
+| Escalation | Claude Sonnet 5.5 | Re-reads a page when an item that would change the dataset (a new measure, or a change that moves a tracked row) has confidence below 0.7, or is a ban, a utility measure or a change to an upstream row; a page that only confirms a tracked row is not re-read |
 | Review | Claude Opus 5.5 | Judges each change before it is written (below) |
+
+Before review, an item must quote the page (at least 40 characters, found in
+the full fetched text) and name its jurisdiction as whole words in the page's
+opening or within 1,500 characters of the quote. The review model's page
+excerpt is centred on the quote, located the same way the quote check finds it.
 
 Review (`refresh/review.py`, `refresh/prompts/review.md`): every new row and
 every change to a tracked row first passes code checks (a new state-level
@@ -90,9 +103,27 @@ specific one. A rejected change is not written: it is listed with its reasons
 under "Rejected in review" in the report and in that run's `notes.md`. A
 change the model could not review (error, refusal, wall clock or cap) is
 rejected too. A new measure the reading model rated below 0.6 confidence is
-rejected without a model call. Two rules apply before review: a `pending`
+rejected without a model call. A change the review model rejected is recorded
+in `inputs/refresh_ledger.json` with the sha of its page; the same change from
+the same page is rejected again on later runs with the first run's reasons and
+no model call (and is not escalated), while a page whose text changed is
+reviewed afresh. Two rules apply before review: a `pending`
 measure gets no end date, and a change never replaces a tracked date with a
 vaguer form of it.
+
+The publish check (`refresh/pr.py check`) compares the rebuilt files with the
+`data-moratoriums` tip and stops the run, before any push, when a header
+changed, `events.csv` lost history, `moratoriums.csv` rows or geojson features
+fell by more than 2% (`MAX_SHRINK`), or an upstream `nm-` row disappeared. A
+deliberate cut that large (many `DROP` lines at once, or a pin bump that
+retires upstream rows) is rebuilt and committed by hand instead.
+
+A direct publish is a plain push, so it never overwrites a `data-moratoriums`
+that moved during the run (a DROP edit, a pin bump, a local rebuild). When the
+push is rejected that way, the workflow resets the checkout to the new tip,
+puts back this run's own inputs (its weekly folder, `refresh_state.json`,
+`refresh_ledger.json`), rebuilds, runs the publish check again and pushes
+once more (`pr.py rebase`); a second rejection fails the run.
 
 A run uses one UTC date for `--as-of`, the weekly folder and the branch name,
 and replaces that date's weekly folder, so the workflow refuses a second
@@ -112,7 +143,7 @@ not carried over. Because carried-over rows are re-synced each run, their
 |---|---|---|
 | `BRAVE_API_KEY` | Actions secret | Search (`research`) |
 | `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` | Actions secret | Model extraction; Anthropic is used when both are set |
-| `DCM_CONTACT` | Actions secret, optional | Contact (email or URL) in the fetcher's User-Agent, which SEC EDGAR requires; defaults to the repo URL |
+| `DCM_CONTACT` | Actions secret, optional | E-mail added to the fetcher's User-Agent on SEC requests only (every request names the repo URL). SEC EDGAR's full-text search requires an e-mail address, so set one for the SEC seed pages to be read |
 | Allow GitHub Actions to create and approve pull requests | Settings > Actions > General > Workflow permissions | Opening the PR (a 403 from `gh` names this setting) |
 
 Python is 3.12 with exact pins in `requirements-refresh.txt`, installed with
@@ -129,17 +160,44 @@ never given a credential that can write to the repo.
 
 | Cap | Value (`refresh/config.py`, override with `DCM_<NAME>`) |
 |---|---|
-| Brave requests (retries count) | 220: planned shares of pending 80, expiring 50, utilities 20, rotating no-end-date 30, discovery 20 reserved; the rest is retry slack |
-| Pages fetched | 300 |
+| Brave requests (retries count) | 220: planned shares of pending 80, expiring 50, utilities 20, rotating no-end-date 30, discovery 20 reserved (6 of them `data center moratorium <State>` for the less covered half of the states by rows per county, `discovery_state_queries`; the fixed queries take the rest; both rotate, longest unsearched first, from the ledger's `discovery` dates); the rest is retry slack |
+| Pages fetched | 300 (`max_pages`), of which 60 (`discovery_pages`) are kept for discovery hits: follow-up queries stop when seeds and follow-ups fill the rest, and slots discovery leaves unused go back to follow-ups |
 | Extraction calls / escalation calls | 400 / 40 (`max_llm_calls`, `max_escalation_calls`) |
 | Review calls | 60 (`max_review_calls`); a change past the cap is rejected unreviewed |
 | Job timeout | 120 minutes; fetch and model calls run 4 at a time; a rate limit (HTTP 429) is retried 5 times, honouring `Retry-After` |
+
+Known pages (`inputs/refresh_ledger.json`, `pages`): every page a run reads is
+recorded with the sha of its text, the tracked rows it was read for, and
+whether it gave a claim. A later run does not send a page to the model again
+when its text and rows are unchanged and it gave no claim, and does not fetch
+one at all (nor give it a page slot) once it has given no claim two runs
+running, until 90 days after its last read. A page wanted for a tracked row it
+was not read for is always read, and a pending or soon-expiring row's pages
+are always fetched, since that is when a council page is updated in place. The report's `ledger` counts both skips.
+
+Seed pages that gave no cited URL three runs running (fetch failures
+included) are paused, listed as `paused` in `notes.md`, and tried again 90
+days after their last try (`seeds` in the ledger). The report's Seed pages
+line counts pages read, failed, paused and the cited URLs kept.
+
+A search hit is fetched only when its title or snippet has one of the
+extraction keywords (moratorium, data center, ban, pause, ...) and, for a
+follow-up query, names the row it was searched for (whole words, so "Ada"
+is not "Canada"); a discovery hit needs the keyword only. A host that
+answered every fetch with HTTP 403 is recorded in the ledger (`hosts`) and
+its hits are not fetched for 30 days, then tried again. The report's `hits`
+counts both.
 
 Every run publishes a commit, because `refresh_state.json` and `notes.md`
 change on every run even when nothing new is found. A run stops cleanly at any
 cap, including a 90-minute wall clock (`wall_clock_minutes`): searches,
 fetches and extraction stop 10 minutes (`review_minutes`) earlier so the review
-always has time, and the cap is listed under "Caps hit" in the report. Brave
+always has time, and the cap is listed under "Caps hit" in the report. A
+follow-up row is stamped in `refresh_state.json` only when its pages were
+read: one a cap left unread, or whose fetch failed in a way that may pass
+(timeout, network error, HTTP 408, 429 or 5xx), or that drew an extraction
+error or a refusal, keeps the row due for the next run. A 403 or 404 does
+not hold the row. Brave
 bills about $5 per 1,000 requests against a monthly credit, so a full run is
 about $1.10 and the two runs a month use about 440 requests. Model cost
 depends on the pages found: the first run (2026-10-09, Sonnet reading pages
@@ -155,8 +213,8 @@ A direct run's report is its commit message on `data-moratoriums` (and
 
 1. Read the report: new rows on the map, updated rows (each event with its old and new value), changes rejected in review with their reasons, QA flags, territory warnings, fetch rate, caps hit, cost.
 2. Open each source link for the rows. Every new row is marked unconfirmed and carries its quote in the row's notes.
-3. Read `inputs/research/weekly/<date>/notes.md`: leads that failed verification (page unreadable, quote not found, no county), changes rejected in review, and seed-page results. Promote a lead or a rejected change by adding a row to that week's CSVs, citing a page.
-4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, under `inputs/research/weekly/`: on `data-moratoriums` for a direct run (then rebuild locally with `rebuild.sh` and commit the regenerated files), or in the PR branch then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them. To take back a whole direct week, `git revert` its commit.
+3. Read `inputs/research/weekly/<date>/notes.md`: leads that failed verification (page unreadable, quote not found, no county), changes rejected in review, seed-page results, and a per-state line of leads, new measures and rejections. Promote a lead or a rejected change by adding a row to that week's CSVs, citing a page.
+4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, under `inputs/research/weekly/`: on `data-moratoriums` for a direct run (then rebuild locally with `rebuild.sh` and commit the regenerated files), or in the PR branch then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them. A dropped row stays dropped: when a later run finds the same measure (same place, type and adoption year) or the same upstream change again, it becomes a `dropped by a reviewer` lead, not a new row. To take back a whole direct week, `git revert` its commit.
 5. For a pull request, merge it. The map serves the new files from `data-moratoriums`.
 
 ## Moving the Moratorium Nation pin

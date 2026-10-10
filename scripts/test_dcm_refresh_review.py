@@ -6,6 +6,7 @@ import unittest
 from datetime import date
 from types import SimpleNamespace
 
+from moratoriums.refresh import ledger as L
 from moratoriums.refresh import review as R
 
 RUN = date(2026, 10, 9)
@@ -91,6 +92,11 @@ class Prompt(unittest.TestCase):
         p = R.review_prompt(cl, DATASET, RUN)
         self.assertEqual((p.count(R.BEGIN), p.count(R.END)), (1, 1))
 
+    def test_excerpt_finds_a_quote_whose_punctuation_differs(self):
+        text = "x " * 10000 + "The board said \u201cno new data centers\u201d \u2014 for a year,\n  starting now. " + "y " * 10000
+        got = R._excerpt(text, 'The board said "no new data centers" - for a year, starting now')
+        self.assertIn("The board said \u201cno new data centers\u201d", got)
+
     def test_excerpt_centres_on_the_quote(self):
         text = "x" * 20000 + " QUOTE HERE " + "y" * 20000
         got = R._excerpt(text, "QUOTE HERE")
@@ -127,11 +133,34 @@ class ReviewStep(unittest.TestCase):
         self.charlotte = claim(kind="extension", target="nm-nc-charlotte-2026", jurisdiction_name="Charlotte",
                                state="NC", status="extended", rows=[("updates", self.upd)])
 
-    def run_review(self, claims, answers, max_calls=60):
+    def run_review(self, claims, answers, max_calls=60, ledger=None):
         v = FakeVerifier(claims, self.rows)
         out = R.review_claims(v, DATASET, RUN, None, "m", "SYS", max_calls, fake_call_all(answers), record, family,
-                              lambda: False)
+                              lambda: False, ledger=ledger)
         return v, out
+
+    def test_rejection_remembered_and_reused_for_the_same_page(self):
+        ledger = L.empty()
+        reject = ({"verdict": "reject", "problems": ["duplicate"], "reason": "Already tracked."}, None, "")
+        _, out = self.run_review([self.charlotte], [reject], ledger=ledger)
+        self.assertEqual(out["model_calls"], 1)
+        entry, = ledger["claims"].values()
+        self.assertEqual((entry["date"], entry["who"], entry["problems"]), ("2026-10-09", "NC|charlotte", ["duplicate"]))
+        self.setUp()
+        v, out = self.run_review([self.charlotte], [], ledger=ledger)  # same claim, same page: no model call
+        self.assertEqual((out["model_calls"], out["by"]), (0, {"ledger": 1}))
+        self.assertEqual(v.leads[0][0], "rejected in review (duplicate)")
+        self.assertTrue(v.leads[0][1].startswith("rejected in review on 2026-10-09, same page: Already tracked."))
+        self.setUp()
+        changed = claim(kind="extension", target="nm-nc-charlotte-2026", jurisdiction_name="Charlotte", state="NC",
+                        status="extended", rows=[("updates", self.upd)], page="the page now says something else entirely")
+        _, out = self.run_review([changed], [({"verdict": "accept", "problems": [], "reason": "ok"}, None, "")], ledger=ledger)
+        self.assertEqual((out["model_calls"], out["accepted"]), (1, 1))  # a changed page is reviewed afresh
+
+    def test_unreviewed_claims_are_not_remembered(self):
+        ledger = L.empty()
+        self.run_review([self.charlotte], [(None, None, "error: HTTP 500")], ledger=ledger)
+        self.assertEqual(ledger["claims"], {})
 
     def test_accepted_rows_stay_and_rejected_rows_become_leads(self):
         v, out = self.run_review([self.ok, self.charlotte], [
@@ -180,3 +209,24 @@ class Schema(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Ledger(unittest.TestCase):
+    def test_round_trip_and_prune(self):
+        import tempfile
+        from pathlib import Path
+        led = L.empty()
+        L.remember_rejection(led, "k-old", c(), "sha1", ["other"], "r", date(2026, 1, 1))
+        L.remember_rejection(led, "k-new", c(), "sha2", ["other"], "r", RUN)
+        L.remember_rejection(led, "k-new", c(), "sha3", ["other"], "r", RUN)
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / L.NAME
+            L.save(path, led, RUN)
+            back = L.load(path)
+            self.assertEqual(L.load(Path(d) / "missing.json"), L.empty())
+            path.write_text("not json")
+            self.assertEqual(L.load(path), L.empty())
+        self.assertEqual(list(back["claims"]), ["k-new"])  # older than KEEP_DAYS
+        self.assertEqual(back["claims"]["k-new"]["pages"], ["sha2", "sha3"])
+        self.assertIsNotNone(L.rejected_before(back, "k-new", "sha3"))
+        self.assertIsNone(L.rejected_before(back, "k-new", "sha9"))

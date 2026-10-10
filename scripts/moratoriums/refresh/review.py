@@ -10,11 +10,13 @@ change to a tracked row, with the rows it would write) goes through two checks:
   2. `review_claims`: the review model (prompts/review.md) reads the tracked row, the proposed
      values, the quote, an excerpt of the page around it and the state's other tracked measures,
      and accepts or rejects with the failing checks named.
+A claim the review model rejected on an earlier run, from the same page (ledger.py), is rejected
+again with that run's reasons and no model call; a model rejection is written to the ledger.
 A rejected claim's rows are removed from the Verifier and it becomes a lead whose reason names
 the problems, so nothing doubtful is written. A claim the model could not review (an error, a
 refusal, the wall clock or the max_review_calls cap) is rejected too: an unreviewed change never
 publishes.
-Dependencies: verify.py (LEVEL), textnorm.py (jn), fetch.py (truncate_for_prompt); run.py passes
+Dependencies: verify.py (LEVEL), textnorm.py (locate), ledger.py; run.py passes
 in its Verifier, the type-family function and the call helpers, so this module never imports run.py.
 """
 from __future__ import annotations
@@ -23,6 +25,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 
+from . import ledger as ledger_mod
+from .textnorm import locate
 from .verify import LEVEL
 
 REVIEW_MAX_TOKENS = 1500
@@ -112,7 +116,8 @@ def _excerpt(text: str, quote: str) -> str:
     text = text.replace(BEGIN, "").replace(END, "")
     if len(text) <= EXCERPT_CHARS:
         return text
-    at = max(0, text.find(quote[:60])) if quote else 0
+    span = locate(quote, text) if quote else None  # by match_key, as the quote check found it
+    at = span[0] if span else 0
     start = max(0, min(at - EXCERPT_CHARS // 3, len(text) - EXCERPT_CHARS))
     return text[start:start + EXCERPT_CHARS]
 
@@ -134,17 +139,28 @@ def review_prompt(claim: Claim, dataset: list[dict], run_date: date) -> str:
             f"{BEGIN}\n{_excerpt(claim.page_text, c['quote'])}\n{END}")
 
 
+def _key(claim: Claim) -> str:
+    return ledger_mod.claim_key(claim.kind, claim.c, (claim.target or {}).get("id", ""))
+
+
 def review_claims(v, dataset: list[dict], run_date: date, llm, model: str, system: str, max_calls: int,
-                  call_all, record, family, over, stage=None) -> dict:
-    """Rule checks, then the model, for every claim on `v.claims`; rejected claims are removed from `v`.
-    `call_all(llm, jobs, over)` runs model jobs, `record(model, result)` tallies one and returns
-    (obj, error). -> the report's "review" section."""
+                  call_all, record, family, over, stage=None, ledger: dict | None = None) -> dict:
+    """Rule checks, the ledger, then the model, for every claim on `v.claims`; rejected claims are
+    removed from `v`. `call_all(llm, jobs, over)` runs model jobs, `record(model, result)` tallies one
+    and returns (obj, error). `ledger` (ledger.py) is read for earlier rejections and gains this run's
+    model rejections. -> the report's "review" section."""
+    ledger = ledger if ledger is not None else ledger_mod.empty()
     rejected: list[dict] = []
     to_model: list[Claim] = []
     for claim in v.claims:
         problems = rule_problems(claim, dataset, family)
+        before = ledger_mod.rejected_before(ledger, _key(claim), ledger_mod.page_sha(claim.page_text))
         if problems:
             rejected.append(_reject(v, claim, [p.split(":")[0] for p in problems], "; ".join(problems), "rules"))
+        elif before:
+            rejected.append(_reject(v, claim, before.get("problems") or ["other"],
+                                    f"rejected in review on {before['date']}, same page: {before.get('reason', '')}"[:200],
+                                    "ledger"))
         else:
             to_model.append(claim)
     over_cap = to_model[max_calls:]
@@ -169,6 +185,8 @@ def review_claims(v, dataset: list[dict], run_date: date, llm, model: str, syste
             accepted += 1
         else:
             rejected.append(_reject(v, claim, problems or ["other"], reason or "rejected without a reason", "model"))
+            ledger_mod.remember_rejection(ledger, _key(claim), claim.c, ledger_mod.page_sha(claim.page_text),
+                                          problems or ["other"], reason, run_date)
     for claim in over_cap:
         rejected.append(_reject(v, claim, ["other"], "not reviewed (max_review_calls)", "unreviewed"))
     return {"claims": len(v.claims), "accepted": accepted, "model_calls": len(jobs),
