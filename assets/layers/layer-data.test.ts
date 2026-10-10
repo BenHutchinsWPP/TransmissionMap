@@ -2,15 +2,15 @@
 // ensureLayerData's fromZoom gate and its zoom-settle retry, against the real
 // registry (hifld-natgas-points has fromZoom 3; hifld-petroleum-facilities
 // shares its source) and a fake map whose 'zoomend' listener the test fires.
-// Also pins the 'layer:data' emission and the explicit loader table to the
-// registry and DATA.
+// Also pins the 'layer:data' emission and layerDataUrl()'s two inputs (each
+// LayerDef.geojson, SOURCE_DATA_URLS) to the registry and DATA.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { gzipSync, strToU8 } from 'fflate';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
 import { DATA } from '../constants.js';
-import { ensureLayerData, LAYER_DATA_URLS, LAYER_SOURCE_ALIAS } from './layer-data.js';
-import { layerById } from '../../src/registry/index.js';
+import { ensureLayerData, layerDataUrl, SOURCE_DATA_URLS, LAYER_SOURCE_ALIAS } from './layer-data.js';
+import { LAYERS, layerById } from '../../src/registry/index.js';
 
 const fetchMock = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }));
 vi.stubGlobal('fetch', fetchMock);
@@ -117,13 +117,28 @@ describe('ensureLayerData layer:data emission', () => {
   });
 });
 
-describe('LAYER_DATA_URLS', () => {
-  it('keys every row by a registry id or an alias target, and points it at a DATA path', () => {
-    const aliasTargets = new Set(Object.values(LAYER_SOURCE_ALIAS));
-    const dataPaths = new Set<string>(Object.values(DATA));
-    for (const [id, url] of Object.entries(LAYER_DATA_URLS)) {
-      expect(layerById(id) !== undefined || aliasTargets.has(id), `${id} is neither a registry id nor an alias target`).toBe(true);
+describe('layerDataUrl', () => {
+  const dataPaths = new Set<string>(Object.values(DATA));
+
+  it('every LayerDef.geojson names a GeoJSON file in DATA', () => {
+    for (const layer of LAYERS.filter(l => l.geojson)) {
+      const url = (DATA as Record<string, string>)[layer.geojson!];
+      expect(url, `${layer.id}: "${layer.geojson}" is not a DATA key`).toBeDefined();
+      expect(url, `${layer.id}: ${url} is not GeoJSON`).toMatch(/\.geojson(\.gz)?$/);
+      expect(layerDataUrl(layer.id)).toBe(url);
+    }
+  });
+
+  it('keys SOURCE_DATA_URLS by source-only ids and points each at a DATA path', () => {
+    for (const [id, url] of Object.entries(SOURCE_DATA_URLS)) {
+      expect(layerById(id), `${id} is a registry id — set its geojson instead`).toBeFalsy();
       expect(dataPaths.has(url), `${id} → ${url} is not a DATA path`).toBe(true);
+    }
+  });
+
+  it('every alias target is a source the loader can fill', () => {
+    for (const [id, target] of Object.entries(LAYER_SOURCE_ALIAS)) {
+      expect(layerDataUrl(target), `${id} → ${target} has no data URL`).toBeDefined();
     }
   });
 });

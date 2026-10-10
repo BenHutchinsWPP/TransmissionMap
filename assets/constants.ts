@@ -1,6 +1,13 @@
-// assets/constants.ts — Static, non-mutable app-wide constants.
-
-export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
+// assets/constants.ts — Static constants shared across modules; imports nothing.
+// Holds: where data lives (DATA, releaseUrl, weatherLiveUrl, RELEASES_ORIGIN),
+// per-source map credits (SOURCE_ATTRIB), the external hosts more than one module
+// reads (basemap/terrain/radar/glyph URLs that diagnostics.ts also probes),
+// EMPTY_FC, the default viewport and the county join keys (COUNTY_SRC*).
+// A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
+// filters.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
+// in basemap.ts, terrain exaggeration and credit in terrain.ts.
+// Which registry layer fetches which DATA file is the layer's own LayerDef.geojson
+// (resolved by layers/layer-data.ts's layerDataUrl()).
 
 // ─── Data URLs ────────────────────────────────────────────────────────────────
 // GeoJSON layers are hosted pre-gzipped (.geojson.gz) and decompressed in the
@@ -202,6 +209,7 @@ export const SOURCE_ATTRIB: Record<string, string> = {
 };
 
 // ─── Basemap tile sources ─────────────────────────────────────────────────────
+// Read by basemap.ts and probed by diagnostics.ts.
 export const OSM_TILE_URL    = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 export const ESRI_TOKEN = import.meta.env.VITE_ESRI_API_KEY;  // basemap tiles + geocoder (ui-geocoder.ts)
 export const AERIAL_TILE_URL = ESRI_TOKEN
@@ -220,32 +228,14 @@ export const OFM_STYLE_URLS = {
   light: "https://tiles.openfreemap.org/styles/positron",
   dark:  "https://tiles.openfreemap.org/styles/dark",
 } as const;
-export const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
-// National Hydrography Dataset, cached as a TRANSPARENT overlay — streams, lakes,
-// dams, no land or labels. It is not a standalone basemap: the "hydro" basemap
-// stacks it over the OFM light basemap in basemap.ts. Cache tops out at tile z16
-// (z17 is a 404), same ceiling as USGSTopo.
-export const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
 
 // ─── 3D terrain (optional) ────────────────────────────────────────────────────
 // AWS Open Data "Terrain Tiles" (Terrarium-encoded raster-dem), CC-BY 4.0,
 // keyless, not requester-pays. Mosaic is a static snapshot (~2017; SRTM/USGS
 // 3DEP/GMTED2010/ETOPO1) — elevations don't change, so no refresh is needed.
-// Tile pyramid tops out at z15; MapLibre overzooms above that.
+// Tile pyramid tops out at z15; MapLibre overzooms above that. Read by
+// terrain.ts and probed by diagnostics.ts.
 export const TERRAIN_TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png";
-// Short on-map credit for the MapLibre attribution control — the required
-// tilezen/joerd wording ("United States 3DEP ... U.S. Geological Survey") is
-// long enough to overlap other floating UI as the only active source with
-// bespoke (non-deduped) attribution while terrain is on. The full wording
-// lives instead in the Data Credits dialog (index.html,
-// data-source-credit="usgs-terrain" — do not reword that entry), matching
-// every other dataset's short-in-map/full-in-dialog split (SOURCE_ATTRIB above).
-export const TERRAIN_ATTRIB_SHORT = "USGS terrain";
-// True to scale: a ridge stands as tall against its valley on screen as it does
-// on the ground, so heights read as measurements rather than as an effect.
-// Relief contrast is the hillshade's job instead (terrain.ts), which sharpens
-// slopes without moving any elevation.
-export const TERRAIN_EXAGGERATION = 1;
 
 // ─── Live layer tile sources ──────────────────────────────────────────────────
 // IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
@@ -267,43 +257,8 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 // OpenFreeMap glyphs (same host as the basemap styles). Serves Noto Sans
 // Regular/Bold/Italic ONLY, as single-font stacks — comma-joined stacks and
 // other families 404, so every text-font in the app must be a one-element
-// Noto Sans array.
+// Noto Sans array. Named by basemap.ts's BLANK_STYLE; probed by diagnostics.ts.
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
-
-// Where the horizon haze begins, as a fraction of the distance from map centre
-// (0) to horizon (1). 0.95 keeps it to a strip at the skyline, leaving the near
-// and middle ground — where the map is read — clear. 1 switches fog off
-// entirely, and the spec allows nothing higher.
-//
-// The colour stays the opaque default. A translucent fog colour reads as the
-// gentler setting and behaves as the opposite: the shader squares the blend
-// factor, so a translucent wash lands under a 2% luminance shift across most of
-// the band, while the same alpha runs through the shader's linear-to-gamma
-// conversion on the extra per-stack pass and comes back amplified. Opacity
-// buys visible haze per unit of side effect.
-//
-// The side effect worth knowing: MapLibre applies this fog once per
-// render-to-texture drape stack, and the stack count follows which
-// symbol/circle/fill-extrusion layers are visible, so the strip does thicken as
-// layers are switched on. A narrow band keeps that to the skyline.
-// Fog only takes effect while 3D Terrain is on, above pitch 60 (see terrain.ts).
-const SKY_FOG_GROUND_BLEND = 0.95;
-
-// MapLibre requires a style object even when we control all sources ourselves.
-export const BLANK_STYLE = {
-  version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [],
-  sky: { "fog-ground-blend": SKY_FOG_GROUND_BLEND, "atmosphere-blend": 0 },
-} as const;
-
-// Globe's halo. Under the vertical-perspective projection MapLibre fades the
-// flat sky layer out entirely, so this atmosphere shader IS the sky there —
-// there is no sky-color/horizon-color fallback behind it. Its wash deepens with
-// the distance a view ray travels through the shell, which for a tilted camera
-// is the whole viewport rather than a rim, so basemap.ts fades it out with pitch
-// (see syncAtmosphere) and starts it at 0 above. Mercator never pays for it.
-export const ATMOSPHERE_BLEND = 0.8;
-// Pitch at which the halo has faded out completely.
-export const ATMOSPHERE_FADE_PITCH = 55;
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layers/*.ts)
 // and the search-highlight sources (highlights.ts).

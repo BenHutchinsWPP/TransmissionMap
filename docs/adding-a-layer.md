@@ -124,6 +124,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   label:       "My Layer",          // shown in the layers panel
   group:       "load",              // panel group — see the `groups` array in assets/ui/ui-layer-rows.ts for the current list
   sourceId:    "my-source",         // key into LAYER_SOURCES (src/registry/sources.ts)
+  geojson:     "my_layer",          // GeoJSON layers only: the DATA key (§4) the loader fetches — see §7
   swatch:      "#6366f1",           // color dot shown in panel row
   defaultOn:   false,               // visible on page load?
   mapLayerIds: ["my-layer-circles"],// all MapLibre layer IDs this entry controls
@@ -223,16 +224,13 @@ A side effect that is not a layer — a tap handler, a bus subscription, a timer
 
 ## 7. `assets/layers/layer-data.ts` + `add-all-layers.ts` — connect lazy loading and orchestration
 
-### For GeoJSON layers: add to `LAYER_DATA_URLS` in `assets/layers/layer-data.ts`
+### For GeoJSON layers: the registry entry's `geojson` names the file
 
-```ts
-export const LAYER_DATA_URLS = {
-  // existing entries...
-  "my-layer": DATA.my_layer,
-};
-```
+A GeoJSON layer's builder adds an empty source (`EMPTY_FC`) under the registry id; `ensureLayerData()` fills it on first enable from `layerDataUrl(id)` (`assets/layers/layer-data.ts`), which reads the entry's `geojson: "my_layer"` (§5) as a `DATA` key. When the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). Leave `geojson` unset for PMTiles layers — MapLibre tiles lazily already.
 
-This is what `ensureLayerData()` uses to fetch and populate the source on first enable; when the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). The key must be a registry id (or a `LAYER_SOURCE_ALIAS` target) and the value a `DATA` path — `layer-data.test.ts` checks both. Do not add PMTiles layers here — MapLibre tiles lazily already.
+Two less common shapes stay in `layer-data.ts`: a registry layer drawn from another layer's source goes in `LAYER_SOURCE_ALIAS` (e.g. `wildfire-smoke` → `wildfire-live`), and a source that is no registry layer at all goes in `SOURCE_DATA_URLS` (e.g. `wecc-path-lines`).
+
+`layer-data.test.ts` checks that every `geojson` is a `DATA` key naming a `.geojson[.gz]` file, and `layer-plan.test.ts` that every empty source `addAllLayers()` adds resolves to a URL (or sits on its short pinned list of sources filled another way) — so a missing `geojson` fails `npm test` rather than leaving the layer blank. The same test pins which sources carry no attribution, so a new source without a `SOURCE_ATTRIB` row (§6) fails it too.
 
 ### Add the plan to `addAllLayers()` in `assets/layers/add-all-layers.ts`
 
@@ -266,7 +264,6 @@ const RASTER_PROBES = {
 
 `pct` maps a raw value to a 0–100 percentage for arrow positioning on the legend ramp. Omit it for linear scales — the default uses `(value / max) * 100`.
 
-Anchor: `>>> ADD-LAYER: layer-data-urls`
 Anchor: `>>> ADD-LAYER: raster-probes`
 Anchor: `>>> ADD-LAYER: add-all-layers`
 
@@ -419,11 +416,11 @@ Update `docs/data-sources.md`:
 [ ] scripts/<id>_color_ramp.txt            — RASTER ONLY: gdaldem color-relief ramp (value R G B A)
 [ ] src/colors/ramps.ts                    — CONTINUOUS RASTER ONLY: <X>_RAMP_STOPS + <X>_RAMP_MAX (mirror the .txt)
 [ ] assets/constants.ts                    — DATA.my_layer (+ lut/meta if raster)
+[ ] assets/constants.ts                    — SOURCE_ATTRIB row keyed by the map source id (or add it to UNCREDITED in layers/layer-plan.test.ts)
 [ ] src/registry/sources.ts               — LAYER_SOURCES entry (if new source)
-[ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…)
+[ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…; geojson for a GeoJSON layer)
 [ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
 [ ] assets/layers/map-layers-*.ts         — planMyLayer() builder returning a LayerPlan
-[ ] assets/layers/layer-data.ts           — LAYER_DATA_URLS entry (GeoJSON only)
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — ...planMyLayer() in the applyLayerPlan() list
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)

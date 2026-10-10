@@ -22,9 +22,11 @@
 // from the facet record (facet(), facetValueMap()). ui/ui-legends.ts hands them to the legend rows; other
 // UI controls call the appliers directly (ui/ui-filters.ts); applyAllFilters()
 // (bottom of file) runs every one.
+// Owns MW_SLIDER_MAX, the MW range's no-upper-bound sentinel (also read by
+// url-state-codec.ts and ui/ui-filters.ts).
 // Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts), condition-compile.ts,
 // view-validate.ts,
-// nws-zone-join.ts (NWS feature-state half), diag-log.ts, constants.ts,
+// nws-zone-join.ts (NWS feature-state half), diag-log.ts,
 // layers/base-filters.ts (BASE_LAYER_FILTERS).
 
 import { state } from './state.js';
@@ -52,10 +54,7 @@ const GEN_MW_FIELDS: Record<string, string> = {
   "osm-plants-polygons-outline": "output_mw",
 };
 
-// Re-exported so filter/UI callers keep one import site; canonical home is
-// constants.ts (url-state-codec.ts imports it there to stay side-effect-free).
-export { MW_SLIDER_MAX } from './constants.js';
-import { MW_SLIDER_MAX } from './constants.js';
+export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
 
 // Slider is log-scaled: handle position is linear 0..MW_SLIDER_POS_MAX, mapping to
 // MW decades 1, 10, 100, 1000, 10000 (1000 position units per decade). State always

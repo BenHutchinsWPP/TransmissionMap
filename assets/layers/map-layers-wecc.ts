@@ -12,7 +12,8 @@
 // Source data: data/layers/wecc_paths.geojson.gz + wecc_path_lines.geojson.gz
 //   (maintained by hand).
 // planWeccPaths() returns a LayerPlan (layer-plan.ts); wireWeccPaths() wires the
-// marker tap. Imported by: add-all-layers.ts. Lazy-loaded via layer-data.ts LAYER_DATA_URLS.
+// marker tap. Imported by: add-all-layers.ts. Lazy-loaded by layer-data.ts
+// (wecc-paths from its registry `geojson`, wecc-path-lines from SOURCE_DATA_URLS).
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';

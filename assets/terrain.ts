@@ -6,17 +6,33 @@
 // flat at pitch 0 and never touches the camera.
 // Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
 // every unproject and every hit-test under raised ground goes through.
-// Deps: state.js (state), constants.js (TERRAIN_* constants). Called from ui/ui.ts (toggles),
+// Owns the terrain tuning: TERRAIN_EXAGGERATION and the short on-map credit
+// TERRAIN_ATTRIB_SHORT (index.html carries the full wording).
+// Deps: state.js (state), constants.js (TERRAIN_TILE_URL). Called from ui/ui.ts (toggles),
 // map.ts (apply3dFromState at load-end), basemap.ts (ensureBuildingsLayer after the OFM
 // style graft resolves, repositionHillshade from switchBasemap).
 
 import { state } from './state.js';
-import { TERRAIN_TILE_URL, TERRAIN_ATTRIB_SHORT, TERRAIN_EXAGGERATION } from './constants.js';
+import { TERRAIN_TILE_URL } from './constants.js';
 import { maybeShowRotateHint } from './terrain-hint.js';
 
 const TERRAIN_SOURCE_ID = 'terrain-dem';
 const BUILDINGS_LAYER_ID = 'buildings-3d';
 const AUTO_TILT_PITCH = 45;
+
+// Short on-map credit for the MapLibre attribution control — the required
+// tilezen/joerd wording ("United States 3DEP ... U.S. Geological Survey") is
+// long enough to overlap other floating UI as the only active source with
+// bespoke (non-deduped) attribution while terrain is on. The full wording
+// lives instead in the Data Credits dialog (index.html,
+// data-source-credit="usgs-terrain" — do not reword that entry), matching
+// every other dataset's short-in-map/full-in-dialog split (SOURCE_ATTRIB in constants.ts).
+const TERRAIN_ATTRIB_SHORT = "USGS terrain";
+// True to scale: a ridge stands as tall against its valley on screen as it does
+// on the ground, so heights read as measurements rather than as an effect.
+// Relief contrast is the hillshade's job instead (terrain.ts), which sharpens
+// slopes without moving any elevation.
+const TERRAIN_EXAGGERATION = 1;
 
 // A second raster-dem source over the same tile URL as terrain-dem, kept
 // separate because setTerrain() re-tunes the source it binds: that source's

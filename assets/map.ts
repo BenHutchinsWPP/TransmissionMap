@@ -16,7 +16,7 @@ import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import * as pmtiles from 'pmtiles';
 import { state } from './state.js';
-import { BLANK_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from './constants.js';
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants.js';
 import { loadIcons } from './icons.js';
 import { addAllLayers } from './layers/add-all-layers.js';
 import { initPolygonHover, initLineHighlight } from './hover.js';
@@ -31,7 +31,7 @@ import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
-import { initBasemaps, switchBasemap, switchProjection } from './basemap.js';
+import { BLANK_STYLE, initBasemaps, switchBasemap, switchProjection } from './basemap.js';
 
 maplibregl.setWorkerUrl(workerUrl);
 

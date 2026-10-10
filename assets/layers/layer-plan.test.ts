@@ -4,7 +4,10 @@
 // Then the whole boot: every style layer addAllLayers() adds keeps its inline
 // filter through filters.ts's effectiveFilter(), which rebuilds a layer's
 // filter from the registered base whenever a legend filter or a `where` runs.
-// Deps: layer-plan.ts, base-filters.ts, add-all-layers.ts, filters.ts, state.ts.
+// And every source it adds: credited (or on the pinned uncredited list), and,
+// when it starts empty, one the loader knows how to fill.
+// Deps: layer-plan.ts, base-filters.ts, add-all-layers.ts, filters.ts, state.ts,
+// layer-data.ts (layerDataUrl), constants.ts (SOURCE_ATTRIB, EMPTY_FC).
 import { describe, it, expect, vi } from 'vitest';
 import type { FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
@@ -12,7 +15,8 @@ import { applyLayerPlan, type LayerPlan } from './layer-plan.js';
 import { BASE_LAYER_FILTERS } from './base-filters.js';
 import { addAllLayers } from './add-all-layers.js';
 import { effectiveFilter } from '../filters.js';
-import { SOURCE_ATTRIB } from '../constants.js';
+import { SOURCE_ATTRIB, EMPTY_FC } from '../constants.js';
+import { layerDataUrl } from './layer-data.js';
 
 /** Fake map recording each addSource/addLayer in call order. */
 function recordingMap() {
@@ -117,5 +121,40 @@ describe('addAllLayers base filters', () => {
     const lost = [...layers].filter(([id, spec]) => !EXEMPT.has(id)
       && JSON.stringify(effectiveFilter(id)) !== JSON.stringify((spec as { filter?: unknown }).filter ?? null));
     expect(lost.map(([id]) => id)).toEqual([]);
+  });
+});
+
+describe('addAllLayers sources', () => {
+  const { map, sources } = recordingMap();
+  state.map = map;
+  addAllLayers();
+  state.map = null;
+  const spec = (id: string) => sources.get(id) as { attribution?: string; data?: unknown };
+
+  // Sources that carry no credit today, from SOURCE_ATTRIB or inline.
+  const UNCREDITED = [
+    'boem-wind-leases', 'highlight-lines', 'highlight-pts', 'nws-alerts', 'weather-admin-lines',
+    'weather-live', 'weather-live-b', 'westtec-10yr', 'wildfire-live',
+  ];
+
+  it('credits every source but the pinned uncredited ones', () => {
+    expect([...sources.keys()].filter(id => !spec(id).attribution).sort()).toEqual(UNCREDITED);
+  });
+
+  it('keys every SOURCE_ATTRIB row by a source it adds', () => {
+    expect(Object.keys(SOURCE_ATTRIB).filter(id => !sources.has(id))).toEqual([]);
+  });
+
+  // Empty GeoJSON sources ensureLayerData() never fills: the search highlights
+  // (highlights.ts sets them), the unclustered data-centre copy (map-layers-load.ts
+  // fills it from osm-datacenters), and the EIA petroleum pipelines, whose
+  // registry entries are commented out in src/registry/pipelines.ts.
+  const FILLED_ELSEWHERE = [
+    'eia-crude-pipelines', 'eia-product-pipelines', 'highlight-lines', 'highlight-pts', 'osm-datacenters-plain',
+  ];
+
+  it('every source that starts empty has a data URL, or is filled elsewhere', () => {
+    const unfilled = [...sources.keys()].filter(id => spec(id).data === EMPTY_FC && !layerDataUrl(id));
+    expect(unfilled.sort()).toEqual(FILLED_ELSEWHERE);
   });
 });

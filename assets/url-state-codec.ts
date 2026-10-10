@@ -18,7 +18,7 @@
 // against it read-only.
 // Deps: fflate (deflate for vx), view-validate.ts, diag-log.ts, the registry
 // (incl. displayModes, conditions.ts), ui/ui-legends.ts (LEGEND_FILTERS),
-// constants.ts (MW_SLIDER_MAX), src/colors/ramps.ts (year-filter bounds),
+// filters.ts (MW_SLIDER_MAX), src/colors/ramps.ts (year-filter bounds),
 // src/i18n (isValidLocale). fflate deflates synchronously, as parse/format run
 // synchronously on cold boot; it is in the boot bundle via pmtiles.
 // CompressionStream's deflate-raw needs Safari 16.4+.
@@ -26,7 +26,7 @@
 import { LAYERS, displayModes } from '../src/registry/index.js';
 import { WEATHER_VARIABLES, NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
-import { MW_SLIDER_MAX } from './constants.js';
+import { MW_SLIDER_MAX } from './filters.js';
 import { YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
 import { isValidLocale } from '../src/i18n/index.js';
 import type { LayerScope, StyleOverride } from '../src/types.js';

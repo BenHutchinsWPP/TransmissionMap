@@ -1,7 +1,8 @@
 // ─── EIA petroleum (liquids) pipeline layers ─────────────────────────────────
 // Crude-oil + petroleum-product pipelines from the EIA U.S. Energy Atlas, served
 // as browser-direct GeoJSON (small; no PMTiles). Lazy-loaded via layer-data.ts
-// LAYER_DATA_URLS; popup in popup-format.ts; registry entries in src/registry/pipelines.ts.
+// (each registry entry's `geojson` file); popup in popup-format.ts; registry
+// entries in src/registry/pipelines.ts (commented out, so not loaded today).
 // planPetroleumPipelines() returns a LayerPlan (layer-plan.ts).
 // Imported by: add-all-layers.ts.
 

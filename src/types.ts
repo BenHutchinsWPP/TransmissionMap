@@ -3,7 +3,9 @@
 // BucketedField (the legend facet record).
 // Types with a single owning module live beside it instead: AppState in
 // assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
-// assets/raster-probes.ts. Imports nothing.
+// assets/raster-probes.ts. Imports only the DATA type from assets/constants.ts.
+
+import type { DATA } from '../assets/constants.js';
 
 // Per-layer look override in a view: opacity and size are multipliers on the layer's own values, color a literal.
 export interface StyleOverride { opacity?: number; size?: number; color?: string }
@@ -109,6 +111,10 @@ export interface LayerDef {
   sourceId: string;
   // FIELD_SCHEMA key (src/registry/field-schema.ts) naming the fields this layer's features carry.
   dataset?: string;
+  // DATA key (assets/constants.ts) of the GeoJSON file ensureLayerData()
+  // (assets/layers/layer-data.ts) fetches into this layer's source on first
+  // enable. Unset for tiled layers, which MapLibre loads itself.
+  geojson?: keyof typeof DATA;
   swatch: string;
   live?: boolean;
   defaultOn: boolean;

@@ -62,7 +62,8 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/main.ts` — top-level import orchestrator; imports `assets/ui/ui.ts` (and, in dev only, `assets/dev-console.ts`)
 - `src/types.ts` — shared `LayerDef` interface and the registry/view types it
   carries (includes the optional `clickPriority` — map-layer id → click
-  hit-test priority — and `fromZoom` — minimum zoom to fetch the layer's data —
+  hit-test priority — `fromZoom` — minimum zoom to fetch the layer's data — and
+  `geojson` — the `DATA` key the lazy loader fetches for a GeoJSON layer —
   fields), and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
   `assets/state.ts`, `UserLayer` in `assets/user-data/user-data.ts`,
   `RasterMeta` in `assets/raster-probes.ts`
@@ -115,7 +116,10 @@ turns public datasets into PMTiles consumed by the frontend.
     - `units-store.ts` — load/save display-unit preferences (`localStorage` key
       `tm-units`, validated against `UNIT_OPTIONS` — a trust boundary, see
       `units-store.test.ts`)
-    - `constants.ts` tile URLs, DATA paths, palette constants
+    - `constants.ts` — shared constants, imports nothing: `DATA` paths, `releaseUrl`/`weatherLiveUrl`,
+      `SOURCE_ATTRIB` (keyed by map source id), the external hosts `diagnostics.ts` also probes,
+      `EMPTY_FC`, default viewport, `COUNTY_SRC*`; a single-owner constant lives in its owner
+      (`MW_SLIDER_MAX` → `filters.ts`, `BLANK_STYLE`/fog/atmosphere → `basemap.ts`, terrain tuning → `terrain.ts`)
     - `live-staleness.ts` — **shared factory** for every live GeoJSON feed: auto-refresh
       poll + stale-data kill-switch modal. `wildfire-staleness.ts` / `nws-staleness.ts`
       are thin config shells over it. Raster/feature-state feeds opt out and
@@ -173,8 +177,9 @@ turns public datasets into PMTiles consumed by the frontend.
       `countyBoundariesSource` (+ `ensureCountyBoundaries` for layers added after boot),
       `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
     - `layer-data.ts` — the lazy GeoJSON loader: `ensureLayerData` (with the `fromZoom` gate and
-      zoom-settle retry), `fetchGeojson`, the explicit `LAYER_DATA_URLS` table (registry id →
-      `DATA` path) and `LAYER_SOURCE_ALIAS`; emits `layer:data` on the bus when a source's features land
+      zoom-settle retry), `fetchGeojson`, `layerDataUrl` (a registry layer's `geojson` DATA key,
+      else the two-row `SOURCE_DATA_URLS` for source-only ids) and `LAYER_SOURCE_ALIAS`; emits
+      `layer:data` on the bus when a source's features land
     - `base-filters.ts` — zero-dependency `registerBaseFilter` + `BASE_LAYER_FILTERS`: each style
       layer's own inline filter (registered by `applyLayerPlan`), which `filters.ts`'s `effectiveFilter()` builds on
     - `add-all-layers.ts` — `addAllLayers()`: collects every builder's plan in z-order and applies

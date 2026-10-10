@@ -5,7 +5,9 @@
 // Deps: state.ts, constants.ts (DATA), state-bus.ts (emits 'layer:data' after a
 //       source's features land), diag-log.ts (recordDiagEvent — records
 //       ensureLayerData failures for the diagnostics panel); registry/index.ts
-//       (layerById — reads a layer's fromZoom threshold).
+//       (layerById — reads a layer's geojson file and fromZoom threshold).
+// Where a source's data lives is layerDataUrl(): the registry entry's
+// `geojson` DATA key, or SOURCE_DATA_URLS for the two source-only ids.
 // ensureLayerData's contract: "fetch this if the zoom allows" — a source
 // whose LayerDef sets fromZoom is withheld below that zoom (for every registry
 // id that shares it through LAYER_SOURCE_ALIAS too), so every caller
@@ -22,37 +24,19 @@ import { emit } from '../state-bus.js';
 import { recordDiagEvent } from '../diag-log.js';
 import { layerById } from '../../src/registry/index.js';
 
-// Maps registry ID → real data URL for GeoJSON-backed layers.
-// >>> ADD-LAYER: layer-data-urls — see docs/adding-a-layer.md §7
-export const LAYER_DATA_URLS: Record<string, string> = {
-  "ogf-planned-transmission":   DATA.ogf_planned_transmission,
-  "hifld-substations":          DATA.hifld_substations,
-  "osm-plants-points":          DATA.osm_plants_points,
-  "eia-generators":             DATA.eia_generators,
-  "osm-pipelines-points":       DATA.osm_pipelines_points,
-  "hifld-natgas-points":        DATA.hifld_natgas_points,
-  "eia-crude-pipelines":        DATA.eia_crude_pipelines,
-  "eia-product-pipelines":      DATA.eia_product_pipelines,
-  "nrel-hydrothermal-points":   DATA.nrel_hydrothermal_points,
-  "osm-datacenters":            DATA.osm_datacenters,
-  "dc-moratoriums":             DATA.dc_moratoriums,
-  "mines":                      DATA.mines,
-  "wecc-paths":                 DATA.wecc_paths,
-  "wecc-path-lines":            DATA.wecc_path_lines,
-  "nerc-regions":               DATA.nerc_regions,
-  "control-areas":              DATA.control_areas,
-  "eia-ba":                     DATA.eia_ba,
-  "us-states":                  DATA.us_states,
-  "countries":                  DATA.countries,
-  "admin1":                     DATA.admin1_boundaries,
-  "tribal-lands":               DATA.tribal_lands,
-  "bia-tribal-lands":           DATA.bia_tribal_lands,
-  "wildfire-live":              DATA.wildfire_live,
-  "nws-alerts":                 DATA.nws_alerts,
-  "boem-wind-leases":           DATA.boem_wind_leases,
-  "westtec-10yr":               DATA.westtec_10yr,
-  "weather-admin-lines":        DATA.admin_lines, // not a registry id — loaded via the weather-live alias below
+// Sources the loader fills that are not registry layers. A registry layer
+// names its file itself, with LayerDef.geojson (a DATA key).
+export const SOURCE_DATA_URLS: Record<string, string> = {
+  "wecc-path-lines":     DATA.wecc_path_lines,  // fetched by map-layers-wecc.ts for the click highlight
+  "weather-admin-lines": DATA.admin_lines,      // loaded via the weather-live alias below
 };
+
+/** The GeoJSON URL ensureLayerData() fetches into source `sourceId`, if any:
+ *  its registry entry's `geojson` file, else a SOURCE_DATA_URLS row. */
+export function layerDataUrl(sourceId: string): string | undefined {
+  const key = layerById(sourceId)?.geojson;
+  return key ? DATA[key as keyof typeof DATA] : SOURCE_DATA_URLS[sourceId];
+}
 
 // Registry IDs that share a source with another registry ID.
 // Enabling one of these triggers ensureLayerData on the owning source instead.
@@ -105,7 +89,7 @@ export function ensureLayerData(registryId: string): Promise<void> {
 }
 
 function fetchSource(registryId: string): Promise<void> {
-  const url = LAYER_DATA_URLS[registryId];
+  const url = layerDataUrl(registryId);
   if (!url || state.sourcesLoaded[registryId]) return Promise.resolve();
   const existing = _inflight[registryId];
   if (existing) return existing;

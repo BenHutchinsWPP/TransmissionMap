@@ -7,7 +7,9 @@
 // its pitch-faded atmosphere.
 // basemapVisibility() is the pure basemap × labels × fallback → layer-visibility
 // matrix; switchBasemap() applies it.
-// Deps: state.js, constants.js (tile URLs, OFM_STYLE_URLS, atmosphere),
+// Owns BLANK_STYLE (the map's starting style, with the fog/atmosphere tuning),
+// read by map.ts's Map constructor, and the USGS topo/hydro tile URLs.
+// Deps: state.js, constants.js (GLYPHS_URL, shared tile URLs, OFM_STYLE_URLS),
 //       basemap-overlay.js (aerialOverlayLayer, normalizeOfmFilter),
 //       terrain.js (ensureBuildingsLayer after the OFM graft, repositionHillshade
 //       from switchBasemap), diag-log.js (OFM style fetch failures),
@@ -22,16 +24,55 @@
 
 import type * as maplibregl from 'maplibre-gl';
 import { state } from './state.js';
-import { BLANK_STYLE,
-         OSM_TILE_URL, OFM_STYLE_URLS,
-         USGS_TOPO_TILE_URL, USGS_HYDRO_TILE_URL,
-         AERIAL_TILE_URL, USGS_AERIAL_TILE_URL,
-         ATMOSPHERE_BLEND, ATMOSPHERE_FADE_PITCH } from './constants.js';
+import { GLYPHS_URL, OSM_TILE_URL, OFM_STYLE_URLS,
+         AERIAL_TILE_URL, USGS_AERIAL_TILE_URL } from './constants.js';
 import { on } from './state-bus.js';
 import { getLocale, type SupportedLocale } from '../src/i18n/index.js';
 import { ensureBuildingsLayer, repositionHillshade } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
 import { aerialOverlayLayer, normalizeOfmFilter, type OfmLayer } from './basemap-overlay.js';
+
+// Where the horizon haze begins, as a fraction of the distance from map centre
+// (0) to horizon (1). 0.95 keeps it to a strip at the skyline, leaving the near
+// and middle ground — where the map is read — clear. 1 switches fog off
+// entirely, and the spec allows nothing higher.
+//
+// The colour stays the opaque default. A translucent fog colour reads as the
+// gentler setting and behaves as the opposite: the shader squares the blend
+// factor, so a translucent wash lands under a 2% luminance shift across most of
+// the band, while the same alpha runs through the shader's linear-to-gamma
+// conversion on the extra per-stack pass and comes back amplified. Opacity
+// buys visible haze per unit of side effect.
+//
+// The side effect worth knowing: MapLibre applies this fog once per
+// render-to-texture drape stack, and the stack count follows which
+// symbol/circle/fill-extrusion layers are visible, so the strip does thicken as
+// layers are switched on. A narrow band keeps that to the skyline.
+// Fog only takes effect while 3D Terrain is on, above pitch 60 (see terrain.ts).
+const SKY_FOG_GROUND_BLEND = 0.95;
+
+// MapLibre requires a style object even when we control all sources ourselves.
+export const BLANK_STYLE = {
+  version: 8 as const, glyphs: GLYPHS_URL, sources: {}, layers: [] as [],
+  sky: { "fog-ground-blend": SKY_FOG_GROUND_BLEND, "atmosphere-blend": 0 },
+} as const;
+
+// Globe's halo. Under the vertical-perspective projection MapLibre fades the
+// flat sky layer out entirely, so this atmosphere shader IS the sky there —
+// there is no sky-color/horizon-color fallback behind it. Its wash deepens with
+// the distance a view ray travels through the shell, which for a tilted camera
+// is the whole viewport rather than a rim, so syncAtmosphere fades it out with
+// pitch and BLANK_STYLE above starts it at 0. Mercator never pays for it.
+const ATMOSPHERE_BLEND = 0.8;
+// Pitch at which the halo has faded out completely.
+const ATMOSPHERE_FADE_PITCH = 55;
+
+const USGS_TOPO_TILE_URL      = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+// National Hydrography Dataset, cached as a TRANSPARENT overlay — streams, lakes,
+// dams, no land or labels. It is not a standalone basemap: the "hydro" basemap
+// stacks it over the OFM light basemap (switchBasemap). Cache tops out at tile z16
+// (z17 is a 404), same ceiling as USGSTopo.
+const USGS_HYDRO_TILE_URL     = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}";
 
 // Adds every basemap source and layer, starts the OFM style fetch and the aerial
 // fallback, and keeps the globe atmosphere in step with pitch. Called once from
