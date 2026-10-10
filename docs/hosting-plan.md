@@ -113,8 +113,8 @@ present from z4 up.
 
 ## Six sources on the frontend
 
-`addTransmissionLines()` in `assets/layers/layer-init.ts` takes a `sources` list
-and adds every style layer across all sources before starting the next, so paint
+`planTransmissionLines()` in `assets/layers/layer-init.ts` takes a `sources` list
+and plans every style layer across all sources before starting the next, so paint
 order is tier-major and ascending kV puts EHV on top.
 
 A source declares its class as `kv: [min, max)`, and a style tier only gets a

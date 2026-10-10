@@ -78,7 +78,7 @@ pushed and `make validate` reports it as an orphan.
 A layer split across several archives (see [hosting-plan.md](hosting-plan.md))
 gets one `DATA` key each, and its builder opens each as a separate MapLibre
 source — see `OSM_TL_BANDS` in `src/registry/transmission.ts` and
-`addTransmissionLines()` in `assets/layers/layer-init.ts`.
+`planTransmissionLines()` in `assets/layers/layer-init.ts`.
 Everything keyed off `LayerDef.mapLayerIds` then follows for free; the registries
 keyed on a *source* or *style-layer* id do not (`assets/popup.ts`,
 `assets/popup-format.ts`, `assets/ui/ui-search.ts`, `assets/hover.ts`,
@@ -175,41 +175,49 @@ Anchor: `>>> ADD-LAYER: layer-registry`
 
 ## 6. `assets/layers/map-layers-*.ts` — MapLibre layer builder
 
-Add an `addMyLayer()` function in the appropriate sibling file, or create a new one (e.g., `assets/layers/map-layers-load.ts`). The function must be **idempotent** — check for the source before adding:
+Add a `planMyLayer()` function in the appropriate sibling file, or create a new one (e.g., `assets/layers/map-layers-load.ts`). It returns a `LayerPlan` (`assets/layers/layer-plan.ts`) — plain data, the source and its style layers in paint order — and never touches the map:
 
 ```ts
-function addMyLayer() {
-  if (state.map.getSource("my-layer")) return;
+import type { LayerPlan } from './layer-plan.js';
 
-  state.map.addSource("my-layer", {
-    type: "geojson",          // or "vector" for PMTiles
-    data: EMPTY_FC,           // GeoJSON starts empty; data fetched lazily
-    // url: pmtilesUrl(DATA.my_layer),  // PMTiles: use this instead
-  });
-
-  state.map.addLayer({
-    id: "my-layer-circles",
-    type: "circle",           // circle | symbol | fill | line
-    source: "my-layer",
-    // "source-layer": "my_layer",   // PMTiles vector only — matches tippecanoe -l name
-    minzoom: 4,
-    layout: { visibility: initialVisibility("my-layer") },
-    paint: {
-      "circle-color": "#6366f1",
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 6],
-      "circle-stroke-color": "#ffffff",
-      "circle-stroke-width": 1,
-    },
-  });
-
-  // If this layer participates in a filter (filterType set in registry):
-  registerBaseFilter("my-layer-circles", null);
+export function planMyLayer(): LayerPlan {
+  return [
+    { source: "my-layer", spec: {
+      type: "geojson",          // or "vector" for PMTiles
+      data: EMPTY_FC,           // GeoJSON starts empty; data fetched lazily
+      // url: pmtilesUrl(DATA.my_layer),  // PMTiles: use this instead
+    } },
+    { layer: {
+      id: "my-layer-circles",
+      type: "circle",           // circle | symbol | fill | line
+      source: "my-layer",
+      // "source-layer": "my_layer",   // PMTiles vector only — matches tippecanoe -l name
+      minzoom: 4,
+      // filter: [...],          // optional: a filter this layer always applies
+      layout: { visibility: initialVisibility("my-layer") },
+      paint: {
+        "circle-color": "#6366f1",
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 6],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 1,
+      },
+    } as LayerSpecification },
+    // { layer: {...}, beforeId: "other-layer" },  // slot below an existing layer
+  ];
 }
 ```
 
 `initialVisibility(id)` returns `"visible"` or `"none"` based on the layer's `defaultOn` and any URL hash state.
 
-`registerBaseFilter(mapLayerId, baseFilter)` (import it from `./base-filters.js`; the other helpers come from `./layer-init.js`) connects the layer to the filter UI. Pass `null` for no additional base filter, or a MapLibre expression to always apply (e.g., only show HV lines).
+`applyLayerPlan()` (called once by `addAllLayers()`, §7) does the rest:
+
+- adds every source before any layer, and skips a source or layer already on the map, so a plan can name a shared source (e.g. `countyBoundariesSource()` from `./layer-init.js`) that another plan also names;
+- credits the source with `SOURCE_ATTRIB[id]`, or `SOURCE_ATTRIB[attrib]` when the step sets `attrib` (a twin source sharing one credit); a `spec.attribution` of its own wins;
+- registers each layer's own `filter` (null without one) as its base filter, which connects the layer to the filter UI: legend and `where` filters are combined with it, never replace it.
+
+Common shapes have helpers in `./layer-init.js` that return plans: `planPolygon` (fill + outline), `planRaster`, `planTransmissionLines`, `planSubstationPoints`. Compose plans by spreading: `[...planPolygon({...}), { layer: labelSpec }]`.
+
+A side effect that is not a layer — a tap handler, a bus subscription, a timer — goes in its own exported function that `addAllLayers()` calls after applying the plans (see `wireWeccPaths()`, `startNexradRadar()`); images a layer's paint names are added before the plans (see `addDcmHatchImages()`).
 
 ---
 
@@ -226,19 +234,19 @@ export const LAYER_DATA_URLS = {
 
 This is what `ensureLayerData()` uses to fetch and populate the source on first enable; when the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). The key must be a registry id (or a `LAYER_SOURCE_ALIAS` target) and the value a `DATA` path — `layer-data.test.ts` checks both. Do not add PMTiles layers here — MapLibre tiles lazily already.
 
-### Call from `addAllLayers()` in `assets/layers/add-all-layers.ts`
+### Add the plan to `addAllLayers()` in `assets/layers/add-all-layers.ts`
 
-Add your call in the right z-order position:
+Spread your plan into the `applyLayerPlan()` list in the right z-order position:
 
 ```ts
-function addAllLayers() {
-  addPopDensity();
-  addMyLayer();      // ← add here, grouped with similar layers
+applyLayerPlan(map, [
+  ...planPopDensity(),
+  ...planMyLayer(),      // ← add here, grouped with similar layers
   // ...
-}
+]);
 ```
 
-Z-order matters: layers added earlier are drawn below layers added later. Rasters go first (bottom), then region fills, then land polygons, then point infrastructure.
+Z-order matters: layers earlier in the list are drawn below layers later in it. Rasters go first (bottom), then region fills, then land polygons, then point infrastructure.
 
 ### For raster layers with hover LUT: add to `RASTER_PROBES` in `assets/raster-probes.ts`
 
@@ -414,10 +422,10 @@ Update `docs/data-sources.md`:
 [ ] src/registry/sources.ts               — LAYER_SOURCES entry (if new source)
 [ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…)
 [ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
-[ ] assets/layers/map-layers-*.ts         — addMyLayer() builder
+[ ] assets/layers/map-layers-*.ts         — planMyLayer() builder returning a LayerPlan
 [ ] assets/layers/layer-data.ts           — LAYER_DATA_URLS entry (GeoJSON only)
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
-[ ] assets/layers/add-all-layers.ts       — addMyLayer() call in addAllLayers()
+[ ] assets/layers/add-all-layers.ts       — ...planMyLayer() in the applyLayerPlan() list
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)
 [ ] assets/popup-format.ts                — renderer tuple in the _defs table (clickable layers)
 [ ] assets/filters.ts                     — bus subscription (if new filter type)

@@ -11,13 +11,14 @@
 //
 // Source data: data/layers/wecc_paths.geojson.gz + wecc_path_lines.geojson.gz
 //   (maintained by hand).
-// Imported by: add-all-layers.ts. Lazy-loaded via layer-data.ts LAYER_DATA_URLS.
+// planWeccPaths() returns a LayerPlan (layer-plan.ts); wireWeccPaths() wires the
+// marker tap. Imported by: add-all-layers.ts. Lazy-loaded via layer-data.ts LAYER_DATA_URLS.
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
+import { EMPTY_FC } from '../constants.js';
 import { initialVisibility } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 import { ensureLayerData } from './layer-data.js';
 import { onMapTap } from '../map-input.js';
 
@@ -35,17 +36,16 @@ const SIZE_FACTOR = ["step", RATED_MW, 0.9, 1000, 1.15, 3000, 1.45];
 const IS_CORRIDOR  = ["==", ["get", "isCorridor"], true] as unknown as FilterSpecification;
 const NOT_CORRIDOR = ["!=", ["get", "isCorridor"], true] as unknown as FilterSpecification;
 
-export function addWeccPaths() {
-  if (!state.map || state.map.getSource("wecc-paths")) return;
-
-  state.map.addSource("wecc-paths", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["wecc-paths"] });
-  state.map.addSource("wecc-path-lines", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["wecc-paths"] });
-
+export function planWeccPaths(): LayerPlan {
   const vis = initialVisibility("wecc-paths");
+
+  return [
+  { source: "wecc-paths", spec: { type: "geojson", data: EMPTY_FC } },
+  { source: "wecc-path-lines", spec: { type: "geojson", data: EMPTY_FC }, attrib: "wecc-paths" },
 
   // ── Digitized corridor lines (isCorridor=true) ──────────────────────────────
   // Thick semi-transparent bands showing approximate path extent.
-  state.map.addLayer({
+  { layer: {
     id: "wecc-path-corridors", type: "line", source: "wecc-paths",
     filter: IS_CORRIDOR,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -55,11 +55,10 @@ export function addWeccPaths() {
       "line-opacity": 0.20,
       "line-blur": 4,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-corridors", IS_CORRIDOR);
+  } as unknown as LayerSpecification },
 
   // Corridor outline
-  state.map.addLayer({
+  { layer: {
     id: "wecc-path-corridors-outline", type: "line", source: "wecc-paths",
     filter: IS_CORRIDOR,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -68,13 +67,12 @@ export function addWeccPaths() {
       "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 8, 3, 12, 5],
       "line-opacity": 0.4,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-corridors-outline", IS_CORRIDOR);
+  } as unknown as LayerSpecification },
 
   // ── Catalog path markers (point geometries, isCorridor != true) ────────────
 
   // Highlight lines matched from OSM/HIFLD (shown on click)
-  state.map.addLayer({
+  { layer: {
     id: "wecc-path-lines-highlight", type: "line", source: "wecc-path-lines",
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
     filter: NONE_FILTER,
@@ -84,11 +82,10 @@ export function addWeccPaths() {
       "line-opacity": 0.55,
       "line-blur": 0.5,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-path-lines-highlight", NONE_FILTER);
+  } as unknown as LayerSpecification },
 
   // Path number circles
-  state.map.addLayer({
+  { layer: {
     id: "wecc-paths-circles", type: "circle", source: "wecc-paths",
     filter: NOT_CORRIDOR,
     minzoom: 3,
@@ -101,11 +98,10 @@ export function addWeccPaths() {
       "circle-stroke-width": 1.2,
       "circle-opacity": 0.9,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-paths-circles", NOT_CORRIDOR);
+  } as unknown as LayerSpecification },
 
   // Path number label
-  state.map.addLayer({
+  { layer: {
     id: "wecc-paths-label", type: "symbol", source: "wecc-paths",
     filter: NOT_CORRIDOR,
     minzoom: 3,
@@ -123,9 +119,11 @@ export function addWeccPaths() {
       "text-halo-color": "rgba(255,255,255,0.7)",
       "text-halo-width": 0.6,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("wecc-paths-label", NOT_CORRIDOR);
+  } as unknown as LayerSpecification },
+  ];
+}
 
+export function wireWeccPaths() {
   // Clicking a path marker highlights that path's matched lines (lazy-loads them once).
   onMapTap("wecc-paths-circles", (_e, features) => {
     const num = features[0]?.properties?.number;

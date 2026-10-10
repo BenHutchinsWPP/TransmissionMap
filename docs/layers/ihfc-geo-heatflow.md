@@ -71,7 +71,7 @@ Key difference vs wind and solar: the source is **scattered measurement points**
 
 ## Rendering — colour is baked into the tiles
 
-The heat-flow → colour mapping is applied **at build time** (`gdaldem color-relief`), so the hosted WEBP tiles carry RGBA. The map shows it as a plain MapLibre `raster` layer (`addGeoResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7.
+The heat-flow → colour mapping is applied **at build time** (`gdaldem color-relief`), so the hosted WEBP tiles carry RGBA. The map shows it as a plain MapLibre `raster` layer (`planGeoResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7.
 
 ### Hover readout — value at the cursor
 

@@ -87,7 +87,7 @@ is all Southern Canada, not just British Columbia.
 
 The m/s → colour mapping is applied **at build time** (`gdaldem color-relief`), so the
 hosted WEBP tiles already carry RGBA. The map shows it as a plain MapLibre `raster` layer
-(`addWindResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7 — **no**
+(`planWindResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7 — **no**
 `raster-color` paint and no float-tile encoding, which keeps it robust across MapLibre
 versions. The colour tiles carry no values.
 

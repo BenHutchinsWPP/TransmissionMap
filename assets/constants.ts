@@ -151,7 +151,8 @@ export const WEATHER_WASH_OPACITY = 0.65;
 
 // ─── Per-source attribution shorthand ─────────────────────────────────────────
 // Short credit strings shown in the MapLibre attribution control. Keyed by the
-// runtime sourceId passed to map.addSource (NOT the registry source key).
+// runtime sourceId (NOT the registry source key), or a plan step's `attrib`;
+// layers/layer-plan.ts's applyLayerPlan() attaches them.
 // MapLibre sorts attributions by length and drops any that are a SUBSTRING of a
 // longer one. So OSM-derived layers MUST use a string identical to (a substring
 // of) the basemap's OSM attribution — see OSM_ATTRIB below — or "OpenStreetMap"
@@ -316,6 +317,6 @@ export const DEFAULT_ZOOM   = 4;
 // US county boundaries source, shared by the feature-state joins (ODIN, NRI, NWS).
 // Kept here, in a module that imports nothing, so every county-joined module reads
 // it straight from the source of truth (odin-outages, fema-nri, nws-zone-join, the
-// admin and conditions builders, layer-init's ensureCountyBoundaries).
+// admin and conditions builders, layer-init's countyBoundariesSource).
 export const COUNTY_SRC = "county_boundaries";
 export const COUNTY_SRC_LAYER = "county_boundaries";   // tippecanoe names the layer after the manifest id

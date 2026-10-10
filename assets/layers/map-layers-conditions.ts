@@ -6,9 +6,11 @@
 //       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
 //       and the FEMA National Risk Index county choropleth (same shared-source
 //       feature-state pattern; the join lives in ../fema-nri.ts).
-// Deps: layer-init.ts (initialVisibility, ensureCountyBoundaries, addRasterLayer),
-//       base-filters.ts (registerBaseFilter — every inline style-layer filter is
-//       registered as its base), state,
+// Each plan* returns a LayerPlan (layer-plan.ts), which add-all-layers.ts
+// applies — that step registers every inline style-layer filter as its base.
+// startNexradRadar() starts the radar frame poll once the plan is applied.
+// Deps: layer-init.ts (initialVisibility, countyBoundariesSource, planRaster),
+//       layer-plan.ts (LayerPlan type), state,
 //       constants (DATA, EMPTY_FC, radar URLs, WEATHER_WASH_OPACITY, COUNTY_SRC*),
 //       src/colors/buckets.ts (NRI_RATINGS; bucketColorExpr over NWS_GROUP_BUCKETS).
 //
@@ -19,18 +21,18 @@
 //   wildfire-live      → wildfire-perimeters-fill/line, wildfire-hotspots-heat/circle
 //   wildfire-incidents → wildfire-incidents-circle
 //
-// addNwsAlerts() is a separate live GeoJSON source ("nws-alerts") — NOAA/NWS
+// planNwsAlerts() is a separate live GeoJSON source ("nws-alerts") — NOAA/NWS
 // active alert polygons, colored by the server-computed `_group` prop.
 // Registry entry: nws-alerts → nws-alerts-fill, nws-alerts-line.
 //
-// addWeatherLive() is a live baked-color raster IMAGE source ("weather-live") —
+// planWeatherLive() is a live baked-color raster IMAGE source ("weather-live") —
 // GFS 0.25° weather fields (temperature, wind, etc.) from scripts/fetch_weather_live.py.
 // The refresh loop, age chip and hover-LUT reload live in ../weather-live.ts.
 // It also adds "weather-admin-lines" (Natural Earth country/state borders,
 // scripts/extract_admin_lines.py) — white highlight lines above the wash,
 // toggled with the same registry row.
 //
-// addNexradRadar() is a live external raster tile source ("nexrad-radar") —
+// planNexradRadar() is a live external raster tile source ("nexrad-radar") —
 // IEM NEXRAD composite reflectivity; no data pipeline. Frame consistency comes
 // from polling IEM's tms.json for the current timestamped layer name. Canada
 // coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
@@ -42,8 +44,8 @@ import {
   DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
   GEOMET_RADAR_TILE_TEMPLATE, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
 } from '../constants.js';
-import { initialVisibility, ensureCountyBoundaries, addRasterLayer } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import { initialVisibility, countyBoundariesSource, planRaster } from './layer-init.js';
+import type { LayerPlan } from './layer-plan.js';
 import { NRI_RATINGS, NWS_GROUP_BUCKETS, bucketColorExpr } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
@@ -72,19 +74,17 @@ export function applySmokeOpacity() {
 // Every wildfire-live style layer selects one `_type` from the shared source.
 const wildfireType = (t: string) => ["==", ["get", "_type"], t] as FilterSpecification;
 
-export function addWildfireLiveAreas() {
-  if (!state.map || state.map.getSource("wildfire-live")) return;
-
-  state.map.addSource("wildfire-live", {
-    type: "geojson",
-    data: EMPTY_FC,
-  });
-
+export function planWildfireLiveAreas(): LayerPlan {
   const smokeVis     = initialVisibility("wildfire-smoke");
   const wildfireVis  = initialVisibility("wildfire-live");
 
+  return [{ source: "wildfire-live", spec: {
+    type: "geojson",
+    data: EMPTY_FC,
+  } },
+
   // ── Smoke layers (bottom — below fire perimeters) ──────────────────────────
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-smoke-fill",
     type: "fill",
     source: "wildfire-live",
@@ -100,10 +100,9 @@ export function addWildfireLiveAreas() {
       ],
       "fill-opacity": smokeFillOpacity(state.smokeOpacity),
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-smoke-fill", wildfireType("smoke"));
+  } as LayerSpecification },
 
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-smoke-line",
     type: "line",
     source: "wildfire-live",
@@ -120,11 +119,10 @@ export function addWildfireLiveAreas() {
       "line-width": 1,
       "line-opacity": 0.5 * state.smokeOpacity,
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-smoke-line", wildfireType("smoke"));
+  } as LayerSpecification },
 
   // ── Fire perimeter fill — thin so basemap terrain reads through ────────────
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-perimeters-fill",
     type: "fill",
     source: "wildfire-live",
@@ -134,11 +132,10 @@ export function addWildfireLiveAreas() {
       "fill-color": "#ff6600",
       "fill-opacity": 0.12,
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-perimeters-fill", wildfireType("perimeter"));
+  } as LayerSpecification },
 
   // ── Perimeter outline — colored by % contained (red→orange→green) ──────────
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-perimeters-line",
     type: "line",
     source: "wildfire-live",
@@ -155,26 +152,18 @@ export function addWildfireLiveAreas() {
       "line-width": 2,
       "line-opacity": 0.9,
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-perimeters-line", wildfireType("perimeter"));
-
+  } as LayerSpecification }];
 }
 
-export function addWildfireLivePoints() {
-  if (!state.map || !state.map.getSource("wildfire-live")
-      || state.map.getLayer("wildfire-hotspots-heat")) return;
-
+export function planWildfireLivePoints(): LayerPlan {
   const wildfireVis  = initialVisibility("wildfire-live");
   const incidentVis  = initialVisibility("wildfire-incidents");
 
-  // The heatmap is a soft area wash at national zoom — slot it below the
-  // point block (anchor = bottom-most point layer) so generator/substation
-  // dots stay visible over it; the discrete circles below go on top as usual.
-  const heatBefore = state.map.getLayer("osm-substations-points-hv")
-    ? "osm-substations-points-hv" : undefined;
-
   // ── Hotspot heatmap — FRP-weighted, shown at low zoom ─────────────────────
-  state.map.addLayer({
+  // The heatmap is a soft area wash at national zoom — slot it below the
+  // point block (beforeId = bottom-most point layer) so generator/substation
+  // dots stay visible over it; the discrete circles below go on top as usual.
+  return [{ layer: {
     id: "wildfire-hotspots-heat",
     type: "heatmap",
     source: "wildfire-live",
@@ -210,11 +199,10 @@ export function addWildfireLivePoints() {
       ],
       "heatmap-opacity": 0.85,
     },
-  } as LayerSpecification, heatBefore);
-  registerBaseFilter("wildfire-hotspots-heat", wildfireType("hotspot"));
+  } as LayerSpecification, beforeId: "osm-substations-points-hv" },
 
   // ── Hotspot circles — individual dots at high zoom, colored by confidence ──
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-hotspots-circle",
     type: "circle",
     source: "wildfire-live",
@@ -236,11 +224,10 @@ export function addWildfireLivePoints() {
       "circle-stroke-width": 0.5,
       "circle-opacity": 0.9,
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-hotspots-circle", wildfireType("hotspot"));
+  } as LayerSpecification },
 
   // ── Named incident points — human-reported; always visible, above hotspots ─
-  state.map.addLayer({
+  { layer: {
     id: "wildfire-incidents-circle",
     type: "symbol",
     source: "wildfire-live",
@@ -276,8 +263,7 @@ export function addWildfireLivePoints() {
       "text-halo-width": 1.5,
       "text-halo-blur": 0.5,
     },
-  } as LayerSpecification);
-  registerBaseFilter("wildfire-incidents-circle", wildfireType("incident"));
+  } as LayerSpecification }];
 }
 
 // ─── NWS active weather alerts (live) ──────────────────────────────────────
@@ -285,14 +271,10 @@ export function addWildfireLivePoints() {
 // (server-side grouping of NWS event types — see scripts/fetch_nws_alerts.py).
 const NWS_GROUP_COLOR = bucketColorExpr("_group", NWS_GROUP_BUCKETS, "#9ca3af");
 
-export function addNwsAlerts() {
-  if (!state.map || state.map.getSource("nws-alerts")) return;
-
-  state.map.addSource("nws-alerts", { type: "geojson", data: EMPTY_FC });
-
+export function planNwsAlerts(): LayerPlan {
   const vis = initialVisibility("nws-alerts");
 
-  state.map.addLayer({
+  return [{ source: "nws-alerts", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "nws-alerts-fill",
     type: "fill",
     source: "nws-alerts",
@@ -301,9 +283,7 @@ export function addNwsAlerts() {
       "fill-color": NWS_GROUP_COLOR,
       "fill-opacity": 0.25,
     },
-  } as LayerSpecification);
-
-  state.map.addLayer({
+  } as LayerSpecification }, { layer: {
     id: "nws-alerts-line",
     type: "line",
     source: "nws-alerts",
@@ -312,10 +292,10 @@ export function addNwsAlerts() {
       "line-color": NWS_GROUP_COLOR,
       "line-width": ["case", ["==", ["get", "severity"], "Extreme"], 2.5, 1.5],
     },
-  } as LayerSpecification);
+  } as LayerSpecification }];
 }
 
-export const addSeismicHazard = () => addRasterLayer("usgs-seismic-pga", DATA.usgs_seismic_pga,
+export const planSeismicHazard = () => planRaster("usgs-seismic-pga", DATA.usgs_seismic_pga,
   '<a href="https://www.usgs.gov/programs/earthquake-hazards/science/2018-nshm">USGS NSHM</a>');
 
 // ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
@@ -362,26 +342,26 @@ async function refreshRadarFrame() {
   }
 }
 
-export function addNexradRadar() {
-  if (!state.map || state.map.getSource("nexrad-radar")) return;
-
+export function planNexradRadar(): LayerPlan {
   const eccc = '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>';
   // GeoMet (Canada) first so the IEM layer draws on top where coverage overlaps.
-  for (const [id, tiles, attribution] of [
+  return ([
     ...GEOMET_RADAR.map(([srcId, wmsLayer]) => [srcId, geometTiles(wmsLayer, "0"), eccc] as const),
     // "-0" alias until the first tms.json answer
     ["nexrad-radar", [RADAR_TILE_URL], '<a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>'] as const,
-  ]) {
-    state.map.addSource(id, { type: "raster", tiles: [...tiles], tileSize: 256, attribution });
-    state.map.addLayer({
+  ]).flatMap(([id, tiles, attribution]): LayerPlan => [
+    { source: id, spec: { type: "raster", tiles: [...tiles], tileSize: 256, attribution } },
+    { layer: {
       id,
       type: "raster",
       source: id,
       layout: { visibility: initialVisibility("nexrad-radar") },
       paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
-    } as LayerSpecification);
-  }
+    } as LayerSpecification },
+  ]);
+}
 
+export function startNexradRadar() {
   void refreshRadarFrame();
   radarTimer ??= setInterval(() => void refreshRadarFrame(), 60_000);
 }
@@ -394,10 +374,10 @@ export function addNexradRadar() {
 // transparent; the null guard comes first because arithmetic on a null
 // feature-state value poisons the whole expression. The join + refresh logic
 // lives in ../odin-outages.ts.
-export function addOdinOutages() {
+export function planOdinOutages(): LayerPlan {
   const out = ["feature-state", "odin_out"] as ExpressionSpecification;
   // YlOrRd choropleth — customers-out buckets: <100 / 100–1k / 1k–5k / 5k+.
-  addCountyChoropleth("odin-outages", out, {
+  return planCountyChoropleth("odin-outages", out, {
     "fill-color": ["step", out,
       "#fed976",          // <100
       100,  "#fd8d3c",    // 100–1k
@@ -411,27 +391,24 @@ export function addOdinOutages() {
 // A fill + thin outline pair on the shared county_boundaries tiles, painting
 // only counties whose feature-state `key` is set. The null guard comes first
 // (no feature-state → transparent). The source is SHARED infra owned by
-// layer-init.ts — guard on our own layer, never on the source, or a county
-// layer that adds it first would silently suppress these layers.
-function addCountyChoropleth(
+// layer-init.ts; applyLayerPlan adds it once, whichever county layer plans it first.
+function planCountyChoropleth(
   id: string, key: ExpressionSpecification,
   fill: Record<string, unknown>, line: Record<string, unknown>,
-) {
-  if (!state.map || state.map.getLayer(`${id}-fill`)) return;
-  ensureCountyBoundaries();
+): LayerPlan {
   const vis = initialVisibility(id);
   const unlit = ["==", key, null];
-  for (const [type, paint] of [["fill", fill], ["line", line]] as const) {
+  return [countyBoundariesSource(), ...([["fill", fill], ["line", line]] as const).map(([type, paint]) => {
     const color = `${type}-color`;
-    state.map.addLayer({
+    return { layer: {
       id: `${id}-${type}`,
       type,
       source: COUNTY_SRC,
       "source-layer": COUNTY_SRC_LAYER,
       layout: { visibility: vis },
       paint: { ...paint, [color]: ["case", unlit, "rgba(0,0,0,0)", paint[color]] },
-    } as LayerSpecification);
-  }
+    } as LayerSpecification };
+  })];
 }
 
 // ─── FEMA National Risk Index county choropleth ───────────────────────────────
@@ -439,11 +416,11 @@ function addCountyChoropleth(
 // county_boundaries tiles as feature-state `nri_r` (and the score as `nri_s`),
 // so switching hazards re-joins the data and never touches this paint. Counties
 // without a code (not applicable, or not yet joined) stay transparent — null
-// guard first, as in addOdinOutages(). Fill fades as you zoom in so the
+// guard first, as in planOdinOutages(). Fill fades as you zoom in so the
 // infrastructure drawn over it stays legible.
-export function addFemaNri() {
+export function planFemaNri(): LayerPlan {
   const rating = ["feature-state", "nri_r"] as ExpressionSpecification;
-  addCountyChoropleth("fema-nri", rating, {
+  return planCountyChoropleth("fema-nri", rating, {
     "fill-color": ["match", rating, ...NRI_RATINGS.flatMap(r => [r.code, r.color]), "rgba(0,0,0,0)"],
     "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 0.55, 11, 0.35],
   }, { "line-color": "#6b2150", "line-width": 0.4, "line-opacity": 0.5 });
@@ -476,8 +453,7 @@ const WEATHER_IMAGE_COORDS: ImageSourceSpecification["coordinates"] = [
 const TRANSPARENT_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=";
 
-export function addWeatherLive() {
-  if (!state.map || state.map.getSource("weather-live")) return;
+export function planWeatherLive(): LayerPlan {
   // MapLibre's image-source spec has no `attribution` field (unlike raster/geojson),
   // so the GFS credit rides in the credits dialog (index.html,
   // data-source-credit="noaa-gfs") instead of the attribution control.
@@ -487,16 +463,16 @@ export function addWeatherLive() {
   // (a complement curve that keeps combined coverage constant — two linear
   // transitions dip toward the basemap mid-fade), so the property's own
   // transition must be instant. "weather-live" starts as the front layer.
-  for (const [id, opacity] of [
+  const plan = ([
     ["weather-live", WEATHER_WASH_OPACITY],
     ["weather-live-b", 0],
-  ] as const) {
-    state.map.addSource(id, {
+  ] as const).flatMap(([id, opacity]): LayerPlan => [
+    { source: id, spec: {
       type: "image",
       url: TRANSPARENT_PNG,
       coordinates: WEATHER_IMAGE_COORDS,
-    });
-    state.map.addLayer({
+    } },
+    { layer: {
       id,
       type: "raster",
       source: id,
@@ -506,30 +482,30 @@ export function addWeatherLive() {
         "raster-opacity-transition": { duration: 0 },
         "raster-resampling": "linear",
       },
-    } as LayerSpecification);
-  }
+    } as LayerSpecification },
+  ]);
 
   // White country/state border highlights over the wash (Ventusky-style) —
   // the dark ramp colors swallow the basemap's own borders. Natural Earth
   // lines, lazily loaded via the weather-live alias in layer-data.ts and
   // toggled by the same registry row (mapLayerIds).
-  state.map.addSource("weather-admin-lines", { type: "geojson", data: EMPTY_FC });
+  plan.push({ source: "weather-admin-lines", spec: { type: "geojson", data: EMPTY_FC } });
   for (const [id, filter, width, opacity] of [
     ["weather-admin-lines-states", ADMIN_STATE_LINES, 0.8, 0.45],
     ["weather-admin-lines-countries", ADMIN_COUNTRY_LINES, 1.4, 0.7],
   ] as const) {
-    state.map.addLayer({
+    plan.push({ layer: {
       id,
       type: "line",
       source: "weather-admin-lines",
       filter,
       layout: { visibility: initialVisibility("weather-live") },
       paint: { "line-color": "#ffffff", "line-width": width, "line-opacity": opacity },
-    });
-    registerBaseFilter(id, filter);
+    } });
   }
+  return plan;
 }
 
-export const addWildfireHazard = () => addRasterLayer("usfs-wildfire-potential", DATA.usfs_wildfire_potential,
+export const planWildfireHazard = () => planRaster("usfs-wildfire-potential", DATA.usfs_wildfire_potential,
   '<a href="https://research.fs.usda.gov/firelab/products/dataandtools/wildfire-hazard-potential">USFS Fire Lab</a>',
   { resampling: "nearest" });

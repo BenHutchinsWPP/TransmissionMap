@@ -17,7 +17,7 @@
 //       'layer:visibility' — re-runs the gate as the layer switches on), i18n (t,
 //       for the legend age chip = #odinAge in index.html).
 //       The map source/layers are built by layers/map-layers-conditions.ts
-//       (addOdinOutages); the click popup reads numbers from the feature-state set here, and
+//       (planOdinOutages); the click popup reads numbers from the feature-state set here, and
 //       click-resolve.ts hit-tests with outageFeatureLit().
 //       Also owns the popup's incident-report ‹ › pager: the per-outage records
 //       ride in the SAME snapshot (`records` map, keyed by FIPS), derived
@@ -94,7 +94,7 @@ function applyJoin() {
 }
 
 // A county is painted only once applyJoin() has written `odin_out` for it; the
-// fill (layers/map-layers-conditions.ts addOdinOutages) leaves a null
+// fill (layers/map-layers-conditions.ts planOdinOutages) leaves a null
 // `odin_out` transparent. click-resolve.ts uses this to drop hit-test matches
 // on transparent counties.
 export function outageFeatureLit(featureState: Record<string, unknown> | undefined): boolean {

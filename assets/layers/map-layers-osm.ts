@@ -1,22 +1,22 @@
 // ─── OSM-derived layers (transmission, substations, plants, generators, pipelines)
+// Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 // Imported by: add-all-layers.ts
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
-import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
+import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { OSM_GEN_ICON, OSM_GEN_COLOR, genIconSize } from '../../src/colors/fuel.js';
 import { PIPELINE_LINE_COLOR, PIPELINE_TYPE_MAP, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
 import { HEAT_MW_STOPS, OSM_MW_FLOOR, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import {
-  addTransmissionLines, addSubstationPoints, addPolygonLayer,
+  planTransmissionLines, planSubstationPoints, planPolygon,
   pmtilesUrl, initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
 } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 
-export function addOsmTransmission() {
-  addTransmissionLines({
+export function planOsmTransmission(): LayerPlan {
+  return planTransmissionLines({
     // One source per voltage-class archive, ascending — OSM_TL_BANDS is the
     // single definition of the split and also derives the layer ids the registry
     // lists. Ascending order is paint order: EHV is added last and draws on top.
@@ -37,8 +37,8 @@ export function addOsmTransmission() {
   });
 }
 
-export function addOsmSubstationPoints() {
-  addSubstationPoints({
+export function planOsmSubstationPoints(): LayerPlan {
+  return planSubstationPoints({
     sourceId: "osm-substations-points",
     url: DATA.osm_substations_points,
     sourceLayer: "osm_substations_points",
@@ -47,8 +47,8 @@ export function addOsmSubstationPoints() {
   });
 }
 
-export function addOsmSubstationPolygons() {
-  addPolygonLayer({
+export function planOsmSubstationPolygons(): LayerPlan {
+  return planPolygon({
     sourceId: "osm-substations-polygons",
     source: { type: "vector", url: pmtilesUrl(DATA.osm_substations_polygons) },
     sourceLayer: "osm_substations_polygons",
@@ -58,8 +58,8 @@ export function addOsmSubstationPolygons() {
   });
 }
 
-export function addOsmPlantPolygons() {
-  addPolygonLayer({
+export function planOsmPlantPolygons(): LayerPlan {
+  return planPolygon({
     sourceId: "osm-plants-polygons",
     source: { type: "vector", url: pmtilesUrl(DATA.osm_plants_polygons) },
     sourceLayer: "osm_plants_polygons",
@@ -69,16 +69,12 @@ export function addOsmPlantPolygons() {
   });
 }
 
-export function addOsmPlants() {
-  if (!state.map || state.map.getSource("osm-plants-points")) return;
-
-  state.map.addSource("osm-plants-points", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["osm-plants-points"] });
-
+export function planOsmPlants(): LayerPlan {
   const vis      = initialVisibility("osm-plants-points");
   const mwExpr   = ["coalesce", ["to-number", ["get", "output_mw"]], 0] as unknown as ExpressionSpecification;
   const plantName = ["coalesce", ["get", "name"], ""] as unknown as ExpressionSpecification;
 
-  state.map.addLayer({
+  return [{ source: "osm-plants-points", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "osm-plant-icons",
     type: "symbol",
     source: "osm-plants-points",
@@ -92,10 +88,7 @@ export function addOsmPlants() {
       ...genPlantTextLayout(plantName, mwExpr),
     },
     paint: { ...GEN_PLANT_TEXT_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-plant-icons", null);
-
-  state.map.addLayer({
+  } as unknown as LayerSpecification }, { layer: {
     id: "osm-plant-heat", type: "heatmap", source: "osm-plants-points",
     maxzoom: 9,
     layout: { visibility: "none" },
@@ -107,19 +100,10 @@ export function addOsmPlants() {
       "heatmap-color":     HEAT_DENSITY_COLOR,
       "heatmap-opacity":   ["interpolate", ["linear"], ["zoom"], 7, 0.9, 9, 0],
     },
-  } as unknown as LayerSpecification, "osm-plant-icons");
-  registerBaseFilter("osm-plant-heat", null);
+  } as unknown as LayerSpecification, beforeId: "osm-plant-icons" }];
 }
 
-export function addOsmGenerators() {
-  if (!state.map || state.map.getSource("osm-generators")) return;
-
-  state.map.addSource("osm-generators", {
-    type: "vector",
-    url: pmtilesUrl(DATA.osm_generators),
-    attribution: SOURCE_ATTRIB["osm-generators"],
-  });
-
+export function planOsmGenerators(): LayerPlan {
   const vis      = initialVisibility("osm-generators");
   const osmGenMw = ["coalesce", ["to-number", ["get", "output_mw"]], 0];
 
@@ -129,7 +113,7 @@ export function addOsmGenerators() {
     ["coalesce", ["get", "name"], ""]
   ];
 
-  state.map.addLayer({
+  return [{ source: "osm-generators", spec: { type: "vector", url: pmtilesUrl(DATA.osm_generators) } }, { layer: {
     id: "osm-gen-circles",
     type: "symbol",
     source: "osm-generators",
@@ -170,22 +154,13 @@ export function addOsmGenerators() {
       "text-halo-color": "#ffffff",
       "text-halo-width": 1.5,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-gen-circles", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addPipelineLines() {
-  if (!state.map || state.map.getSource("osm-pipelines-lines")) return;
-
-  state.map.addSource("osm-pipelines-lines", {
-    type: "vector",
-    url: pmtilesUrl(DATA.osm_pipelines_lines),
-    attribution: SOURCE_ATTRIB["osm-pipelines-lines"],
-  });
-
+export function planPipelineLines(): LayerPlan {
   const vis = initialVisibility("osm-pipelines-lines");
 
-  state.map.addLayer({
+  return [{ source: "osm-pipelines-lines", spec: { type: "vector", url: pmtilesUrl(DATA.osm_pipelines_lines) } }, { layer: {
     id: "osm-pipelines-lines",
     type: "line",
     source: "osm-pipelines-lines",
@@ -198,15 +173,10 @@ export function addPipelineLines() {
       "line-dasharray": [3, 2],
       "line-opacity": 0.9,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-pipelines-lines", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addPipelinePoints() {
-  if (!state.map || state.map.getSource("osm-pipelines-points")) return;
-
-  state.map.addSource("osm-pipelines-points", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["osm-pipelines-points"] });
-
+export function planPipelinePoints(): LayerPlan {
   const vis = initialVisibility("osm-pipelines-points");
   const noValve = ["!=", ["get", "pipeline"], "valve"] as unknown as FilterSpecification;
 
@@ -216,7 +186,7 @@ export function addPipelinePoints() {
   }
   const iconExpr = ["match", ["get", "pipeline"], ...matchArgs, "pipeline-other"];
 
-  state.map.addLayer({
+  return [{ source: "osm-pipelines-points", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "osm-pipelines-points",
     type: "symbol",
     source: "osm-pipelines-points",
@@ -229,6 +199,5 @@ export function addPipelinePoints() {
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-pipelines-points", noValve);
+  } as unknown as LayerSpecification }];
 }

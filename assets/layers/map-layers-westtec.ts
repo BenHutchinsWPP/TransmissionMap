@@ -1,23 +1,20 @@
 // ─── WestTEC 10-Year Horizon portfolio lines ─────────────────────────────────
+// planWestTEC() returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 // Imported by: add-all-layers.ts
-// Deps: state.js (state), constants.js (EMPTY_FC), src/colors/buckets.js (westtecColorExpr),
-//       layer-init.js (initialVisibility), base-filters.js (registerBaseFilter)
+// Deps: state.js (state.westtecColorBy), constants.js (EMPTY_FC), src/colors/buckets.js (westtecColorExpr),
+//       layer-init.js (initialVisibility), layer-plan.js (LayerPlan type)
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC } from '../constants.js';
 import { westtecColorExpr } from '../../src/colors/buckets.js';
 import { initialVisibility } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 
-export function addWestTEC() {
-  if (!state.map || state.map.getSource("westtec-10yr")) return;
-
-  state.map.addSource("westtec-10yr", { type: "geojson", data: EMPTY_FC });
-
+export function planWestTEC(): LayerPlan {
   const vis = initialVisibility("westtec-10yr");
 
-  state.map.addLayer({
+  return [{ source: "westtec-10yr", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "westtec-lines-casing",
     type: "line", source: "westtec-10yr", minzoom: 3,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -26,10 +23,7 @@ export function addWestTEC() {
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 4.5, 7, 6.5, 12, 10],
       "line-opacity": 0.75,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("westtec-lines-casing", null);
-
-  state.map.addLayer({
+  } as unknown as LayerSpecification }, { layer: {
     id: "westtec-lines",
     type: "line", source: "westtec-10yr", minzoom: 3,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -39,6 +33,5 @@ export function addWestTEC() {
       "line-dasharray": [4, 2],
       "line-opacity": 0.95,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("westtec-lines", null);
+  } as unknown as LayerSpecification }];
 }

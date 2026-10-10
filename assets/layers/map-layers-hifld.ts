@@ -1,19 +1,20 @@
 // ─── HIFLD + region/land layers ──────────────────────────────────────────────
+// Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 // Imported by: add-all-layers.ts
 
-import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
+import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
+import { DATA, EMPTY_FC } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { bucketColorExpr, ogfColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {
-  addTransmissionLines, addSubstationPoints, addPolygonLayer,
+  planTransmissionLines, planSubstationPoints, planPolygon,
   pmtilesUrl, initialVisibility,
 } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 
-export function addHifldTransmission() {
-  addTransmissionLines({
+export function planHifldTransmission(): LayerPlan {
+  return planTransmissionLines({
     sources: [{ id: "hifld-transmission-lines", url: DATA.hifld_transmission_lines }],
     sourceLayer: "hifld_transmission_lines",
     registryId: "hifld-transmission-lines", prefix: "hifld-transmission-lines",
@@ -25,16 +26,16 @@ export function addHifldTransmission() {
   });
 }
 
-export function addHifldSubstationPoints() {
-  addSubstationPoints({
+export function planHifldSubstationPoints(): LayerPlan {
+  return planSubstationPoints({
     sourceId: "hifld-substations",
     kvField:  "max_kv",
     layerIds: { hv: "hifld-substations-hv", lv: "hifld-substations-lv", label: "hifld-substations-label" },
   });
 }
 
-export function addTribalLands() {
-  addPolygonLayer({
+export function planTribalLands(): LayerPlan {
+  return planPolygon({
     sourceId: "tribal-lands", source: { type: "geojson", data: EMPTY_FC },
     prefix: "tribal",
     color: bucketColorExpr("area_type", TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR),
@@ -43,8 +44,8 @@ export function addTribalLands() {
   });
 }
 
-export function addBiaTribalLands() {
-  addPolygonLayer({
+export function planBiaTribalLands(): LayerPlan {
+  return planPolygon({
     sourceId: "bia-tribal-lands", source: { type: "geojson", data: EMPTY_FC },
     prefix: "bia-tribal",
     color: "#8b5cf6",
@@ -53,15 +54,7 @@ export function addBiaTribalLands() {
   });
 }
 
-export function addHifldNatgasLines() {
-  if (!state.map || state.map.getSource("hifld-natgas-lines")) return;
-
-  state.map.addSource("hifld-natgas-lines", {
-    type: "vector",
-    url: pmtilesUrl(DATA.hifld_natgas_lines),
-    attribution: SOURCE_ATTRIB["hifld-natgas-lines"],
-  });
-
+export function planHifldNatgasLines(): LayerPlan {
   const NATGAS_LINE_COLOR = bucketColorExpr("pipe_type", NATGAS_PIPE_TYPE_BUCKETS, "#f97316");
   const lineWidth = ["interpolate", ["linear"], ["zoom"],
     3, 0.8, 6, 1.5, 9, 2.2, 12, 3.5];
@@ -74,26 +67,21 @@ export function addHifldNatgasLines() {
     { id: "hifld-natgas-hgl",        pipeType: "HGL",        minzoom: 0, opacity: 0.80 },
     { id: "hifld-natgas-gathering",  pipeType: "Gathering",  minzoom: 0, opacity: 0.75 },
   ];
-  for (const { id, pipeType, minzoom, opacity } of sublayers) {
-    const filter = ["==", ["get", "pipe_type"], pipeType];
-    state.map.addLayer({
+  return [
+    { source: "hifld-natgas-lines", spec: { type: "vector", url: pmtilesUrl(DATA.hifld_natgas_lines) } },
+    ...sublayers.map(({ id, pipeType, minzoom, opacity }) => ({ layer: {
       id,
       type: "line", source: "hifld-natgas-lines",
       "source-layer": "hifld_natgas_lines", minzoom,
-      filter,
+      filter: ["==", ["get", "pipe_type"], pipeType],
       layout: { visibility: visI, "line-cap": "butt", "line-join": "round" },
       paint: { "line-color": NATGAS_LINE_COLOR, "line-width": lineWidth,
                "line-dasharray": dashArray, "line-opacity": opacity },
-    } as unknown as LayerSpecification);
-    registerBaseFilter(id, filter as FilterSpecification);
-  }
+    } as unknown as LayerSpecification })),
+  ];
 }
 
-export function addHifldNatgasPts() {
-  if (!state.map || state.map.getSource("hifld-natgas-points")) return;
-
-  state.map.addSource("hifld-natgas-points", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["hifld-natgas-points"] });
-
+export function planHifldNatgasPts(): LayerPlan {
   const vis = initialVisibility("hifld-natgas-points");
 
   const FAC_ICON = [
@@ -127,8 +115,9 @@ export function addHifldNatgasPts() {
   const GAS_BASE   = ["match", ["get", "fac_type"], PETRO_TYPES, false, true] as unknown as ExpressionSpecification;
   const PETRO_BASE = ["match", ["get", "fac_type"], PETRO_TYPES, true, false] as unknown as ExpressionSpecification;
 
+  return [{ source: "hifld-natgas-points", spec: { type: "geojson", data: EMPTY_FC } },
   // Gas facilities (processing, storage, LNG, hubs, border, peak shaving)
-  state.map.addLayer({
+  { layer: {
     id: "hifld-natgas-points",
     type: "symbol",
     source: "hifld-natgas-points",
@@ -143,11 +132,9 @@ export function addHifldNatgasPts() {
       "symbol-sort-key":      SORT_KEY,
     },
     paint: {},
-  } as unknown as LayerSpecification);
-  registerBaseFilter("hifld-natgas-points", GAS_BASE);
-
+  } as unknown as LayerSpecification },
   // Petroleum facilities (POL terminals + Strategic Petroleum Reserve) — same source
-  state.map.addLayer({
+  { layer: {
     id: "hifld-petroleum-facilities",
     type: "symbol",
     source: "hifld-natgas-points",
@@ -162,12 +149,11 @@ export function addHifldNatgasPts() {
       "symbol-sort-key":      SORT_KEY,
     },
     paint: {},
-  } as unknown as LayerSpecification);
-  registerBaseFilter("hifld-petroleum-facilities", PETRO_BASE);
+  } as unknown as LayerSpecification }];
 }
 
-export function addNercRegions() {
-  addPolygonLayer({
+export function planNercRegions(): LayerPlan {
+  return planPolygon({
     sourceId: "nerc-regions", source: { type: "geojson", data: EMPTY_FC },
     prefix: "nerc",
     color: bucketColorExpr("code", NERC_BUCKETS, "#94a3b8"),
@@ -178,7 +164,7 @@ export function addNercRegions() {
   });
 }
 
-export function addControlAreas() {
+export function planControlAreas(): LayerPlan {
   const BA_COLOR = ["match", ["to-number", ["get", "color_idx"], 0],
     0, "#3b82f6",
     1, "#06b6d4",
@@ -188,21 +174,17 @@ export function addControlAreas() {
     "#f43f5e"
   ] as unknown as ExpressionSpecification;
 
-  addPolygonLayer({
+  return [...planPolygon({
     sourceId: "control-areas", source: { type: "geojson", data: EMPTY_FC },
     prefix: "ba", color: BA_COLOR,
     fillMinzoom: 2, fillOpacity: 0.10,
     outlineMinzoom: 2,
     outlineWidth: ["interpolate", ["linear"], ["zoom"], 2, 0.8, 5, 1.3, 8, 2.0],
     outlineOpacity: ["case", ["boolean", ["feature-state", "hover"], false], 0.90, 0.70],
-  });
-
-  if (!state.map || state.map.getLayer("ba-label")) return;
-  const vis = initialVisibility("control-areas");
-  state.map.addLayer({
+  }), { layer: {
     id: "ba-label", type: "symbol", source: "control-areas",
     minzoom: 4, layout: {
-      visibility: vis,
+      visibility: initialVisibility("control-areas"),
       "text-field": ["get", "name"],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], 4, 8, 7, 11, 10, 13],
@@ -215,19 +197,14 @@ export function addControlAreas() {
       "text-halo-width": 1.2,
       "text-opacity": 0.85,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("ba-label", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addOGFPlannedTransmission() {
-  if (!state.map || state.map.getSource("ogf-planned-transmission")) return;
-
-  state.map.addSource("ogf-planned-transmission", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["ogf-planned-transmission"] });
-
+export function planOGFPlannedTransmission(): LayerPlan {
   const OGF_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 3, 2, 7, 3.5, 12, 6];
   const vis = initialVisibility("ogf-planned-transmission");
 
-  state.map.addLayer({
+  return [{ source: "ogf-planned-transmission", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "ogf-planned-lines-casing",
     type: "line", source: "ogf-planned-transmission", minzoom: 3,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -236,10 +213,7 @@ export function addOGFPlannedTransmission() {
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 4.5, 7, 6.5, 12, 10],
       "line-opacity": 0.75,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("ogf-planned-lines-casing", null);
-
-  state.map.addLayer({
+  } as unknown as LayerSpecification }, { layer: {
     id: "ogf-planned-lines",
     type: "line", source: "ogf-planned-transmission", minzoom: 3,
     layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
@@ -249,13 +223,12 @@ export function addOGFPlannedTransmission() {
       "line-dasharray": OGF_DASH_EXPR,
       "line-opacity": 0.95,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("ogf-planned-lines", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addRetailTerritories() {
+export function planRetailTerritories(): LayerPlan {
   const RETAIL_COLOR = bucketColorExpr("type", RETAIL_TYPE_BUCKETS, "#94a3b8");
-  addPolygonLayer({
+  return planPolygon({
     sourceId: "retail-territories",
     source: { type: "vector", url: pmtilesUrl(DATA.retail_territories) },
     sourceLayer: "retail_territories", prefix: "retail", color: RETAIL_COLOR,

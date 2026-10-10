@@ -198,7 +198,7 @@ function nearestStepIdx(t: number): number {
 
 // ── A/B crossfade painter ─────────────────────────────────────────────────────
 // "weather-live" and "weather-live-b" are twin image source/layer pairs (see
-// addWeatherLive in map-layers-conditions.ts). Each new image is painted onto
+// planWeatherLive in map-layers-conditions.ts). Each new image is painted onto
 // the hidden partner and the pair's raster-opacity crossfades — a lone
 // updateImage() swaps the texture with a hard pop. The fade is driven
 // per-frame here rather than by paint-spec transitions: two LINEAR fades dip

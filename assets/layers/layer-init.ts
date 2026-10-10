@@ -1,24 +1,26 @@
-// ─── Layer initialisation: shared add* helpers for the map-layers-*.ts builders ─
-// Imported by: add-all-layers.ts (addPadus, addCritHab),
+// ─── Layer initialisation: shared plan helpers for the map-layers-*.ts builders ─
+// Each plan* helper returns a LayerPlan (layer-plan.ts) and never touches the
+// map; add-all-layers.ts hands the plans to applyLayerPlan().
+// Imported by: add-all-layers.ts (planPadus, planCritHab),
 //              nws-zone-join.ts (ensureCountyBoundaries, pmtilesUrl, initialVisibility),
-//              map-layers-*.ts (addTransmissionLines, addPolygonLayer, addRasterLayer,
-//              addSubstationPoints, pmtilesUrl, initialVisibility, ensureCountyBoundaries,
-//              genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
-// Deps: state.ts, constants.ts (DATA, EMPTY_FC, SOURCE_ATTRIB, COUNTY_SRC*),
-//       base-filters.ts (registerBaseFilter), src/colors/{voltage,buckets}.ts,
+//              map-layers-*.ts (planTransmissionLines, planPolygon, planRaster,
+//              planSubstationPoints, countyBoundariesSource, pmtilesUrl,
+//              initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
+// Deps: state.ts, constants.ts (DATA, EMPTY_FC, COUNTY_SRC*),
+//       layer-plan.ts (applyLayerPlan, LayerPlan), src/colors/{voltage,buckets}.ts,
 //       src/registry/transmission.ts (OSM_TL_TIERS).
 // The lazy GeoJSON loader (ensureLayerData, fetchGeojson) lives in layer-data.ts.
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, SourceSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
+import { DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import {
   subRadius, bucketColorExpr, LINE_WIDTH, DC_STRIPE_COLOR, DC_STRIPE_WIDTH, DC_STRIPE_DASH,
   DC_LABEL_MINZOOM, DC_LABEL_COLOR, DC_LABEL_HALO,
   PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS,
 } from '../../src/colors/buckets.js';
-import { registerBaseFilter } from './base-filters.js';
+import { applyLayerPlan, type LayerPlan, type PlanStep } from './layer-plan.js';
 import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
 
 export function pmtilesUrl(path: string): string {
@@ -38,9 +40,9 @@ export function initialVisibility(registryId: string): "visible" | "none" {
 // addresses. GEOID is a zero-padded 5-digit string ("08123") — never parseInt it.
 // Consumers MUST namespace their feature-state keys (e.g. `odin_out`), since all
 // of them share one per-feature state bag on these same features.
-export function ensureCountyBoundaries() {
-  if (!state.map || state.map.getSource(COUNTY_SRC)) return;
-  state.map.addSource(COUNTY_SRC, {
+export const countyBoundariesSource = (): PlanStep => ({
+  source: COUNTY_SRC,
+  spec: {
     type: "vector",
     url: pmtilesUrl(DATA.county_boundaries),
     promoteId: { [COUNTY_SRC_LAYER]: "GEOID" },
@@ -52,7 +54,12 @@ export function ensureCountyBoundaries() {
       '<a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas.html">US Census TIGER</a>' +
       ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>' +
       ' | <a href="https://www.arcgis.com/home/item.html?id=39485e8035d446a5bff03259508ae355">FEMA NRI</a>',
-  });
+  },
+});
+
+// For layers added after boot (nws-zone-join.ts).
+export function ensureCountyBoundaries() {
+  if (state.map) applyLayerPlan(state.map, [countyBoundariesSource()]);
 }
 
 export function genPlantTextLayout(nameExpr: ExpressionSpecification, mwExpr: ExpressionSpecification) {
@@ -81,44 +88,45 @@ export const GEN_PLANT_TEXT_PAINT = {
   "text-halo-width": 1.5,
 };
 
-// ─── Polygon fill + outline helper ────────────────────────────────────────────
+// ─── Raster helper ────────────────────────────────────────────────────────────
 // One raster PMTiles source + layer, id == sourceId. Attribution is passed
 // inline (not SOURCE_ATTRIB — see the dedup note in constants.ts).
-export function addRasterLayer(id: string, url: string, attribution: string,
-                               { opacity = 0.7, resampling = "linear" }: { opacity?: number; resampling?: "linear" | "nearest" } = {}) {
-  if (!state.map || state.map.getSource(id)) return;
-  state.map.addSource(id, { type: "raster", url: pmtilesUrl(url), tileSize: 256, attribution });
-  state.map.addLayer({
-    id, type: "raster", source: id,
-    layout: { visibility: initialVisibility(id) },
-    paint: { "raster-opacity": opacity, "raster-resampling": resampling },
-  } as LayerSpecification);
+export function planRaster(id: string, url: string, attribution: string,
+                           { opacity = 0.7, resampling = "linear" }: { opacity?: number; resampling?: "linear" | "nearest" } = {}): LayerPlan {
+  return [
+    { source: id, spec: { type: "raster", url: pmtilesUrl(url), tileSize: 256, attribution } },
+    { layer: {
+      id, type: "raster", source: id,
+      layout: { visibility: initialVisibility(id) },
+      paint: { "raster-opacity": opacity, "raster-resampling": resampling },
+    } as LayerSpecification },
+  ];
 }
 
-export function addPolygonLayer({ sourceId, source, sourceLayer = undefined as (string | undefined), prefix, color,
+// ─── Polygon fill + outline helper ────────────────────────────────────────────
+
+export function planPolygon({ sourceId, source, sourceLayer = undefined as (string | undefined), prefix, color,
                           fillMinzoom, fillOpacity,
                           outlineMinzoom, outlineWidth, outlineOpacity }: {
   sourceId: string; source: SourceSpecification; sourceLayer?: string; prefix: string; color: ExpressionSpecification | string;
   fillMinzoom: number; fillOpacity: number | ExpressionSpecification;
   outlineMinzoom: number; outlineWidth: number | ExpressionSpecification; outlineOpacity: number | ExpressionSpecification;
-}) {
-  if (!state.map || state.map.getSource(sourceId)) return;
-  state.map.addSource(sourceId, { ...source, attribution: SOURCE_ATTRIB[sourceId] } as SourceSpecification);
+}): LayerPlan {
   const vis = initialVisibility(sourceId);
   const common: Partial<LayerSpecification> = { source: sourceId, layout: { visibility: vis } };
   if (sourceLayer) (common as Record<string, unknown>)["source-layer"] = sourceLayer;
 
-  state.map.addLayer({
-    ...common, id: `${prefix}-fill`, type: "fill", minzoom: fillMinzoom,
-    paint: { "fill-color": color, "fill-opacity": fillOpacity },
-  } as LayerSpecification);
-  registerBaseFilter(`${prefix}-fill`, null);
-
-  state.map.addLayer({
-    ...common, id: `${prefix}-outline`, type: "line", minzoom: outlineMinzoom,
-    paint: { "line-color": color, "line-width": outlineWidth, "line-opacity": outlineOpacity },
-  } as LayerSpecification);
-  registerBaseFilter(`${prefix}-outline`, null);
+  return [
+    { source: sourceId, spec: source },
+    { layer: {
+      ...common, id: `${prefix}-fill`, type: "fill", minzoom: fillMinzoom,
+      paint: { "fill-color": color, "fill-opacity": fillOpacity },
+    } as LayerSpecification },
+    { layer: {
+      ...common, id: `${prefix}-outline`, type: "line", minzoom: outlineMinzoom,
+      paint: { "line-color": color, "line-width": outlineWidth, "line-opacity": outlineOpacity },
+    } as LayerSpecification },
+  ];
 }
 
 // ─── Transmission lines helper ────────────────────────────────────────────────
@@ -134,20 +142,18 @@ export function addPolygonLayer({ sourceId, source, sourceLayer = undefined as (
 // over the EHV archive would match nothing but still cost a per-frame filter
 // evaluation. Omitting `kv` means "could hold anything", which is what a single
 // undivided archive is.
-export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
+export function planTransmissionLines({ sources, sourceLayer, registryId, prefix,
                                kvExpr, color, opacity, nameField = undefined as (string | undefined), undergroundExpr = undefined as (ExpressionSpecification | undefined),
                                dcExpr = undefined as (ExpressionSpecification | undefined) }: {
   sources: { id: string; url: string; suffix?: string; kv?: [number, number] }[];
   sourceLayer: string; registryId: string; prefix: string;
   kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string; undergroundExpr?: ExpressionSpecification;
   dcExpr?: ExpressionSpecification;
-}) {
-  const map = state.map;
-  if (!map || sources.some(s => map.getSource(s.id))) return;
+}): LayerPlan {
   // Attribution keys off the registry id: the six voltage-class sources share
   // one credit, and MapLibre collapses the byte-identical strings into one.
-  for (const s of sources)
-    map.addSource(s.id, { type: "vector", url: pmtilesUrl(s.url), attribution: SOURCE_ATTRIB[registryId] });
+  const plan: LayerPlan = sources.map(s =>
+    ({ source: s.id, spec: { type: "vector", url: pmtilesUrl(s.url) }, attrib: registryId }));
   const vis = initialVisibility(registryId);
 
   // Half-open [min, max) overlap. A tier with no range (the DC overlays) applies
@@ -155,15 +161,12 @@ export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
   const holds = (s: { kv?: [number, number] }, kv?: [number, number]) =>
     !s.kv || !kv || (s.kv[0] < kv[1] && kv[0] < s.kv[1]);
 
-  // Adds one style layer per source that can hold the tier, and registers each
-  // with the base filter.
-  const addAcross = (tier: string, spec: (srcId: string) => Record<string, unknown>,
-                     filter: FilterSpecification | null, kv?: [number, number]) => {
+  // Plans one style layer per source that can hold the tier.
+  const addAcross = (tier: string, spec: (srcId: string) => Record<string, unknown>, kv?: [number, number]) => {
     for (const s of sources) {
       if (!holds(s, kv)) continue;
       const id = `${prefix}${s.suffix ?? ""}-${tier}`;
-      map.addLayer({ id, source: s.id, "source-layer": sourceLayer, ...spec(s.id) } as LayerSpecification);
-      registerBaseFilter(id, filter);
+      plan.push({ layer: { id, source: s.id, "source-layer": sourceLayer, ...spec(s.id) } as LayerSpecification });
     }
   };
 
@@ -195,7 +198,7 @@ export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
       minzoom: t.minzoom, filter: t.filter,
       layout: { visibility: vis, "line-cap": "round", "line-join": "round", "line-sort-key": kvExpr },
       paint,
-    }), t.filter, t.kv);
+    }), t.kv);
   }
 
   // HVDC white dashes, drawn over every kV tier.  This is the zoomed-OUT cue:
@@ -214,7 +217,7 @@ export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
         "line-dasharray": DC_STRIPE_DASH,
         "line-opacity":   0.95,
       },
-    }), dcExpr as FilterSpecification);
+    }));
 
     // Zoomed-IN cue: name the circuit outright with a repeating "DC" along the
     // route, dense enough that a corridor is unmistakable at a glance.
@@ -241,10 +244,10 @@ export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
         "text-halo-width": 1.8,
         "text-halo-blur":  0.3,
       },
-    }), dcExpr as FilterSpecification);
+    }));
   }
 
-  if (!nameField) return;
+  if (!nameField) return plan;
   const name    = ["coalesce", ["get", nameField], ""] as unknown as ExpressionSpecification;
   const hasName = ["!=", name, ""] as FilterSpecification;
   addAcross("label", () => ({
@@ -270,20 +273,18 @@ export function addTransmissionLines({ sources, sourceLayer, registryId, prefix,
       "text-halo-width": 2,
       "text-halo-blur":  0.5,
     },
-  }), hasName);
+  }));
+  return plan;
 }
 
 // ─── Substation points helper ─────────────────────────────────────────────────
-export function addSubstationPoints({ sourceId, kvField, layerIds, url, sourceLayer }: {
+export function planSubstationPoints({ sourceId, kvField, layerIds, url, sourceLayer }: {
   sourceId: string; kvField: string; layerIds: { hv: string; lv: string; label: string };
   url?: string; sourceLayer?: string;
-}) {
-  if (!state.map || state.map.getSource(sourceId)) return;
-  if (url) {
-    state.map.addSource(sourceId, { type: "vector", url: pmtilesUrl(url), attribution: SOURCE_ATTRIB[sourceId] });
-  } else {
-    state.map.addSource(sourceId, { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB[sourceId] });
-  }
+}): LayerPlan {
+  const source: SourceSpecification = url
+    ? { type: "vector", url: pmtilesUrl(url) }
+    : { type: "geojson", data: EMPTY_FC };
 
   const vis = initialVisibility(sourceId);
   const paint = {
@@ -295,28 +296,6 @@ export function addSubstationPoints({ sourceId, kvField, layerIds, url, sourceLa
   };
   const kvNum = ["to-number", ["get", kvField], -1];
   const srcLayerProp = sourceLayer ? { "source-layer": sourceLayer } : {};
-
-  state.map.addLayer({
-    id: layerIds.lv, type: "circle", source: sourceId, ...srcLayerProp,
-    minzoom: 7, filter: ["<", kvNum, 200] as unknown as FilterSpecification,
-    layout: {
-      visibility: vis,
-      "circle-sort-key": kvNum as unknown as ExpressionSpecification,
-    },
-    paint,
-  } as LayerSpecification);
-  registerBaseFilter(layerIds.lv, ["<", kvNum, 200] as unknown as FilterSpecification);
-
-  state.map.addLayer({
-    id: layerIds.hv, type: "circle", source: sourceId, ...srcLayerProp,
-    minzoom: 0, filter: [">=", kvNum, 200] as unknown as FilterSpecification,
-    layout: {
-      visibility: vis,
-      "circle-sort-key": kvNum as unknown as ExpressionSpecification,
-    },
-    paint,
-  } as LayerSpecification);
-  registerBaseFilter(layerIds.hv, [">=", kvNum, 200] as unknown as FilterSpecification);
 
   const labelVisible = ["any",
     [">", kvNum, 399],
@@ -335,40 +314,60 @@ export function addSubstationPoints({ sourceId, kvField, layerIds, url, sourceLa
     ["!=", subName, ""],
   ] as unknown as FilterSpecification;
 
-  state.map.addLayer({
-    id: layerIds.label, type: "symbol", source: sourceId, ...srcLayerProp,
-    minzoom: 6, filter: labelFilter,
-    layout: {
-      visibility: vis,
-      "symbol-sort-key": ["-", 10000, kvNum] as unknown as ExpressionSpecification,
-      "text-field": ["step", ["zoom"],
-        subName,
-        10, ["case",
-          [">", kvNum, 0],
-          ["concat", subName, "\n", ["to-string", ["round", kvNum]], " kV"],
+  return [
+    { source: sourceId, spec: source },
+    { layer: {
+      id: layerIds.lv, type: "circle", source: sourceId, ...srcLayerProp,
+      minzoom: 7, filter: ["<", kvNum, 200] as unknown as FilterSpecification,
+      layout: {
+        visibility: vis,
+        "circle-sort-key": kvNum as unknown as ExpressionSpecification,
+      },
+      paint,
+    } as LayerSpecification },
+    { layer: {
+      id: layerIds.hv, type: "circle", source: sourceId, ...srcLayerProp,
+      minzoom: 0, filter: [">=", kvNum, 200] as unknown as FilterSpecification,
+      layout: {
+        visibility: vis,
+        "circle-sort-key": kvNum as unknown as ExpressionSpecification,
+      },
+      paint,
+    } as LayerSpecification },
+    { layer: {
+      id: layerIds.label, type: "symbol", source: sourceId, ...srcLayerProp,
+      minzoom: 6, filter: labelFilter,
+      layout: {
+        visibility: vis,
+        "symbol-sort-key": ["-", 10000, kvNum] as unknown as ExpressionSpecification,
+        "text-field": ["step", ["zoom"],
           subName,
-        ],
-      ] as unknown as ExpressionSpecification,
-      "text-font": ["Noto Sans Regular"],
-      "text-variable-anchor": ["top", "bottom"],
-      "text-radial-offset": 0.9,
-      "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 13, 16, 15] as unknown as ExpressionSpecification,
-      "text-max-width": 8,
-      "text-optional": true,
-    },
-    paint: {
-      "text-color": "#1a1a2e",
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 1.5,
-      "text-halo-blur": 0.5,
-    },
-  } as LayerSpecification);
-  registerBaseFilter(layerIds.label, labelFilter);
+          10, ["case",
+            [">", kvNum, 0],
+            ["concat", subName, "\n", ["to-string", ["round", kvNum]], " kV"],
+            subName,
+          ],
+        ] as unknown as ExpressionSpecification,
+        "text-font": ["Noto Sans Regular"],
+        "text-variable-anchor": ["top", "bottom"],
+        "text-radial-offset": 0.9,
+        "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 13, 16, 15] as unknown as ExpressionSpecification,
+        "text-max-width": 8,
+        "text-optional": true,
+      },
+      paint: {
+        "text-color": "#1a1a2e",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5,
+      },
+    } as LayerSpecification },
+  ];
 }
 
 // ─── PAD-US and CritHab ───────────────────────────────────────────────────────
-export function addPadus() {
-  addPolygonLayer({
+export function planPadus(): LayerPlan {
+  return planPolygon({
     sourceId: "padus", source: { type: "vector", url: pmtilesUrl(DATA.padus) },
     sourceLayer: "padus", prefix: "padus",
     color: bucketColorExpr("desig", PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT),
@@ -377,9 +376,8 @@ export function addPadus() {
   });
 }
 
-
-export function addCritHab() {
-  addPolygonLayer({
+export function planCritHab(): LayerPlan {
+  return planPolygon({
     sourceId: "crithab", source: { type: "vector", url: pmtilesUrl(DATA.crithab) },
     sourceLayer: "crithab", prefix: "crithab",
     color: bucketColorExpr("listing_st", CRITHAB_BUCKETS, "#dc2626"),

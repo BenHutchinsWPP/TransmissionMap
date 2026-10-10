@@ -105,7 +105,7 @@ the county total shown above. Wired in `assets/odin-outages.ts`.
 ### Choropleth ramp (customers out)
 
 Static 4-bucket YlOrRd ramp (visually distinct from the wildfire fire-glow
-palette), defined in `assets/layers/map-layers-conditions.ts` (`addOdinOutages`) and
+palette), defined in `assets/layers/map-layers-conditions.ts` (`planOdinOutages`) and
 mirrored by the legend in `index.html` (`#odinLegend`):
 
 | Bucket | Color |

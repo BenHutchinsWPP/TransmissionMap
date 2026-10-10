@@ -82,7 +82,7 @@ Simpler than wind: the GSA raster is already global EPSG:4326, single continuous
 
 The PVOUT → colour mapping is applied **at build time** (`gdaldem color-relief`), so the
 hosted WEBP tiles already carry RGBA. The map shows it as a plain MapLibre `raster` layer
-(`addSolarResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7 — **no**
+(`planSolarResource()` in `assets/layers/map-layers-renewable.ts`) with `raster-opacity` 0.7 — **no**
 `raster-color` paint and no float-tile encoding. The colour tiles carry no values.
 
 ### Hover readout — value at the cursor

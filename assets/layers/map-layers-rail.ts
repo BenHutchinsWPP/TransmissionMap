@@ -1,23 +1,14 @@
 // MapLibre builder — BTS NARN rail network lines (PMTiles vector).
-// Role: addRailroads() adds the rail source + single line layer.
-// Deps: ../state, ../constants (DATA, SOURCE_ATTRIB), ./layer-init (pmtilesUrl, initialVisibility),
-//       ./base-filters (registerBaseFilter). Called from ./add-all-layers.
+// Role: planRailroads() plans the rail source + single line layer.
+// Deps: ../constants (DATA), ./layer-init (pmtilesUrl, initialVisibility),
+//       ./layer-plan (LayerPlan type). Called from ./add-all-layers.
 import type { LayerSpecification } from 'maplibre-gl';
-import { state } from '../state.js';
-import { DATA, SOURCE_ATTRIB } from '../constants.js';
+import { DATA } from '../constants.js';
 import { pmtilesUrl, initialVisibility } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 
-export function addRailroads() {
-  if (!state.map || state.map.getSource("railroads")) return;
-
-  state.map.addSource("railroads", {
-    type: "vector",
-    url: pmtilesUrl(DATA.railroads),
-    attribution: SOURCE_ATTRIB["railroads"],
-  });
-
-  state.map.addLayer({
+export function planRailroads(): LayerPlan {
+  return [{ source: "railroads", spec: { type: "vector", url: pmtilesUrl(DATA.railroads) } }, { layer: {
     id: "railroads",
     type: "line",
     source: "railroads",
@@ -34,6 +25,5 @@ export function addRailroads() {
       // crossties effect: dashed at high zoom reads as rail
       "line-dasharray": [3, 1.5],
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("railroads", null);
+  } as unknown as LayerSpecification }];
 }

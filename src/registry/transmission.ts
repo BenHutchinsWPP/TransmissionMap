@@ -17,7 +17,7 @@ export const OSM_TL_BANDS: { suffix: string; dataKey: string; kv: [number, numbe
   { suffix: "-kv300", dataKey: "osm_transmission_lines_kv300", kv: [300, Infinity] },
 ];
 
-// The voltage tiers addTransmissionLines() paints, lowest first, with the
+// The voltage tiers planTransmissionLines() paints, lowest first, with the
 // half-open range each one's filter selects. A tier only gets a style layer on
 // an archive whose class it overlaps, so most bands carry a single tier.
 export const OSM_TL_TIERS: { id: string; kv: [number, number] }[] = [
@@ -48,7 +48,7 @@ export const osmTlLayerIds = (...tiers: string[]) =>
     return bands.map(b => `osm-transmission-lines${b.suffix}-${tier}`);
   });
 
-// Every style layer addTransmissionLines() builds, in paint order.
+// Every style layer planTransmissionLines() builds, in paint order.
 const OSM_TL_LAYER_IDS = [
   ...osmTlLayerIds(...OSM_TL_TIERS.map(t => t.id)),
   ...osmTlLayerIds(...OSM_TL_OVERLAYS),

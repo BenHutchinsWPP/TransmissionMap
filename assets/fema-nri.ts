@@ -16,7 +16,7 @@
 // Deps: state (map, layerVisibility, nriHazard), constants (DATA,
 //       COUNTY_SRC*), src/registry/conditions.ts (NRI_HAZARDS),
 //       diag-log.ts (recordDiagEvent). The source/layers are built by
-//       layers/map-layers-conditions.ts (addFemaNri); the picker is rendered by
+//       layers/map-layers-conditions.ts (planFemaNri); the picker is rendered by
 //       ui/ui-layer-rows.ts and wired by ui/ui-filters.ts (setNriHazard); the
 //       popup (popup-format.ts) reads the merged feature-state and nriVersion();
 //       click-resolve.ts hit-tests with nriFeatureLit().
@@ -85,7 +85,7 @@ function applyJoin() {
 }
 
 // A county is painted only when applyJoin() gave it a rating code; the fill
-// (layers/map-layers-conditions.ts addFemaNri) leaves a null `nri_r`
+// (layers/map-layers-conditions.ts planFemaNri) leaves a null `nri_r`
 // transparent. click-resolve.ts uses this to drop hit-test matches on
 // transparent counties.
 export function nriFeatureLit(featureState: Record<string, unknown> | undefined): boolean {

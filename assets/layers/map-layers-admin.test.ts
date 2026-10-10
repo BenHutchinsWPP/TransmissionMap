@@ -7,60 +7,41 @@
 // exactly the point it would help. MapLibre then drops a spec that fails to
 // type-check without throwing — the polygon renders nothing while its label
 // layer still draws — so neither typecheck, lint, nor the browser console
-// catches it. Each builder runs against a fake map here and every captured
-// layer goes through the real validator.
-// Deps: map-layers-admin.ts (five builders + paletteColor), state.ts,
+// catches it. Every layer each builder's plan holds goes through the real
+// validator here.
+// Deps: map-layers-admin.ts (five builders + paletteColor),
 //       @maplibre/maplibre-gl-style-spec.
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createPropertyExpression, v8, validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
-import { state } from '../state.js';
 import {
-  addCountries, addAdmin1, addUsStates, addUsCounties, addUsZcta, paletteColor,
+  planCountries, planAdmin1, planUsStates, planUsCounties, planUsZcta, paletteColor,
 } from './map-layers-admin.js';
+import type { LayerPlan } from './layer-plan.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const feat = (properties: Record<string, unknown>) => ({ type: 'Feature', properties }) as any;
 
-/** Fake map recording what a builder adds, so the specs can be validated. */
-function captureMap() {
-  const sources: Record<string, unknown> = {};
-  const layers: Record<string, any>[] = [];
-  return {
-    sources, layers,
-    addSource: (id: string, src: unknown) => { sources[id] = src; },
-    addLayer: (spec: Record<string, any>) => { layers.push(spec); },
-    getSource: (id: string) => sources[id],
-    getLayer: (id: string) => layers.find(l => l.id === id),
-    setFilter: vi.fn(),
-    setPaintProperty: vi.fn(),
-  };
-}
-
-const BUILDERS: [string, () => void][] = [
-  ['countries', addCountries], ['admin1', addAdmin1], ['us-states', addUsStates],
-  ['us-counties', addUsCounties], ['us-zcta', addUsZcta],
+const BUILDERS: [string, () => LayerPlan][] = [
+  ['countries', planCountries], ['admin1', planAdmin1], ['us-states', planUsStates],
+  ['us-counties', planUsCounties], ['us-zcta', planUsZcta],
 ];
 
 describe.each(BUILDERS)('%s layers', (_name, build) => {
-  let map: ReturnType<typeof captureMap>;
-
-  beforeEach(() => {
-    map = captureMap();
-    state.map = map as unknown as typeof state.map;
-    build();
-  });
+  const plan = build();
+  const sources = plan.flatMap(s => ('source' in s ? [s.source] : []));
+  const layers = plan.flatMap(s => ('layer' in s ? [s.layer as Record<string, any>] : []));
 
   it('passes the MapLibre style validator', () => {
-    expect(map.layers.length).toBeGreaterThan(0);
+    expect(layers.length).toBeGreaterThan(0);
     // Sources become empty GeoJSON stand-ins: the validator would otherwise try
     // to resolve a pmtiles:// URL, and source wiring is not what a cast breaks.
     // `source-layer` goes with them, since it is only legal on a vector source.
     const style = {
       version: 8,
       glyphs: 'https://example.invalid/{fontstack}/{range}.pbf',
-      sources: Object.fromEntries(Object.keys(map.sources).map(id =>
+      sources: Object.fromEntries(sources.map(id =>
         [id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } }])),
-      layers: map.layers.map((l) => {
+      layers: layers.map((l) => {
         const rest: Record<string, any> = { ...l };
         delete rest['source-layer'];
         return rest;

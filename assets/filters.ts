@@ -2,9 +2,9 @@
 // Every MapLibre filter this module writes is effectiveFilter(mlId) =
 // base ∧ applier part ∧ where, written by writeFilter()/refilter() — the one
 // setFilter call site here (filters.test.ts enforces it):
-//   base    — the layer's own inline filter, registered by its builder through
-//             registerBaseFilter() (layers/base-filters.ts, which owns
-//             BASE_LAYER_FILTERS; called from map-layers-*.ts, layer-init.ts);
+//   base    — the layer's own inline filter, registered from its plan spec by
+//             applyLayerPlan() through registerBaseFilter() (layers/base-filters.ts,
+//             which owns BASE_LAYER_FILTERS);
 //   applier — the legend/range expression last computed by an applier
 //             (FACET_APPLIERS or a range applier) for that map layer,
 //             remembered per map layer so a `where` change re-filters one

@@ -163,16 +163,23 @@ turns public datasets into PMTiles consumed by the frontend.
       `scripts/build_data_manifest.py`) over the hand-written `<li>` fallback
       already shipped in `index.html`; lazy chunk, opened from the info button
   - **`assets/layers/`** — MapLibre layer builders
-    - `layer-init.ts` — shared builder helpers: `initialVisibility`, `pmtilesUrl`, `addPolygonLayer`,
-      `addRasterLayer`, `addTransmissionLines`, `addSubstationPoints`, `addPadus`, `addCritHab`,
-      `ensureCountyBoundaries`, `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
+    - `layer-plan.ts` — `LayerPlan` (a builder's sources + style layers, in paint order — plain
+      data) and `applyLayerPlan(map, plan)`, the one step that puts a plan on the map: sources
+      first, already-there guards, `beforeId`, `SOURCE_ATTRIB` attribution, and each layer's
+      `filter` registered as its base filter
+    - `layer-init.ts` — shared plan helpers: `initialVisibility`, `pmtilesUrl`, `planPolygon`,
+      `planRaster`, `planTransmissionLines`, `planSubstationPoints`, `planPadus`, `planCritHab`,
+      `countyBoundariesSource` (+ `ensureCountyBoundaries` for layers added after boot),
+      `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
     - `layer-data.ts` — the lazy GeoJSON loader: `ensureLayerData` (with the `fromZoom` gate and
       zoom-settle retry), `fetchGeojson`, the explicit `LAYER_DATA_URLS` table (registry id →
       `DATA` path) and `LAYER_SOURCE_ALIAS`; emits `layer:data` on the bus when a source's features land
     - `base-filters.ts` — zero-dependency `registerBaseFilter` + `BASE_LAYER_FILTERS`: each style
-      layer's own inline filter, which `filters.ts`'s `effectiveFilter()` builds on
-    - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
-    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,admin}.ts` — per-source builders
+      layer's own inline filter (registered by `applyLayerPlan`), which `filters.ts`'s `effectiveFilter()` builds on
+    - `add-all-layers.ts` — `addAllLayers()`: collects every builder's plan in z-order and applies
+      them in one `applyLayerPlan` call, then runs the builders' non-layer side effects
+    - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,westtec,admin}.ts` — per-source
+      `plan*()` builders, each returning a `LayerPlan`
       (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/FEMA NRI/NEXRAD radar — all the live + hazard layers;
       `admin` = administrative boundaries — US Counties/States/ZCTA, world Countries/Admin-1)
   - **`assets/user-data/`** — user-imported/drawn layers

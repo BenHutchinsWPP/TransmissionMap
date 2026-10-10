@@ -1,23 +1,25 @@
 // ─── Load context layers ──────────────────────────────────────────────────────
 // Data center moratoriums: one GeoJSON source (`dc-moratoriums`) drawn at two
-// z-levels — addDcMoratoriumAreas() with the context fills (state wash, then
-// hatched utility service areas, then counties), addDcMoratoriumPoints() with the
+// z-levels — planDcMoratoriumAreas() with the context fills (state wash, then
+// hatched utility service areas, then counties), planDcMoratoriumPoints() with the
 // infrastructure markers. Colours from DCM_CLASSES (src/colors/buckets.ts); the
-// utility hatch images are generated here from them (map.addImage); popups in
-// popup-format.ts. The plain data-centre twin source refills on the
-// 'layer:data' bus event for osm-datacenters.
+// utility hatch images are generated here from them (addDcmHatchImages, which
+// add-all-layers.ts runs before applying the plans); popups in popup-format.ts.
+// Each plan* returns a LayerPlan (layer-plan.ts). wireOsmDataCenters() holds the
+// data-centre side effects: the plain twin source refills on the 'layer:data'
+// bus event for osm-datacenters, and a cluster tap zooms in.
 
-import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
+import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, addRasterLayer } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import { DATA, EMPTY_FC } from '../constants.js';
+import { initialVisibility, planRaster } from './layer-init.js';
+import type { LayerPlan } from './layer-plan.js';
 import { on } from '../state-bus.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import { DCM_CLASSES } from '../../src/colors/buckets.js';
 import { onMapTap } from '../map-input.js';
 
-export const addPopDensity = () => addRasterLayer("worldpop-pop-density", DATA.worldpop_pop_density,
+export const planPopDensity = () => planRaster("worldpop-pop-density", DATA.worldpop_pop_density,
   '<a href="https://www.worldpop.org/">WorldPop</a>', { opacity: 0.75 });
 
 // Circle area ∝ facility sqft (radius ∝ √sqft, normalized to the ~135k sq ft
@@ -41,19 +43,18 @@ const DC_POINT_PAINT = {
   "circle-opacity": 0.85,
 };
 
-export function addOsmDataCenters() {
-  if (!state.map || state.map.getSource("osm-datacenters")) return;
-  state.map.addSource("osm-datacenters", {
-    type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["osm-datacenters"],
+export function planOsmDataCenters(): LayerPlan {
+  return [{ source: "osm-datacenters", spec: {
+    type: "geojson", data: EMPTY_FC,
     cluster: true, clusterRadius: 40, clusterMaxZoom: 12,
     // Per-cluster total facility area (sq ft) — sizes cluster circles + feeds heat weight.
     clusterProperties: { sqft_sum: ["+", ["to-number", ["get", "im3_sqft"], 0]] },
-  });
+  } },
   // Unclustered twin source for the Points display mode AND the heatmap
   // (heat needs raw point density; clusters collapse it to one dot per metro). (MapLibre cannot
   // toggle clustering on a live source). Data mirrored from the lazy fetch.
-  state.map.addSource("osm-datacenters-plain", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["osm-datacenters"] });
-  state.map.addLayer({
+  { source: "osm-datacenters-plain", spec: { type: "geojson", data: EMPTY_FC }, attrib: "osm-datacenters" },
+  { layer: {
     id: "osm-dc-circles",
     type: "circle",
     source: "osm-datacenters",
@@ -61,12 +62,10 @@ export function addOsmDataCenters() {
     layout: { visibility: initialVisibility("osm-datacenters") },
     paint: DC_POINT_PAINT,
     filter: ["!", ["has", "point_count"]],
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-dc-circles", ["!", ["has", "point_count"]]);
-
+  } as unknown as LayerSpecification },
   // Cluster bubbles: radius = max(count curve, summed-sqft curve) so a stack of
   // unsized CA/MX sites still grows, and a 2-site hyperscale campus still reads big.
-  state.map.addLayer({
+  { layer: {
     id: "osm-dc-clusters", type: "circle", source: "osm-datacenters",
     filter: ["has", "point_count"],
     layout: { visibility: initialVisibility("osm-datacenters") },
@@ -79,10 +78,8 @@ export function addOsmDataCenters() {
       "circle-stroke-width": 1.5,
       "circle-opacity": 0.85,
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-dc-clusters", ["has", "point_count"]);
-
-  state.map.addLayer({
+  } as unknown as LayerSpecification },
+  { layer: {
     id: "osm-dc-cluster-count", type: "symbol", source: "osm-datacenters",
     filter: ["has", "point_count"],
     layout: {
@@ -93,25 +90,16 @@ export function addOsmDataCenters() {
       "text-allow-overlap": true,
     },
     paint: { "text-color": "#ffffff" },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-dc-cluster-count", ["has", "point_count"]);
-
-  state.map.addLayer({
+  } as unknown as LayerSpecification },
+  { layer: {
     id: "osm-dc-points", type: "circle", source: "osm-datacenters-plain",
     minzoom: 0,
     layout: { visibility: "none" },
     paint: DC_POINT_PAINT,
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-dc-points", null);
-  on('layer:data', ({ id }) => {
-    if (id !== "osm-datacenters" || !state.map) return;
-    const src = state.map.getSource("osm-datacenters-plain") as import("maplibre-gl").GeoJSONSource | undefined;
-    if (src) src.setData({ type: "FeatureCollection", features: state.sourcesData["osm-datacenters"] || [] } as GeoJSON.FeatureCollection);
-  });
-
+  } as unknown as LayerSpecification },
   // Street-zoom companion for Heatmap mode: sqft-sized points fading in as the
   // heat fades out (z9.5-12), so the mode never goes blank up close.
-  state.map.addLayer({
+  { layer: {
     id: "osm-dc-heat-points", type: "circle", source: "osm-datacenters-plain",
     minzoom: 9,
     layout: { visibility: "none" },
@@ -124,22 +112,10 @@ export function addOsmDataCenters() {
       "circle-opacity":        ["interpolate", ["linear"], ["zoom"], 9.5, 0, 12, 0.85],
       "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0, 12, 1],
     },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("osm-dc-heat-points", null);
-
-  // Click a cluster → zoom into it.
-  onMapTap("osm-dc-clusters", async (_e, features) => {
-    const f = features[0];
-    if (!state.map) return;
-    const src = state.map.getSource("osm-datacenters") as import("maplibre-gl").GeoJSONSource;
-    const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id);
-    state.map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
-  });
-  // Pointer cursor comes from popup.ts's shared hit-test (CURSOR_ONLY_LAYERS).
-
+  } as unknown as LayerSpecification },
   // Heatmap sibling for the Icons/Heatmap/Both toggle (visibility driven by
   // applyGenMode). Weight ∝ facility sqft; unsized rows count as a small site.
-  state.map.addLayer({
+  { layer: {
     // Heat mode hands off to points at street zoom: heat fades out z9.5-12
     // while osm-dc-heat-points fades in (see below).
     id: "osm-dc-heat", type: "heatmap", source: "osm-datacenters-plain",
@@ -154,8 +130,25 @@ export function addOsmDataCenters() {
       "heatmap-color":     HEAT_DENSITY_COLOR,
       "heatmap-opacity":   ["interpolate", ["linear"], ["zoom"], 9.5, 0.85, 12, 0],
     },
-  } as unknown as LayerSpecification, "osm-dc-circles");
-  registerBaseFilter("osm-dc-heat", null);
+  } as unknown as LayerSpecification, beforeId: "osm-dc-circles" }];
+}
+
+export function wireOsmDataCenters() {
+  on('layer:data', ({ id }) => {
+    if (id !== "osm-datacenters" || !state.map) return;
+    const src = state.map.getSource("osm-datacenters-plain") as import("maplibre-gl").GeoJSONSource | undefined;
+    if (src) src.setData({ type: "FeatureCollection", features: state.sourcesData["osm-datacenters"] || [] } as GeoJSON.FeatureCollection);
+  });
+
+  // Click a cluster → zoom into it.
+  onMapTap("osm-dc-clusters", async (_e, features) => {
+    const f = features[0];
+    if (!state.map) return;
+    const src = state.map.getSource("osm-datacenters") as import("maplibre-gl").GeoJSONSource;
+    const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id);
+    state.map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
+  });
+  // Pointer cursor comes from popup.ts's shared hit-test (CURSOR_ONLY_LAYERS).
 }
 
 // ─── Data center moratoriums ──────────────────────────────────────────────────
@@ -185,47 +178,44 @@ function dcmHatch(hex: string): { width: number; height: number; data: Uint8Arra
   return { width: n, height: n, data };
 }
 
-// The kind filters set in addLayer are structural: the status legend filter
-// (FACET_APPLIERS.dcm in filters.ts) is combined with them, never replaces them.
-function registerDcmBaseFilters(ids: string[]) {
-  for (const id of ids) registerBaseFilter(id, state.map!.getFilter(id) ?? null);
+// The utility fills' "/" hatch patterns, one per class colour.
+export function addDcmHatchImages(map: MapLibreMap) {
+  for (const c of DCM_CLASSES) {
+    const id = `dcm-hatch-${c.id}`;
+    if (!map.hasImage(id)) map.addImage(id, dcmHatch(c.color), { pixelRatio: 2 });
+  }
 }
 
-export function addDcMoratoriumAreas() {
-  if (!state.map || state.map.getSource("dc-moratoriums")) return;
-  state.map.addSource("dc-moratoriums", {
-    type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["dc-moratoriums"],
-  });
+// The kind filters below are structural: the status legend filter
+// (FACET_APPLIERS.dcm in filters.ts) is combined with them, never replaces them.
+export function planDcMoratoriumAreas(): LayerPlan {
   const vis = initialVisibility("dc-moratoriums");
+  const isUtility = ["==", ["get", "kind"], "utility"] as ExpressionSpecification;
+  return [{ source: "dc-moratoriums", spec: { type: "geojson", data: EMPTY_FC } },
   // States are a light wash under a heavy dashed edge, so the county fills and
   // points inside them stay readable.
-  state.map.addLayer({
+  { layer: {
     id: "dcm-state-fill", type: "fill", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "state"],
     layout: { visibility: vis },
     paint: { "fill-color": DCM_COLOR, "fill-opacity": 0.12 },
-  } as LayerSpecification);
-  state.map.addLayer({
+  } as LayerSpecification },
+  { layer: {
     id: "dcm-state-line", type: "line", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "state"],
     layout: { visibility: vis },
     paint: { "line-color": DCM_COLOR, "line-width": 2.5, "line-dasharray": [3, 2], "line-opacity": 0.8 },
-  } as LayerSpecification);
+  } as LayerSpecification },
   // Utility (and grid-operator) service areas: hatched in the class colour under
   // a dash-dot edge, below the counties so a county or town inside one wins the
   // click.
-  for (const c of DCM_CLASSES) {
-    const id = `dcm-hatch-${c.id}`;
-    if (!state.map.hasImage(id)) state.map.addImage(id, dcmHatch(c.color), { pixelRatio: 2 });
-  }
-  const isUtility = ["==", ["get", "kind"], "utility"] as ExpressionSpecification;
-  state.map.addLayer({
+  { layer: {
     id: "dcm-utility-fill", type: "fill", source: "dc-moratoriums",
     filter: isUtility,
     layout: { visibility: vis },
     paint: { "fill-pattern": ["concat", "dcm-hatch-", ["get", "cls"]], "fill-opacity": 0.7 },
-  } as LayerSpecification);
-  state.map.addLayer({
+  } as LayerSpecification },
+  { layer: {
     id: "dcm-utility-line", type: "line", source: "dc-moratoriums",
     filter: isUtility,
     layout: { visibility: vis },
@@ -234,8 +224,8 @@ export function addDcMoratoriumAreas() {
       "line-width": ["case", dcmRecent(), 2.5, 1.5],
       "line-dasharray": [4, 2, 1, 2],
     },
-  } as LayerSpecification);
-  state.map.addLayer({
+  } as LayerSpecification },
+  { layer: {
     id: "dcm-county-fill", type: "fill", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "county"],
     layout: { visibility: vis },
@@ -243,8 +233,8 @@ export function addDcMoratoriumAreas() {
       "fill-color": DCM_COLOR,
       "fill-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 8, 0.45, 11, 0.3],
     },
-  } as LayerSpecification);
-  state.map.addLayer({
+  } as LayerSpecification },
+  { layer: {
     id: "dcm-county-line", type: "line", source: "dc-moratoriums",
     filter: ["==", ["get", "kind"], "county"],
     layout: { visibility: vis },
@@ -252,17 +242,14 @@ export function addDcMoratoriumAreas() {
       "line-color": ["case", dcmRecent(), "#1d4ed8", DCM_COLOR],
       "line-width": ["case", dcmRecent(), 2.5, 0.8],
     },
-  } as LayerSpecification);
-  registerDcmBaseFilters(["dcm-state-fill", "dcm-state-line", "dcm-utility-fill", "dcm-utility-line",
-    "dcm-county-fill", "dcm-county-line"]);
+  } as LayerSpecification }];
 }
 
-export function addDcMoratoriumPoints() {
-  if (!state.map || state.map.getLayer("dcm-points")) return;
+export function planDcMoratoriumPoints(): LayerPlan {
   const vis = initialVisibility("dc-moratoriums");
   const isPoint = ["==", ["get", "kind"], "point"] as ExpressionSpecification;
   // A blue ring marks a point that changed in the last DCM_RECENT_DAYS.
-  state.map.addLayer({
+  return [{ layer: {
     id: "dcm-points-recent", type: "circle", source: "dc-moratoriums",
     filter: ["all", isPoint, dcmRecent()],
     layout: { visibility: vis },
@@ -272,8 +259,8 @@ export function addDcMoratoriumPoints() {
       "circle-stroke-color": "#1d4ed8",
       "circle-stroke-width": 2,
     },
-  } as LayerSpecification);
-  state.map.addLayer({
+  } as LayerSpecification },
+  { layer: {
     id: "dcm-points", type: "circle", source: "dc-moratoriums",
     filter: isPoint,
     layout: { visibility: vis },
@@ -284,6 +271,5 @@ export function addDcMoratoriumPoints() {
       "circle-stroke-width": 1,
       "circle-opacity": 0.9,
     },
-  } as LayerSpecification);
-  registerDcmBaseFilters(["dcm-points-recent", "dcm-points"]);
+  } as LayerSpecification }];
 }

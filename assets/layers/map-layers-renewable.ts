@@ -1,18 +1,18 @@
 // ─── Renewable resource raster + geothermal + BOEM offshore-lease layers ─────
+// Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 
 import type { LayerSpecification } from "maplibre-gl";
-import { state } from '../state.js';
-import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, addPolygonLayer, addRasterLayer } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import { DATA, EMPTY_FC } from '../constants.js';
+import { initialVisibility, planPolygon, planRaster } from './layer-init.js';
+import type { LayerPlan } from './layer-plan.js';
 
-export const addWindResource = () => addRasterLayer("nlr-wind-100m", DATA.nlr_wind_100m,
+export const planWindResource = () => planRaster("nlr-wind-100m", DATA.nlr_wind_100m,
   '<a href="https://www.nrel.gov/">NREL WIND Toolkit</a>');
 
-export const addSolarResource = () => addRasterLayer("gsa-solar-pvout", DATA.gsa_solar_pvout,
+export const planSolarResource = () => planRaster("gsa-solar-pvout", DATA.gsa_solar_pvout,
   '© <a href="https://globalsolaratlas.info">Global Solar Atlas</a> / Solargis');
 
-export const addGeoResource = () => addRasterLayer("ihfc-geo-heatflow", DATA.ihfc_geo_heatflow,
+export const planGeoResource = () => planRaster("ihfc-geo-heatflow", DATA.ihfc_geo_heatflow,
   '© <a href="https://ihfc-iugg.org">IHFC</a> / GFZ');
 
 const GEO_HYDRO_TEMP_COLOR = [
@@ -28,11 +28,9 @@ const GEO_HYDRO_TEMP_RADIUS = [
   90, 7,
 ];
 
-export function addGeoHydroPts() {
-  if (!state.map || state.map.getSource("nrel-hydrothermal-points")) return;
-  state.map.addSource("nrel-hydrothermal-points", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["nrel-hydrothermal-points"] });
+export function planGeoHydroPts(): LayerPlan {
   const vis = initialVisibility("nrel-hydrothermal-points");
-  state.map.addLayer({
+  return [{ source: "nrel-hydrothermal-points", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "nrel-hydrothermal-points",
     type: "circle",
     source: "nrel-hydrothermal-points",
@@ -45,12 +43,11 @@ export function addGeoHydroPts() {
       "circle-stroke-width": 1,
       "circle-stroke-color": "#ffffff",
     },
-  } as LayerSpecification);
-  registerBaseFilter("nrel-hydrothermal-points", null);
+  } as LayerSpecification }];
 }
 
-export function addBoemWindLeases() {
-  addPolygonLayer({
+export function planBoemWindLeases(): LayerPlan {
+  return planPolygon({
     sourceId: "boem-wind-leases",
     source: { type: "geojson", data: EMPTY_FC },
     prefix: "boem-wind-leases",

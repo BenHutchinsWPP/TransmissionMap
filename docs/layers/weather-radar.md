@@ -57,7 +57,7 @@ baked color ramp by the IEM tile server (no client-side ramp, no hover readout).
 - **Radial velocity deliberately excluded** — this layer is reflectivity only.
 - **Refresh**: the source starts on IEM's `-0` (latest-frame) alias, but that alias
   resolves per tile in IEM's cache, so adjacent tiles can mix volume scans during a
-  frame rollover. A 60-second `setInterval` in `addNexradRadar()`
+  frame rollover. A 60-second `setInterval` in `startNexradRadar()`
   (`assets/layers/map-layers-conditions.ts`) polls IEM's `tms.json` for the current
   timestamped layer name (`ridge::USCOMP-N0Q-YYYYMMDDHHMM`) and calls `setTiles()`
   when the frame changes, so every tile renders the same scan. The same frame

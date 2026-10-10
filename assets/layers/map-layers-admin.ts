@@ -11,24 +11,24 @@
 // sourceLayer. Census ZIP Codes and Census Counties stay tiled: 33.8k features
 // is past what a single fetch should carry, and the county tiles are shared
 // join infrastructure owned by layer-init.ts.
-// Deps: layer-init.ts (addPolygonLayer, pmtilesUrl, initialVisibility,
-//       ensureCountyBoundaries), base-filters.ts (registerBaseFilter),
-//       state, constants (DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER).
+// Each plan* returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
+// Deps: layer-init.ts (planPolygon, pmtilesUrl, initialVisibility,
+//       countyBoundariesSource), layer-plan.ts (LayerPlan type),
+//       constants (DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER).
 //
-// addUsCounties() does NOT add its own source — it mounts on the shared
+// planUsCounties() does NOT own its source — it mounts on the shared
 // county_boundaries PMTiles (owned by layer-init.ts, also used by the ODIN
 // live outage choropleth in map-layers-conditions.ts). It carries no
 // feature-state of its own, so it can't collide with ODIN's `odin_out`/
-// `odin_n`/`odin_utils` keys, and add-all-layers.ts calls it before
-// addOdinOutages() so the live choropleth paints over these county outlines.
+// `odin_n`/`odin_utils` keys, and add-all-layers.ts plans it before
+// planOdinOutages() so the live choropleth paints over these county outlines.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
-import { state } from '../state.js';
 import { DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import {
-  addPolygonLayer, pmtilesUrl, initialVisibility, ensureCountyBoundaries,
+  planPolygon, pmtilesUrl, initialVisibility, countyBoundariesSource,
 } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 
 // Seven hues far enough apart in both hue and lightness to stay distinguishable
 // once a fill drops to a quarter opacity, which is where a pale wash starts
@@ -60,8 +60,8 @@ const LABEL_PAINT = {
   "text-opacity": 0.85,
 };
 
-export function addCountries() {
-  addPolygonLayer({
+export function planCountries(): LayerPlan {
+  return [...planPolygon({
     sourceId: "countries", source: { type: "geojson", data: EMPTY_FC },
     prefix: "countries",
     color: paletteColor("color_idx"),
@@ -69,10 +69,7 @@ export function addCountries() {
     outlineMinzoom: 0,
     outlineWidth: ["interpolate", ["linear"], ["zoom"], 0, 0.6, 5, 1.2, 10, 1.8] as unknown as ExpressionSpecification,
     outlineOpacity: 0.8,
-  });
-
-  if (!state.map || state.map.getLayer("countries-label")) return;
-  state.map.addLayer({
+  }), { layer: {
     id: "countries-label", type: "symbol", source: "countries",
     minzoom: 1,
     layout: {
@@ -84,12 +81,11 @@ export function addCountries() {
       "text-allow-overlap": false,
     },
     paint: { "text-color": "#2f4356", ...LABEL_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("countries-label", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addAdmin1() {
-  addPolygonLayer({
+export function planAdmin1(): LayerPlan {
+  return [...planPolygon({
     sourceId: "admin1", source: { type: "geojson", data: EMPTY_FC },
     prefix: "admin1",
     color: paletteColor("color_idx"),
@@ -97,10 +93,7 @@ export function addAdmin1() {
     outlineMinzoom: 0,
     outlineWidth: ["interpolate", ["linear"], ["zoom"], 1, 0.5, 5, 1.0, 10, 1.5] as unknown as ExpressionSpecification,
     outlineOpacity: 0.8,
-  });
-
-  if (!state.map || state.map.getLayer("admin1-label")) return;
-  state.map.addLayer({
+  }), { layer: {
     id: "admin1-label", type: "symbol", source: "admin1",
     minzoom: 2,
     layout: {
@@ -112,22 +105,18 @@ export function addAdmin1() {
       "text-allow-overlap": false,
     },
     paint: { "text-color": "#3d3350", ...LABEL_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("admin1-label", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addUsStates() {
-  addPolygonLayer({
+export function planUsStates(): LayerPlan {
+  return [...planPolygon({
     sourceId: "us-states", source: { type: "geojson", data: EMPTY_FC },
     prefix: "us-states", color: paletteColor("color_idx"),
     fillMinzoom: 0, fillOpacity: 0.26,
     outlineMinzoom: 0,
     outlineWidth: ["interpolate", ["linear"], ["zoom"], 2, 0.8, 6, 1.4, 10, 2.2] as unknown as ExpressionSpecification,
     outlineOpacity: 0.8,
-  });
-
-  if (!state.map || state.map.getLayer("us-states-label")) return;
-  state.map.addLayer({
+  }), { layer: {
     id: "us-states-label", type: "symbol", source: "us-states",
     minzoom: 3,
     layout: {
@@ -141,30 +130,22 @@ export function addUsStates() {
       "text-allow-overlap": false,
     },
     paint: { "text-color": "#2f4356", ...LABEL_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("us-states-label", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addUsCounties() {
-  if (!state.map || state.map.getLayer("us-counties-fill")) return;
-  // The source is SHARED infra owned by layer-init.ts — guard on our own layer
-  // above, never on the source, or whichever county-keyed layer initializes
-  // first would silently suppress the others.
-  ensureCountyBoundaries();
-
+export function planUsCounties(): LayerPlan {
   const vis = initialVisibility("us-counties");
   const color = paletteColor("color_idx");
 
+  // The source is SHARED infra owned by layer-init.ts; applyLayerPlan adds it
+  // once, whichever county-keyed layer plans it first.
   // z2 is the county tileset's floor (tile_manifest.yaml `county_boundaries`).
-  state.map.addLayer({
+  return [countyBoundariesSource(), { layer: {
     id: "us-counties-fill", type: "fill", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 2,
     layout: { visibility: vis },
     paint: { "fill-color": color, "fill-opacity": 0.26 },
-  } as LayerSpecification);
-  registerBaseFilter("us-counties-fill", null);
-
-  state.map.addLayer({
+  } as LayerSpecification }, { layer: {
     id: "us-counties-outline", type: "line", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 2,
     layout: { visibility: vis },
@@ -173,10 +154,7 @@ export function addUsCounties() {
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.5, 8, 1.0, 12, 1.4] as unknown as ExpressionSpecification,
       "line-opacity": 0.8,
     },
-  } as LayerSpecification);
-  registerBaseFilter("us-counties-outline", null);
-
-  state.map.addLayer({
+  } as LayerSpecification }, { layer: {
     id: "us-counties-label", type: "symbol", source: COUNTY_SRC, "source-layer": COUNTY_SRC_LAYER,
     minzoom: 7,
     layout: {
@@ -188,12 +166,11 @@ export function addUsCounties() {
       "text-allow-overlap": false,
     },
     paint: { "text-color": "#4a3f36", ...LABEL_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("us-counties-label", null);
+  } as unknown as LayerSpecification }];
 }
 
-export function addUsZcta() {
-  addPolygonLayer({
+export function planUsZcta(): LayerPlan {
+  return [...planPolygon({
     sourceId: "us-zcta",
     source: { type: "vector", url: pmtilesUrl(DATA.us_zcta) },
     sourceLayer: "us_zcta", prefix: "us-zcta",
@@ -205,10 +182,7 @@ export function addUsZcta() {
     outlineMinzoom: 4,
     outlineWidth: ["interpolate", ["linear"], ["zoom"], 6, 0.5, 10, 1.0, 14, 1.4] as unknown as ExpressionSpecification,
     outlineOpacity: 0.8,
-  });
-
-  if (!state.map || state.map.getLayer("us-zcta-label")) return;
-  state.map.addLayer({
+  }), { layer: {
     id: "us-zcta-label", type: "symbol", source: "us-zcta", "source-layer": "us_zcta",
     // 33k features — a label earlier than z10 is unreadable clutter.
     minzoom: 10,
@@ -221,6 +195,5 @@ export function addUsZcta() {
       "text-allow-overlap": false,
     },
     paint: { "text-color": "#5c3f3f", ...LABEL_PAINT },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("us-zcta-label", null);
+  } as unknown as LayerSpecification }];
 }

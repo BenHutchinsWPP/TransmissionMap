@@ -3,16 +3,14 @@
 // commodity category, sized by peak employment (retired = dimmed).
 // Colors/icons come from src/colors/minerals.ts; filter logic in
 // assets/filters.ts (applyMinesFilter); popup in assets/popup-format.ts.
+// planMines() returns a LayerPlan (layer-plan.ts); add-all-layers.ts applies it.
 import type { LayerSpecification } from "maplibre-gl";
-import { state } from '../state.js';
-import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
+import { EMPTY_FC } from '../constants.js';
 import { minesIconExpr } from '../../src/colors/minerals.js';
 import { initialVisibility } from './layer-init.js';
-import { registerBaseFilter } from './base-filters.js';
+import type { LayerPlan } from './layer-plan.js';
 
-export function addMines() {
-  if (!state.map || state.map.getSource("mines")) return;
-  state.map.addSource("mines", { type: "geojson", data: EMPTY_FC, attribution: SOURCE_ATTRIB["mines"] });
+export function planMines(): LayerPlan {
   const vis = initialVisibility("mines");
   const retired = ["==", ["get", "status"], "retired"];
   // Size scales with mine size (peak employment) — same shape as genIconSize()
@@ -21,7 +19,7 @@ export function addMines() {
   const empBucket = (sm: number, md: number, lg: number) =>
     ["case", [">=", emp, 1000], lg, [">=", emp, 300], md, sm];
 
-  state.map.addLayer({
+  return [{ source: "mines", spec: { type: "geojson", data: EMPTY_FC } }, { layer: {
     id: "mines-icons",
     type: "symbol",
     source: "mines",
@@ -37,6 +35,5 @@ export function addMines() {
       "symbol-sort-key": ["case", ["==", ["get", "status"], "active"], 0, 1],
     },
     paint: { "icon-opacity": ["case", retired, 0.55, 1] },
-  } as unknown as LayerSpecification);
-  registerBaseFilter("mines-icons", null);
+  } as unknown as LayerSpecification }];
 }
