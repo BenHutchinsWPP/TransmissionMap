@@ -1,11 +1,13 @@
 // ─── addAllLayers orchestrator ────────────────────────────────────────────────
-// Imports from layer-init.ts (helpers) and map-layers-*.ts (builders).
+// Imports from layer-init.ts (helpers), layer-data.ts (ensureLayerData) and
+// map-layers-*.ts (builders).
 // Isolated here so layer-init.ts has no back-imports from map-layers-*.ts.
 // >>> ADD-LAYER: add-all-layers — see docs/adding-a-layer.md §7
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
-import { ensureLayerData, addPadus, addCritHab } from './layer-init.js';
+import { addPadus, addCritHab } from './layer-init.js';
+import { ensureLayerData } from './layer-data.js';
 import { RASTER_PROBES, ensureRasterLut } from '../raster-probes.js';
 import {
   addOsmTransmission, addOsmSubstationPoints, addOsmSubstationPolygons,

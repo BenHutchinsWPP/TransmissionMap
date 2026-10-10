@@ -63,7 +63,7 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/types.ts` — shared `LayerDef` interface and the registry/view types it
   carries (includes the optional `clickPriority` — map-layer id → click
   hit-test priority — and `fromZoom` — minimum zoom to fetch the layer's data —
-  fields). Single-owner types live beside their owner: `AppState` in
+  fields), and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
   `assets/state.ts`, `UserLayer` in `assets/user-data/user-data.ts`,
   `RasterMeta` in `assets/raster-probes.ts`
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
@@ -75,9 +75,11 @@ turns public datasets into PMTiles consumed by the frontend.
     - `basemap.ts` — raster + OpenFreeMap basemaps, Map Labels, Esri → USGS aerial fallback,
       projection/atmosphere; `basemapVisibility` is the pure basemap × labels × fallback matrix
     - `state.ts` mutable global singleton and its `AppState` interface (type-only imports); constants live in `constants.ts` — import them from there. The Map Experience link (story id, dirty flag) is not on it — read it through `experience-link.ts`'s `activeExperienceId()` / `experienceIsDirty()`
-    - `state-bus.ts` typed pub/sub (events: `filter:*`, `layer:visibility`, `view:applied`, `url:write`, `undo:changed`; see `Events`); no deps
+    - `state-bus.ts` typed pub/sub (broadcast events — `layer:visibility`, `layer:data`, `view:applied`, `url:write`, `lang:changed`, `undo:changed` — plus the few one-subscriber events a direct import would cycle or pull into the main bundle; see `Events`). Filters are called directly: `applyAllFilters()`, `applyGeneratorFilters()`; no deps
     - `visibility.ts` — `setLayerVisibility` (the one way to switch a layer: state, map, commits with `url:write`, then emits `layer:visibility`, which refreshes the legends and the panel row), `applyGenMode`, `applyAllGenModes`; pure `wantedLayout` (layer → map-layer visibility), `heatRampShown` (heat ramp legend rule) and `settleExclusiveGroups` (one member per exclusive group, for a whole view); writes no panel control
-    - `filters.ts` — all `applyXFilter()` functions + bus subscriptions; `MW_SLIDER_MAX`;
+    - `filters.ts` — `FACET_APPLIERS` (facet key → applier: one derived `applyFacet()` for a
+      single-field facet, hand appliers for voltage/generators/OGF/WestTEC/mines/NWS) and
+      `applyAllFilters()`, which runs each applier once and is called by `repaintView`; `MW_SLIDER_MAX`;
       `effectiveFilter()` (base ∧ legend/range part ∧ the view's `where`) is the one
       filter each map layer carries, and `setWhere()` sets a layer's field conditions
     - `style-overrides.ts` — a view's per-layer `style` (opacity/size multipliers,
@@ -134,14 +136,14 @@ turns public datasets into PMTiles consumed by the frontend.
       and the readers `activeExperienceId`/`experienceIsDirty`; the story id,
       snapshot and dirty flag are private module state; deps `state-bus.ts` only
     - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
-      is called from the existing catch blocks in `map.ts`, `basemap.ts`, `layers/layer-init.ts`,
+      is called from the existing catch blocks in `map.ts`, `basemap.ts`, `layers/layer-data.ts`,
       `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
     - `diagnostics.ts` — check catalogue behind the Diagnostics panel (browser
       capabilities, host probes, live-feed freshness, report builder); no DOM
   - **`assets/ui/`** — UI wiring and panels
     - `ui.ts` bootstrap + `init()`; wires all UI subsystems
     - `ui-filters.ts` — layer/legend/MW/year filter event wiring (emits bus events)
-    - `ui-legends.ts` — legend HTML + `LEGEND_FILTERS` config
+    - `ui-legends.ts` — legend HTML + `LEGEND_FILTERS` (each `FACETS` record + its `FACET_APPLIERS` entry)
     - `ui-layer-rows.ts` — layer panel row HTML (structure only — no template reads state for a value)
     - `panel-mirror.ts` — **the only writer of panel control values derived from state**:
       `renderPanel()` (rebuild rows, then sync) and `syncPanel(layerId?)` (values only:
@@ -161,7 +163,14 @@ turns public datasets into PMTiles consumed by the frontend.
       `scripts/build_data_manifest.py`) over the hand-written `<li>` fallback
       already shipped in `index.html`; lazy chunk, opened from the info button
   - **`assets/layers/`** — MapLibre layer builders
-    - `layer-init.ts` — `ensureLayerData`, `LAZY_GEOJSON`, `initialVisibility`, `registerBaseFilter`, helpers
+    - `layer-init.ts` — shared builder helpers: `initialVisibility`, `pmtilesUrl`, `addPolygonLayer`,
+      `addRasterLayer`, `addTransmissionLines`, `addSubstationPoints`, `addPadus`, `addCritHab`,
+      `ensureCountyBoundaries`, `genPlantTextLayout`, `GEN_PLANT_TEXT_PAINT`
+    - `layer-data.ts` — the lazy GeoJSON loader: `ensureLayerData` (with the `fromZoom` gate and
+      zoom-settle retry), `fetchGeojson`, the explicit `LAYER_DATA_URLS` table (registry id →
+      `DATA` path) and `LAYER_SOURCE_ALIAS`; emits `layer:data` on the bus when a source's features land
+    - `base-filters.ts` — zero-dependency `registerBaseFilter` + `BASE_LAYER_FILTERS`: each style
+      layer's own inline filter, which `filters.ts`'s `effectiveFilter()` builds on
     - `add-all-layers.ts` — `addAllLayers()`: calls every layer-builder in z-order
     - `map-layers-{osm,hifld,eia,load,renewable,rail,conditions,mines,petroleum,wecc,admin}.ts` — per-source builders
       (`conditions` = wildfire/seismic/NWS alerts/ODIN outages/FEMA NRI/NEXRAD radar — all the live + hazard layers;
@@ -180,8 +189,13 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/colors/` — color/style logic (no MapLibre side effects, safe to import anywhere)
   - `voltage.ts` — `voltageColorExpr()`
   - `ramps.ts` — wind/solar/geo/pop/heat ramps + year-filter constants
-  - `fuel.ts` — gen icons, pipeline colors, voltage/fuel legends
-  - `buckets.ts` — `bucketColorExpr`, line widths, KV/fuel/region bucket arrays
+  - `fuel.ts` — gen icons, pipeline colors, voltage/fuel legends, OSM/EIA fuel value maps
+  - `buckets.ts` — `bucketColorExpr`, line widths, KV/fuel/region bucket arrays; each
+    bucket's `values` (feature values it matches) and the `*_MAP` derived from them
+    with `bucketValueMap`
+  - `facets.ts` — `FACETS`: one `BucketedField` record per legend filter (group code,
+    buckets, field, map layers, defaults, title, swatch); `assets/filters.ts` derives
+    its applier and `assets/ui/ui-legends.ts` pairs the two into `LEGEND_FILTERS`
 - `src/registry/` — layer definitions (pure data, no side effects)
   - `sources.ts` — `LAYER_SOURCES`; `index.ts` — `LAYERS[]`, `layerById`
   - `generators.ts` EIA+OSM; `transmission.ts` lines+substations; `pipelines.ts` natgas
@@ -238,7 +252,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a dataset to the pipeline | `docs/adding-a-dataset.md` (data half), then `docs/adding-a-layer.md` for frontend |
 | Add a map layer | `docs/adding-a-layer.md` ONLY, then `rg ">>> ADD-LAYER"` for insertion points |
 | Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (silent footguns: the shared `data-branch` concurrency group, and `maxAgeMs` must exceed the worst-case cron gap) |
-| Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: wire `filter:all` too, and claim a unique URL code — see `docs/url-state.md`) |
+| Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: a non-standard facet's hand applier goes in `FACET_APPLIERS`, which is what `applyAllFilters()` runs, and claim a unique URL code — see `docs/url-state.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | Undo/redo, what goes on the stack | `assets/undo.ts`, `docs/adr/0004-undo-replays-url-write-snapshots.md` (silent footgun: a control that writes the URL without `url:write` — calling `writeUrlState()` directly — updates the link but is not undoable) |
 | URL hash / shareable links / add a URL param | `docs/url-state.md` (silent footgun: param-char collisions — check the reserved-char table) |
@@ -251,16 +265,16 @@ turns public datasets into PMTiles consumed by the frontend.
 | Fix voltage colors | `src/colors/voltage.ts` |
 | Edit ramp stops (wind/solar/geo/pop/heat) | `src/colors/ramps.ts` |
 | Edit fuel colors / icons / legends | `src/colors/fuel.ts` |
-| Edit bucket arrays (PAD-US, Tribal, NERC, etc.) | `src/colors/buckets.ts` |
+| Edit bucket arrays (PAD-US, Tribal, NERC, etc.) | `src/colors/buckets.ts`; the legend facet record is in `src/colors/facets.ts` |
 | Add/edit a layer registry entry | `src/registry/<group>.ts` — imports in `src/registry/index.ts` list every group file |
 | Add hover highlight to a polygon layer | set `hoverField` on the `LayerDef` in `src/registry/<group>.ts` |
 | Add line click-highlight to a line layer | set `lineHighlightKeys` on the `LayerDef` in `src/registry/<group>.ts` |
 | Change which feature a click resolves to / add a clickable layer | set `clickPriority` on the `LayerDef` in `src/registry/<group>.ts` (higher number wins); a style layer built outside the registry goes in `UNOWNED_CLICKABLE` in `assets/popup.ts` instead |
-| Gate a layer's fetch on zoom (large point datasets) | set `fromZoom` on the `LayerDef` in `src/registry/<group>.ts` — `assets/layers/layer-init.ts`'s `ensureLayerData()` withholds the fetch below it (for any layer sharing that source too) and retries it on zoom settle |
+| Gate a layer's fetch on zoom (large point datasets) | set `fromZoom` on the `LayerDef` in `src/registry/<group>.ts` — `assets/layers/layer-data.ts`'s `ensureLayerData()` withholds the fetch below it (for any layer sharing that source too) and retries it on zoom settle |
 | Add a field to a dataset's filter schema (types, operators, closed value domains) | `src/registry/field-schema.ts` (`FIELD_SCHEMA`); compiled into filter expressions by `src/registry/condition-compile.ts` |
 | Legends | `assets/ui/ui-legends.ts` |
 | Search behavior | `assets/ui/ui-search.ts` |
-| Layer add order / lazy loading | `assets/layers/layer-init.ts` |
+| Layer add order / lazy loading | `assets/layers/add-all-layers.ts` (order), `assets/layers/layer-data.ts` (lazy GeoJSON loading) |
 | Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/wildfire-staleness.ts` |
 | Data source facts (URL, license, columns) | `docs/data-sources.md`, `docs/layers/<layer>.md` |
 | Add/fix a layer's provenance (publisher, landing page, licence) | `scripts/data_manifest.yaml` — sourced only from `docs/data-sources.md` and `docs/layers/<id>.md`; a field those docs don't settle is the literal string `UNKNOWN` |
@@ -271,8 +285,8 @@ turns public datasets into PMTiles consumed by the frontend.
 | Publishing a build / repo-size headroom | `docs/hosting-plan.md` § *Repository headroom* — read before running `make publish-data` (silent footgun: a force-push to `data-static` deletes nothing, so an overshoot of GitHub's 5 GB soft limit can only be undone by GitHub Support running GC — never set `SKIP_SIZE_CHECK=1` to get past the gate) |
 | Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN` / `LIVE_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
 | How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
-| Moratorium layer data / weekly refresh | `scripts/moratoriums/README.md` (silent footguns: the workflow YAML must be on `main` to run at all; scheduled runs commit straight to `data-moratoriums` (no review; undo a week with `git revert`) — reject a row with an `updates.csv` `DROP` line and a rebuild, never by editing the published CSVs; move the pin in one `data-moratoriums` PR changing `inputs/upstream.sha` and `inputs/upstream_as_of` together) |
-| Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them; a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
+| Moratorium layer data / twice-monthly refresh | `scripts/moratoriums/README.md` (silent footguns: the workflow YAML must be on `main` to run at all; scheduled runs commit straight to `data-moratoriums` (no review; undo a run with `git revert`) — reject a row with an `updates.csv` `DROP` line and a rebuild, never by editing the published CSVs; move the pin in one `data-moratoriums` PR changing `inputs/upstream.sha` and `inputs/upstream_as_of` together) |
+| Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them (`assets/constants.test.ts` fails on any other form); a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
 
 ## Commands
 

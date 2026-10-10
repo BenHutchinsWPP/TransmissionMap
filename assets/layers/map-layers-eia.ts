@@ -5,7 +5,8 @@ import { state } from '../state.js';
 import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { EIA_GEN_ICON, genIconSize } from '../../src/colors/fuel.js';
 import { HEAT_MW_STOPS, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
-import { initialVisibility, registerBaseFilter, genPlantTextLayout, GEN_PLANT_TEXT_PAINT, addPolygonLayer } from './layer-init.js';
+import { initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT, addPolygonLayer } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export function addEiaGenerators() {
   if (!state.map || state.map.getSource("eia-generators")) return;

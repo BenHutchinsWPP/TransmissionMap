@@ -20,7 +20,7 @@
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
 // Deps: i18n (t, for the play button label and the age chip), state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, rasterLut),
-//       constants (weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS), style-overrides (effectiveOverride), raster-probes
+//       constants (weatherLiveUrl, WEATHER_WASH_OPACITY), style-overrides (effectiveOverride), raster-probes
 //       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
@@ -42,7 +42,7 @@
 
 import type { ImageSource } from 'maplibre-gl';
 import { state } from './state.js';
-import { weatherLiveUrl, WEATHER_WASH_OPACITY, WEATHER_FADE_MS, type ImageCorners } from './constants.js';
+import { weatherLiveUrl, WEATHER_WASH_OPACITY } from './constants.js';
 import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
@@ -55,6 +55,10 @@ import { t } from '../src/i18n/index.js';
 // combined view (temp wash + particles on top), and Windstream (particles
 // only, no color wash).
 const PARTICLE_VARS = new Set(["wind", "tempwind", "windstream"]);
+// Length of the A/B crossfade between two images (paintImage).
+export const WEATHER_FADE_MS = 300;
+// MapLibre's image-source `coordinates` 4-tuple: NW, NE, SE, SW.
+type ImageCorners = [[number, number], [number, number], [number, number], [number, number]];
 // 1×1 transparent GIF — crossfaded in place of a real webp for `noWash`
 // variables, so paintImage()'s existing A/B crossfade (which assumes the
 // front layer starts near full opacity) never flashes a stale texture: the

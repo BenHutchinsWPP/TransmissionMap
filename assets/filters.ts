@@ -3,43 +3,43 @@
 // base ∧ applier part ∧ where, written by writeFilter()/refilter() — the one
 // setFilter call site here (filters.test.ts enforces it):
 //   base    — the layer's own inline filter, registered by its builder through
-//             registerBaseFilter() (map-layers-*.ts, layer-init.ts);
-//   applier — the legend/range expression last computed by an applyXFilter()
-//             for that map layer, remembered per map layer so a `where` change
-//             re-filters one registry layer without re-running the appliers;
+//             registerBaseFilter() (layers/base-filters.ts, which owns
+//             BASE_LAYER_FILTERS; called from map-layers-*.ts, layer-init.ts);
+//   applier — the legend/range expression last computed by an applier
+//             (FACET_APPLIERS or a range applier) for that map layer,
+//             remembered per map layer so a `where` change re-filters one
+//             registry layer without re-running the appliers;
 //   where   — state.where[registryId] for the registry layer (LayerDef.dataset
 //             set) owning the map layer, compiled by toMapLibreFilter().
 // setWhere() validates (view-validate.ts's validateWhere(), the pure check
 // share links reuse) and applies one layer's conditions; applyAllWhere() re-filters every
 // where-capable map layer from state. Whole-view applies and Reset need neither:
-// their `filter:all` re-filters every where-owned layer (view-state-paint.test.ts).
-// Appliers also run off the bus (`filter:*`, bottom of file).
-// Deps: state.ts, registry (LAYERS, layerById), src/colors/*, condition-compile.ts,
+// their applyAllFilters() re-filters every where-owned layer (view-state-paint.test.ts).
+// FACET_APPLIERS maps each legend facet (src/colors/facets.ts FACETS) to its
+// applier: applyFacet() derived from the record for a facet that is one field
+// on its own map layers, a hand applier (voltage, generators, OGF, WestTEC,
+// mines, NWS) otherwise. ui/ui-legends.ts hands them to the legend rows; other
+// UI controls call the appliers directly (ui/ui-filters.ts); applyAllFilters()
+// (bottom of file) runs every one.
+// Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts), condition-compile.ts,
 // view-validate.ts,
-// nws-zone-join.ts (NWS feature-state half), diag-log.ts, constants.ts.
-
-// ─── Filter value maps (bucket id → array of feature property values) ────────
+// nws-zone-join.ts (NWS feature-state half), diag-log.ts, constants.ts,
+// layers/base-filters.ts (BASE_LAYER_FILTERS).
 
 import { state } from './state.js';
 import type { FilterSpecification } from 'maplibre-gl';
-import type { BucketDef } from '../src/types.js';
+import type { BucketDef, BucketedField } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
-import { FUEL_LEGEND } from '../src/colors/fuel.js';
+import { FUEL_LEGEND, OSM_FUEL_MAP, EIA_FUEL_MAP } from '../src/colors/fuel.js';
+import { FACETS } from '../src/colors/facets.js';
 import {
-  KV_BUCKETS, OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS,
-  NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
-  PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, CRITHAB_MAP,
-  PADUS_CLASS_BUCKETS, PADUS_CLASS_MAP,
-  TRIBAL_BUCKETS, TRIBAL_MAP,
-  NERC_BUCKETS, NERC_MAP,
-  OGF_STATUS_BUCKETS, OGF_STATUS_MAP, DCM_CLASSES, DCM_CLASS_MAP,
+  bucketValueMap, KV_BUCKETS, OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS,
+  OGF_STATUS_BUCKETS, OGF_STATUS_MAP,
   OGF_REGION_BUCKETS, OGF_REGION_MAP,
   OGF_WORK_BUCKETS, OGF_WORK_MAP,
-  RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP,
-  SUBSTANCE_BUCKETS, SUBSTANCE_MAP,
   SECTOR_BUCKETS, SECTOR_MAP,
   OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, LINE_PLACEMENT_BUCKETS,
-  NWS_GROUP_BUCKETS,
+  NWS_GROUP_BUCKETS, NWS_GROUP_MAP,
   WESTTEC_SCENARIO_BUCKETS, WESTTEC_SCENARIO_MAP,
   WESTTEC_DATASET_BUCKETS, WESTTEC_DATASET_MAP,
 } from '../src/colors/buckets.js';
@@ -51,69 +51,7 @@ import { setZoneGroupFilter } from './nws-zone-join.js';
 import { toMapLibreFilter, ConditionError, type Condition } from '../src/registry/condition-compile.js';
 import { recordDiagEvent } from './diag-log.js';
 import { validateWhere } from '../src/registry/view-validate.js';
-
-export const OSM_FUEL_MAP = {
-  wind:       ["wind"],
-  solar:      ["solar"],
-  hydro:      ["hydro"],
-  nuclear:    ["nuclear"],
-  coal:       ["coal"],
-  gas:        ["gas"],
-  oil:        ["oil"],
-  battery:    ["battery"],
-  geothermal: ["geothermal"],
-  biomass:    ["biomass", "biogas", "waste"],
-};
-
-const EIA_FUEL_MAP = {
-  wind:    ["WND"],
-  solar:   ["SUN"],
-  hydro:   ["WAT"],
-  nuclear: ["NUC"],
-  coal:    ["BIT", "SUB", "LIG", "PC"],
-  gas:     ["NG", "OG"],
-  oil:     ["DFO", "RFO", "KER"],
-  storage: ["MWH", "ES"],
-  geo:     ["GEO"],
-  biomass: ["WDS", "WDL", "MSW", "BLQ"],
-};
-
-const NATGAS_PIPE_TYPE_MAP = {
-  interstate: ["Interstate"],
-  intrastate: ["Intrastate"],
-  hgl:        ["HGL"],
-  gathering:  ["Gathering"],
-};
-
-const NATGAS_FAC_TYPE_MAP = {
-  lng_terminal:  ["lng_terminal"],
-  underground:   ["underground"],
-  spr:           ["spr"],
-  trading_hub:   ["trading_hub"],
-  processing:    ["processing"],
-  border_cross:  ["border_cross"],
-  peak_shaving:  ["peak_shaving"],
-  lng_storage:   ["lng_storage"],
-  pol_terminal:  ["pol_terminal"],
-};
-
-const NWS_GROUP_MAP = {
-  convective: ["convective"],
-  flood:      ["flood"],
-  fire:       ["fire"],
-  heat:       ["heat"],
-  wind:       ["wind"],
-  winter:     ["winter"],
-  tropical:   ["tropical"],
-};
-
-export const PIPELINE_TYPE_MAP = {
-  pig_launcher: ["pig_launcher"],
-  compressor:   ["substation", "pump_station"],
-  delivery:     ["delivery", "receipt", "reciept", "measurement", "meter"],
-  interconnect: ["interconnect"],
-  end:          ["end"],
-};
+import { BASE_LAYER_FILTERS } from './layers/base-filters.js';
 
 const GEN_MW_FIELDS: Record<string, string> = {
   "osm-plant-icons":      "output_mw",
@@ -184,25 +122,6 @@ function applyBucketFilterToLayers(layerIds: string[], field: string, activeSet:
   setBucketFilter(layerIds, bucketExpr);
 }
 
-export function applyNatgasLineFilter() {
-  applyBucketFilterToLayers(
-    ["hifld-natgas-interstate", "hifld-natgas-intrastate",
-     "hifld-natgas-hgl", "hifld-natgas-gathering"],
-    "pipe_type", state.legendFilters.natgasLine, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_PIPE_TYPE_MAP);
-}
-
-export function applyNatgasPtsFilter() {
-  applyBucketFilterToLayers(
-    ["hifld-natgas-points", "hifld-petroleum-facilities"],
-    "fac_type", state.legendFilters.natgasPts, NATGAS_FAC_TYPE_BUCKETS, NATGAS_FAC_TYPE_MAP);
-}
-
-export function applySubstanceFilter() {
-  applyBucketFilterToLayers(
-    ["osm-pipelines-lines"],
-    "substance", state.legendFilters.substance, SUBSTANCE_BUCKETS, SUBSTANCE_MAP);
-}
-
 // Status + region + type of work all target the same two OGF map
 // layers, so they must be combined in one setFilter call — applying them via
 // separate applyBucketFilterToLayers calls would clobber each other.
@@ -235,47 +154,6 @@ export function applyMinesFilter() {
     buildValueFilterExpr("cat",    state.legendFilters.mines,       MINES_COMMODITY_BUCKETS, MINES_COMMODITY_MAP),
     buildValueFilterExpr("status", state.legendFilters.minesStatus, MINES_STATUS_BUCKETS,    MINES_STATUS_MAP));
   setBucketFilter(["mines-icons"], expr);
-}
-
-export function applyPipelineTypeFilter() {
-  applyBucketFilterToLayers(
-    ["osm-pipelines-points"],
-    "pipeline", state.legendFilters.pipeline, PIPELINE_TYPE_BUCKETS, PIPELINE_TYPE_MAP);
-}
-
-export function applyCritHabFilter() {
-  applyBucketFilterToLayers(
-    ["crithab-fill", "crithab-outline"],
-    "listing_st", state.legendFilters.crithab, CRITHAB_BUCKETS, CRITHAB_MAP);
-}
-
-export function applyPadusClassFilter() {
-  applyBucketFilterToLayers(
-    ["padus-fill", "padus-outline"],
-    "desig", state.legendFilters.padus, PADUS_CLASS_BUCKETS, PADUS_CLASS_MAP);
-}
-
-export function applyTribalClassFilter() {
-  applyBucketFilterToLayers(
-    ["tribal-fill", "tribal-outline"],
-    "area_type", state.legendFilters.tribal, TRIBAL_BUCKETS, TRIBAL_MAP);
-}
-
-export function applyNercFilter() {
-  applyBucketFilterToLayers(
-    ["nerc-fill", "nerc-outline"],
-    "code", state.legendFilters.nerc, NERC_BUCKETS, NERC_MAP);
-}
-
-export function applyRetailTypeFilter() {
-  applyBucketFilterToLayers(
-    ["retail-fill", "retail-outline"],
-    "type", state.legendFilters.retail, RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP);
-}
-
-export function applyDcMoratoriumFilter() {
-  applyBucketFilterToLayers(layerById("dc-moratoriums")!.mapLayerIds,
-    "cls", state.legendFilters.dcm, DCM_CLASSES, DCM_CLASS_MAP);
 }
 
 export function applyNwsGroupFilter() {
@@ -395,16 +273,6 @@ export function applyGeneratorFilters() {
   }
 }
 
-// ─── Base-filter registry ─────────────────────────────────────────────────────
-const BASE_LAYER_FILTERS: Record<string, FilterSpecification | null> = {};
-
-// Must be called once per MapLibre layer ID immediately after map.addLayer().
-// Integration contract between layer renderers (map-layers-*.ts) and the
-// filter/visibility system — every add*Layer() call must register here.
-export function registerBaseFilter(layerId: string, filter: FilterSpecification | null) {
-  BASE_LAYER_FILTERS[layerId] = filter ?? null;
-}
-
 // ─── Effective filter: base ∧ applier part ∧ where ────────────────────────────
 // Last applier part per map layer, kept as the applier's list of parts so the
 // combined expression stays flat (["all", base, fuel, mw, …]) exactly as the
@@ -449,7 +317,7 @@ function whereExpr(mlId: string): FilterSpecification | null {
   if (!conds?.length) return null;
   // setWhere validates before writing; this guards a state.where seeded by
   // another path, so an invalid entry is recorded and skipped rather than
-  // thrown into the middle of a filter:all sequence.
+  // thrown into the middle of an applyAllFilters() sequence.
   try {
     return toMapLibreFilter(layerById(owner)!.dataset!, conds) as unknown as FilterSpecification;
   } catch (err) {
@@ -498,7 +366,7 @@ export function setWhere(registryId: string, conditions: Condition[]): string | 
 }
 
 /** Re-filter every where-capable map layer from state, for a state.where
- *  write that no `filter:all` follows. A layer whose conditions vanished from
+ *  write that no applyAllFilters() follows. A layer whose conditions vanished from
  *  state.where returns to base ∧ applier part. */
 export function applyAllWhere() {
   if (!state.mapReady) return;
@@ -552,12 +420,6 @@ export function buildValueFilterExpr(field: string, activeSet: Set<string> | nul
   return anyOfConds(conds);
 }
 
-export const LAYER_FILTER_VALUE_MAPS: Record<string, Record<string, string[]>> = {
-  pipeline_type:    PIPELINE_TYPE_MAP,
-  natgas_pipe_type: NATGAS_PIPE_TYPE_MAP,
-  natgas_fac_type:  NATGAS_FAC_TYPE_MAP,
-};
-
 // Filtered field → the tile_manifest dataset whose FIELD_SCHEMA entry declares
 // it, so the values expression compiles schema-checked. Keyed by field name,
 // which is unique across the bucket filters; a field absent here keeps the
@@ -593,8 +455,8 @@ export function compileBucketExpr(
   if (!allowed.length) return anyOfConds([]);
   // toMapLibreFilter validates against FIELD_SCHEMA and throws ConditionError
   // when a bucket value has drifted outside the declared domain. This runs on
-  // the live filter:all path with no surrounding try/catch (state-bus.ts emit
-  // calls every subscriber unguarded), so an escaped throw would abort every
+  // the live applyAllFilters() path, which repaintView() calls with no
+  // surrounding try/catch, so an escaped throw would abort every
   // remaining applyXFilter() in the sequence and leave the map half-filtered.
   // Falling back to the pre-schema builder keeps the filter usable; the
   // recorded diagnostic is how the drift still gets seen.
@@ -607,45 +469,50 @@ export function compileBucketExpr(
   }
 }
 
+// Per-layer legend chips (state.layerFilters): only the generator registry
+// layers declare filterBuckets, and applyGeneratorFilters() folds them in.
 export function applyLayerFilter(registryId: string) {
-  const entry = layerById(registryId);
-  if (!entry || !state.mapReady) return;
-  if (entry.group === "generators") { applyGeneratorFilters(); return; }
-  if (!entry.filterType) return;
-  const active = state.layerFilters[registryId];
-  if (!active) return;
-
-  const valueMap = LAYER_FILTER_VALUE_MAPS[entry.filterType];
-  const bucketExpr = valueMap
-    ? compileBucketExpr(entry.filterField!, active, entry.filterBuckets ?? [], valueMap)
-    : null;
-
-  setBucketFilter(entry.mapLayerIds, bucketExpr);
+  if (layerById(registryId)?.group === "generators") applyGeneratorFilters();
 }
 
-// ─── Bus subscriptions ────────────────────────────────────────────────────────
-import { on } from './state-bus.js';
-on('filter:generators',    applyGeneratorFilters);
-on('filter:layer',         ({ id }) => applyLayerFilter(id));
-on('filter:all',           () => {
-  applyVoltageFilter();
-  applyGeneratorFilters();
-  applyPipelineTypeFilter();
-  applyPadusClassFilter();
-  applyTribalClassFilter();
-  applyCritHabFilter();
-  applyNercFilter();
-  applyRetailTypeFilter();
-  applyDcMoratoriumFilter();
-  applyNatgasLineFilter();
-  applyNatgasPtsFilter();
-  applySubstanceFilter();
-  applyOGFFilters();
-  applyMinesFilter();
-  applyNwsGroupFilter();
-  applyWestTECFilters();
-  // Per-layer legend-chip filters (state.layerFilters), driven off whichever
-  // registry entries declare filterBuckets — derived at runtime so a future
-  // registry addition is covered automatically instead of needing a new line here.
+// ─── Facet appliers ───────────────────────────────────────────────────────────
+// A facet with one field on its own map layers: compileBucketExpr over the
+// record's buckets, written to `mapLayerIds` (or the `layerRef` registry layer's).
+function applyFacet(f: BucketedField) {
+  const mapLayerIds = f.mapLayerIds ?? layerById(f.layerRef!)!.mapLayerIds;
+  applyBucketFilterToLayers(mapLayerIds, f.field!, state.legendFilters[f.key], f.buckets, facetValueMap(f));
+}
+
+/** A facet's bucket id → feature values: the buckets' `values`, or, when no
+ *  bucket declares any, each bucket id as its own literal value. */
+export function facetValueMap(f: BucketedField): Record<string, string[]> {
+  return f.buckets.some(b => b.values)
+    ? bucketValueMap(f.buckets)
+    : Object.fromEntries(f.buckets.map(b => [b.id, [b.id]]));
+}
+
+// Facets whose filter is more than one field on its own layers: shared map
+// layers (OGF, WestTEC, mines), registry-wide targets (kv, underground, fuel,
+// sector) or a feature-state half (nwsGroup).
+const HAND_APPLIERS: Record<string, () => void> = {
+  kv: applyVoltageFilter, underground: applyVoltageFilter,
+  fuel: applyGeneratorFilters, sector: applyGeneratorFilters,
+  ogfRegion: applyOGFFilters, ogfStatus: applyOGFFilters, ogfWork: applyOGFFilters,
+  mines: applyMinesFilter, minesStatus: applyMinesFilter,
+  nwsGroup: applyNwsGroupFilter,
+  westtecScenario: applyWestTECFilters, westtecDataset: applyWestTECFilters,
+};
+
+/** Facet key (src/colors/facets.ts) → the function that re-filters the map
+ *  from state.legendFilters[key]. Keys sharing map layers share one function. */
+export const FACET_APPLIERS: Record<string, () => void> = Object.fromEntries(
+  FACETS.map(f => [f.key, HAND_APPLIERS[f.key] ?? (() => applyFacet(f))]));
+
+// ─── Apply all ────────────────────────────────────────────────────────────────
+/** Re-apply every filter: each facet applier once, in FACETS order, then every
+ *  per-layer legend-chip filter. Run by view-state.ts's repaintView() (map
+ *  load, Reset, a view apply). */
+export function applyAllFilters() {
+  for (const apply of new Set(Object.values(FACET_APPLIERS))) apply();
   for (const entry of LAYERS) if (entry.filterBuckets) applyLayerFilter(entry.id);
-});
+}

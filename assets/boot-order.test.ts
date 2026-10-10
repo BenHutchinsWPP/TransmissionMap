@@ -8,6 +8,8 @@
 // TypeScript parser instead: import graph → cycles (Tarjan SCC) → module-level
 // identifier reads (function bodies skipped) resolved through re-exports to
 // their owning module. A function declaration is hoisted, so it is safe.
+// assets/ and src/ currently form no import cycle at all, so the scan reports
+// nothing; it stands guard for the first cycle a new import introduces.
 import { describe, it, expect } from 'vitest';
 import ts from 'typescript';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
@@ -163,11 +165,6 @@ function loadTimeCycleReads(): string[] {
 }
 
 describe('boot order', () => {
-  it('finds the layer-init / filters / nws-zone-join cycle (the scan sees cycles)', () => {
-    const f = (p: string) => resolve(ROOT, p);
-    expect(scc.get(f('assets/nws-zone-join.ts'))).toBe(scc.get(f('assets/layers/layer-init.ts')));
-  });
-
   it('no module reads a cycle partner\'s const/let/class binding at load time', () => {
     expect(loadTimeCycleReads()).toEqual([]);
   });

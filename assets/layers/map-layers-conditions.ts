@@ -6,9 +6,11 @@
 //       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
 //       and the FEMA National Risk Index county choropleth (same shared-source
 //       feature-state pattern; the join lives in ../fema-nri.ts).
-// Deps: layer-init.ts (pmtilesUrl, initialVisibility, registerBaseFilter — every
-//       inline style-layer filter is registered as its base), state, constants (DATA),
-//       src/colors/buckets.ts (NRI_RATINGS).
+// Deps: layer-init.ts (initialVisibility, ensureCountyBoundaries, addRasterLayer),
+//       base-filters.ts (registerBaseFilter — every inline style-layer filter is
+//       registered as its base), state,
+//       constants (DATA, EMPTY_FC, radar URLs, WEATHER_WASH_OPACITY, COUNTY_SRC*),
+//       src/colors/buckets.ts (NRI_RATINGS; bucketColorExpr over NWS_GROUP_BUCKETS).
 //
 // All live data shares one source ("wildfire-live") and one GeoJSON file.
 // _type field distinguishes: "smoke" | "perimeter" | "hotspot" | "incident"
@@ -34,15 +36,15 @@
 // coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
 // -snow) added underneath and toggled by the same registry row.
 
-import type { LayerSpecification, ExpressionSpecification, FilterSpecification, RasterTileSource } from "maplibre-gl";
+import type { LayerSpecification, ExpressionSpecification, FilterSpecification, RasterTileSource, ImageSourceSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import {
   DATA, EMPTY_FC, RADAR_TILE_TEMPLATE, RADAR_TILE_URL, RADAR_TMS_JSON_URL,
-  GEOMET_RADAR_TILE_TEMPLATE, WEATHER_IMAGE_COORDS, TRANSPARENT_PNG,
-  WEATHER_WASH_OPACITY,
+  GEOMET_RADAR_TILE_TEMPLATE, WEATHER_WASH_OPACITY, COUNTY_SRC, COUNTY_SRC_LAYER,
 } from '../constants.js';
-import { initialVisibility, registerBaseFilter, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER, addRasterLayer } from './layer-init.js';
-import { NRI_RATINGS } from '../../src/colors/buckets.js';
+import { initialVisibility, ensureCountyBoundaries, addRasterLayer } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
+import { NRI_RATINGS, NWS_GROUP_BUCKETS, bucketColorExpr } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
   return [
@@ -281,17 +283,7 @@ export function addWildfireLivePoints() {
 // ─── NWS active weather alerts (live) ──────────────────────────────────────
 // Curated, polygon-bearing alerts only (phase 1). Colored by `_group`
 // (server-side grouping of NWS event types — see scripts/fetch_nws_alerts.py).
-const NWS_GROUP_COLOR: ExpressionSpecification = [
-  "match", ["get", "_group"],
-  "convective", "#a855f7",
-  "flood",      "#22c55e",
-  "fire",       "#ef4444",
-  "heat",       "#f97316",
-  "wind",       "#eab308",
-  "winter",     "#38bdf8",
-  "tropical",   "#14b8a6",
-  /* other */   "#9ca3af",
-];
+const NWS_GROUP_COLOR = bucketColorExpr("_group", NWS_GROUP_BUCKETS, "#9ca3af");
 
 export function addNwsAlerts() {
   if (!state.map || state.map.getSource("nws-alerts")) return;
@@ -469,6 +461,21 @@ export function addFemaNri() {
 const ADMIN_STATE_LINES   = ["==", ["get", "level"], 1] as FilterSpecification;
 const ADMIN_COUNTRY_LINES = ["!=", ["get", "level"], 1] as FilterSpecification;
 
+// Corner coordinates of the weather image (must match WEST/EAST/SOUTH/NORTH in
+// scripts/fetch_weather_live.py). Only the initial placement — every refresh re-sets
+// them from the meta JSON's bbox, so a grid change in the script self-heals.
+// MapLibre's image-source `coordinates` is a 4-tuple: NW, NE, SE, SW.
+const WEATHER_IMAGE_COORDS: ImageSourceSpecification["coordinates"] = [
+  [-180, 85], [180, 85], [180, -85], [-180, -85],
+];
+// 1×1 transparent PNG. The image source is created with this so a visitor who
+// never enables the layer never downloads the real (~130 KB) mosaic; weather-live.ts
+// swaps in the real image on first enable.
+// Carries a full 5-byte scanline (filter byte + RGBA), which is what the
+// 1×1 RGBA header declares — strict image decoders reject a short one.
+const TRANSPARENT_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=";
+
 export function addWeatherLive() {
   if (!state.map || state.map.getSource("weather-live")) return;
   // MapLibre's image-source spec has no `attribution` field (unlike raster/geojson),
@@ -504,7 +511,7 @@ export function addWeatherLive() {
 
   // White country/state border highlights over the wash (Ventusky-style) —
   // the dark ramp colors swallow the basemap's own borders. Natural Earth
-  // lines, lazily loaded via the weather-live alias in layer-init.ts and
+  // lines, lazily loaded via the weather-live alias in layer-data.ts and
   // toggled by the same registry row (mapLayerIds).
   state.map.addSource("weather-admin-lines", { type: "geojson", data: EMPTY_FC });
   for (const [id, filter, width, opacity] of [

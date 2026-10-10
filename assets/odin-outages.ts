@@ -11,7 +11,7 @@
 //       6 h is not painted (console warning only — no modal, unlike
 //       wildfire-staleness.ts).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
-// Deps: state (map, layerVisibility), constants (DATA), diag-log.ts (recordDiagEvent —
+// Deps: state (map, layerVisibility), constants (DATA, COUNTY_SRC*), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel), experience-link.ts
 //       (rebaselineExperience before the kill switch), state-bus.ts (on
 //       'layer:visibility' — re-runs the gate as the layer switches on), i18n (t,
@@ -29,8 +29,7 @@
 
 import { state } from './state.js';
 import { rebaselineExperience } from './experience-link.js';
-import { DATA } from './constants.js';
-import { COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './layers/layer-init.js';
+import { DATA, COUNTY_SRC as SRC, COUNTY_SRC_LAYER as SRC_LAYER } from './constants.js';
 import { escapeHtml } from './utils/utils.js';
 import { recordDiagEvent } from './diag-log.js';
 import { setLayerVisibility } from './visibility.js';

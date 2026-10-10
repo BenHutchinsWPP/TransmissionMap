@@ -8,10 +8,11 @@ import type { FilterSpecification } from 'maplibre-gl';
 import { state } from './state.js';
 import { layerById } from '../src/registry/index.js';
 import {
-  registerBaseFilter, effectiveFilter, setWhere, applyAllWhere,
+  effectiveFilter, setWhere, applyAllWhere,
   applyVoltageFilter, applyGeneratorFilters, whereOwnership,
 } from './filters.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
+import { registerBaseFilter } from './layers/base-filters.js';
 
 // ─── Every setFilter writer is accounted for ──────────────────────────────────
 // filters.ts writes every feature filter through its single refilter() call,

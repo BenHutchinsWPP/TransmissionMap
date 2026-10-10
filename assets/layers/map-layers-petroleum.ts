@@ -1,13 +1,14 @@
 // ─── EIA petroleum (liquids) pipeline layers ─────────────────────────────────
 // Crude-oil + petroleum-product pipelines from the EIA U.S. Energy Atlas, served
-// as browser-direct GeoJSON (small; no PMTiles). Lazy-loaded via layer-init.ts
-// LAZY_GEOJSON; popup in popup-format.ts; registry entries in src/registry/pipelines.ts.
+// as browser-direct GeoJSON (small; no PMTiles). Lazy-loaded via layer-data.ts
+// LAYER_DATA_URLS; popup in popup-format.ts; registry entries in src/registry/pipelines.ts.
 // Imported by: add-all-layers.ts.
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, registerBaseFilter } from './layer-init.js';
+import { initialVisibility } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 // [registryId, sourceAttribKey, color]
 const LINES: [string, string][] = [

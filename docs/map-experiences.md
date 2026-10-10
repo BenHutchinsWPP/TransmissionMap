@@ -68,7 +68,7 @@ wholesale, so the next story or Reset clears them.
    `layer:visibility`, which `weather-live.ts` and `nws-zone-join.ts` follow,
    so a programmatic switch reaches them the same way a click does.
 4. `setTerrain3d()` / `setBuildings3d()` / `setHillshade()` where they change.
-5. `repaintView()`: `applySmokeOpacity()`, `emit('filter:all')` (which also
+5. `repaintView()`: `applySmokeOpacity()`, `applyAllFilters()` (which also
    applies the view's `where` conditions), `applyAllGenModes()`, then
    `applyAllStyles()` — the `style` overrides and the colour-by modes. Cold boot runs the same function from
    `map.ts`'s load handler via `paintLinkedView()`. A style key the map cannot

@@ -2,8 +2,8 @@
 // The extract script (scripts/extract_mines.py) pre-computes each mine's `cat`
 // (commodity category) and `status` (active|retired), so matching here is a
 // simple property equality — no runtime code-list parsing.
-// Used by: assets/filters.ts (applyMinesFilter), assets/ui/ui-legends.ts
-//          (LEGEND_FILTERS chips), assets/layers/map-layers-mines.ts (colors).
+// Used by: assets/filters.ts (applyMinesFilter), src/colors/facets.ts
+//          (legend chips), assets/layers/map-layers-mines.ts (colors).
 import type { BucketDef } from '../types.js';
 import type { ExpressionSpecification } from 'maplibre-gl';
 

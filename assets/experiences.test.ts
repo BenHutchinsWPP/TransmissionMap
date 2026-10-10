@@ -59,11 +59,9 @@ vi.mock('./nws-zone-join.js', () => ({
 
 vi.mock('./layers/map-layers-conditions.js', () => ({ applySmokeOpacity: vi.fn() }));
 vi.mock('./layers/layer-init.js', () => ({
-  ensureLayerData: vi.fn(),
-  registerBaseFilter: vi.fn(),
-  LAZY_GEOJSON: {},
   initialVisibility: vi.fn(() => 'none'),
 }));
+vi.mock('./layers/layer-data.js', () => ({ ensureLayerData: vi.fn() }));
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
   ensureRasterLut: vi.fn(),

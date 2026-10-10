@@ -1,10 +1,12 @@
 // ─── Feature search (inside layers panel) ───────────────────────────────────
+// An open query re-runs on the 'layer:data' bus event, as lazy sources land.
 
 import { state } from '../state.js';
 import { onMapTap } from '../map-input.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 import { escapeHtml } from '../utils/utils.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
+import { on } from '../state-bus.js';
 
 interface SearchResult {
   name: string;
@@ -199,7 +201,7 @@ export function wireFeatureSearch() {
     if (e.key === "Escape") hideResults();
   });
 
-  window.addEventListener('tm:layerdata', () => {
+  on('layer:data', () => {
     if (searchInput.value.trim()) {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(doSearch, 0);

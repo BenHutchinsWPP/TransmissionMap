@@ -4,7 +4,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import { state } from './state.js';
 import { beginExperience, endExperienceLink, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { readUrlState, writeUrlState } from './url-state.js';
-import { splitHash, parseCameraSegment, formatCameraSegment, parseUrlState } from './url-state-codec.js';
+import { splitHash, parseCameraSegment, formatCameraSegment, parseUrlState, formatUrlState, defaultView, LEGACY_BUCKET_CODES } from './url-state-codec.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
@@ -552,6 +552,34 @@ describe('camera segment – strict numbers and wrapped longitude', () => {
       const seg = formatCameraSegment({ center: [lng, 10], zoom: 4, bearing: 0, pitch: 0 });
       expect(parseCameraSegment(seg)?.center).toEqual([wrapped, 10]);
     });
+});
+
+describe('parseUrlState – retired bucket codes', () => {
+  const parse = (qs: string) => parseUrlState(new URLSearchParams(qs));
+  const formatOgfStatus = (ids: Set<string>) => {
+    const dv = defaultView();
+    return formatUrlState({ ...dv, legendFilters: { ...dv.legendFilters, ogfStatus: ids } });
+  };
+
+  it('reads the retired OGF status `N` (conceptual) as planning, written back as `L`', () => {
+    const ids = parse('g=N').legendFilters!.ogfStatus;
+    expect(ids).toEqual(new Set(['planning']));
+    expect(formatOgfStatus(ids)).toContain('g=L');
+  });
+
+  it.each(Object.entries(LEGACY_BUCKET_CODES))('param %s: retired codes are unused, targets are live buckets', (code, aliases) => {
+    const buckets = LEGEND_FILTERS.find(f => f.groupCode === code)!.buckets;
+    for (const [old, id] of Object.entries(aliases)) {
+      expect(buckets.map(b => b.urlCode)).not.toContain(old);
+      expect(buckets.map(b => b.id)).toContain(id);
+    }
+  });
+
+  it('dedupes `N` with `L` and keeps the other statuses', () => {
+    const ids = parse('g=NLC').legendFilters!.ogfStatus;
+    expect(ids).toEqual(new Set(['planning', 'construction']));
+    expect(formatOgfStatus(ids)).toContain('g=LC');
+  });
 });
 
 describe('parseUrlState – invalid values are dropped', () => {

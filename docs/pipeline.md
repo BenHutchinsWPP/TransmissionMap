@@ -187,7 +187,7 @@ Two on-disk formats are served to the app, picked per layer by geometry profile:
 - **Gzipped GeoJSON** (`.geojson.gz`) — for *many-small* geometries (plant
   points, EIA generators, pipeline points). Files are shipped **pre-gzipped**;
   the app fetches the `.gz` and decompresses in-browser via `DecompressionStream`
-  (`fetchGeojson` in `assets/layers/layer-init.ts`). `build_tiles.py` gzips all served
+  (`fetchGeojson` in `assets/layers/layer-data.ts`). `build_tiles.py` gzips all served
   GeoJSON as its final step.
 
 Neither format lives in `main` — `data/layers/` and `data/releases/` are gitignored.

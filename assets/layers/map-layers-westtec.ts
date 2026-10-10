@@ -1,13 +1,14 @@
 // ─── WestTEC 10-Year Horizon portfolio lines ─────────────────────────────────
 // Imported by: add-all-layers.ts
 // Deps: state.js (state), constants.js (EMPTY_FC), src/colors/buckets.js (westtecColorExpr),
-//       layer-init.js (initialVisibility, registerBaseFilter)
+//       layer-init.js (initialVisibility), base-filters.js (registerBaseFilter)
 
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC } from '../constants.js';
 import { westtecColorExpr } from '../../src/colors/buckets.js';
-import { initialVisibility, registerBaseFilter } from './layer-init.js';
+import { initialVisibility } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export function addWestTEC() {
   if (!state.map || state.map.getSource("westtec-10yr")) return;

@@ -16,13 +16,13 @@
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
 //              view-state.ts (setLayerVisibility, settleExclusiveGroups, applyAllGenModes);
 //              ui-filters.ts (applyGenMode); ui/panel-mirror.ts (heatRampShown, modeOf).
-// Deps: layers/layer-init.ts (ensureLayerData), raster-probes.ts,
+// Deps: layers/layer-data.ts (ensureLayerData), raster-probes.ts,
 //       tribal-disclaimer.ts, state-bus.ts.
 
 import { state } from './state.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
-import { ensureLayerData } from './layers/layer-init.js';
+import { ensureLayerData } from './layers/layer-data.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 import { emit } from './state-bus.js';
 import type { LayerDef } from '../src/types.js';

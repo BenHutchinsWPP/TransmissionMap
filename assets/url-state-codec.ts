@@ -5,7 +5,8 @@
 // a link omits it.
 // formatUrlState() drops a field that equals its default, and view-state.ts
 // resolves a parsed link over the same defaults, so the two can't disagree.
-// Every code → value lookup is a Map, so only the codes listed resolve.
+// Every code → value lookup is a Map, so only the codes listed resolve; a
+// retired bucket code resolves through LEGACY_BUCKET_CODES.
 // The view's `where` and `style` sections travel in one compact param, `vx`
 // (encodeVx/decodeVx below): a trust boundary — every entry is validated with
 // src/registry/view-validate.ts's validateWhere() and validateStyleOverride(),
@@ -16,7 +17,9 @@
 // formatUrlState() builds the default view once, on first use, and compares
 // against it read-only.
 // Deps: fflate (deflate for vx), view-validate.ts, diag-log.ts, the registry
-// (incl. displayModes). fflate deflates synchronously, as parse/format run
+// (incl. displayModes, conditions.ts), ui/ui-legends.ts (LEGEND_FILTERS),
+// constants.ts (MW_SLIDER_MAX), src/colors/ramps.ts (year-filter bounds),
+// src/i18n (isValidLocale). fflate deflates synchronously, as parse/format run
 // synchronously on cold boot; it is in the boot bundle via pmtiles.
 // CompressionStream's deflate-raw needs Safari 16.4+.
 
@@ -52,8 +55,16 @@ interface BucketParam {
   buckets: { id: string; urlCode?: string }[];
   codeToId: Map<string, string>;
 }
+// Retired bucket codes still found in shared links, per param: code → the
+// bucket id it now reads as. Parse-only; format writes each bucket's urlCode.
+export const LEGACY_BUCKET_CODES: Record<string, Record<string, string>> = {
+  g: { N: 'planning' }, // OGF "conceptual", merged into planning (`L`)
+};
 const bucketParam = (code: string, target: BucketParam['target'], key: string, buckets: BucketParam['buckets']): BucketParam =>
-  ({ code, target, key, buckets, codeToId: new Map(buckets.filter(b => b.urlCode).map(b => [b.urlCode!, b.id])) });
+  ({ code, target, key, buckets, codeToId: new Map([
+    ...Object.entries(LEGACY_BUCKET_CODES[code] ?? {}),
+    ...buckets.filter(b => b.urlCode).map(b => [b.urlCode!, b.id] as [string, string]),
+  ]) });
 const BUCKET_PARAMS: BucketParam[] = [
   ...LEGEND_FILTERS.filter(c => c.groupCode).map(c => bucketParam(c.groupCode, 'legendFilters', c.key, c.buckets)),
   ...LAYERS.filter(e => e.filterGroupCode && e.filterBuckets)

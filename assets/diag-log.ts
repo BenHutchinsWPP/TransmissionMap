@@ -1,5 +1,5 @@
 // assets/diag-log.ts — in-memory diagnostics ring buffer for "what actually
-// failed for this user". Leaf module: no imports, so map.ts and layer-init.ts
+// failed for this user". Leaf module: no imports, so map.ts and layers/layer-data.ts
 // can call recordDiagEvent() from hot startup paths without pulling in a
 // dependency graph. recordDiagEvent must never throw — it runs inside catch
 // blocks and error listeners, where a throw would mask the original error.
@@ -31,7 +31,7 @@ export function recordDiagEvent(source: DiagSource, detail: unknown): void {
   }
   // Announced rather than exposed as a subscriber list, so this module keeps
   // its zero imports and hot startup paths can call it freely. ui/ui.ts listens
-  // to raise the File-menu badge; layer-init.ts uses the same CustomEvent idiom.
+  // to raise the File-menu badge.
   try {
     window.dispatchEvent(new CustomEvent(DIAG_EVENT));
   } catch { /* no window (unit tests) — the buffer is still recorded */ }

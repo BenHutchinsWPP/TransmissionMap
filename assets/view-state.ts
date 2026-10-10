@@ -10,7 +10,7 @@
 //                          and 'url:write' — the apply's one URL write.
 //         currentView()    the live view in the codec's shape, for the link.
 //         repaintView()    the one repaint sequence after state is written:
-//                          smoke opacity, filter:all (which carries `where`),
+//                          smoke opacity, applyAllFilters() (which carries `where`),
 //                          gen modes, then the styles and colour-bys; run by
 //                          applyView() and by the cold-boot paint
 //                          (url-state.ts's paintLinkedView(), from map.ts).
@@ -50,7 +50,8 @@
 //       terrain.js (setTerrain3d, setBuildings3d, setHillshade),
 //       weather-live.js (setWeatherVar), fema-nri.js (setNriHazard),
 //       layers/map-layers-conditions.js (applySmokeOpacity), state-bus.js,
-//       style-overrides.js (applyAllStyles — the styles and colour-bys), diag-log.js.
+//       style-overrides.js (applyAllStyles — the styles and colour-bys), diag-log.js,
+//       filters.js (applyAllFilters).
 
 import { state } from './state.js';
 import { defaultView, type UrlStateData, type CameraView } from './url-state-codec.js';
@@ -67,6 +68,7 @@ import type { Condition } from '../src/registry/condition-compile.js';
 import { emit } from './state-bus.js';
 import { applyAllStyles, type DroppedStyle } from './style-overrides.js';
 import { recordDiagEvent } from './diag-log.js';
+import { applyAllFilters } from './filters.js';
 
 // The fields a view carries; the link adds `lang` and `exp` on top.
 export type View = Omit<UrlStateData, 'lang' | 'experienceId'>;
@@ -140,11 +142,11 @@ export function seedView(data: Partial<UrlStateData>) {
 }
 
 /** Repaint the whole view from state: re-applies smoke opacity, re-filters
- *  every layer (`where` rides on 'filter:all'), re-applies gen modes, then
+ *  every layer (`where` rides on applyAllFilters()), re-applies gen modes, then
  *  paints the style overrides and colour-bys. Returns the style keys the map could not take. */
 export function repaintView(): DroppedStyle[] {
   applySmokeOpacity();
-  emit('filter:all');
+  applyAllFilters();
   applyAllGenModes();
   return applyAllStyles();
 }

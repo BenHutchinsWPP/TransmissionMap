@@ -162,7 +162,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `lineHighlightKeys: ["name"]` | Line click-highlight — set to one or more feature properties that uniquely identify a line |
 | `clickPriority: { "my-layer-circles": 500 }` | **Required for a clickable layer.** Maps each of this entry's MapLibre layer ids to its click hit-test priority — higher number tested first when overlapping features exist. `assets/popup.ts` folds every `LayerDef.clickPriority` into its query order at module load; see §10. |
 | `exclusiveGroup: "county-choropleth"` | Optional. Layers sharing a group show one at a time — switching one on switches the others off and unticks their checkboxes (`setLayerVisibility()` in `assets/visibility.ts`). Give it to any new layer that paints the same shapes as an existing one, e.g. another county-keyed choropleth on `county_boundaries`. |
-| `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-init.ts`), which also gates any layer sharing the source and retries a held layer on zoom settle. Omit for anything fetched at its default visibility. |
+| `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-data.ts`), which also gates any layer sharing the source and retries a held layer on zoom settle. Omit for anything fetched at its default visibility. |
 
 **Ramp stops** are `[value, "r,g,b"]` pairs matching the gdaldem color ramp — define them as `<X>_RAMP_STOPS` / `<X>_RAMP_MAX` in `src/colors/ramps.ts` and reference them here (see **§3R**). `minLabel`/`maxLabel` override the default "0" / `max+ unit` labels.
 
@@ -209,22 +209,22 @@ function addMyLayer() {
 
 `initialVisibility(id)` returns `"visible"` or `"none"` based on the layer's `defaultOn` and any URL hash state.
 
-`registerBaseFilter(mapLayerId, baseFilter)` connects the layer to the filter UI. Pass `null` for no additional base filter, or a MapLibre expression to always apply (e.g., only show HV lines).
+`registerBaseFilter(mapLayerId, baseFilter)` (import it from `./base-filters.js`; the other helpers come from `./layer-init.js`) connects the layer to the filter UI. Pass `null` for no additional base filter, or a MapLibre expression to always apply (e.g., only show HV lines).
 
 ---
 
-## 7. `assets/layers/layer-init.ts` — connect lazy loading and orchestration
+## 7. `assets/layers/layer-data.ts` + `add-all-layers.ts` — connect lazy loading and orchestration
 
-### For GeoJSON layers: add to `LAZY_GEOJSON`
+### For GeoJSON layers: add to `LAYER_DATA_URLS` in `assets/layers/layer-data.ts`
 
 ```ts
-const LAZY_GEOJSON = {
+export const LAYER_DATA_URLS = {
   // existing entries...
   "my-layer": DATA.my_layer,
 };
 ```
 
-This is what `ensureLayerData()` uses to fetch and populate the source on first enable. Do not add PMTiles layers here — MapLibre tiles lazily already.
+This is what `ensureLayerData()` uses to fetch and populate the source on first enable; when the features land it emits `layer:data` on the bus (`assets/state-bus.ts`). The key must be a registry id (or a `LAYER_SOURCE_ALIAS` target) and the value a `DATA` path — `layer-data.test.ts` checks both. Do not add PMTiles layers here — MapLibre tiles lazily already.
 
 ### Call from `addAllLayers()` in `assets/layers/add-all-layers.ts`
 
@@ -258,7 +258,7 @@ const RASTER_PROBES = {
 
 `pct` maps a raw value to a 0–100 percentage for arrow positioning on the legend ramp. Omit it for linear scales — the default uses `(value / max) * 100`.
 
-Anchor: `>>> ADD-LAYER: lazy-geojson`
+Anchor: `>>> ADD-LAYER: layer-data-urls`
 Anchor: `>>> ADD-LAYER: raster-probes`
 Anchor: `>>> ADD-LAYER: add-all-layers`
 
@@ -286,9 +286,7 @@ Anchor: `>>> ADD-LAYER: search-sources`
 
 ## 9. Optional: filter value maps and legends
 
-If your layer has a filter chip panel, add its value→label map to `assets/filters.ts` and wire the layer's `filterType` in the registry entry (§5). For a color-ramp legend, set `ramp` on the registry entry rather than registering it separately.
-
-If your filter needs to be re-applied when the user resets layers (the Reset button), add it to `assets/filters.ts` following the bus pattern: subscribe `on('filter:mytype', applyMyFilter)` and add `applyMyFilter()` inside the `on('filter:all', ...)` handler. Then emit `'filter:mytype'` and `'url:write'` from `assets/ui/ui-filters.ts` wherever the user changes the filter value. See `assets/state-bus.ts` for the full event list.
+If your layer has a filter chip panel, give its buckets `values` in `src/colors/buckets.ts` and add a `FACETS` record in `src/colors/facets.ts`; `assets/filters.ts` derives its applier, which the legend chips, Reset and every view apply run. A facet that shares map layers with another, or needs more than one field, gets a hand applier in `FACET_APPLIERS` instead. See [adding-a-filter.md](adding-a-filter.md). For a color-ramp legend, set `ramp` on the registry entry rather than registering it separately.
 
 Anchor: `>>> ADD-LAYER: legend-filters`
 
@@ -417,7 +415,7 @@ Update `docs/data-sources.md`:
 [ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds…)
 [ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
 [ ] assets/layers/map-layers-*.ts         — addMyLayer() builder
-[ ] assets/layers/layer-init.ts           — LAZY_GEOJSON entry (GeoJSON only)
+[ ] assets/layers/layer-data.ts           — LAYER_DATA_URLS entry (GeoJSON only)
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — addMyLayer() call in addAllLayers()
 [ ] assets/ui/ui-search.ts               — SEARCH_SOURCES entry (sourceId, label, fields)

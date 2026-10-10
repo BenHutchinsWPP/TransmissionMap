@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { voltageColorExpr } from './voltage.js';
-import { bucketColorExpr, subRadius } from './buckets.js';
+import {
+  bucketColorExpr, subRadius,
+  NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, NWS_GROUP_BUCKETS,
+} from './buckets.js';
 import { genIconSize } from './fuel.js';
 import type { BucketDef } from '../types.js';
 
@@ -61,6 +64,46 @@ describe('bucketColorExpr', () => {
   it('ends with the default color', () => {
     const result = bucketColorExpr('field', buckets, '#ffffff') as unknown[];
     expect(result[result.length - 1]).toBe('#ffffff');
+  });
+});
+
+// The layer builders paint these three palettes with bucketColorExpr; each
+// literal below is the hand-written expression the builder carried before.
+describe('bucketColorExpr layer palettes', () => {
+  it('natgas line colour (map-layers-hifld.ts)', () => {
+    expect(bucketColorExpr("pipe_type", NATGAS_PIPE_TYPE_BUCKETS, "#f97316")).toEqual([
+      "match", ["get", "pipe_type"],
+      "Interstate",  "#f97316",
+      "Intrastate",  "#fbbf24",
+      "HGL",         "#38bdf8",
+      "Gathering",   "#a78bfa",
+      "#f97316"
+    ]);
+  });
+
+  it('retail territory colour (map-layers-hifld.ts)', () => {
+    expect(bucketColorExpr("type", RETAIL_TYPE_BUCKETS, "#94a3b8")).toEqual([
+      "match", ["get", "type"],
+      "INVESTOR OWNED",                                          "#3b82f6",
+      "COOPERATIVE",                                             "#22c55e",
+      ["MUNICIPAL", "MUNICIPAL MKTG AUTHORITY"],                 "#f97316",
+      ["STATE", "FEDERAL", "POLITICAL SUBDIVISION"],             "#a855f7",
+      "#94a3b8"
+    ]);
+  });
+
+  it('NWS alert group colour (map-layers-conditions.ts)', () => {
+    expect(bucketColorExpr("_group", NWS_GROUP_BUCKETS, "#9ca3af")).toEqual([
+      "match", ["get", "_group"],
+      "convective", "#a855f7",
+      "flood",      "#22c55e",
+      "fire",       "#ef4444",
+      "heat",       "#f97316",
+      "wind",       "#eab308",
+      "winter",     "#38bdf8",
+      "tropical",   "#14b8a6",
+      /* other */   "#9ca3af",
+    ]);
   });
 });
 

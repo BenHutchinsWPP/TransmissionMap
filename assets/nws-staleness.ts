@@ -8,7 +8,7 @@
 //       staleness gate covers them).
 //       Also drives nws-zone-join.ts's joined zone/county
 //       feature-state, since that module only knows the polygon layer's
-//       cadence indirectly (via its own tm:layerdata refetch, see its
+//       cadence indirectly (via its own 'layer:data' refetch, see its
 //       header): every polygon prune tick here also calls
 //       pruneExpiredZoneAlerts() so joined zones/counties expire in step.
 //       The kill-switch (feed older than maxAgeMs → modal + layers hidden)

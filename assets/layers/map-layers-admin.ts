@@ -12,8 +12,8 @@
 // is past what a single fetch should carry, and the county tiles are shared
 // join infrastructure owned by layer-init.ts.
 // Deps: layer-init.ts (addPolygonLayer, pmtilesUrl, initialVisibility,
-//       registerBaseFilter, ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER),
-//       state, constants (DATA, EMPTY_FC).
+//       ensureCountyBoundaries), base-filters.ts (registerBaseFilter),
+//       state, constants (DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER).
 //
 // addUsCounties() does NOT add its own source — it mounts on the shared
 // county_boundaries PMTiles (owned by layer-init.ts, also used by the ODIN
@@ -24,11 +24,11 @@
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
-import { DATA, EMPTY_FC } from '../constants.js';
+import { DATA, EMPTY_FC, COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import {
-  addPolygonLayer, pmtilesUrl, initialVisibility, registerBaseFilter,
-  ensureCountyBoundaries, COUNTY_SRC, COUNTY_SRC_LAYER,
+  addPolygonLayer, pmtilesUrl, initialVisibility, ensureCountyBoundaries,
 } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 // Seven hues far enough apart in both hue and lightness to stay distinguishable
 // once a fill drops to a quarter opacity, which is where a pale wash starts

@@ -425,7 +425,7 @@ function mountLayer(filename: string, geojson: GeoJSON.FeatureCollection, { colo
   if (!skipZoom) zoomToUserLayer(layer);
 }
 
-export function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollection, opts: AddLayerOpts = {}) {
+function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollection, opts: AddLayerOpts = {}) {
   mountLayer(filename, geojson, opts);
   commit();
 }

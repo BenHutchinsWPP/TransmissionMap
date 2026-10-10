@@ -4,12 +4,15 @@
 // hatched utility service areas, then counties), addDcMoratoriumPoints() with the
 // infrastructure markers. Colours from DCM_CLASSES (src/colors/buckets.ts); the
 // utility hatch images are generated here from them (map.addImage); popups in
-// popup-format.ts.
+// popup-format.ts. The plain data-centre twin source refills on the
+// 'layer:data' bus event for osm-datacenters.
 
 import type { ExpressionSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, registerBaseFilter, addRasterLayer } from './layer-init.js';
+import { initialVisibility, addRasterLayer } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
+import { on } from '../state-bus.js';
 import { HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import { DCM_CLASSES } from '../../src/colors/buckets.js';
 import { onMapTap } from '../map-input.js';
@@ -100,8 +103,8 @@ export function addOsmDataCenters() {
     paint: DC_POINT_PAINT,
   } as unknown as LayerSpecification);
   registerBaseFilter("osm-dc-points", null);
-  window.addEventListener("tm:layerdata", (e) => {
-    if ((e as CustomEvent).detail?.registryId !== "osm-datacenters" || !state.map) return;
+  on('layer:data', ({ id }) => {
+    if (id !== "osm-datacenters" || !state.map) return;
     const src = state.map.getSource("osm-datacenters-plain") as import("maplibre-gl").GeoJSONSource | undefined;
     if (src) src.setData({ type: "FeatureCollection", features: state.sourcesData["osm-datacenters"] || [] } as GeoJSON.FeatureCollection);
   });
@@ -183,7 +186,7 @@ function dcmHatch(hex: string): { width: number; height: number; data: Uint8Arra
 }
 
 // The kind filters set in addLayer are structural: the status legend filter
-// (applyDcMoratoriumFilter) is combined with them, never replaces them.
+// (FACET_APPLIERS.dcm in filters.ts) is combined with them, never replaces them.
 function registerDcmBaseFilters(ids: string[]) {
   for (const id of ids) registerBaseFilter(id, state.map!.getFilter(id) ?? null);
 }

@@ -1,5 +1,5 @@
 // ─── Raster LUT hover probes (wind/solar/geo/pop-density) ────────────────────
-// Imported by: layer-init.ts (ensureRasterLut in addAllLayers),
+// Imported by: layers/add-all-layers.ts (ensureRasterLut in addAllLayers),
 //              visibility.ts (setLayerVisibility, updateRasterArrow)
 // Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
 // Exports the RasterMeta type (state.rasterLut[id].meta); state.ts imports it type-only.

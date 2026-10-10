@@ -69,6 +69,7 @@ def tile_sources(doc: dict) -> set[str]:
 
 def expected_layers(text: str) -> set[str]:
     """Pull every "data/layers/..." path out of constants.ts DATA{}."""
+    # assets/constants.test.ts runs this regex over DATA to keep the two in step.
     return set(re.findall(r'"(data/layers/[^"]+)"', text))
 
 

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fmtAge, fmtAgeShort, downFor, feedIssue, initLiveStaleness } from './live-staleness.js';
 import { state } from './state.js';
-import { emit } from './state-bus.js';
+import { emit, on } from './state-bus.js';
 
 vi.mock('./visibility.js', () => ({
   setLayerVisibility: vi.fn((id: string, on: boolean) => { state.layerVisibility[id] = on; }),
@@ -79,7 +79,7 @@ function setupTest(): Setup {
 }
 
 function fireLayerData(sourceKey: string) {
-  window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId: sourceKey } }));
+  emit('layer:data', { id: sourceKey });
 }
 
 beforeEach(() => {
@@ -270,7 +270,7 @@ describe('staleness gate on a switch-on (Undo, a link)', () => {
 });
 
 describe('refetchLive (via the refresh-interval timer)', () => {
-  it('successful fetch with a newer generated_utc calls setData, updates state, and dispatches tm:layerdata', async () => {
+  it('successful fetch with a newer generated_utc calls setData, updates state, and emits layer:data', async () => {
     const t = setupTest();
     const initial = new Date(Date.now() - 30 * 60_000).toISOString();
     state.sourcesData[t.sourceKey] = [
@@ -286,7 +286,7 @@ describe('refetchLive (via the refresh-interval timer)', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const dispatchSpy = vi.fn();
-    window.addEventListener('tm:layerdata', dispatchSpy);
+    on('layer:data', ({ id }) => { if (id === t.sourceKey) dispatchSpy(id); });
 
     t.init();
     await vi.advanceTimersByTimeAsync(t.refreshMs);
@@ -294,9 +294,7 @@ describe('refetchLive (via the refresh-interval timer)', () => {
     expect(t.src.setData).toHaveBeenCalledTimes(1);
     expect(state.sourcesData[t.sourceKey]).toEqual(payload.features);
     expect(state.liveFcMeta[t.sourceKey]?.generated_utc).toBe(newer);
-    expect(dispatchSpy).toHaveBeenCalled();
-
-    window.removeEventListener('tm:layerdata', dispatchSpy);
+    expect(dispatchSpy).toHaveBeenCalledWith(t.sourceKey);
   });
 
   it('monotonic dedupe: a non-newer generated_utc does not call setData', async () => {

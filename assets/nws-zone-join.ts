@@ -30,19 +30,19 @@
 //       never disappears); features with no matching alert are unpainted.
 //       `nws_multi` feature-state flags >1 matching alert and thickens the
 //       outline.
-// Deps: state-bus (on 'layer:visibility'), state (map, layerVisibility), constants (DATA), layers/layer-init.ts
+// Deps: state-bus (on 'layer:visibility', on 'layer:data'), state (map, layerVisibility), constants (DATA), layers/layer-init.ts
 //       (ensureCountyBoundaries, pmtilesUrl,
 //       initialVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
 //       polygons with; reused here, not duplicated).
 // Wired from ui/ui.ts init() via initNwsZoneJoin(), which listens for the
-//       `tm:layerdata` event (registryId "nws-alerts") dispatched by
-//       nws-staleness.ts's refresh factory and does its OWN fetch of
+//       'layer:data' bus event (id "nws-alerts") emitted by the
+//       layers/layer-data.ts loader and nws-staleness.ts's refresh factory, and does its OWN fetch of
 //       DATA.nws_alerts to read the top-level `zone_alerts` sidecar (that
 //       field is stripped off before the polygon features are cached into
 //       state.sourcesData, so it isn't available from that path). This is a
 //       small redundant fetch on the same ~5 min cadence; the shared
-//       live-staleness.ts/layer-init.ts fetch paths are left untouched.
+//       live-staleness.ts/layers/layer-data.ts fetch paths are left untouched.
 //       Zone visibility follows the nws-alerts layer through the
 //       'layer:visibility' bus event visibility.ts's setLayerVisibility() emits.
 // Staleness wiring (in nws-staleness.ts): the kill-switch watches
@@ -51,7 +51,7 @@
 //       on live-staleness.ts's factory). Expiry pruning reuses the polygon prune tick: this
 //       module exports pruneExpiredZoneAlerts(), called from nws-staleness.ts's
 //       pruneExpiredAlerts() (which the shared factory invokes on every prune
-//       point — post-refetch, initial tm:layerdata load, and the 60s tick),
+//       point — post-refetch, initial 'layer:data' load, and the 60s tick),
 //       so joined zones/counties expire on the same cadence as the polygons.
 
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
@@ -335,7 +335,7 @@ let inflight = false;
 // Exported for nws-staleness.ts: the kill-switch modal's "re-enable" button
 // must restore the zone/county join that clearZoneAlerts() wiped when the
 // modal opened (the shared factory only restores the polygon layers, and its
-// monotonic generated_utc dedup means no tm:layerdata will re-fire for the
+// monotonic generated_utc dedup means no 'layer:data' will re-fire for the
 // same stale snapshot).
 export async function refetchZoneAlerts(): Promise<void> {
   if (inflight) return;
@@ -355,9 +355,8 @@ export async function refetchZoneAlerts(): Promise<void> {
 export function initNwsZoneJoin() {
   if (!state.map) return;
 
-  window.addEventListener("tm:layerdata", (e) => {
-    const registryId = (e as CustomEvent<{ registryId: string }>).detail?.registryId;
-    if (registryId !== "nws-alerts") return;
+  on('layer:data', ({ id }) => {
+    if (id !== "nws-alerts") return;
     void refetchZoneAlerts();
   });
 

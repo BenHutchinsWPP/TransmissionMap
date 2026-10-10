@@ -28,12 +28,11 @@ vi.mock('./terrain.js', async () => {
 import { state } from './state.js';
 import { endExperienceLink, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { addAllLayers } from './layers/add-all-layers.js';
-import { whereOwnership } from './filters.js';
+import { whereOwnership, applyAllFilters } from './filters.js';
 import { LAYERS } from '../src/registry/index.js';
 import { EXPERIENCES, type MapExperience } from '../src/registry/experiences.js';
 import { experienceUrlState, applyExperience } from './experiences.js';
 import { applyView, seedView, currentView } from './view-state.js';
-import { emit } from './state-bus.js';
 import { formatUrlState, defaultView } from './url-state-codec.js';
 import { readUrlState, paintLinkedView, writeUrlState } from './url-state.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
@@ -142,15 +141,15 @@ describe('seedView', () => {
   });
 });
 
-// repaintView() leaves `where` to filter:all, which it emits first.
-describe('filter:all', () => {
+// repaintView() leaves `where` to applyAllFilters(), which it runs first.
+describe('applyAllFilters', () => {
   it('re-filters every where-owned map layer', () => {
     const layers = recordingMap();
     const hit = new Set<string>();
     const map = state.map as unknown as { setFilter: (id: string, f: unknown) => void };
     const setFilter = map.setFilter;
     map.setFilter = (id, f) => { hit.add(id); setFilter(id, f); };
-    try { emit('filter:all'); } finally { map.setFilter = setFilter; }
+    try { applyAllFilters(); } finally { map.setFilter = setFilter; }
     expect(WHERE_ML.filter(id => layers.has(id) && !hit.has(id))).toEqual([]);
   });
 });

@@ -13,6 +13,14 @@ export function bucketColorExpr(field: string, buckets: BucketDef[], defaultColo
   return expr as unknown as ExpressionSpecification;
 }
 
+// ─── Bucket id → feature values ───────────────────────────────────────────────
+// One entry per bucket that declares `values`, in bucket order (an empty array
+// included). A bucket with no `values` gets no entry: buildValueFilterExpr's
+// "other" catch-all then matches every value no entry lists, null included.
+export function bucketValueMap(buckets: BucketDef[]): Record<string, string[]> {
+  return Object.fromEntries(buckets.flatMap(b => b.values ? [[b.id, b.values]] : []));
+}
+
 // ─── Line / circle geometry helpers ──────────────────────────────────────────
 export const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"],
   4, 1.0,
@@ -72,7 +80,7 @@ export function subRadius(kvField: string): ExpressionSpecification {
 }
 
 // ─── Voltage filter buckets ───────────────────────────────────────────────────
-export const KV_BUCKETS = [
+export const KV_BUCKETS: BucketDef[] = [
   { id: "550+",    urlCode: "H", label: "≥ 550",   color: "#f97316" },
   { id: "500-549", urlCode: "F", label: "500–549", color: "#ef4444" },
   { id: "300-499", urlCode: "G", label: "300–499", color: "#22c55e" },
@@ -91,7 +99,7 @@ export const EIA_FUEL_BUCKETS = FUEL_LEGEND.map(f => ({ id: f.eiaBucket, label: 
 
 // ─── PAD-US land management ───────────────────────────────────────────────────
 export const PADUS_CLASS_DEFAULT = "#64748b";
-export const PADUS_CLASS_BUCKETS = [
+export const PADUS_CLASS_BUCKETS: BucketDef[] = [
   { id: "blm",     urlCode: "B", label: "BLM Public Lands",        color: "#ca8a04",
     values: ["National Public Lands"] },
   { id: "forest",  urlCode: "F", label: "National Forest",         color: "#15803d",
@@ -127,12 +135,11 @@ export const PADUS_CLASS_BUCKETS = [
   { id: "other",   urlCode: "O", label: "Other / unknown",         color: PADUS_CLASS_DEFAULT,
     values: [] },
 ];
-export const PADUS_CLASS_MAP = Object.fromEntries(
-  PADUS_CLASS_BUCKETS.map(b => [b.id, b.values]));
+export const PADUS_CLASS_MAP = bucketValueMap(PADUS_CLASS_BUCKETS);
 
 // ─── Tribal lands ─────────────────────────────────────────────────────────────
 export const TRIBAL_DEFAULT_COLOR = "#64748b";
-export const TRIBAL_BUCKETS = [
+export const TRIBAL_BUCKETS: BucketDef[] = [
   { id: "reservation", urlCode: "R", label: "Reservation / Trust Land",   color: "#7c3aed",
     values: ["American Indian Reservation", "Off-Reservation Trust Land",
              "Reservation / Off-Reservation Trust Land"] },
@@ -149,10 +156,10 @@ export const TRIBAL_BUCKETS = [
   { id: "statereserv", urlCode: "J", label: "State Reservation",          color: "#65a30d",
     values: ["State American Indian Reservation"] },
 ];
-export const TRIBAL_MAP = Object.fromEntries(TRIBAL_BUCKETS.map(b => [b.id, b.values]));
+export const TRIBAL_MAP = bucketValueMap(TRIBAL_BUCKETS);
 
 // ─── Critical Habitat ─────────────────────────────────────────────────────────
-export const CRITHAB_BUCKETS = [
+export const CRITHAB_BUCKETS: BucketDef[] = [
   { id: "endangered",          urlCode: "E", label: "Endangered",          color: "#dc2626",
     values: ["Endangered"] },
   { id: "threatened",          urlCode: "T", label: "Threatened",          color: "#f97316",
@@ -162,43 +169,51 @@ export const CRITHAB_BUCKETS = [
   { id: "prop-threatened",     urlCode: "Q", label: "Proposed Threatened", color: "#fcd34d",
     values: ["Proposed Threatened"] },
 ];
-export const CRITHAB_MAP = Object.fromEntries(CRITHAB_BUCKETS.map(b => [b.id, b.values]));
+export const CRITHAB_MAP = bucketValueMap(CRITHAB_BUCKETS);
 
 // ─── Natural gas pipeline types ───────────────────────────────────────────────
-export const NATGAS_PIPE_TYPE_BUCKETS = [
-  { id: "interstate", urlCode: "I", label: "Interstate",  color: "#f97316" },
-  { id: "intrastate", urlCode: "N", label: "Intrastate",  color: "#fbbf24" },
-  { id: "hgl",        urlCode: "H", label: "HGL / NGL",   color: "#38bdf8" },
-  { id: "gathering",  urlCode: "G", label: "Gathering",   color: "#a78bfa" },
+export const NATGAS_PIPE_TYPE_BUCKETS: BucketDef[] = [
+  { id: "interstate", urlCode: "I", label: "Interstate",  color: "#f97316", values: ["Interstate"] },
+  { id: "intrastate", urlCode: "N", label: "Intrastate",  color: "#fbbf24", values: ["Intrastate"] },
+  { id: "hgl",        urlCode: "H", label: "HGL / NGL",   color: "#38bdf8", values: ["HGL"] },
+  { id: "gathering",  urlCode: "G", label: "Gathering",   color: "#a78bfa", values: ["Gathering"] },
 ];
+export const NATGAS_PIPE_TYPE_MAP = bucketValueMap(NATGAS_PIPE_TYPE_BUCKETS);
 
-export const NATGAS_FAC_TYPE_BUCKETS = [
-  { id: "lng_terminal",  urlCode: "L", label: "LNG Terminal",               color: "#06b6d4", icon: "natgas-lng_terminal"  },
-  { id: "underground",   urlCode: "U", label: "Underground Storage",         color: "#8b5cf6", icon: "natgas-underground"   },
-  { id: "spr",           urlCode: "S", label: "Strategic Petroleum Reserve", color: "#ef4444", icon: "natgas-spr"           },
-  { id: "trading_hub",   urlCode: "T", label: "Trading Hub",                 color: "#fbbf24", icon: "natgas-trading_hub"   },
-  { id: "processing",    urlCode: "P", label: "Processing Plant",            color: "#f97316", icon: "natgas-processing"    },
-  { id: "border_cross",  urlCode: "B", label: "Border Crossing",             color: "#ec4899", icon: "natgas-border_cross"  },
-  { id: "peak_shaving",  urlCode: "K", label: "Peak Shaving",                color: "#84cc16", icon: "natgas-peak_shaving"  },
-  { id: "lng_storage",   urlCode: "N", label: "Above-Ground LNG",            color: "#0ea5e9", icon: "natgas-lng_storage"   },
-  { id: "pol_terminal",  urlCode: "O", label: "Petroleum Terminal",          color: "#94a3b8", icon: "natgas-pol_terminal"  },
+export const NATGAS_FAC_TYPE_BUCKETS: BucketDef[] = [
+  { id: "lng_terminal",  urlCode: "L", label: "LNG Terminal",               color: "#06b6d4", icon: "natgas-lng_terminal", values: ["lng_terminal"] },
+  { id: "underground",   urlCode: "U", label: "Underground Storage",         color: "#8b5cf6", icon: "natgas-underground", values: ["underground"] },
+  { id: "spr",           urlCode: "S", label: "Strategic Petroleum Reserve", color: "#ef4444", icon: "natgas-spr", values: ["spr"] },
+  { id: "trading_hub",   urlCode: "T", label: "Trading Hub",                 color: "#fbbf24", icon: "natgas-trading_hub", values: ["trading_hub"] },
+  { id: "processing",    urlCode: "P", label: "Processing Plant",            color: "#f97316", icon: "natgas-processing", values: ["processing"] },
+  { id: "border_cross",  urlCode: "B", label: "Border Crossing",             color: "#ec4899", icon: "natgas-border_cross", values: ["border_cross"] },
+  { id: "peak_shaving",  urlCode: "K", label: "Peak Shaving",                color: "#84cc16", icon: "natgas-peak_shaving", values: ["peak_shaving"] },
+  { id: "lng_storage",   urlCode: "N", label: "Above-Ground LNG",            color: "#0ea5e9", icon: "natgas-lng_storage", values: ["lng_storage"] },
+  { id: "pol_terminal",  urlCode: "O", label: "Petroleum Terminal",          color: "#94a3b8", icon: "natgas-pol_terminal", values: ["pol_terminal"] },
 ];
+export const NATGAS_FAC_TYPE_MAP = bucketValueMap(NATGAS_FAC_TYPE_BUCKETS);
 
-export const PIPELINE_TYPE_BUCKETS = [
-  { id: "pig_launcher", urlCode: "P", label: "Pig launcher",    color: "#64748b", icon: "pipeline-pig_launcher" },
-  { id: "compressor",   urlCode: "C", label: "Compressor/Pump", color: "#f97316", icon: "pipeline-compressor"   },
-  { id: "delivery",     urlCode: "D", label: "Delivery/Meter",  color: "#3b82f6", icon: "pipeline-delivery"     },
-  { id: "interconnect", urlCode: "I", label: "Interconnect",    color: "#06b6d4", icon: "pipeline-interconnect" },
-  { id: "end",          urlCode: "E", label: "End point",       color: "#ef4444", icon: "pipeline-end"          },
-  { id: "other",        urlCode: "O", label: "Other",           color: "#d1d5db", icon: "pipeline-other"        },
+export const PIPELINE_TYPE_BUCKETS: BucketDef[] = [
+  { id: "pig_launcher", urlCode: "P", label: "Pig launcher",    color: "#64748b", icon: "pipeline-pig_launcher",
+    values: ["pig_launcher"] },
+  { id: "compressor",   urlCode: "C", label: "Compressor/Pump", color: "#f97316", icon: "pipeline-compressor",
+    values: ["substation", "pump_station"] },
+  { id: "delivery",     urlCode: "D", label: "Delivery/Meter",  color: "#3b82f6", icon: "pipeline-delivery",
+    values: ["delivery", "receipt", "reciept", "measurement", "meter"] },
+  { id: "interconnect", urlCode: "I", label: "Interconnect",    color: "#06b6d4", icon: "pipeline-interconnect",
+    values: ["interconnect"] },
+  { id: "end",          urlCode: "E", label: "End point",       color: "#ef4444", icon: "pipeline-end",
+    values: ["end"] },
+  { id: "other",        urlCode: "O", label: "Other",           color: "#d1d5db", icon: "pipeline-other" },
 ];
+export const PIPELINE_TYPE_MAP = bucketValueMap(PIPELINE_TYPE_BUCKETS);
 
 // ─── OSM pipeline substance → generator-fuel type ─────────────────────────────
 // Only generator fuels survive the data strip (scripts/enrich_osm_tags.py);
 // non-fuel pipelines are gone. Buckets group by generator fuel type. "other" is
 // the catch-all for untagged pipelines. Keep values in sync with
 // _FUEL_SUBSTANCES in scripts/enrich_osm_tags.py.
-export const SUBSTANCE_BUCKETS = [
+export const SUBSTANCE_BUCKETS: BucketDef[] = [
   { id: "gas",      urlCode: "g", label: "Natural gas",     color: "#f97316",
     values: ["gas", "natural_gas", "cng", "methane", "lng", "LNG",
              "landfill_gas", "coke_gas", "syngas", "fcc_gas"] },
@@ -215,8 +230,7 @@ export const SUBSTANCE_BUCKETS = [
     values: ["coal"] },
   { id: "other",    urlCode: "u", label: "Unknown",          color: "#9ca3af" },
 ];
-export const SUBSTANCE_MAP = Object.fromEntries(
-  SUBSTANCE_BUCKETS.filter(b => "values" in b).map(b => [b.id, (b as { values: string[] }).values]));
+export const SUBSTANCE_MAP = bucketValueMap(SUBSTANCE_BUCKETS);
 
 // Pipeline line color by generator-fuel type. Derived from SUBSTANCE_BUCKETS so
 // the palette and the legend never drift. Untagged → "Unknown" grey.
@@ -225,22 +239,21 @@ export const PIPELINE_LINE_COLOR = bucketColorExpr("substance", SUBSTANCE_BUCKET
 // ─── EIA generator sector (Form 860 "Sector Name") ────────────────────────────
 // Filter-only chips (legend renders swatch: "none"); colors are unused but the
 // BucketDef type requires them. CHP and non-CHP variants collapse into one
-// chip per ownership sector via SECTOR_MAP.
+// chip per ownership sector via each bucket's `values`.
 export const SECTOR_BUCKETS: BucketDef[] = [
-  { id: "utility",    label: "Electric Utility", color: "#9ca3af", urlCode: "u" },
-  { id: "ipp",        label: "IPP",              color: "#9ca3af", urlCode: "i" },
-  { id: "commercial", label: "Commercial",       color: "#9ca3af", urlCode: "c" },
-  { id: "industrial", label: "Industrial",       color: "#9ca3af", urlCode: "n" },
+  { id: "utility",    label: "Electric Utility", color: "#9ca3af", urlCode: "u",
+    values: ["Electric Utility"] },
+  { id: "ipp",        label: "IPP",              color: "#9ca3af", urlCode: "i",
+    values: ["IPP Non-CHP", "IPP CHP"] },
+  { id: "commercial", label: "Commercial",       color: "#9ca3af", urlCode: "c",
+    values: ["Commercial Non-CHP", "Commercial CHP"] },
+  { id: "industrial", label: "Industrial",       color: "#9ca3af", urlCode: "n",
+    values: ["Industrial Non-CHP", "Industrial CHP"] },
 ];
-export const SECTOR_MAP: Record<string, string[]> = {
-  utility:    ["Electric Utility"],
-  ipp:        ["IPP Non-CHP", "IPP CHP"],
-  commercial: ["Commercial Non-CHP", "Commercial CHP"],
-  industrial: ["Industrial Non-CHP", "Industrial CHP"],
-};
+export const SECTOR_MAP = bucketValueMap(SECTOR_BUCKETS);
 
 // ─── NERC regions ─────────────────────────────────────────────────────────────
-export const NERC_BUCKETS = [
+export const NERC_BUCKETS: BucketDef[] = [
   { id: "WECC",  urlCode: "W", label: "WECC — Western",        color: "#3b82f6", values: ["WECC"]  },
   { id: "SERC",  urlCode: "S", label: "SERC — Southeast",       color: "#22c55e", values: ["SERC"]  },
   { id: "RFC",   urlCode: "R", label: "RFC — Mid-Atl./Midwest", color: "#f97316", values: ["RFC"]   },
@@ -250,25 +263,26 @@ export const NERC_BUCKETS = [
   { id: "TRE",   urlCode: "T", label: "TRE — Texas (ERCOT)",    color: "#ef4444", values: ["TRE"]   },
   { id: "FRCC",  urlCode: "F", label: "FRCC — Florida",         color: "#ec4899", values: ["FRCC"]  },
 ];
-export const NERC_MAP = Object.fromEntries(NERC_BUCKETS.map(b => [b.id, b.values]));
+export const NERC_MAP = bucketValueMap(NERC_BUCKETS);
 
 // ─── NWS active weather alert groups ─────────────────────────────────────────
 // Mirrors NWS_GROUP_COLOR in assets/layers/map-layers-conditions.ts — keep colors
 // in sync (that expression paints the map; this bucket set drives the legend
 // filter chips over the same `_group` field).
 export const NWS_GROUP_BUCKETS: BucketDef[] = [
-  { id: "convective", label: "Convective",     color: "#a855f7", urlCode: "c" },
-  { id: "flood",       label: "Flood",          color: "#22c55e", urlCode: "l" },
-  { id: "fire",        label: "Fire weather",   color: "#ef4444", urlCode: "f" },
-  { id: "heat",        label: "Heat",           color: "#f97316", urlCode: "h" },
-  { id: "wind",        label: "Wind/Dust",      color: "#eab308", urlCode: "w" },
-  { id: "winter",      label: "Winter",         color: "#38bdf8", urlCode: "i" },
-  { id: "tropical",    label: "Tropical",       color: "#14b8a6", urlCode: "t" },
+  { id: "convective", label: "Convective",     color: "#a855f7", urlCode: "c", values: ["convective"] },
+  { id: "flood",       label: "Flood",          color: "#22c55e", urlCode: "l", values: ["flood"] },
+  { id: "fire",        label: "Fire weather",   color: "#ef4444", urlCode: "f", values: ["fire"] },
+  { id: "heat",        label: "Heat",           color: "#f97316", urlCode: "h", values: ["heat"] },
+  { id: "wind",        label: "Wind/Dust",      color: "#eab308", urlCode: "w", values: ["wind"] },
+  { id: "winter",      label: "Winter",         color: "#38bdf8", urlCode: "i", values: ["winter"] },
+  { id: "tropical",    label: "Tropical",       color: "#14b8a6", urlCode: "t", values: ["tropical"] },
   { id: "other",       label: "Other",          color: "#9ca3af", urlCode: "o" },
 ];
+export const NWS_GROUP_MAP = bucketValueMap(NWS_GROUP_BUCKETS);
 
 // ─── Retail service territory types ──────────────────────────────────────────
-export const RETAIL_TYPE_BUCKETS = [
+export const RETAIL_TYPE_BUCKETS: BucketDef[] = [
   { id: "iou",     urlCode: "I", label: "Investor Owned",    color: "#3b82f6",
     values: ["INVESTOR OWNED"] },
   { id: "coop",    urlCode: "C", label: "Cooperative",        color: "#22c55e",
@@ -280,14 +294,13 @@ export const RETAIL_TYPE_BUCKETS = [
   { id: "other",   urlCode: "O", label: "Other / Unknown",    color: "#94a3b8",
     values: [] },
 ];
-export const RETAIL_TYPE_MAP = Object.fromEntries(
-  RETAIL_TYPE_BUCKETS.filter(b => b.values.length).map(b => [b.id, b.values]));
+export const RETAIL_TYPE_MAP = bucketValueMap(RETAIL_TYPE_BUCKETS.filter(b => b.values?.length));
 
 // ─── OGF planned transmission status ─────────────────────────────────────────
 // Lifecycle hue ramp: cool = early, warm = late, green = in service. The layer
 // reads as "planned" via its white casing, so hue is free to encode status
 // (mirrors ourgridfuture.org's own status palette semantics).
-export const OGF_STATUS_BUCKETS = [
+export const OGF_STATUS_BUCKETS: BucketDef[] = [
   { id: "planning",     urlCode: "L", label: "Conceptual / planning",     color: "#60a5fa" },
   { id: "engineering",  urlCode: "E", label: "Engineering & routing",     color: "#22d3ee" },
   { id: "permitting",   urlCode: "P", label: "Permitting",                color: "#eab308" },
@@ -314,39 +327,37 @@ export const OGF_STATUS_MAP = {
 // since ISO_RTO records market membership); elsewhere it carries ISO_RTO.
 // Combo values ("MISO, SPP") are listed under each member so checking either
 // region shows the row; the first bucket listed wins the colour.
-export const OGF_REGION_BUCKETS = [
-  { id: "wecc",      urlCode: "W", label: "WECC (West)",         color: "#c026d3" },
-  { id: "ercot",     urlCode: "E", label: "ERCOT",               color: "#ea580c" },
-  { id: "spp",       urlCode: "S", label: "SPP",                 color: "#ca8a04" },
-  { id: "miso",      urlCode: "M", label: "MISO",                color: "#7c3aed" },
-  { id: "pjm",       urlCode: "P", label: "PJM",                 color: "#0d9488" },
-  { id: "nyiso",     urlCode: "N", label: "NYISO",               color: "#2563eb" },
-  { id: "isone",     urlCode: "I", label: "ISO-NE",              color: "#0ea5e9" },
-  { id: "southeast", urlCode: "U", label: "Southeast (non-RTO)", color: "#65a30d" },
+export const OGF_REGION_BUCKETS: BucketDef[] = [
+  { id: "wecc",      urlCode: "W", label: "WECC (West)",         color: "#c026d3",
+    values: ["WECC"] },
+  { id: "ercot",     urlCode: "E", label: "ERCOT",               color: "#ea580c",
+    values: ["ERCOT", "ERCOT, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, ERCOT", "MISO, SPP, ERCOT"] },
+  { id: "spp",       urlCode: "S", label: "SPP",                 color: "#ca8a04",
+    values: ["SPP", "MISO, SPP", "SPP, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, SPP, ERCOT"] },
+  { id: "miso",      urlCode: "M", label: "MISO",                color: "#7c3aed",
+    values: ["MISO", "MISO, SPP", "SPP, MISO", "MISO, PJM", "PJM, MISO", "ERCOT, MISO", "MISO, ERCOT", "MISO, SPP, ERCOT"] },
+  { id: "pjm",       urlCode: "P", label: "PJM",                 color: "#0d9488",
+    values: ["PJM", "MISO, PJM", "PJM, MISO", "NYISO, PJM"] },
+  { id: "nyiso",     urlCode: "N", label: "NYISO",               color: "#2563eb",
+    values: ["NYISO", "NYISO, PJM"] },
+  { id: "isone",     urlCode: "I", label: "ISO-NE",              color: "#0ea5e9",
+    values: ["ISO-NE"] },
+  { id: "southeast", urlCode: "U", label: "Southeast (non-RTO)", color: "#65a30d",
+    values: ["None (Southeast)"] },
   { id: "other",     urlCode: "O", label: "Other / none",        color: "#94a3b8" },
 ];
-export const OGF_REGION_MAP = {
-  wecc:      ["WECC"],
-  ercot:     ["ERCOT", "ERCOT, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, ERCOT", "MISO, SPP, ERCOT"],
-  spp:       ["SPP", "MISO, SPP", "SPP, MISO", "ERCOT, SPP", "SPP, ERCOT", "MISO, SPP, ERCOT"],
-  miso:      ["MISO", "MISO, SPP", "SPP, MISO", "MISO, PJM", "PJM, MISO", "ERCOT, MISO", "MISO, ERCOT", "MISO, SPP, ERCOT"],
-  pjm:       ["PJM", "MISO, PJM", "PJM, MISO", "NYISO, PJM"],
-  nyiso:     ["NYISO", "NYISO, PJM"],
-  isone:     ["ISO-NE"],
-  southeast: ["None (Southeast)"],
-};
+export const OGF_REGION_MAP = bucketValueMap(OGF_REGION_BUCKETS);
 
 // ─── OGF type of work (derived Work field) ──────────────────────────────────
 // Solid = a new circuit; dashed = rebuild / reconductor / upgrade of an
 // existing line. Applies in every color-by mode.
-export const OGF_WORK_BUCKETS = [
-  { id: "new",      urlCode: "N", label: "New line",                                 color: "#64748b" },
-  { id: "existing", urlCode: "E", label: "Existing line (rebuild, reconductor, upgrade)", color: "#64748b" },
+export const OGF_WORK_BUCKETS: BucketDef[] = [
+  { id: "new",      urlCode: "N", label: "New line",                                 color: "#64748b",
+    values: ["new"] },
+  { id: "existing", urlCode: "E", label: "Existing line (rebuild, reconductor, upgrade)", color: "#64748b",
+    values: ["existing"] },
 ];
-export const OGF_WORK_MAP = {
-  new:      ["new"],
-  existing: ["existing"],
-};
+export const OGF_WORK_MAP = bucketValueMap(OGF_WORK_BUCKETS);
 export const OGF_DASH_EXPR = [
   "match", ["get", "Work"], "existing", ["literal", [2, 1.5]], ["literal", [1, 0]],
 ] as unknown as ExpressionSpecification;
@@ -396,27 +407,19 @@ export function ogfColorExpr(mode: OgfColorMode): ExpressionSpecification {
 // ─── WestTEC 10-Year Plan color-by ───────────────────────────────────────────
 // Drives westtec-10yr line color; selected via state.westtecColorBy. Every
 // feature has a real value for both fields — no "other"/catch-all bucket.
-export const WESTTEC_SCENARIO_BUCKETS = [
-  { id: "base_case",  urlCode: "B", label: "Planned Projects",        color: "#1e40af" },
-  { id: "sra",        urlCode: "R", label: "Reliability-Driven (SRA)", color: "#4ade80" },
-  { id: "ida",        urlCode: "D", label: "Deliverability (IDA)",     color: "#38bdf8" },
-  { id: "congestion", urlCode: "C", label: "Congestion",               color: "#dc2626" },
+export const WESTTEC_SCENARIO_BUCKETS: BucketDef[] = [
+  { id: "base_case",  urlCode: "B", label: "Planned Projects",        color: "#1e40af", values: ["Base Case"] },
+  { id: "sra",        urlCode: "R", label: "Reliability-Driven (SRA)", color: "#4ade80", values: ["SRA"] },
+  { id: "ida",        urlCode: "D", label: "Deliverability (IDA)",     color: "#38bdf8", values: ["IDA"] },
+  { id: "congestion", urlCode: "C", label: "Congestion",               color: "#dc2626", values: ["Congestion"] },
 ];
-export const WESTTEC_SCENARIO_MAP = {
-  base_case:  ["Base Case"],
-  sra:        ["SRA"],
-  ida:        ["IDA"],
-  congestion: ["Congestion"],
-};
+export const WESTTEC_SCENARIO_MAP = bucketValueMap(WESTTEC_SCENARIO_BUCKETS);
 
-export const WESTTEC_DATASET_BUCKETS = [
-  { id: "planned",    urlCode: "P", label: "Planned Projects",    color: "#2563eb" },
-  { id: "identified", urlCode: "I", label: "Identified Upgrades", color: "#16a34a" },
+export const WESTTEC_DATASET_BUCKETS: BucketDef[] = [
+  { id: "planned",    urlCode: "P", label: "Planned Projects",    color: "#2563eb", values: ["planned"] },
+  { id: "identified", urlCode: "I", label: "Identified Upgrades", color: "#16a34a", values: ["identified"] },
 ];
-export const WESTTEC_DATASET_MAP = {
-  planned:    ["planned"],
-  identified: ["identified"],
-};
+export const WESTTEC_DATASET_MAP = bucketValueMap(WESTTEC_DATASET_BUCKETS);
 
 export type WesttecColorMode = "scenario" | "dataset";
 const WESTTEC_COLOR_CFG: Record<WesttecColorMode, {

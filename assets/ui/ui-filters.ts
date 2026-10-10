@@ -11,7 +11,7 @@
 import { state } from '../state.js';
 import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster, updateLegends } from './ui-legends.js';
 import { emit } from '../state-bus.js';
-import { MW_SLIDER_MAX, mwPosToMw, mwToPos } from '../filters.js';
+import { MW_SLIDER_MAX, mwPosToMw, mwToPos, applyGeneratorFilters, applyLayerFilter } from '../filters.js';
 import { setWeatherVar } from '../weather-live.js';
 import { setNriHazard } from '../fema-nri.js';
 import { refreshWeatherRampBlock } from './ui-legends.js';
@@ -29,7 +29,7 @@ export function wireLayerFilterPanels() {
     const active = state.layerFilters[cb.dataset.filterLayer!];
     if (!active) return;
     cb.checked ? active.add(cb.dataset.bucketId!) : active.delete(cb.dataset.bucketId!);
-    emit('filter:layer', { id: cb.dataset.filterLayer! });
+    applyLayerFilter(cb.dataset.filterLayer!);
     emit('url:write');
   });
 
@@ -125,7 +125,7 @@ function onMwSliderInput(e: Event) {
   state.mwFilter.max = mwPosToMw(maxPos);
 
   updateMwSliderUI();
-  emit('filter:generators');
+  applyGeneratorFilters();
 }
 
 function onMwTextChange(e: Event) {
@@ -158,7 +158,7 @@ function onMwTextChange(e: Event) {
   state.mwFilter.max = mwPosToMw(maxPos);
 
   updateMwSliderUI();
-  emit('filter:generators');
+  applyGeneratorFilters();
   emit('url:write');
 }
 
@@ -264,14 +264,14 @@ function onYearSliderInput(e: Event) {
   state.yearFilter.enabled = true;
   stopYearPlayback();
   updateYearSliderUI();
-  emit('filter:generators');
+  applyGeneratorFilters();
 }
 
 function clearYearFilter() {
   stopYearPlayback();
   state.yearFilter.enabled = false;
   updateYearSliderUI();
-  emit('filter:generators');
+  applyGeneratorFilters();
   emit('url:write');
 }
 
@@ -292,13 +292,13 @@ function toggleYearPlayback() {
   pb.active = true;
   updateYearPlayBtn();
   updateYearSliderUI();
-  emit('filter:generators');
+  applyGeneratorFilters();
   emit('url:write');
   pb.interval = setInterval(() => {
     let y = state.yearFilter.year + 1;
     if (y > state.yearFilter.max) y = state.yearFilter.min;
     state.yearFilter.year = y;
     updateYearSliderUI();
-    emit('filter:generators');
+    applyGeneratorFilters();
   }, pb.speedMs);
 }

@@ -1,11 +1,12 @@
 // MapLibre builder — BTS NARN rail network lines (PMTiles vector).
 // Role: addRailroads() adds the rail source + single line layer.
-// Deps: ../state, ../constants (DATA, SOURCE_ATTRIB), ./layer-init (pmtilesUrl, initialVisibility,
-//       registerBaseFilter). Called from ./add-all-layers.
+// Deps: ../state, ../constants (DATA, SOURCE_ATTRIB), ./layer-init (pmtilesUrl, initialVisibility),
+//       ./base-filters (registerBaseFilter). Called from ./add-all-layers.
 import type { LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
 import { DATA, SOURCE_ATTRIB } from '../constants.js';
-import { pmtilesUrl, initialVisibility, registerBaseFilter } from './layer-init.js';
+import { pmtilesUrl, initialVisibility } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export function addRailroads() {
   if (!state.map || state.map.getSource("railroads")) return;

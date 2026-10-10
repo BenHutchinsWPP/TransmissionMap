@@ -2,10 +2,15 @@
 // ensureLayerData's fromZoom gate and its zoom-settle retry, against the real
 // registry (hifld-natgas-points has fromZoom 3; hifld-petroleum-facilities
 // shares its source) and a fake map whose 'zoomend' listener the test fires.
+// Also pins the 'layer:data' emission and the explicit loader table to the
+// registry and DATA.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { gzipSync, strToU8 } from 'fflate';
 import { state } from '../state.js';
+import { on } from '../state-bus.js';
 import { DATA } from '../constants.js';
-import { ensureLayerData } from './layer-init.js';
+import { ensureLayerData, LAYER_DATA_URLS, LAYER_SOURCE_ALIAS } from './layer-data.js';
+import { layerById } from '../../src/registry/index.js';
 
 const fetchMock = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }));
 vi.stubGlobal('fetch', fetchMock);
@@ -96,5 +101,29 @@ describe('ensureLayerData fromZoom gate', () => {
     await flush();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(DATA.hifld_natgas_points, undefined);
+  });
+});
+
+describe('ensureLayerData layer:data emission', () => {
+  it('emits layer:data with the alias-resolved source id once the fetch lands', async () => {
+    fakeMap(4);
+    const emitted: string[] = [];
+    on('layer:data', ({ id }) => emitted.push(id));
+    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: null }] };
+    fetchMock.mockResolvedValueOnce(new Response(gzipSync(strToU8(JSON.stringify(fc)))) as never);
+    await ensureLayerData('hifld-petroleum-facilities');
+    expect(emitted).toEqual(['hifld-natgas-points']);
+    expect(state.sourcesData['hifld-natgas-points']).toHaveLength(1);
+  });
+});
+
+describe('LAYER_DATA_URLS', () => {
+  it('keys every row by a registry id or an alias target, and points it at a DATA path', () => {
+    const aliasTargets = new Set(Object.values(LAYER_SOURCE_ALIAS));
+    const dataPaths = new Set<string>(Object.values(DATA));
+    for (const [id, url] of Object.entries(LAYER_DATA_URLS)) {
+      expect(layerById(id) !== undefined || aliasTargets.has(id), `${id} is neither a registry id nor an alias target`).toBe(true);
+      expect(dataPaths.has(url), `${id} → ${url} is not a DATA path`).toBe(true);
+    }
   });
 });

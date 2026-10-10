@@ -6,8 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { state } from './state.js';
 import { emit } from './state-bus.js';
-import { WEATHER_WASH_OPACITY, WEATHER_FADE_MS } from './constants.js';
-import { initWeatherLive, paintImage, crossfadeOpacities } from './weather-live.js';
+import { WEATHER_WASH_OPACITY } from './constants.js';
+import { initWeatherLive, paintImage, crossfadeOpacities, WEATHER_FADE_MS } from './weather-live.js';
 
 describe('weather crossfade', () => {
   const opacity: Record<string, number> = { 'weather-live': WEATHER_WASH_OPACITY, 'weather-live-b': 0 };

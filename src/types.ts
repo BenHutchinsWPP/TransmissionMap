@@ -1,5 +1,6 @@
 // Shared registry and view types: LayerDef and the shapes it carries (ramps,
-// buckets, scopes, downloads), FuelEntry, LayerSourceDef and StyleOverride.
+// buckets, scopes, downloads), FuelEntry, LayerSourceDef, StyleOverride and
+// BucketedField (the legend facet record).
 // Types with a single owning module live beside it instead: AppState in
 // assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
 // assets/raster-probes.ts. Imports nothing.
@@ -35,6 +36,36 @@ export interface BucketDef {
   default?: boolean;
   values?: string[];
   icon?: string;
+}
+
+// A legend facet: one categorical field the user filters with checkbox chips,
+// carried in a shared link under `groupCode` (one `urlCode` per bucket). Pure
+// data, declared in src/colors/facets.ts; the applier that turns the active
+// set into a map filter lives in assets/filters.ts.
+export interface BucketedField {
+  key: string;          // state.legendFilters key
+  groupCode: string;    // URL param char
+  // Feature property the buckets match. Absent when each registry layer names
+  // its own (kv, fuel: LayerDef.filterField) or the match is an expression
+  // (underground).
+  field?: string;
+  buckets: BucketDef[];
+  // The bucket set the "all" checkbox and defaults count, when it differs from
+  // the displayed `buckets` (kv: same ids, plain labels).
+  syncBuckets?: BucketDef[];
+  // Map layers the filter writes; `layerRef` names a registry layer whose
+  // mapLayerIds to use instead. Both absent when the registry layers are picked
+  // by filterType/group in the applier.
+  mapLayerIds?: string[];
+  layerRef?: string;
+  defaultActive?: string[];   // bucket ids on in the default view (all when absent)
+  title: string;              // fallback when titleKey has no translation
+  titleKey: string;
+  swatch: "color" | "line" | "icon" | "none";
+  // DOM ids default to `${key}AllCb` and `${key}Legend`; the item list is
+  // always `${legendId}Items`.
+  masterId?: string;
+  legendId?: string;
 }
 
 // What the region selector scopes: which layers the panel lists. Map data is

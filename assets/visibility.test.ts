@@ -4,7 +4,7 @@ import type { LayerDef } from '../src/types.js';
 
 // ─── Mocks (must come before importing the module under test) ─────────────────
 
-vi.mock('./layers/layer-init.js', () => ({ ensureLayerData: vi.fn() }));
+vi.mock('./layers/layer-data.js', () => ({ ensureLayerData: vi.fn() }));
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
   ensureRasterLut: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('../src/registry/index.js', () => ({
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import { state } from './state.js';
-import { ensureLayerData } from './layers/layer-init.js';
+import { ensureLayerData } from './layers/layer-data.js';
 import { ensureRasterLut, updateRasterArrow, RASTER_PROBES } from './raster-probes.js';
 import {
   setLayerVisibility, exclusiveRivals, applyGenMode, applyAllGenModes,

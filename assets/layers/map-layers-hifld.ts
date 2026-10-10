@@ -1,15 +1,16 @@
 // ─── HIFLD + region/land layers ──────────────────────────────────────────────
-// Imported by: layer-init.ts
+// Imported by: add-all-layers.ts
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
-import { bucketColorExpr, ogfColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
+import { bucketColorExpr, ogfColorExpr, OGF_DASH_EXPR, TRIBAL_BUCKETS, TRIBAL_DEFAULT_COLOR, NERC_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, RETAIL_TYPE_BUCKETS, HIFLD_UNDERGROUND_EXPR, HIFLD_DC_EXPR } from '../../src/colors/buckets.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
-  pmtilesUrl, initialVisibility, registerBaseFilter,
+  pmtilesUrl, initialVisibility,
 } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export function addHifldTransmission() {
   addTransmissionLines({
@@ -61,14 +62,7 @@ export function addHifldNatgasLines() {
     attribution: SOURCE_ATTRIB["hifld-natgas-lines"],
   });
 
-  const NATGAS_LINE_COLOR = [
-    "match", ["get", "pipe_type"],
-    "Interstate",  "#f97316",
-    "Intrastate",  "#fbbf24",
-    "HGL",         "#38bdf8",
-    "Gathering",   "#a78bfa",
-    "#f97316"
-  ];
+  const NATGAS_LINE_COLOR = bucketColorExpr("pipe_type", NATGAS_PIPE_TYPE_BUCKETS, "#f97316");
   const lineWidth = ["interpolate", ["linear"], ["zoom"],
     3, 0.8, 6, 1.5, 9, 2.2, 12, 3.5];
   const dashArray = [4, 3];
@@ -260,14 +254,7 @@ export function addOGFPlannedTransmission() {
 }
 
 export function addRetailTerritories() {
-  const RETAIL_COLOR = [
-    "match", ["get", "type"],
-    "INVESTOR OWNED",                                          "#3b82f6",
-    "COOPERATIVE",                                             "#22c55e",
-    ["MUNICIPAL", "MUNICIPAL MKTG AUTHORITY"],                 "#f97316",
-    ["STATE", "FEDERAL", "POLITICAL SUBDIVISION"],             "#a855f7",
-    "#94a3b8"
-  ] as unknown as ExpressionSpecification;
+  const RETAIL_COLOR = bucketColorExpr("type", RETAIL_TYPE_BUCKETS, "#94a3b8");
   addPolygonLayer({
     sourceId: "retail-territories",
     source: { type: "vector", url: pmtilesUrl(DATA.retail_territories) },

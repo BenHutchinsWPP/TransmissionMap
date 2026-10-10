@@ -20,7 +20,8 @@ export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper boun
 // they must NOT use DATA_ORIGIN. In dev both are "" — every file, live or
 // static, is read from the local data/layers/ (run the fetch script first).
 // Paths stay double-quoted data/layers/… string literals after the origin:
-// scripts/validate_build.py scrapes them to decide what to check and publish.
+// scripts/validate_build.py scrapes them to decide what to check and publish,
+// and assets/constants.test.ts fails when a DATA path is not one.
 const RAW_REPO = "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/";
 const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
 const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
@@ -144,25 +145,9 @@ export function weatherLiveUrl(file: string): string {
   return LIVE_ORIGIN + `data/layers/weather_live/${file}`;
 }
 
-// Corner coordinates of the weather image (must match WEST/EAST/SOUTH/NORTH in
-// scripts/fetch_weather_live.py). Only the initial placement — every refresh re-sets
-// them from the meta JSON's bbox, so a grid change in the script self-heals.
-// MapLibre's image-source `coordinates` is a 4-tuple: NW, NE, SE, SW.
-export type ImageCorners = [[number, number], [number, number], [number, number], [number, number]];
-export const WEATHER_IMAGE_COORDS: ImageCorners = [
-  [-180, 85], [180, 85], [180, -85], [-180, -85],
-];
 // Shared by the weather A/B layer pair (map-layers-conditions.ts) and the
 // crossfade in weather-live.ts — the fade's target must equal the wash opacity.
 export const WEATHER_WASH_OPACITY = 0.65;
-export const WEATHER_FADE_MS = 300;
-// 1×1 transparent PNG. The image source is created with this so a visitor who
-// never enables the layer never downloads the real (~130 KB) mosaic; weather-live.ts
-// swaps in the real image on first enable.
-// Carries a full 5-byte scanline (filter byte + RGBA), which is what the
-// 1×1 RGBA header declares — strict image decoders reject a short one.
-export const TRANSPARENT_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=";
 
 // ─── Per-source attribution shorthand ─────────────────────────────────────────
 // Short credit strings shown in the MapLibre attribution control. Keyed by the
@@ -319,7 +304,7 @@ export const ATMOSPHERE_BLEND = 0.8;
 // Pitch at which the halo has faded out completely.
 export const ATMOSPHERE_FADE_PITCH = 55;
 
-// Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layer-init.ts)
+// Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layers/*.ts)
 // and the search-highlight sources (highlights.ts).
 export const EMPTY_FC = { type: "FeatureCollection" as const, features: [] as GeoJSON.Feature[] };
 
@@ -329,7 +314,8 @@ export const DEFAULT_CENTER: [number, number] = [-95.7, 37.1];
 export const DEFAULT_ZOOM   = 4;
 
 // US county boundaries source, shared by the feature-state joins (ODIN, NRI, NWS).
-// Kept here, in a module that imports nothing, so nws-zone-join.ts can read it at
-// load time whatever order the layer-init ↔ filters ↔ nws-zone-join cycle loads in.
+// Kept here, in a module that imports nothing, so every county-joined module reads
+// it straight from the source of truth (odin-outages, fema-nri, nws-zone-join, the
+// admin and conditions builders, layer-init's ensureCountyBoundaries).
 export const COUNTY_SRC = "county_boundaries";
 export const COUNTY_SRC_LAYER = "county_boundaries";   // tippecanoe names the layer after the manifest id

@@ -55,9 +55,9 @@ Every param is a **single char** (a few are two). They live in one flat
 `URLSearchParams` namespace, so **a new code must not collide with an existing
 one** — `params.get("l")` can only return one thing.
 
-This bit us once: a PAD-US legend filter was given `groupCode: "l"`, the same
-char as the layer-visibility param. `get("l")` returned the layer string, the
-filter never saved or restored, silently. No error — just broken state.
+A collision fails silently: were a legend filter given `groupCode: "l"`, the
+same char as the layer-visibility param, `get("l")` would return the layer
+string and the filter would never save or restore, with no error raised.
 
 ### Currently taken
 
@@ -82,7 +82,7 @@ filter never saved or restored, silently. No error — just broken state.
 | `vx` | View `where` + `style` sections, one compact encoded value (see below) | codec, `encodeVx`/`decodeVx` |
 | `exp` | Active Map Experience slug (`columbia-hydro`, …) | codec (parse) + `url-state.ts` (pristine check); catalogue in `registry/experiences.ts` |
 | `s`  | generator status filter | `filterGroupCode` in `registry/generators.ts` |
-| `v f p h j t n r c e g u b m k d i o q x z a` | legend-filter `groupCode`s | `LEGEND_FILTERS` in `ui-legends.ts` |
+| `v f p h j t n r c e g u b m k d i o q x z a` | legend-filter `groupCode`s | `FACETS` in `src/colors/facets.ts` |
 
 Per-layer bucket filters use `filterGroupCode` (currently only `s`), read as a
 top-level param the same way — so they share the same key namespace as
@@ -103,6 +103,14 @@ Within a single param the **values** are also coded chars (e.g. basemap
 `l/d/v/t/a`, gen mode `i/h/b`, each bucket's `urlCode`). Those share no
 namespace with the param keys, so a bucket `urlCode: "l"` is fine — only the
 top-level param keys must be globally unique.
+
+A retired bucket `urlCode` stays readable through `LEGACY_BUCKET_CODES` in
+`assets/url-state-codec.ts` (parse only — links are always written with the
+current codes), and is not reused within its param:
+
+| Param | Retired code | Reads as |
+|---|---|---|
+| `g` | `N` (conceptual) | `planning` (`L`) |
 
 ---
 

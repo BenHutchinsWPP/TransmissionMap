@@ -1,4 +1,7 @@
 // ─── Legends + legend-filter registry ────────────────────────────────────────
+// LEGEND_FILTERS pairs each facet record (src/colors/facets.ts: group code,
+// buckets, defaults, DOM ids, title, swatch) with its applier from
+// ../filters.js's FACET_APPLIERS. The URL codec and ui-filters.ts read it.
 // Live-feed age/degraded-feed status text (downFor, feedIssue, fmtAgeShort)
 // comes from ../live-staleness.js, which owns those helpers so they can be
 // shared with other live-feed displays.
@@ -12,26 +15,13 @@
 // updateLegends() also dims the OGF/WestTEC legend that is not the active
 // colour key (state.ogfColorBy / state.westtecColorBy), via LEGEND_VISIBILITY's
 // `colorKey`.
+// The live-feed age chips refresh on the 'layer:data' bus event (state-bus.ts).
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
-import type { RampDef } from '../../src/types.js';
-import { FUEL_LEGEND } from '../../src/colors/fuel.js';
-import {
-  KV_BUCKETS, VOLTAGE_LEGEND, PIPELINE_TYPE_BUCKETS, CRITHAB_BUCKETS, PADUS_CLASS_BUCKETS,
-  TRIBAL_BUCKETS, NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS,
-  NERC_BUCKETS, RETAIL_TYPE_BUCKETS, OGF_STATUS_BUCKETS, SUBSTANCE_BUCKETS, DCM_CLASSES,
-  OGF_REGION_BUCKETS, OGF_WORK_BUCKETS, SECTOR_BUCKETS, LINE_PLACEMENT_BUCKETS,
-  NWS_GROUP_BUCKETS, WESTTEC_SCENARIO_BUCKETS, WESTTEC_DATASET_BUCKETS,
-} from '../../src/colors/buckets.js';
-import {
-  applyVoltageFilter, applyGeneratorFilters, applyPipelineTypeFilter,
-  applyCritHabFilter, applyPadusClassFilter, applyTribalClassFilter,
-  applyNatgasLineFilter, applyNatgasPtsFilter, applyNercFilter,
-  applyRetailTypeFilter, applyOGFFilters, applySubstanceFilter, applyMinesFilter, applyDcMoratoriumFilter,
-  applyNwsGroupFilter, applyWestTECFilters,
-} from '../filters.js';
-import { MINES_COMMODITY_BUCKETS, MINES_STATUS_BUCKETS } from '../../src/colors/minerals.js';
+import type { RampDef, BucketDef, BucketedField } from '../../src/types.js';
+import { FACETS } from '../../src/colors/facets.js';
+import { FACET_APPLIERS } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
 import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
 import { ICON_SVG } from '../icons.js';
@@ -39,80 +29,34 @@ import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
 
-// >>> ADD-LAYER: legend-filters — see docs/adding-a-layer.md §opt
-export const LEGEND_FILTERS = [
-  { key: "kv", groupCode: "v", buckets: VOLTAGE_LEGEND, syncBuckets: KV_BUCKETS,
-    masterId: "kvAllCb", legendId: "voltageLegend", itemsId: "voltageLegendItems",
-    title: "Voltage (kV)", titleKey: "legend.voltage", swatch: "color", apply: applyVoltageFilter },
-  { key: "underground", groupCode: "o", buckets: LINE_PLACEMENT_BUCKETS,
-    masterId: "linePlacementAllCb", legendId: "linePlacementLegend", itemsId: "linePlacementLegendItems",
-    title: "Line placement", titleKey: "legend.linePlacement", swatch: "line", apply: applyVoltageFilter },
-  { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
-    masterId: "fuelAllCb", legendId: "fuelLegend", itemsId: "fuelLegendItems",
-    title: "Fuel Type", titleKey: "legend.fuel", swatch: "icon", apply: applyGeneratorFilters },
-  { key: "sector", groupCode: "i", buckets: SECTOR_BUCKETS,
-    masterId: "sectorAllCb", legendId: "sectorLegend", itemsId: "sectorLegendItems",
-    title: "EIA Plants — sector", titleKey: "legend.sector", swatch: "none", apply: applyGeneratorFilters },
-  { key: "pipeline", groupCode: "p", buckets: PIPELINE_TYPE_BUCKETS,
-    masterId: "pipelineAllCb", legendId: "pipelineLegend", itemsId: "pipelineLegendItems",
-    title: "Pipeline Points", titleKey: "legend.pipelinePoints", swatch: "icon", apply: applyPipelineTypeFilter },
-  { key: "crithab", groupCode: "h", buckets: CRITHAB_BUCKETS,
-    masterId: "crithabAllCb", legendId: "crithabLegend", itemsId: "crithabLegendItems",
-    title: "Critical Habitat — ESA status", titleKey: "legend.crithab", swatch: "color", apply: applyCritHabFilter },
-  { key: "padus", groupCode: "j", buckets: PADUS_CLASS_BUCKETS,
-    masterId: "padusAllCb", legendId: "padusLegend", itemsId: "padusLegendItems",
-    title: "PAD-US — land type", titleKey: "legend.padus", swatch: "color", apply: applyPadusClassFilter },
-  { key: "tribal", groupCode: "t", buckets: TRIBAL_BUCKETS,
-    masterId: "tribalAllCb", legendId: "tribalLegend", itemsId: "tribalLegendItems",
-    title: "Tribal (Census)", titleKey: "layer.tribalCensus", swatch: "color", apply: applyTribalClassFilter },
-  { key: "natgasLine", groupCode: "n", buckets: NATGAS_PIPE_TYPE_BUCKETS,
-    masterId: "natgasLineAllCb", legendId: "natgasLineLegend", itemsId: "natgasLineLegendItems",
-    title: "Pipeline type", titleKey: "legend.pipelineType", swatch: "color", apply: applyNatgasLineFilter },
-  { key: "natgasPts", groupCode: "r", buckets: NATGAS_FAC_TYPE_BUCKETS,
-    masterId: "natgasPtsAllCb", legendId: "natgasPtsLegend", itemsId: "natgasPtsLegendItems",
-    title: "Facility type", titleKey: "legend.facilityType", swatch: "icon", apply: applyNatgasPtsFilter },
-  { key: "substance", groupCode: "u", buckets: SUBSTANCE_BUCKETS,
-    masterId: "substanceAllCb", legendId: "substanceLegend", itemsId: "substanceLegendItems",
-    title: "Pipeline fuel", titleKey: "legend.pipelineFuel", swatch: "color",
-    defaultActive: ["gas", "oil", "products", "hydrogen", "coal"], apply: applySubstanceFilter },
-  { key: "nerc", groupCode: "c", buckets: NERC_BUCKETS,
-    masterId: "nercAllCb", legendId: "nercLegend", itemsId: "nercLegendItems",
-    title: "NERC Region", titleKey: "popup.nercRegion", swatch: "color", apply: applyNercFilter },
-  { key: "retail", groupCode: "e", buckets: RETAIL_TYPE_BUCKETS,
-    masterId: "retailAllCb", legendId: "retailLegend", itemsId: "retailLegendItems",
-    title: "Utility type", titleKey: "legend.utilityType", swatch: "color", apply: applyRetailTypeFilter },
-  { key: "dcm", groupCode: "a", buckets: DCM_CLASSES,
-    masterId: "dcmAllCb", legendId: "dcMoratoriumLegend", itemsId: "dcMoratoriumLegendItems",
-    title: "Data Center Moratoriums", titleKey: "layer.dcMoratoriums", swatch: "color", apply: applyDcMoratoriumFilter },
-  { key: "ogfRegion", groupCode: "b", buckets: OGF_REGION_BUCKETS,
-    masterId: "ogfRegionAllCb", legendId: "ogfRegionLegend", itemsId: "ogfRegionLegendItems",
-    title: "Region", titleKey: "popup.region", swatch: "color", apply: applyOGFFilters },
-  { key: "ogfStatus", groupCode: "g", buckets: OGF_STATUS_BUCKETS,
-    masterId: "ogfStatusAllCb", legendId: "ogfStatusLegend", itemsId: "ogfStatusLegendItems",
-    title: "Project status", titleKey: "legend.status", swatch: "color", apply: applyOGFFilters },
-  { key: "ogfWork", groupCode: "m", buckets: OGF_WORK_BUCKETS,
-    masterId: "ogfWorkAllCb", legendId: "ogfWorkLegend", itemsId: "ogfWorkLegendItems",
-    title: "Type of work", titleKey: "legend.typeOfWork", swatch: "line", apply: applyOGFFilters },
-  { key: "mines", groupCode: "k", buckets: MINES_COMMODITY_BUCKETS,
-    masterId: "minesAllCb", legendId: "minesLegend", itemsId: "minesLegendItems",
-    title: "Mines — commodity", titleKey: "legend.minesCommodity", swatch: "icon", apply: applyMinesFilter },
-  { key: "minesStatus", groupCode: "d", buckets: MINES_STATUS_BUCKETS,
-    masterId: "minesStatusAllCb", legendId: "minesStatusLegend", itemsId: "minesStatusLegendItems",
-    title: "Mines — status", titleKey: "legend.minesStatus", swatch: "none", defaultActive: ["active"], apply: applyMinesFilter },
-  { key: "nwsGroup", groupCode: "q", buckets: NWS_GROUP_BUCKETS,
-    masterId: "nwsGroupAllCb", legendId: "nwsGroupLegend", itemsId: "nwsGroupLegendItems",
-    title: "Weather Alerts", titleKey: "legend.weatherAlerts", swatch: "color", apply: applyNwsGroupFilter },
-  { key: "westtecScenario", groupCode: "x", buckets: WESTTEC_SCENARIO_BUCKETS,
-    masterId: "westtecScenarioAllCb", legendId: "westtecScenarioLegend", itemsId: "westtecScenarioLegendItems",
-    title: "Scenario", titleKey: "legend.scenario", swatch: "color", apply: applyWestTECFilters },
-  { key: "westtecDataset", groupCode: "z", buckets: WESTTEC_DATASET_BUCKETS,
-    masterId: "westtecDatasetAllCb", legendId: "westtecDatasetLegend", itemsId: "westtecDatasetLegendItems",
-    title: "Project Type", titleKey: "legend.projectType", swatch: "color", apply: applyWestTECFilters },
-];
+export interface LegendFilter {
+  key: string;
+  groupCode: string;
+  buckets: BucketDef[];
+  syncBuckets?: BucketDef[];
+  masterId: string;
+  legendId: string;
+  itemsId: string;
+  title: string;
+  titleKey: string;
+  swatch: BucketedField["swatch"];
+  defaultActive?: string[];
+  apply: () => void;
+}
+
+export const LEGEND_FILTERS: LegendFilter[] = FACETS.map(f => {
+  const legendId = f.legendId ?? `${f.key}Legend`;
+  return {
+    key: f.key, groupCode: f.groupCode, buckets: f.buckets,
+    ...(f.syncBuckets && { syncBuckets: f.syncBuckets }),
+    masterId: f.masterId ?? `${f.key}AllCb`, legendId, itemsId: `${legendId}Items`,
+    title: f.title, titleKey: f.titleKey, swatch: f.swatch,
+    ...(f.defaultActive && { defaultActive: f.defaultActive }),
+    apply: FACET_APPLIERS[f.key],
+  };
+});
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
-
-type LegendFilter = (typeof LEGEND_FILTERS)[number];
 
 export function legendAllIds(cfg: LegendFilter) {
   return (cfg.syncBuckets ?? cfg.buckets).map(b => b.id);
@@ -312,16 +256,15 @@ function renderLiveAge() {
 // Register live-data listener and refresh interval once at module load.
 // Hoisted outside buildLegends() to prevent stacking multiple listeners/intervals
 // when buildLegends() is called multiple times (init + reset).
-window.addEventListener("tm:layerdata", (e) => {
-  const { registryId } = (e as CustomEvent<{ registryId: string }>).detail;
-  if (registryId === "wildfire-live") {
+on('layer:data', ({ id }) => {
+  if (id === "wildfire-live") {
     const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
     const fcMeta = state.liveFcMeta["wildfire-live"];
     liveGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
     liveFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
     liveFeedLastOk = fcMeta?.feed_last_ok;
     renderLiveAge();
-  } else if (registryId === "nws-alerts") {
+  } else if (id === "nws-alerts") {
     const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
     const fcMeta = state.liveFcMeta["nws-alerts"];
     nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;

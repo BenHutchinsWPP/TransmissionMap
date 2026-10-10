@@ -2,10 +2,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { state as StateSingleton } from './state.js';
 
-vi.mock('./layers/layer-init.js', () => ({
-  COUNTY_SRC: 'county_boundaries',
-  COUNTY_SRC_LAYER: 'county_boundaries',
-}));
 // The gate reaches visibility.js -> url-state.js -> url-state-codec.js, which
 // reads LEGEND_FILTERS at module load; mock both ends so the chain stays out.
 // The double keeps setLayerVisibility()'s contract: state plus panel checkbox.

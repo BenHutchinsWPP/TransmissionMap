@@ -11,12 +11,14 @@
 //
 // Source data: data/layers/wecc_paths.geojson.gz + wecc_path_lines.geojson.gz
 //   (maintained by hand).
-// Imported by: add-all-layers.ts. Lazy-loaded via layer-init.ts LAZY_GEOJSON.
+// Imported by: add-all-layers.ts. Lazy-loaded via layer-data.ts LAYER_DATA_URLS.
 
 import type { FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, registerBaseFilter, ensureLayerData } from './layer-init.js';
+import { initialVisibility } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
+import { ensureLayerData } from './layer-data.js';
 import { onMapTap } from '../map-input.js';
 
 const SWATCH = "#eab308";

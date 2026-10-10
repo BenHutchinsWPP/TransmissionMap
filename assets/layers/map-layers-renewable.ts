@@ -3,7 +3,8 @@
 import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
-import { initialVisibility, registerBaseFilter, addPolygonLayer, addRasterLayer } from './layer-init.js';
+import { initialVisibility, addPolygonLayer, addRasterLayer } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export const addWindResource = () => addRasterLayer("nlr-wind-100m", DATA.nlr_wind_100m,
   '<a href="https://www.nrel.gov/">NREL WIND Toolkit</a>');

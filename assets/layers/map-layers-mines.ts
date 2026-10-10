@@ -7,7 +7,8 @@ import type { LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { minesIconExpr } from '../../src/colors/minerals.js';
-import { initialVisibility, registerBaseFilter } from './layer-init.js';
+import { initialVisibility } from './layer-init.js';
+import { registerBaseFilter } from './base-filters.js';
 
 export function addMines() {
   if (!state.map || state.map.getSource("mines")) return;

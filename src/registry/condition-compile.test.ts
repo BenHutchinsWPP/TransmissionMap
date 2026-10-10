@@ -9,20 +9,21 @@ import {
   type Condition,
 } from './condition-compile.js';
 import { FIELD_SCHEMA } from './field-schema.js';
-// ui-legends.ts sits in an import cycle with url-state-codec.ts, and the codec
-// reads LEGEND_FILTERS at module scope. Pulling the codec in first lets
-// ui-legends finish evaluating before that loop runs.
-import '../../assets/url-state-codec.js';
 import {
-  buildValueFilterExpr, compileBucketExpr,
-  LAYER_FILTER_VALUE_MAPS, BUCKET_FILTER_DATASETS, OSM_FUEL_MAP,
+  buildValueFilterExpr, compileBucketExpr, facetValueMap,
+  BUCKET_FILTER_DATASETS,
 } from '../../assets/filters.js';
+import { OSM_FUEL_MAP } from '../colors/fuel.js';
 import {
   NATGAS_PIPE_TYPE_BUCKETS, NATGAS_FAC_TYPE_BUCKETS, PIPELINE_TYPE_BUCKETS,
-  SUBSTANCE_BUCKETS, SUBSTANCE_MAP, NERC_BUCKETS, NERC_MAP,
-  RETAIL_TYPE_BUCKETS, RETAIL_TYPE_MAP, SECTOR_BUCKETS, SECTOR_MAP,
+  SUBSTANCE_BUCKETS, NERC_BUCKETS,
+  RETAIL_TYPE_BUCKETS, SECTOR_BUCKETS, SECTOR_MAP,
   OSM_FUEL_BUCKETS,
 } from '../colors/buckets.js';
+import { FACETS } from '../colors/facets.js';
+
+// The value map the facet's legend applier filters with.
+const facetMap = (key: string) => facetValueMap(FACETS.find(f => f.key === key)!);
 
 describe('validateConditions', () => {
   it('accepts a condition drawn from the schema', () => {
@@ -114,11 +115,11 @@ describe('toMapLibreFilter shape', () => {
 // buildValueFilterExpr emitted for the same active set, enumerated over bucket
 // subsets rather than sampled.
 const ROUTED: { field: string; buckets: { id: string }[]; valueMap: Record<string, string[]>; via: string }[] = [
-  { field: 'pipe_type',   buckets: NATGAS_PIPE_TYPE_BUCKETS, valueMap: LAYER_FILTER_VALUE_MAPS.natgas_pipe_type, via: 'applyNatgasLineFilter' },
-  { field: 'fac_type',    buckets: NATGAS_FAC_TYPE_BUCKETS,  valueMap: LAYER_FILTER_VALUE_MAPS.natgas_fac_type,  via: 'applyNatgasPtsFilter' },
-  { field: 'substance',   buckets: SUBSTANCE_BUCKETS,        valueMap: SUBSTANCE_MAP,     via: 'applySubstanceFilter' },
-  { field: 'code',        buckets: NERC_BUCKETS,             valueMap: NERC_MAP,          via: 'applyNercFilter' },
-  { field: 'type',        buckets: RETAIL_TYPE_BUCKETS,      valueMap: RETAIL_TYPE_MAP,   via: 'applyRetailTypeFilter' },
+  { field: 'pipe_type',   buckets: NATGAS_PIPE_TYPE_BUCKETS, valueMap: facetMap('natgasLine'), via: 'FACET_APPLIERS.natgasLine' },
+  { field: 'fac_type',    buckets: NATGAS_FAC_TYPE_BUCKETS,  valueMap: facetMap('natgasPts'), via: 'FACET_APPLIERS.natgasPts' },
+  { field: 'substance',   buckets: SUBSTANCE_BUCKETS,        valueMap: facetMap('substance'),     via: 'FACET_APPLIERS.substance' },
+  { field: 'code',        buckets: NERC_BUCKETS,             valueMap: facetMap('nerc'),          via: 'FACET_APPLIERS.nerc' },
+  { field: 'type',        buckets: RETAIL_TYPE_BUCKETS,      valueMap: facetMap('retail'),   via: 'FACET_APPLIERS.retail' },
   { field: 'sector_name', buckets: SECTOR_BUCKETS,           valueMap: SECTOR_MAP,        via: 'applyGeneratorFilters (sector)' },
   { field: 'source',      buckets: OSM_FUEL_BUCKETS,         valueMap: OSM_FUEL_MAP,      via: 'applyGeneratorFilters (OSM fuel)' },
 ];
@@ -126,7 +127,7 @@ const ROUTED: { field: string; buckets: { id: string }[]; valueMap: Record<strin
 // Fields whose filters keep the direct builder, each for a reason the compiler
 // is not meant to cover.
 const NOT_ROUTED = [
-  { field: 'pipeline', buckets: PIPELINE_TYPE_BUCKETS, valueMap: LAYER_FILTER_VALUE_MAPS.pipeline_type, via: 'applyPipelineTypeFilter' },
+  { field: 'pipeline', buckets: PIPELINE_TYPE_BUCKETS, valueMap: facetMap('pipeline'), via: 'FACET_APPLIERS.pipeline' },
 ];
 
 // Subsets of the leading ids (the full 2^n is 512 for the 9-bucket set and
@@ -194,7 +195,7 @@ describe('BUCKET_FILTER_DATASETS', () => {
     }
   });
 
-  // compileBucketExpr is the live render path (filter:all has no surrounding
+  // compileBucketExpr is the live render path (applyAllFilters() has no surrounding
   // try/catch), so a drifted bucket value must never throw there — it falls
   // back to the pre-schema builder instead, which stays infallible.
   it('falls back to buildValueFilterExpr, without throwing, when a bucket value drifts out of the schema domain', () => {

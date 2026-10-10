@@ -23,16 +23,18 @@
 //       'layer:visibility', refreshes the legends and the panel checkbox),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the diagnostics panel),
 //       experience-link.ts (rebaselineExperience before the kill switch),
-//       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on). Modal DOM ids come from cfg.
+//       layers/layer-data.ts (fetchGeojson),
+//       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on;
+//       on/emit 'layer:data' — re-checks on fresh data, announces each refetch). Modal DOM ids come from cfg.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from './state.js';
 import { rebaselineExperience } from './experience-link.js';
 import { setLayerVisibility } from './visibility.js';
-import { on } from './state-bus.js';
+import { on, emit } from './state-bus.js';
 import { recordDiagEvent } from './diag-log.js';
-import { fetchGeojson } from './layers/layer-init.js';
+import { fetchGeojson } from './layers/layer-data.js';
 import { t } from '../src/i18n/index.js';
 
 // Age → short human string ("42m", "3h 5m", "2d 1h"). Shared by the stale
@@ -104,7 +106,7 @@ export interface LiveStalenessConfig {
   dismissId: string;
   // Optional: filter out expired features. Applied before every setData
   // (post-refetch and on the 60s staleness tick) and on the initial
-  // tm:layerdata lazy-load path.
+  // 'layer:data' lazy-load path.
   pruneExpired?: (features: GeoJSON.Feature[]) => GeoJSON.Feature[];
 }
 
@@ -191,7 +193,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
       }
       src.setData({ ...geojson, features });
       // Same event the legend age chip listens for → it (and checkStaleness) refresh.
-      window.dispatchEvent(new CustomEvent('tm:layerdata', { detail: { registryId: sourceKey } }));
+      emit('layer:data', { id: sourceKey });
     } catch (err) {
       console.warn(`[TransmissionMap] ${sourceKey} auto-refresh failed`, err);
       recordDiagEvent('live', `${sourceKey}: ${err}`);
@@ -211,7 +213,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
   document.getElementById(dismissId)?.addEventListener("click", () => dlg?.close());
 
   // Prune expired features in place and push the result to the map source.
-  // No re-dispatch of tm:layerdata — avoids a loop.
+  // No re-emit of 'layer:data' — avoids a loop.
   const pruneAndSetData = () => {
     if (!pruneExpired || !state.map) return;
     const current = state.sourcesData[sourceKey] as GeoJSON.Feature[] | undefined;
@@ -226,8 +228,8 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
 
   // Re-check whenever fresh feed data lands — covers first load (page open with
   // already-stale data) and every successful auto-refresh / lazy enable.
-  window.addEventListener("tm:layerdata", (e) => {
-    if ((e as CustomEvent<{ registryId: string }>).detail?.registryId !== sourceKey) return;
+  on('layer:data', ({ id }) => {
+    if (id !== sourceKey) return;
     pruneAndSetData();
     checkStaleness();
   });
@@ -239,7 +241,7 @@ export function initLiveStaleness(cfg: LiveStalenessConfig): void {
     if (visible && layerIds.includes(id)) queueMicrotask(checkStaleness);
   });
 
-  // Poll: refetch (which dispatches tm:layerdata → checkStaleness) only while
+  // Poll: refetch (which emits 'layer:data' → checkStaleness) only while
   // something is actually on screen — no point polling for hidden layers.
   setInterval(() => {
     if (visibleLayers().length === 0) return;

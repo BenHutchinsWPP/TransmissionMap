@@ -9,11 +9,6 @@ import {
 } from './experiences.js';
 import { LAYERS, layerById, displayModes } from './index.js';
 import { WEATHER_VARIABLES } from './conditions.js';
-// ui-legends.ts sits in an import cycle with url-state-codec.ts, and the codec
-// reads LEGEND_FILTERS at module scope. Pulling the codec in first lets
-// ui-legends finish evaluating before that loop runs — the ordering
-// url-state.test.ts gets for free by importing url-state.ts first.
-import '../../assets/url-state-codec.js';
 import { LEGEND_FILTERS, LEGEND_FILTERS_BY_KEY, legendAllIds } from '../../assets/ui/ui-legends.js';
 
 const BASEMAPS = new Set(['light', 'dark', 'street', 'topo', 'aerial', 'hydro']);

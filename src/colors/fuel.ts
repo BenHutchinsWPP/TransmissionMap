@@ -1,4 +1,6 @@
-// Generator icon expressions, fuel color expressions, and legend entries.
+// Generator icon expressions, fuel color expressions, legend entries, and the
+// per-dataset fuel value maps (OSM_FUEL_MAP on `source`, EIA_FUEL_MAP on
+// `energy_source`, keyed by FUEL_LEGEND's osmBucket / eiaBucket).
 import type { ExpressionSpecification } from 'maplibre-gl';
 import type { FuelEntry } from '../types.js';
 
@@ -90,3 +92,33 @@ export const FUEL_LEGEND: FuelEntry[] = [
   { id: "biomass", urlCode: "i", label: "Biomass", color: "#84cc16", icon: "gen-biomass", osmBucket: "biomass",    eiaBucket: "biomass" },
   { id: "other",   urlCode: "x", label: "Other",   color: "#d1d5db", icon: "gen-other",   osmBucket: "other",      eiaBucket: "other"   },
 ];
+
+// ─── Fuel value maps (dataset bucket id → raw field values) ──────────────────
+// Keyed by FUEL_LEGEND's osmBucket / eiaBucket. pumped_storage and other have
+// no entry: assets/filters.ts splits EIA hydro from pumped storage on
+// prime_mover, and "other" matches every value the map does not list.
+export const OSM_FUEL_MAP: Record<string, string[]> = {
+  wind:       ["wind"],
+  solar:      ["solar"],
+  hydro:      ["hydro"],
+  nuclear:    ["nuclear"],
+  coal:       ["coal"],
+  gas:        ["gas"],
+  oil:        ["oil"],
+  battery:    ["battery"],
+  geothermal: ["geothermal"],
+  biomass:    ["biomass", "biogas", "waste"],
+};
+
+export const EIA_FUEL_MAP: Record<string, string[]> = {
+  wind:    ["WND"],
+  solar:   ["SUN"],
+  hydro:   ["WAT"],
+  nuclear: ["NUC"],
+  coal:    ["BIT", "SUB", "LIG", "PC"],
+  gas:     ["NG", "OG"],
+  oil:     ["DFO", "RFO", "KER"],
+  storage: ["MWH", "ES"],
+  geo:     ["GEO"],
+  biomass: ["WDS", "WDL", "MSW", "BLQ"],
+};

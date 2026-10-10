@@ -1,19 +1,18 @@
 // ─── OSM-derived layers (transmission, substations, plants, generators, pipelines)
-// Imported by: layer-init.ts
+// Imported by: add-all-layers.ts
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from "maplibre-gl";
 import { state } from '../state.js';
 import { DATA, EMPTY_FC, SOURCE_ATTRIB } from '../constants.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { OSM_GEN_ICON, OSM_GEN_COLOR, genIconSize } from '../../src/colors/fuel.js';
-import { PIPELINE_LINE_COLOR, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
+import { PIPELINE_LINE_COLOR, PIPELINE_TYPE_MAP, OSM_UNDERGROUND_EXPR, OSM_DC_EXPR } from '../../src/colors/buckets.js';
 import { HEAT_MW_STOPS, OSM_MW_FLOOR, HEAT_DENSITY_COLOR } from '../../src/colors/ramps.js';
 import {
   addTransmissionLines, addSubstationPoints, addPolygonLayer,
-  pmtilesUrl, initialVisibility, registerBaseFilter,
-  genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
+  pmtilesUrl, initialVisibility, genPlantTextLayout, GEN_PLANT_TEXT_PAINT,
 } from './layer-init.js';
-import { PIPELINE_TYPE_MAP } from '../filters.js';
+import { registerBaseFilter } from './base-filters.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 
 export function addOsmTransmission() {

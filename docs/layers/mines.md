@@ -32,7 +32,7 @@ mineplant (2003 snapshot). MSHA refreshes continuously.
    `_CATEGORY_RULES`).
 5. Writes a minimal GeoJSON FeatureCollection → gzipped (NO tippecanoe; owner
    rejected tiling — visible tile grid on zoom is jarring). Served lazy-loaded
-   like other point layers (`LAZY_GEOJSON` in `assets/layers/layer-init.ts`).
+   like other point layers (`LAYER_DATA_URLS` in `assets/layers/layer-data.ts`).
 
 ## Frontend
 

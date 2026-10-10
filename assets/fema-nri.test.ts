@@ -2,11 +2,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { state as StateSingleton } from './state.js';
 
-vi.mock('./layers/layer-init.js', () => ({
-  COUNTY_SRC: 'county_boundaries',
-  COUNTY_SRC_LAYER: 'county_boundaries',
-}));
-
 const TABLE = {
   version: 'December 2025',
   hazards: ['RISK', 'WFIR'],
