@@ -2,13 +2,13 @@
 """Extract Census TIGER Tribal lands (AIANNH) -> trimmed SHP + CSV for the map.
 
 Pipeline role (mirrors the other extract_*.py scripts):
-    data/raw/aiannh/tl_2025_us_aiannh.zip  ->  this script  ->  data/build/tribal_lands.{shp,csv}
+    data/raw/aiannh/tl_2026_us_aiannh.zip  ->  this script  ->  data/build/tribal_lands.{shp,csv}
     then scripts/build_tiles.py tiles + packages it.
 
 Input (manual placement; gitignored under data/raw/):
-  - data/raw/aiannh/tl_2025_us_aiannh.zip
+  - data/raw/aiannh/tl_2026_us_aiannh.zip
         Census TIGER/Line national AIANNH shapefile (zip), EPSG:4269 (NAD83).
-        https://www2.census.gov/geo/tiger/TIGER2025/AIANNH/tl_2025_us_aiannh.zip
+        https://www2.census.gov/geo/tiger/TIGER2026/AIANNH/tl_2026_us_aiannh.zip
         Updated annually -- bump the year in the URL/filename for newer vintages.
 
 Why TIGER, not HIFLD: HIFLD just re-hosts this same Census geography at a frozen
@@ -24,12 +24,12 @@ import geopandas as gpd
 
 from geo_common import run_extraction
 
-AIANNH_ZIP = Path("data/raw/aiannh/tl_2025_us_aiannh.zip")
+AIANNH_ZIP = Path("data/raw/aiannh/tl_2026_us_aiannh.zip")
 DEFAULT_SHP = Path("data/build/tribal_lands.gpkg")
 
 SQM_PER_ACRE = 4046.8564224
 
-# Census MTFCC -> readable area type (TIGER 2025 codes).
+# Census MTFCC -> readable area type (TIGER 2026 codes).
 AREA_TYPE = {
     "G2100": "Reservation / Off-Reservation Trust Land",  # legacy combined code
     "G2101": "American Indian Reservation",
@@ -74,8 +74,8 @@ def main():
         build, output=DEFAULT_SHP,
         description="Extract TIGER Tribal (AIANNH) -> SHP + CSV",
         require=AIANNH_ZIP,
-        missing_hint=["Download from https://www2.census.gov/geo/tiger/TIGER2025/"
-                      "AIANNH/tl_2025_us_aiannh.zip"],
+        missing_hint=["Download from https://www2.census.gov/geo/tiger/TIGER2026/"
+                      "AIANNH/tl_2026_us_aiannh.zip"],
         summary=summary)
 
 

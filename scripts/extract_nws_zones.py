@@ -15,11 +15,14 @@ Three zone sets, listed on:
   Fire weather zones    — https://www.weather.gov/gis/FireZones
   Marine zones          — https://www.weather.gov/gis/MarineZones
     (coastal mz*.zip + offshore oz*.zip, both zone_type "marine")
-Each page links a dated shapefile ZIP under
-  https://www.weather.gov/source/gis/Shapefiles/WSOM/  (newest listed first;
-  public = z_*.zip, fire = fz*.zip, marine coastal = mz*.zip, marine
-  offshore = oz*.zip). This script scrapes the page for the FIRST matching
-  href and downloads it if not already present.
+Each page links dated shapefile ZIPs under
+  https://www.weather.gov/source/gis/Shapefiles/WSOM/  (public = z_*.zip,
+  fire = fz*.zip, marine coastal = mz*.zip, marine offshore = oz*.zip; the
+  name ends in the effective date, e.g. mz16ap26 = 16 Apr 2026). A page can
+  list the current and the upcoming vintage in either order, so this script
+  takes the newest-dated matching href and downloads it unless that vintage's
+  .shp is already present. Earlier vintages stay beside it in the same
+  subdir, untouched.
 
 Not a standalone map layer: this is shared join infra (same pattern as
 county_boundaries — see scripts/tile_manifest.yaml). Zone alerts (phase 2 of
@@ -103,19 +106,32 @@ def _fetch(url: str) -> bytes:
         return r.read()
 
 
-def ensure_shapefile(listing_url: str, href_re: re.Pattern, subdir: Path, label: str) -> Path:
-    """Return path to a .shp in `subdir`, downloading + unzipping if absent."""
-    existing = next(subdir.glob("*.shp"), None)
-    if existing:
-        print(f"  ✓ {label}: using existing {existing}")
-        return existing
+MONTHS = {m: i for i, m in enumerate(
+    ("ja", "fe", "mr", "ap", "my", "jn", "jl", "au", "se", "oc", "no", "de"), 1)}
+VINTAGE_RE = re.compile(r"(\d{2})([a-z]{2})(\d{2})\.zip$")
 
+
+def vintage(zip_name: str) -> tuple[int, int, int]:
+    """(year, month, day) a WSOM zip name ends in, e.g. mz16ap26.zip → (26, 4, 16)."""
+    m = VINTAGE_RE.search(zip_name)
+    if not m or m.group(2) not in MONTHS:
+        sys.exit(f"unrecognised WSOM vintage in {zip_name!r}")
+    day, mon, year = m.groups()
+    return int(year), MONTHS[mon], int(day)
+
+
+def ensure_shapefile(listing_url: str, href_re: re.Pattern, subdir: Path, label: str) -> Path:
+    """Return the newest listed vintage's .shp in `subdir`, downloading + unzipping if absent."""
     print(f"  ↓ {label}: scraping {listing_url}")
     html = _fetch(listing_url).decode("utf-8", errors="ignore")
-    m = href_re.search(html)
-    if not m:
+    names = href_re.findall(html)
+    if not names:
         sys.exit(f"no matching shapefile href found on {listing_url}")
-    zip_name = m.group(1)
+    zip_name = max(names, key=vintage)
+    shp = subdir / f"{Path(zip_name).stem}.shp"
+    if shp.exists():
+        print(f"  ✓ {label}: using existing {shp}")
+        return shp
     zip_url = f"https://www.weather.gov/source/gis/Shapefiles/WSOM/{zip_name}"
 
     subdir.mkdir(parents=True, exist_ok=True)
@@ -127,8 +143,7 @@ def ensure_shapefile(listing_url: str, href_re: re.Pattern, subdir: Path, label:
     with zipfile.ZipFile(zpath) as z:
         z.extractall(subdir)
 
-    shp = next(subdir.glob("*.shp"), None)
-    if not shp:
+    if not shp.exists():
         sys.exit(f"no .shp found after unzipping {zpath}")
     return shp
 

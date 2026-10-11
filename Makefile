@@ -128,12 +128,12 @@ pipeline:
 	@echo "=== 6/9  HIFLD substations ==="
 	@$(PY) $(SCRIPTS)/extract_hifld_substations.py
 	@echo "=== 7/9  EIA generators ==="
-	@$(PY) $(SCRIPTS)/extract_eia_generators.py --year 2025 --file-suffix _Early_Release --header-row 2
+	@$(PY) $(SCRIPTS)/extract_eia_generators.py --year 2025
 	@echo "=== 8/9  HIFLD transmission lines ==="
 	@$(PY) $(SCRIPTS)/extract_hifld_lines.py
 	@echo "=== 9/9  Land layers (Census TIGER Tribal + USGS PAD-US) ==="
 	@$(PY) $(SCRIPTS)/extract_tribal_lands.py || \
-	    echo "  [skip] tribal lands — place input at data/raw/aiannh/tl_2025_us_aiannh.zip (see script header)"
+	    echo "  [skip] tribal lands — place input at data/raw/aiannh/tl_2026_us_aiannh.zip (see script header)"
 	@$(PY) $(SCRIPTS)/extract_bia_tribal.py || \
 	    echo "  [skip] bia tribal lands — place input at data/raw/bia/bia_aian_national_lar.geojson (see script header)"
 	@$(PY) $(SCRIPTS)/extract_padus.py || \
@@ -331,7 +331,7 @@ seismic:
 
 # ── Shared county boundaries (Census TIGER cartographic, join infra) ────────
 # Self-contained vector pipeline (gdal + tippecanoe, no venv). Downloads the
-# cb_2024_us_county_500k cartographic boundary zip → data/build/county_boundaries.geojson
+# cb_2025_us_county_500k cartographic boundary zip → data/build/county_boundaries.geojson
 # → data/layers/county_boundaries.pmtiles (source layer `county_boundaries`). Draws nothing
 # on its own — future county-keyed layers (outages, risk indices) join onto it
 # via feature-state. Public domain (US Government work).

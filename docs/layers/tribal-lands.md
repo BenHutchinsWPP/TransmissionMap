@@ -7,13 +7,13 @@ American Indian / Alaska Native / Native Hawaiian areas from Census TIGER/Line.
 | | |
 |---|---|
 | **Provider** | [U.S. Census Bureau](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html) |
-| **Dataset** | TIGER/Line 2025 — American Indian / Alaska Native / Native Hawaiian Areas (AIANNH) |
-| **Download** | `https://www2.census.gov/geo/tiger/TIGER2025/AIANNH/tl_2025_us_aiannh.zip` (bump year for newer vintages) |
+| **Dataset** | TIGER/Line 2026 (published 2026-10-07) — American Indian / Alaska Native / Native Hawaiian Areas (AIANNH) |
+| **Download** | `https://www2.census.gov/geo/tiger/TIGER2026/AIANNH/tl_2026_us_aiannh.zip` (bump year for newer vintages) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "U.S. Census Bureau, TIGER/Line" |
 | **Served** | `data/layers/tribal_lands.geojson.gz` — lazy GeoJSON (full geometry; features copyable in the UI) |
 | **Built by** | `extract_tribal_lands.py` → `data/build/tribal_lands.{shp,csv}` |
-| **Raw input** | `data/raw/aiannh/tl_2025_us_aiannh.zip` |
+| **Raw input** | `data/raw/aiannh/tl_2026_us_aiannh.zip` |
 
 > Was previously sourced from HIFLD (`seerai/hifld`), which only re-hosts this same
 > Census geography at a frozen vintage. TIGER is the upstream source, refreshed annually.

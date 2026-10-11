@@ -11,13 +11,13 @@ MapLibre `feature-state`, instead of each shipping duplicated county geometry.
 | | |
 |---|---|
 | **Provider** | [U.S. Census Bureau](https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html) |
-| **Dataset** | TIGER/Line 2024 cartographic boundary file — counties, 1:500,000 (generalized) |
-| **Download** | `https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_county_500k.zip` (bump year for newer vintages) |
+| **Dataset** | TIGER/Line 2025 cartographic boundary file (GENZ2025, published 2026-04-23) — counties, 1:500,000 (generalized) |
+| **Download** | `https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_county_500k.zip` (bump year for newer vintages) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "U.S. Census Bureau, TIGER/Line" |
 | **Served** | `data/layers/county_boundaries.pmtiles` — PMTiles, source layer `county_boundaries`, z2–8 |
 | **Built by** | `scripts/build_boundaries.sh` (`make boundaries`); also wired as a `scripts/tile_manifest.yaml` block so `make tiles` can rebuild it from the same intermediate |
-| **Raw input** | `data/raw/boundaries/cb_2024_us_county_500k.zip` |
+| **Raw input** | `data/raw/boundaries/cb_2025_us_county_500k.zip` |
 
 Cartographic boundary (not TIGER/Line legal boundary) chosen deliberately:
 generalized geometry is far smaller and renders cleanly at low zoom, which is
@@ -75,8 +75,8 @@ every consumer layer.
   River Valley, Naugatuck Valley, Northeastern Connecticut, Northwest Hills,
   South Central Connecticut, Southeastern Connecticut, Western Connecticut),
   FIPS `09110`–`09190`, replacing the eight historical counties. Confirmed
-  present in the 2024 vintage this layer ships (9 records with `STATEFP =
-  "09"`, verified against the built `cb_2024_us_county_500k` DBF). Any
+  present in the 2025 vintage this layer ships (9 records with `STATEFP =
+  "09"`, verified against the built `cb_2025_us_county_500k` DBF). Any
   Connecticut-specific logic keyed on the old eight-county FIPS list needs
   updating for this layer.
 

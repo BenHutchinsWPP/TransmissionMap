@@ -21,9 +21,9 @@
 # the tile-size limit; ODIN does not report them, so this is accepted.
 #
 # Source: US Census Bureau TIGER/Line, cartographic boundary file (1:500,000,
-# generalized for small-scale mapping), 2024 vintage. Public domain (US
+# generalized for small-scale mapping), 2025 vintage. Public domain (US
 # Government work, 17 U.S.C. § 105). No login required.
-#   https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_county_500k.zip
+#   https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_county_500k.zip
 #
 # Prerequisites: curl, unzip, ogr2ogr (GDAL), tippecanoe.
 
@@ -37,10 +37,10 @@ RAW="data/raw/boundaries"
 BUILD="data/build"
 OUT_TILES="data/layers"
 
-ZIP_URL="https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_county_500k.zip"
-ZIP="$RAW/cb_2024_us_county_500k.zip"
-SHP_DIR="$RAW/cb_2024_us_county_500k"
-SHP="$SHP_DIR/cb_2024_us_county_500k.shp"
+ZIP_URL="https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_county_500k.zip"
+ZIP="$RAW/cb_2025_us_county_500k.zip"
+SHP_DIR="$RAW/cb_2025_us_county_500k"
+SHP="$SHP_DIR/cb_2025_us_county_500k.shp"
 GEOJSON="$BUILD/county_boundaries.geojson"
 OUT="$OUT_TILES/county_boundaries.pmtiles"
 
@@ -50,7 +50,7 @@ done
 
 mkdir -p "$RAW" "$BUILD" "$OUT_TILES"
 
-echo "--- 1/3 download (Census TIGER cartographic boundary, cb_2024_us_county_500k) ---"
+echo "--- 1/3 download (Census TIGER cartographic boundary, cb_2025_us_county_500k) ---"
 if [ -f "$ZIP" ]; then
   echo "  [skip] $ZIP already present"
 else

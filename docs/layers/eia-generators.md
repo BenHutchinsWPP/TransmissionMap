@@ -4,23 +4,23 @@ One row per generator within a plant. The layer spans the
 **full lifecycle** — operating, planned-future, and retired units — partitioned by
 `gen_status`:
 
-_Counts approximate, from the EIA-860 2025 early-release build (`eia8602025ER.zip`)._
+_Counts approximate, from the EIA-860 2025 final edition (`eia8602025.zip`, released 2026-09-10)._
 
 | `gen_status` | Count | Source sheet | Meaning |
 |---|---:|---|---|
-| `existing` | ~26,500 | Operable | Operating / standby, no future retirement scheduled |
+| `existing` | ~26,600 | Operable | Operating / standby, no future retirement scheduled |
 | `retired` | ~4,800 | Retired and Canceled | Actually retired (`status` RE; canceled units excluded) |
-| `proposed` | ~2,500 | Proposed | Planned future additions |
-| `retirement` | ~540 | Operable | Operating now, but with a future planned retirement year |
+| `proposed` | ~2,850 | Proposed | Planned future additions |
+| `retirement` | ~560 | Operable | Operating now, but with a future planned retirement year |
 
 ## Source
 
 | | |
 |---|---|
 | **Provider** | [U.S. Energy Information Administration](https://www.eia.gov/) |
-| **Dataset** | [EIA-860 Annual Electric Generator Report](https://www.eia.gov/electricity/data/eia860/) — `eia8602025ER.zip` |
+| **Dataset** | [EIA-860 Annual Electric Generator Report](https://www.eia.gov/electricity/data/eia860/) — `eia8602025.zip` |
 | **Coverage** | US utility-scale plants ≥1 MW nameplate |
-| **Vintage** | 2025 (early release) |
+| **Vintage** | 2025 (final edition, released 2026-09-10) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution requested** | "Source: U.S. Energy Information Administration, Form EIA-860" |
 | **Served** | `data/layers/eia_generators.geojson.gz` — gzipped GeoJSON |

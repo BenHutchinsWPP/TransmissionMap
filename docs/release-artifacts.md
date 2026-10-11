@@ -202,7 +202,7 @@ URLs are stable and public — but the sizes are worth knowing before a cold run
 | `data/raw/census_boundaries/cb_2020_us_zcta520_500k.zip` | 64 MB | Census cartographic boundary files, GENZ2020 — the last vintage to ship ZCTAs | 2026-08-25 |
 | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip` | 99 MB | [geoBoundaries CGAZ](https://www.geoboundaries.org/) ADM0 — CC BY 4.0 | 2026-08-25 |
 | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip` | 99 MB | geoBoundaries CGAZ ADM1 — CC BY 4.0 | 2026-08-25 |
-| `data/raw/boundaries/cb_2024_us_county_500k.zip` | 12 MB | Census cartographic boundary files, GENZ2024 — shared county tileset | 2026-05-28 |
+| `data/raw/boundaries/cb_2025_us_county_500k.zip` | 12 MB | Census cartographic boundary files, GENZ2025 — shared county tileset | 2026-10-11 |
 | **Total** | **~277 MB** | | |
 
 The shapefile `.zip` is used for CGAZ rather than the published `.geojson`,
@@ -212,18 +212,18 @@ of the zip at a quarter of the transfer.
 **Attribution required:** geoBoundaries (William & Mary geoLab), CC BY 4.0. The
 Census files are public domain (17 U.S.C. § 105).
 
-### EIA (Form 860, 2025 Early Release)
+### EIA (Form 860, 2025 final edition)
 
 Only two workbooks from the EIA-860 ZIP are read by `extract_eia_generators.py`.
 The full ZIP is included for completeness; the two extracted workbooks are listed
 separately so they can be restored without re-downloading the whole archive.
-(Sizes below are approximate — Early Release files shift between vintages.)
+(Sizes below are approximate — files shift between vintages.)
 
 | File | Size | Notes |
 |---|--:|---|
-| `data/raw/eia/2___Plant_Y2025_Early_Release.xlsx` | ~4 MB | **Used by script** — plant locations and metadata |
-| `data/raw/eia/3_1_Generator_Y2025_Early_Release.xlsx` | ~11 MB | **Used by script** — generator units (operable / proposed / retired sheets) |
-| `data/raw/eia/eia8602025ER.zip` | ~22 MB | Full EIA-860 Early Release archive (source of the two files above) |
+| `data/raw/eia/2___Plant_Y2025.xlsx` | ~4 MB | **Used by script** — plant locations and metadata |
+| `data/raw/eia/3_1_Generator_Y2025.xlsx` | ~11 MB | **Used by script** — generator units (operable / proposed / retired sheets) |
+| `data/raw/eia/eia8602025.zip` | ~24 MB | Full EIA-860 archive (source of the two files above) |
 | **Total (deduplicated)** | **~37 MB** | (zip + two extracted workbooks) |
 
 ---

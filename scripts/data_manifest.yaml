@@ -238,7 +238,7 @@ layers:
     # from before the switch to Census TIGER as the actual data source — see
     # the comment in src/registry/sources.ts).
     source_id: hifld-tribal
-    raw: data/raw/aiannh/tl_2025_us_aiannh.zip
+    raw: data/raw/aiannh/tl_2026_us_aiannh.zip
 
   bia_tribal_lands:
     label: Tribal Lands (BIA AIAN-LAR)

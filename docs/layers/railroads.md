@@ -9,7 +9,7 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 | **Provider** | [US DOT Bureau of Transportation Statistics](https://www.bts.gov/ntad) — National Transportation Atlas Database (NTAD); geometry from the Federal Railroad Administration (FRA) |
 | **Dataset** | [North American Rail Network Lines](https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about) |
 | **Coverage** | All 50 states + DC, Mexico, Canada |
-| **Vintage** | Created 2016; this build used the 2026-05-05 update |
+| **Vintage** | Created 2016; this build used the 2026-07-22 update |
 | **Resolution** | 1:24,000 or better within the US |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "US DOT BTS / FRA North American Rail Network" |
@@ -17,8 +17,15 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 | **Built by** | `scripts/tile_manifest.yaml` (`railroads` block) → `build_tiles.py` — `ogr2ogr` field subset + `tippecanoe` |
 | **Raw input** | `data/raw/railroads/narn_rail_lines.geojson` (~345 MB, **not committed**) |
 
-> **Download origin:** Direct GeoJSON from the BTS Geodata portal (ArcGIS Hub):
-> `https://geodata.bts.gov/api/download/v1/items/f0651adc56f5467eb9402ccca045f213/geojson?layers=0`
+> **Download origin:** the BTS feature service, paged by `ogr2ogr` (the Hub's one-file
+> GeoJSON export at `geodata.bts.gov/api/download/v1/items/f0651adc56f5467eb9402ccca045f213/geojson?layers=0`
+> answered 400 on 2026-10-11):
+> ```sh
+> u=https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_North_American_Rail_Network_Lines/FeatureServer/0
+> ogr2ogr -f GeoJSON data/raw/railroads/narn_rail_lines.geojson \
+>   "ESRIJSON:$u/query?where=1%3D1&outFields=*&outSR=4326&f=json&resultRecordCount=2000" -nln narn_rail_lines
+> ```
+> The service's `editingInfo.lastEditDate` dates the edition.
 > No extract script — the build selects a field subset and tiles it straight to PMTiles.
 
 ## Download pack

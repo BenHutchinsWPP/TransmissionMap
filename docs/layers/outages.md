@@ -147,7 +147,7 @@ mirrored by the legend in `index.html` (`#odinLegend`):
   drop their leading zero and fail to match.
 - **Legacy CT/AK FIPS never paint.** If a utility reports the pre-2022 Connecticut
   county codes (`09001`-`09015` odd) and the pre-2019 Alaska Valdez-Cordova code
-  (`02261`), but `county_boundaries.pmtiles` is Census GENZ2024 vintage (CT planning
+  (`02261`), but `county_boundaries.pmtiles` is Census GENZ2025 vintage (CT planning
   regions `09110`-`09190`; AK split into `02063`/`02066`), so those rows have no
   matching `GEOID` and silently fail to join — they're still kept in the snapshot's
   `counties` (see `legacy_fips` count) but won't render on the map.

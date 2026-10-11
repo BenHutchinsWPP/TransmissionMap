@@ -80,8 +80,8 @@ CARD_FIELDS = (
 FIPS_RE = re.compile(r"^\d{5}$")
 UTILITY_ID_SUFFIX_RE = re.compile(r",\d+$")
 
-# The county tileset (county_boundaries.pmtiles) is Census GENZ2024 vintage.
-# These FIPS codes are pre-2022/2019 and will never match a GENZ2024 GEOID, so
+# The county tileset (county_boundaries.pmtiles) is Census GENZ2025 vintage.
+# These FIPS codes are pre-2022/2019 and will never match a GENZ2025 GEOID, so
 # rows keyed to them silently fail the frontend feature-state join (no crash,
 # just an unpainted county) — flag them instead of guessing:
 #   - Connecticut's 8 legacy counties (09001-09015, odd only) were replaced by

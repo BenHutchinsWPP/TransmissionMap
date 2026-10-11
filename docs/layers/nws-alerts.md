@@ -170,9 +170,14 @@ NWS WSOM shapefiles listed at
 [weather.gov/gis/PublicZones](https://www.weather.gov/gis/PublicZones) (public forecast
 zones, current `z_16ap26.zip`) and
 [weather.gov/gis/FireZones](https://www.weather.gov/gis/FireZones) (fire weather zones,
-current `fz16ap26.zip`), plus the coastal (`mz*`) and offshore (`oz*`) marine zone
-shapefiles from [weather.gov/gis/MarineZones](https://www.weather.gov/gis/MarineZones),
-same WSOM directory (high-seas `hz*` is not built into the tileset). All sets are hosted
+current `fz16ap26.zip`), plus the coastal (`mz*`, current `mz16ap26.zip`) and offshore
+(`oz*`, current `oz16ap26.zip`) marine zone shapefiles from
+[weather.gov/gis/MarineZones](https://www.weather.gov/gis/MarineZones), same WSOM
+directory (high-seas `hz*` is not built into the tileset); all four vintages are
+effective 2026-04-16 and were rebuilt 2026-10-11. Each page can list the current and
+the upcoming vintage in either order, so the script takes the newest-dated link per
+set and downloads it unless that vintage's `.shp` is already in its `data/raw/nws_zones/`
+subdir (earlier vintages stay beside it). All sets are hosted
 under `https://www.weather.gov/source/gis/Shapefiles/WSOM/`, EPSG:4269, public domain. The
 zone sets share the UGC string format (`STATE`/`BASIN` + `"Z"` + 3-digit `ZONE`) but are
 **different polygon sets** — 3016 UGC codes exist in both the forecast and fire sets with
@@ -183,7 +188,7 @@ duplicate rows by `(ugc, type)` and writes `data/build/nws_zones.geojson` with f
 `type=forecast`, `"f"+ugc` for `type=fire`, `"m"+ugc` for `type=marine` — the single string
 used as the pmtiles `promoteId`, since MapLibre `promoteId` needs one scalar per feature
 and bare `ugc` collides). `tile_manifest.yaml`
-builds this into **`nws_zones.pmtiles`** (source layer `nws_zones`, 7683 features, 5.06
+builds this into **`nws_zones.pmtiles`** (source layer `nws_zones`, 8382 features, 7.2
 MB). Like `county_boundaries` (see [boundaries.md](boundaries.md)), this is shared
 join infra with no `release_manifest.yaml` download-pack entry and no legend of its own.
 `/zones/county/`-issued alerts need no new tileset — they fall back to the existing
