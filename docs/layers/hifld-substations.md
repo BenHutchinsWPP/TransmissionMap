@@ -14,6 +14,7 @@ HIFLD electric substations (US, ≥69 kV).
 | **Acquired** | 2026-05-28 |
 | **Served** | `data/layers/hifld_substations.geojson.gz` — gzipped GeoJSON |
 | **Built by** | `extract_hifld_substations.py` → `data/build/substation_hifld.csv` |
+| **Region tags** | `states`, `counties`, `ba`, `nerc`, `retail`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 > The HIFLD Open portal closed September 16, 2025. This layer is sourced from the live
 > HIFLD FeatureServer, with the ArcGIS item metadata and ANL GEM as corroborating references.
@@ -30,7 +31,7 @@ HIFLD electric substations (US, ≥69 kV).
 - **Computed:** `kv_range` bucket from `max_kv`; centroid lon/lat in the CSV
 - **Display filter:** ~70% carry HIFLD's `UNKNOWN######` placeholder name and are filtered
   out for display
-- **Columns kept:** `hifld_id`, `name`, `max_kv`, `min_kv`, `kv_range`
+- **Columns kept:** `hifld_id`, `name`, `max_kv`, `min_kv`, `kv_range`, plus the region tags `states`, `counties`, `ba`, `nerc`, `retail`
 
 ## Fields
 

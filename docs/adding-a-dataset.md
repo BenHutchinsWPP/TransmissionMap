@@ -127,6 +127,34 @@ Two edits, no driver code:
        # pmtiles only: min_zoom, max_zoom, simplification, flags: [...]
    ```
 
+### Region tags — asset or context layer?
+
+Decide first: is this an **asset** (generators, substations, lines, pipelines,
+mines, datacenters, resource sites) or a **context layer** (a backdrop such as
+protected areas, critical habitat, tribal lands, offshore leases, railroads)?
+
+- **Asset → tag it** with the fields people scope that kind of asset by.
+  Points and footprints get `states, counties, ba, nerc, retail`; lines get the
+  same without `retail` (the owner field says whose line it is).
+- **Context layer → leave it untagged.** A region filter on a backdrop only
+  repeats what panning the map does, and its county and utility lists repeat on
+  every tile fragment of a large polygon (critical habitat grew 57% when tagged).
+
+To tag a US asset:
+
+1. Add its `data/build/` intermediate to `REGION_TAG_FILES` in the `Makefile`
+   (`region-tags` target). For a line dataset, add it to the `case` that passes
+   `--fields states,counties,ba,nerc`. If the extract writes straight to
+   `data/layers/`, call `region_join.tag_features(features, "usa", "<id>")`
+   before it writes instead (see `extract_mines.py`).
+2. Add the fields to the block's `select:` in `tile_manifest.yaml` — tippecanoe
+   drops any column `select:` leaves out.
+
+A world OSM layer is tagged in `build_global_tiles.py`: give its spec
+`"fields": GLOBAL_FIELDS` (points, footprints) or `LINE_FIELDS` (lines). See
+[pipeline.md § Region tags](pipeline.md#region-tags-scriptsregion_joinpy) for
+the values, the join rules and what each log line reports.
+
 ### Raster layers
 
 No manifest block. Add a **standalone `make` target** that runs your build
@@ -148,13 +176,17 @@ Plus the color ramp + `ramps.ts` stops — that's frontend territory, see
 make pipeline      # full extract — or just run your one script:
 python scripts/extract_my_dataset.py
 
-make tiles         # builds every manifest block → data/layers/
-# raster: make mydataset   (your standalone target instead of make tiles)
+make region-tags   # an asset: tag the intermediates (make pipeline ends with this)
+python scripts/build_tiles.py --only my_dataset   # builds one manifest block → data/layers/
+# raster: make mydataset   (your standalone target instead)
 ```
 
-`make tiles` only rebuilds from `data/build/`, so iterate on a single dataset
-by re-running its extract script then `make tiles` — no need for the full OSM
-PBF pass each time.
+`build_tiles.py` only rebuilds from `data/build/`, so iterate on a single
+dataset by re-running its extract script (then `make region-tags` for an asset)
+and `build_tiles.py --only` — no need for the full OSM PBF pass each time. Once
+`make global-tiles` has run, use `--only` rather than a bare `make tiles`: the
+bare target also rebuilds the world `osm_*` layers from one region's
+intermediates.
 
 `make validate` checks the manifest output matches `assets/constants.ts` — run
 it after wiring the frontend.
@@ -179,7 +211,8 @@ duplicate that here.
 [ ] .gitignore                    — ignore data/raw/<source>/  (NOT ignored by default; see >>> ADD-LAYER: gitignore. data/layers/ and data/releases/ are gitignored too)
 [ ] Makefile                      — pipeline step (manifest) OR standalone target (raster)
 [ ] scripts/tile_manifest.yaml    — one block  (manifest layers only)
-[ ] run: extract script → make tiles → file appears in data/layers/
+[ ] region tags                   — asset: REGION_TAG_FILES (+ --fields for lines) and the fields in select:; context layer: none
+[ ] run: extract script → make region-tags (asset) → build_tiles.py --only <id> → file appears in data/layers/
 [ ] release_manifest.yaml         — one pack per layer (point→csv_only; line/polygon→geojson+shp; raster→tif), or skip:true if non-redistributable
 [ ] make publish-data             — push data/layers + data/releases → data-static branch (prod host)
 [ ] → continue in adding-a-layer.md for all frontend wiring

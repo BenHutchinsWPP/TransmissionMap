@@ -3,7 +3,8 @@
 provenance manifest the credits page renders from.
 
 Merges hand-written provenance (scripts/data_manifest.yaml: label, source,
-url, licence, source_id — some fields the literal string UNKNOWN) with facts
+url, licence, source_id, the optional boundary `edition`; a field the docs
+don't settle is the literal string UNKNOWN) with facts
 measured off each layer's tile-build input (scripts/tile_manifest.yaml
 `src`): a row count, per-field coverage, and a `data_as_of` date — plus
 the built artifact's size under data/layers/, when one exists.  `source_id`
@@ -229,6 +230,8 @@ def build_layer_entry(
     """One `layers` value for the output manifest, plus a status tag
     ("ok" | "missing" | "unsupported:<ext>") for the run summary."""
     entry: dict = {f: provenance.get(f, "UNKNOWN") for f in PROVENANCE_FIELDS}
+    if provenance.get("edition"):
+        entry["edition"] = provenance["edition"]
     has_select = "select" in tile_entry
     src_path = repo_root / tile_entry["src"]
 

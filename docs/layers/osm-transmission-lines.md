@@ -14,6 +14,7 @@ OSM transmission line and cable features, worldwide.
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_transmission_lines_kv{0,50,100,125,200,300}.pmtiles` — six planet-wide PMTiles archives, zoom 2–11, one per voltage class. `make global-tiles` re-tiles the layer from the eight continental GeoPackages in one pass (deduping the seam overlaps) and cuts the classes out of the result. See [hosting-plan.md](../hosting-plan.md). |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/transmission_lines.gpkg` → `tippecanoe -l osm_transmission_lines` |
+| **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack
 
@@ -32,7 +33,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 - **Selected:** `power=line` and `power=cable` ways
 - **Row filter:** none
 - **Computed:** `nominal_kv` parsed to integer kV from raw OSM voltage text; `-1` sentinel = unknown; `is_undergrnd` flag derived from `power=cable` / `location` tags; `is_dc` from `frequency=0`
-- **Columns kept:** `nominal_kv`, `operator`, `name`, `minz`
+- **Columns kept:** `nominal_kv`, `operator`, `name`, `minz`, plus the region tags listed in the Source table
 - **Simplification:** `--simplification=5 --simplify-only-low-zooms` — the
   Douglas-Peucker pass runs on z2–z10 only, so maxzoom carries every vertex the
   tile grid holds. Dropping the flag re-simplifies maxzoom; see

@@ -15,6 +15,7 @@ For one-row-per-facility use [OSM Plants](osm-plants.md).
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_generators.pmtiles` — PMTiles, zoom 7–13. z14 alone was 48% of the archive; capping at z13 keeps it under the host's 100 MiB per-file ceiling and MapLibre overzooms above it. |
 | **Built by** | `extract_osm_generators.py` → `data/build/generator_osm.csv` → `tippecanoe -l osm_generators` |
+| **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack
 
@@ -31,7 +32,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
   farm-level node generators** so a solar farm doesn't explode into thousands of points
 - **Computed:** `output_mw` per-unit nameplate parsed from OSM tags
 - **Columns kept:** `osm_id`, `name`, `source`, `gen_method`, `gen_type`, `output_mw`,
-  `operator`, `start_date`, `manufactur`, `ref`
+  `operator`, `start_date`, `manufactur`, `ref`, plus the region tags listed in the Source table
 
 ## Fields
 

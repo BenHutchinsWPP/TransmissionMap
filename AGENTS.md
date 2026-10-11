@@ -243,18 +243,25 @@ turns public datasets into PMTiles consumed by the frontend.
   - `view-validate.ts` — map-free `validateWhere`/`validateStyleOverride`: the
     trust-boundary checks for a view's `where`/`style` (share-link decode,
     `setWhere`, `setStyle`)
-- `scripts/build_global_tiles.py` — joins the 8 continental OSM builds into one
-  planet-wide artifact per layer (what the map reads), capping any archive over the
-  host's 100 MiB per-file ceiling. Transmission is re-tiled from the GeoPackages in
-  one global pass (deduping the seam overlaps) and cut into six voltage-class
-  archives — `TRANSMISSION_BANDS`, mirrored by `OSM_TL_BANDS` in
-  `src/registry/transmission.ts`. Download packs stay per-continent.
+- `scripts/build_global_tiles.py` — builds one planet-wide artifact per layer (what
+  the map reads) from the 8 continental OSM intermediates: each layer is merged,
+  deduped on its seam key and tiled in one tippecanoe pass (`RETILE`,
+  `TILE_POLYGONS`; `CONCAT_GEOJSON` for the small point layers). Transmission is
+  cut afterwards into six voltage-class archives — `TRANSMISSION_BANDS`, mirrored
+  by `OSM_TL_BANDS` in `src/registry/transmission.ts`. Download packs stay
+  per-continent.
   See `docs/hosting-plan.md` and `docs/pipeline.md`.
 - `scripts/` — data pipeline: `extract_*.py` (per dataset — e.g.
   `extract_us_census_boundaries.py` for US states/ZCTA,
   `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
+- `scripts/region_join.py` — region tags (`|TX|NM|`, `|none|`): which states, counties,
+  BAs, NERC regions and utility territories (worldwide: countries, admin-1) each asset
+  falls in; run by `make region-tags` on the US intermediates and by
+  `build_global_tiles.py` on the world layers. Assets are tagged, context layers are
+  not — see `docs/pipeline.md` § *Region tags*. `scripts/admin1_codes.csv` — the
+  committed admin-1 short codes; never renumber (links filter on them)
 - `scripts/moratoriums/` — data center moratorium pipeline (`rebuild.sh` over `build*.py` + `sync.py`) and the
   twice-monthly refresh (`refresh/`: search, fetch, extract, quote-verify, review, publish; `moratorium-refresh.yml`); inputs live on
   the `data-moratoriums` branch. See its `README.md` and `docs/layers/dc-moratoriums.md`.
@@ -316,7 +323,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Where an asset is hosted / the world transmission kV split / tile precision | `docs/hosting-plan.md` — read before changing `DATA_ORIGIN` / `LIVE_ORIGIN`, the kV bands, or any tippecanoe simplification flag (silent footgun: `--simplify-only-low-zooms` is opt-in, and dropping it re-simplifies maxzoom, costing ~5 screen px of line accuracy at z15) |
 | How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
 | Moratorium layer data / twice-monthly refresh | `scripts/moratoriums/README.md` (silent footguns: the workflow YAML must be on `main` to run at all; scheduled runs commit straight to `data-moratoriums` (no review; undo a run with `git revert`) — reject a row with an `updates.csv` `DROP` line and a rebuild, never by editing the published CSVs; move the pin in one `data-moratoriums` PR changing `inputs/upstream.sha` and `inputs/upstream_as_of` together) |
-| Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them (`assets/constants.test.ts` fails on any other form); a joined layer must carry the same maxzoom on every continent, or the capped one draws blank instead of overzooming; and `tile-join` concatenates rather than dedupes, so the overlapping Geofabrik extracts are still doubled in every world archive except transmission, which is re-tiled with a dedupe) |
+| Global tilesets | `docs/hosting-plan.md` (silent footguns: `assets/constants.ts` must name layers in double-quoted `"data/layers/…"` literals or `validate_build.py` cannot see them (`assets/constants.test.ts` fails on any other form); each world layer's `select` in `build_global_tiles.py` must match its `tile_manifest.yaml` `select:` (`scripts/test_global_tiles.py` holds them together); and a re-tile spec must not carry `--extend-zooms-if-still-dropping`, or the archive advertises z14 past its `max_zoom`) |
 
 ## Commands
 
@@ -325,8 +332,9 @@ turns public datasets into PMTiles consumed by the frontend.
 - `make install` — create venv + Python deps
 - `make pipeline` — full data pipeline for one region (slow; needs `data/raw/` inputs)
 - `make continental-all` — run the OSM pipeline for all 8 continents; must precede `make global-tiles`
-- `make tiles` — build PMTiles from extracted data
-- `make global-tiles` — join the 8 continental OSM builds into one world tileset per layer;
+- `make region-tags` — tag the US intermediates in `data/build/` with the regions they fall in (last step of `make pipeline`; needs the boundary files)
+- `make tiles` — build PMTiles from extracted data; once `make global-tiles` has run, rebuild one layer with `build_tiles.py --only <id>` instead (the bare target replaces the world `osm_*` archives with one region's)
+- `make global-tiles` — join the 8 continental OSM builds into one world tileset per layer, region-tagged;
   transmission is re-tiled globally instead and cut into six voltage-class archives
 - `make data-manifest` — build per-layer provenance → `data/layers/manifest.json` (Data Credits dialog); runs cleanly with no `data/` present, emitting null facts rather than failing
 - `make publish-data` — force-push the layers `constants.ts` names + `data/releases` to the orphan `data-static` branch (the prod host)

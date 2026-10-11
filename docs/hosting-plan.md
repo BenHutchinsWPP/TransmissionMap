@@ -84,32 +84,74 @@ voltage split is the lever to use instead.
 
 ## What the re-tile does
 
-Transmission is re-tiled from the continental GeoPackages rather than joined
-tile-for-tile. That is required for the voltage split, and it also:
+Every world layer is built from one merged input: `build_global_tiles.py` reads
+the eight continental intermediates (`data/build/*_{code}.csv` / `.gpkg`), drops
+the seam copies, and runs tippecanoe once. Transmission, the `RETILE` table
+(substation points, generators, pipeline lines) and `TILE_POLYGONS` (substation
+and plant footprints) all follow this pattern; `CONCAT_GEOJSON` applies the same
+dedupe to the three small point layers it concatenates.
 
 - **Dedupes the seams.** Geofabrik's extracts overlap (Russia, Türkiye, the
-  Caucasus), nothing clips them to continent polygons, and `tile-join`
-  concatenates a shared tile's features rather than picking a winner. Keeping
-  the first feature per `osm_id` before tippecanoe runs removes ~1.7% redundant
-  ways. The other joined world archives still carry their duplicates.
+  Caucasus) and nothing clips them to continent polygons, so the same OSM
+  element arrives from two extracts. The merge keeps the first copy, on a key
+  that identifies one element:
+  - transmission: `osm_id` (ways only) — removes ~1.7% redundant ways;
+  - data centers: `(osm_type, osm_id)`;
+  - every other layer: `(osm_id, geometry as written)`, because those sources
+    carry no `osm_type`. A seam copy has the same id and the same coordinates;
+    a node and a way sharing a number differ in geometry.
+
+  Each merge logs features read and kept. The key columns are read for the
+  merge only, and the merged file carries just the layer's `select` columns,
+  so pipeline lines (which do not tile `osm_id`) coalesce on the same
+  attributes as before.
+- **One maxzoom by construction.** A PMTiles archive carries **one** `maxzoom`,
+  and a single tippecanoe pass gives every continent the same depth. The
+  re-tiled layers do not use `--extend-zooms-if-still-dropping`, so each
+  archive advertises exactly its spec's `max_zoom`: generators 13, substation
+  points 13, pipeline lines 12, substation and plant polygons 12, transmission
+  bands 11.
 - **Strips `minz`.** `minz` is the per-feature zoom floor the tippecanoe `-j`
   ladder selects on, so tiling needs it, but nothing in `assets/` or `src/`
-  reads it. `tile-join -x minz` drops it afterwards.
+  reads it. `tile-join -x minz` drops it when the voltage bands are cut.
+- **Logs drop warnings.** tippecanoe's stderr lines about thinning (`Going to
+  try`, `too many features`, `with detail`, `dropping`) are logged even when
+  the command succeeds, so a build that thinned a layer shows it.
 
-> [!IMPORTANT]
-> A PMTiles archive carries **one** `maxzoom`. Joining continents built to
-> different depths makes the archive advertise the deepest one, and regions that
-> never built that deep then draw **blank** above their own ceiling instead of
-> overzooming. Tiling once globally makes that impossible by construction; any
-> layer still joined must be built to the same maxzoom on every continent.
+## Archive sizes with region tags
+
+Region tags ([pipeline.md § Region tags](pipeline.md#region-tags-scriptsregion_joinpy))
+make each tagged archive 10–25% larger than the published, untagged build. Measured
+on the 2026-10-14 build:
+
+| archive | MiB | room to 100 MiB | vs published |
+|---|---|---|---|
+| `osm_pipelines_lines` | 94.2 | 5.8 | +21% |
+| `osm_substations_points` | 91.8 | 8.2 | +22% |
+| `osm_generators` | 89.0 | 11.0 | +18% |
+| `osm_transmission_lines_kv0` | 80.8 | 19.2 | +11% |
+| `osm_plants_polygons` | 79.8 | 20.2 | +14% |
+| `osm_transmission_lines_kv100` | 65.0 | 35.0 | +10% |
+| `osm_transmission_lines_kv200` | 59.6 | 40.4 | +11% |
+| `osm_transmission_lines_kv300` | 55.8 | 44.2 | +13% |
+| `osm_substations_polygons` | 52.0 | 48.0 | +25% |
+| `osm_transmission_lines_kv125` | 46.2 | 53.8 | +10% |
+| `hifld_transmission_lines` | 44.6 | 55.4 | +16% |
+| `osm_transmission_lines_kv50` | 35.4 | 64.6 | +12% |
+| `hifld_natgas_lines` | 23.2 | 76.8 | +47% |
+
+The first three are the ones to watch: a new tagged field, or a year of OSM
+growth, can take them past the ceiling. `scripts/region_report.py --archive`
+prints this table for any build. That publish adds 1.03 GB of new objects;
+with the repository at 1.15 GB, the total is 2.13 GB against
+`SIZE_CEILING_KB`.
 
 ## Substation zoom floor
 
-Points are never dropped or coalesced: the builds carry `-r1
---no-tile-size-limit --no-feature-limit --preserve-input-order`, and the global
-join preserves that with `tile-join -pk`. The archive starts at **z4** — below
-that a single tile holds most of the substations on Earth — and every point is
-present from z4 up.
+Points are never dropped or coalesced: the substation spec carries `-r1
+--no-tile-size-limit --no-feature-limit --preserve-input-order`. The archive
+starts at **z4** — below that a single tile holds most of the substations on
+Earth — and every point is present from z4 up.
 
 ## Six sources on the frontend
 
@@ -126,22 +168,18 @@ The cost is six PMTiles headers at map init instead of one, fetched in parallel.
 ## Publishing
 
 `scripts/publish_data.sh` publishes **only the layers `assets/constants.ts`
-names**, via `validate_build.py --list-expected`; the per-continent join inputs
-stay local. Layers go to the branch as one orphan commit (~1.2 GB, inside
+names**, via `validate_build.py --list-expected`; the per-continent archives
+`make continental-all` leaves in `data/layers/` stay local. Layers go to the branch as one orphan commit (~1.2 GB, inside
 GitHub's ~2 GB per-push ceiling); download packs go to the `data-latest` Release
 in the same run.
 
 > [!WARNING]
-> `trim_pmtiles()` rewrites through a temp file whose name **must** end in
-> `.pmtiles`. `tile-join` picks its output format from the suffix and silently
-> writes mbtiles for anything else — which looks like a successful trim that
-> makes the file bigger.
-
-> [!WARNING]
 > Tile attributes are not free to drop. `operator` is a **search** field —
 > `assets/ui/ui-search.ts` matches on it via `querySourceFeatures`, which reads
-> tile properties — so dropping it silently empties those searches. `DROP_ATTRS`
-> in `build_global_tiles.py` lists what is genuinely unread.
+> tile properties — so dropping it silently empties those searches. Each world
+> layer's columns are its `select` list in `build_global_tiles.py`, held equal
+> to the `tile_manifest.yaml` `select:` of the same id by
+> `scripts/test_global_tiles.py`.
 
 ### Repository headroom — check before every publish
 

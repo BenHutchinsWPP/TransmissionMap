@@ -45,6 +45,8 @@ import geopandas as gpd
 import pandas as pd
 import yaml
 
+from region_join import REGION_FIELDS
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
@@ -200,9 +202,13 @@ def write_shp_and_csv(gdf: gpd.GeoDataFrame, stem: str, zf: zipfile.ZipFile) -> 
     GDAL's ESRI Shapefile driver would otherwise reject mid-write. This assumes
     one dominant family with only noise around it; a layer that is genuinely
     mixed-geometry should be `geojson_only: true` instead (see WECC Paths).
+
+    The region tag columns (`REGION_FIELDS`) ride in the CSV only: a DBF string
+    holds 254 characters, and a long pipeline's county list runs past that.
     """
     gdf = _prep_geometry(gdf)
     _write_csv(gdf, stem, zf)  # full attribute table — all features
+    gdf = gdf.drop(columns=[c for c in REGION_FIELDS if c in gdf.columns])
 
     fam = gdf.geom_type.str.replace("Multi", "", regex=False)
     dominant_fams = fam.mode(dropna=True)

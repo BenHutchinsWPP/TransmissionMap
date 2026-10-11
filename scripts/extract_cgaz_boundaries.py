@@ -19,7 +19,9 @@ reused — re-run skips a file already present):
                       3,224 states/provinces across 218 countries
                       -> data/build/admin1_boundaries.gpkg
                       fields: name (shapeName), iso_a3 (shapeGroup),
-                              country (ADM0 shapeName for that shapeGroup)
+                              country (ADM0 shapeName for that shapeGroup),
+                              shapeID, code (short code from
+                              scripts/admin1_codes.csv; see region_join.py)
 
 Downloaded as shapefile zips rather than the CGAZ .geojson release (401 MB /
 371 MB) — GDAL reads the shapefile straight out of the zip via the `zip://`
@@ -34,10 +36,15 @@ script already loads for the countries output (shapeGroup -> shapeName), so
 it costs no extra download or attribute-only read. CGAZ carries no ISO 3166-2
 subdivision code — not joined in here; see docs/layers/admin1.md.
 
+admin1 codes are committed in scripts/admin1_codes.csv and never renumbered.
+A shapeID missing from an existing table stops the run unless
+--assign-new-admin1 is passed, which appends codes for the new units.
+
 Usage:
-  venv/bin/python scripts/extract_cgaz_boundaries.py
+  venv/bin/python scripts/extract_cgaz_boundaries.py [--assign-new-admin1]
 """
 from __future__ import annotations
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -50,6 +57,7 @@ except ImportError:
     sys.exit(1)
 
 from geo_common import assign_color_index, write_shp_csv
+from region_join import assign_admin1_codes, read_admin1_table, write_admin1_table
 
 RAW = Path("data/raw/geoboundaries")
 BUILD = Path("data/build")
@@ -92,6 +100,10 @@ ADM1_NEAR_DEG = 0.0
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    ap.add_argument("--assign-new-admin1", action="store_true",
+                    help="give codes to shapeIDs missing from scripts/admin1_codes.csv")
+    args = ap.parse_args()
     os.chdir(Path(__file__).parent.parent)
     RAW.mkdir(parents=True, exist_ok=True)
     BUILD.mkdir(parents=True, exist_ok=True)
@@ -111,10 +123,22 @@ def main():
     adm1_zip = _fetch(ADM1_URL, RAW / "geoBoundariesCGAZ_ADM1.zip")
     adm1 = _read_4326(adm1_zip)
     country_name = dict(zip(adm0["shapeGroup"], adm0["shapeName"]))
+    existing = read_admin1_table()
+    known = {r["shapeID"] for r in existing}
+    unknown = sorted(set(adm1["shapeID"]) - known)
+    if existing and unknown and not args.assign_new_admin1:
+        sys.exit(f"ERROR: {len(unknown)} admin-1 shapeIDs not in scripts/admin1_codes.csv "
+                 f"(first: {unknown[:3]}); rerun with --assign-new-admin1")
+    table = assign_admin1_codes(
+        existing, list(zip(adm1["shapeID"], adm1["shapeGroup"], adm1["shapeName"])))
+    write_admin1_table(table)
+    code_of = {r["shapeID"]: r["code"] for r in table}
     admin1 = gpd.GeoDataFrame({
         "name":      adm1["shapeName"],
         "iso_a3":    adm1["shapeGroup"],
         "country":   adm1["shapeGroup"].map(country_name).fillna(adm1["shapeGroup"]),
+        "shapeID":   adm1["shapeID"],
+        "code":      adm1["shapeID"].map(code_of),
         "color_idx": assign_color_index(adm1, near_deg=ADM1_NEAR_DEG, indent="  "),
     }, geometry=adm1.geometry, crs="EPSG:4326")
     n_countries = admin1["iso_a3"].nunique()

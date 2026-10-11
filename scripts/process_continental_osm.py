@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import tempfile
 import gzip
 import json
 import logging
@@ -362,7 +363,7 @@ def _build_pmtiles_layer(src: Path, out_pmtiles: Path, layer_id: str,
         return
 
     tip = [
-        "tippecanoe", "-o", str(out_pmtiles), "-l", layer_id,
+        "tippecanoe", "-o", str(out_pmtiles), "-l", layer_id, "-t", tempfile.gettempdir(),
         f"--minimum-zoom={min_zoom}",
         f"--maximum-zoom={max_zoom}",
         *(flags or []),

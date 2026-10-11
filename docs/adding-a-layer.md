@@ -28,6 +28,15 @@ the data-engineering half, covered entirely in
 helpers, conventions). Do that first; come back here when the served file
 exists in `data/layers/`.
 
+**Region tags come with the data.** An asset layer (generators, substations,
+lines, pipelines, mines, datacenters, resource sites) carries the regions it
+falls in — `states, counties, ba, nerc, retail` on points and footprints, the
+same without `retail` on lines — so a filter can scope it to a work area. A
+context layer (protected areas, critical habitat, tribal lands, offshore
+leases, railroads) is a backdrop and stays untagged. Decide which one yours is
+in [adding-a-dataset.md § Region tags](adding-a-dataset.md#region-tags--asset-or-context-layer);
+the steps live there too.
+
 One exception stays in this doc because it's half-frontend: the raster color
 ramp (**§3R** below) — its stops must mirror `src/colors/ramps.ts`.
 
@@ -411,7 +420,7 @@ Update `docs/data-sources.md`:
 ## Checklist
 
 ```
-[ ] Data half done                         — script, Makefile, manifest, .gitignore, release pack: checklist in adding-a-dataset.md
+[ ] Data half done                         — script, Makefile, manifest, region tags (asset) or none (context layer), .gitignore, release pack: checklist in adding-a-dataset.md
 [ ] scripts/<id>_color_ramp.txt            — RASTER ONLY: gdaldem color-relief ramp (value R G B A)
 [ ] src/colors/ramps.ts                    — CONTINUOUS RASTER ONLY: <X>_RAMP_STOPS + <X>_RAMP_MAX (mirror the .txt)
 [ ] assets/constants.ts                    — DATA.my_layer (+ lut/meta if raster)

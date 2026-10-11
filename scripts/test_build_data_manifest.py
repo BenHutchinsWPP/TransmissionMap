@@ -146,6 +146,40 @@ class TestBuildManifestMissingArtifact(unittest.TestCase):
             self.assertIsNone(written["layers"]["ghost_layer"]["source_rows"])
 
 
+class TestEditionPassThrough(unittest.TestCase):
+    def test_edition_present_passes_through_and_absent_adds_no_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "data" / "build").mkdir(parents=True)
+            (root / "data" / "build" / "widgets.csv").write_text("name\nA\n")
+            (root / "data" / "build" / "gadgets.csv").write_text("name\nB\n")
+
+            data_manifest = root / "data_manifest.yaml"
+            tile_manifest = root / "tile_manifest.yaml"
+            base = {"label": "L", "source": "S", "url": "U",
+                    "licence": "UNKNOWN", "source_id": "x"}
+            data_manifest.write_text(yaml.dump({
+                "layers": {
+                    "widgets": dict(base, edition="cb_2025_us_county_500k"),
+                    "gadgets": dict(base),
+                }
+            }))
+            tile_manifest.write_text(yaml.dump({
+                "layers": [
+                    {"id": "widgets", "src": "data/build/widgets.csv",
+                     "format": "geojson", "select": ["name"]},
+                    {"id": "gadgets", "src": "data/build/gadgets.csv",
+                     "format": "geojson", "select": ["name"]},
+                ]
+            }))
+
+            manifest, _ = build_manifest(data_manifest, tile_manifest, root)
+
+            self.assertEqual(manifest["layers"]["widgets"]["edition"],
+                             "cb_2025_us_county_500k")
+            self.assertNotIn("edition", manifest["layers"]["gadgets"])
+
+
 class TestBuildManifestMerge(unittest.TestCase):
     def test_provenance_fields_including_unknown_survive(self):
         with tempfile.TemporaryDirectory() as tmp:

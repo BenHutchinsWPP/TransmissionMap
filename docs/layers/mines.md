@@ -33,6 +33,8 @@ mineplant (2003 snapshot). MSHA refreshes continuously.
 5. Writes a minimal GeoJSON FeatureCollection → gzipped (NO tippecanoe; owner
    rejected tiling — visible tile grid on zoom is jarring). Served lazy-loaded
    like other point layers (the registry entry's `data`, read by `assets/layers/layer-source.ts`).
+6. Before writing, tags each mine with the regions it falls in (`states`, `counties`, `ba`, `nerc`, `retail`) through
+   `region_join.tag_features` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy).
 
 ## Frontend
 

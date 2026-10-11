@@ -30,6 +30,10 @@
 #              extract script reads. The generator takes the newest mtime of
 #              the matching files as data_as_of. Omit when the path is not
 #              unambiguously clear from the extract script.
+#   edition    (optional, boundary entries only) the boundary vintage the
+#              layer's region tags are joined against, as named in the docs
+#              (e.g. cb_2025_us_county_500k). build_data_manifest.py passes it
+#              through to data/layers/manifest.json only when present.
 #
 # Facts here are drawn only from docs/data-sources.md and docs/layers/<id>.md
 # — never from the web or from memory of what a licence "usually" is (source_id
@@ -172,6 +176,7 @@ layers:
     licence: CC BY 4.0 (attribution required)
     source_id: cgaz-adm0
     raw: data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip
+    edition: geoBoundaries CGAZ (main branch)
 
   admin1_boundaries:
     label: States / Provinces (geoBoundaries CGAZ Admin-1)
@@ -180,6 +185,7 @@ layers:
     licence: CC BY 4.0 (attribution required)
     source_id: cgaz-adm1
     raw: data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip
+    edition: geoBoundaries CGAZ (main branch)
 
   us_states:
     label: Census States
@@ -188,6 +194,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: census-states
     raw: data/raw/census_boundaries/cb_2025_us_state_500k.zip
+    edition: cb_2025_us_state_500k
 
   us_zcta:
     label: US ZIP Codes / ZCTAs (Census)
@@ -196,6 +203,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: census-zcta
     raw: data/raw/census_boundaries/cb_2020_us_zcta520_500k.zip
+    edition: cb_2020_us_zcta520_500k
 
   nerc_regions:
     label: HIFLD NERC Regions
@@ -204,6 +212,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-nerc
     raw: data/raw/hifld/regions/nerc-regions.parquet
+    edition: HIFLD via SeerAI parquet
 
   control_areas:
     label: HIFLD Control Areas (Balancing Authorities)
@@ -212,6 +221,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-ba
     raw: data/raw/hifld/regions/control-areas.parquet
+    edition: HIFLD via SeerAI parquet
 
   eia_ba:
     label: EIA Balancing Authorities
@@ -220,6 +230,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: eia-ba
     raw: data/raw/eia-ba/balancing_authorities.geojson
+    edition: EIA Balancing Authorities FeatureServer
 
   retail_territories:
     label: HIFLD Retail Service Territories
@@ -228,6 +239,7 @@ layers:
     licence: Public domain (US federal work, 17 U.S.C. § 105)
     source_id: hifld-retail
     raw: data/raw/hifld/regions/retail-service-territories.parquet
+    edition: HIFLD via SeerAI parquet
 
   tribal_lands:
     label: Tribal Lands (AIANNH)
@@ -284,6 +296,7 @@ layers:
     # Census county boundaries the "Census Counties" layer displays — grouped
     # under the same anchor as that layer's sourceId, "census-counties".
     source_id: census-counties
+    edition: cb_2025_us_county_500k
 
   nws_zones:
     label: NWS Zones (Forecast / Fire / Marine)

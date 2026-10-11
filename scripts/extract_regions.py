@@ -15,7 +15,7 @@ Inputs (manual placement; gitignored under data/raw/):
 Output schemas:
   nerc_regions      code, sub_nm, region, state, website
   control_areas     name, state, tot_cap, peak_ld, min_ld, avail_cap, year, website
-  retail_territories name, type, state, customers, retail_mwh, sumr_peak, wntr_peak,
+  retail_territories id, name, type, state, customers, retail_mwh, sumr_peak, wntr_peak,
                      hold_co, ctrl_area, year, website
 """
 from __future__ import annotations
@@ -29,6 +29,7 @@ import geopandas as gpd
 import pandas as pd
 
 from geo_common import write_shp_csv
+from region_join import retail_ids
 
 RAW_DIR  = Path("data/raw/hifld/regions")
 BUILD    = Path("data/build")
@@ -122,7 +123,13 @@ def build_control_areas(parquet: Path) -> gpd.GeoDataFrame:
 
 def build_retail(parquet: Path) -> gpd.GeoDataFrame:
     gdf = _read(parquet)
+    if gdf["ID"].isna().any():
+        raise ValueError("retail territories have a null ID")
+    ids = retail_ids(list(zip(
+        [str(int(v)) if isinstance(v, float) and v.is_integer() else v for v in gdf["ID"]],
+        gdf.geometry.to_wkb())))
     return gpd.GeoDataFrame({
+        "id":         ids,
         "name":       gdf["NAME"].apply(clean_str),
         "type":       gdf["TYPE"].apply(clean_str),
         "state":      gdf["STATE"].apply(clean_str),

@@ -13,6 +13,7 @@ HIFLD natural gas and petroleum pipeline lines and facility points (US).
 | **Download origin** | [SeerAI HIFLD Archive](https://source.coop/repositories/seerai/hifld/description/) (source.coop), GeoParquet — **manually placed** at `data/raw/hifld/natgas/` |
 | **Served** | `data/layers/hifld_natgas_lines.pmtiles` (lines) · `data/layers/hifld_natgas_points.geojson.gz` (points) |
 | **Built by** | `scripts/extract_hifld_natgas.py` |
+| **Region tags** | Lines `states`, `counties`, `ba`, `nerc`; points `states`, `counties`, `ba`, `nerc`, `retail`; by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 > The HIFLD Open portal closed September 16, 2025; datasets have been archived by SeerAI on source.coop.
 

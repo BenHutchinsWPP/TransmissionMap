@@ -137,6 +137,8 @@ def main() -> int:
             return 1
 
     fc = build(mines_path, prod_path, args.threshold)
+    import region_join  # geo libs load only here
+    region_join.tag_features(fc["features"], "usa", "mines")
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(fc), encoding="utf-8")

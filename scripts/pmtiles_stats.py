@@ -3,7 +3,8 @@
 
 Reads only the header + directories (no tile payloads), so it is cheap even on
 multi-hundred-MB archives. Used to size the global builds and pick per-layer
-minzoom cutoffs.
+minzoom cutoffs. `entries()` — the directory walk — is shared with
+region_report.py, which reads per-tile sizes from it.
 
     python3 scripts/pmtiles_stats.py data/layers/osm_substations_points.pmtiles
 """
@@ -56,31 +57,36 @@ def _zoom_of(tile_id):
         z += 1
 
 
+def entries(path):
+    """Yield (zoom, byte length, run length) per tile entry, walking root + leaf directories."""
+    with open(path, "rb") as f:
+        head = f.read(127)
+        if head[:7] != b"PMTiles":
+            raise SystemExit(f"{path}: not a PMTiles archive")
+        g = lambda o: struct.unpack_from("<Q", head, o)[0]
+        root_off, root_len, leaf_off = g(8), g(16), g(40)
+
+        def walk(dir_entries):
+            for tid, run, length, off in dir_entries:
+                if run == 0:
+                    f.seek(leaf_off + off)
+                    yield from walk(_parse_dir(gzip.decompress(f.read(length))))
+                else:
+                    yield _zoom_of(tid), length, run
+
+        f.seek(root_off)
+        yield from walk(_parse_dir(gzip.decompress(f.read(root_len))))
+
+
 def stats(path):
-    f = open(path, "rb")
-    head = f.read(127)
-    if head[:7] != b"PMTiles":
-        raise SystemExit(f"{path}: not a PMTiles archive")
-    g = lambda o: struct.unpack_from("<Q", head, o)[0]
-    root_off, root_len, leaf_off = g(8), g(16), g(40)
+    """Per zoom: stored bytes (one per entry), tile count, largest tile."""
     by_zoom = collections.Counter()
     tiles = collections.Counter()
     largest = collections.defaultdict(int)
-
-    def walk(entries):
-        for tid, run, length, off in entries:
-            if run == 0:
-                f.seek(leaf_off + off)
-                walk(_parse_dir(gzip.decompress(f.read(length))))
-            else:
-                z = _zoom_of(tid)
-                by_zoom[z] += length
-                tiles[z] += run
-                largest[z] = max(largest[z], length)
-
-    f.seek(root_off)
-    walk(_parse_dir(gzip.decompress(f.read(root_len))))
-    f.close()
+    for z, length, run in entries(path):
+        by_zoom[z] += length
+        tiles[z] += run
+        largest[z] = max(largest[z], length)
     return by_zoom, tiles, largest
 
 

@@ -80,6 +80,113 @@ HIFLD and EIA reference data are auto-downloaded on first run to `data/raw/hifld
 and region layers) are **manually placed** — see the script headers and
 [release-artifacts.md](release-artifacts.md) for the exact files and origins.
 
+### Region tags (`scripts/region_join.py`)
+
+Each asset carries the regions it falls in, so a map filter or a shared link can
+scope it to a work area: "lines ≥345 kV in Texas", "plants in ERCOT".
+
+**What gets tagged.** Assets get the fields people scope that kind of asset by.
+Context layers are backdrops and get none.
+
+| kind | US datasets (`--scope usa`) | world OSM layers (`--scope global`) |
+|---|---|---|
+| points and footprints | `states, counties, ba, nerc, retail` | `countries, admin1`, plus `counties, ba, nerc, retail` inside the US |
+| lines | `states, counties, ba, nerc` | `countries, admin1`, plus `counties, ba, nerc` inside the US |
+| context layers (PAD-US, critical habitat, tribal lands, BOEM leases, railroads) | none | — |
+
+Lines carry no `retail`: the owner field already says whose line it is. On a
+world layer the US-only keys are present only when `countries` holds `USA`;
+elsewhere the key is absent.
+
+**Values.** Every value is wrapped, points included: `|TX|`, `|TX|NM|`, and
+`|none|` for a feature in no region (offshore, or outside every boundary).
+Wrapping lets one `contains` test match any field without `USA1` also matching
+`USA10`. The codes: `countries` ISO3; `admin1` a short code from
+`scripts/admin1_codes.csv`; `states` USPS; `counties` the 5-digit GEOID; `ba`
+the EIA abbreviation; `nerc` the region code; `retail` the HIFLD `ID`. Points
+take every region they intersect, so a point on a border gets both. Lines and
+polygons drop a region they only touch, unless every region they meet is
+touch-only. EIA generators keep their reported `state`, `ba_code` and
+`nerc_region` when non-blank (`--prefer`) and fall back to the spatial join.
+
+**`scripts/admin1_codes.csv` is committed and never renumbered.** A link that
+filters on `admin1` names these codes, so a code, once given, stays with its
+geoBoundaries `shapeID`; a unit that disappears keeps its row with `current=0`
+and its code is never reused. `make world-boundaries` stops when CGAZ brings a
+`shapeID` the table lacks; rerun `extract_cgaz_boundaries.py
+--assign-new-admin1` to give it the next free code, and commit the table.
+
+**Where the join runs.** Each dataset is joined once:
+
+- **US datasets — `make region-tags`**, the last step of `make pipeline`. It
+  checks that the seven boundary files exist (naming the `make` target for any
+  missing one), then tags each `data/build/` intermediate in place
+  (`REGION_TAG_FILES` in the `Makefile`; lines pass `--fields
+  states,counties,ba,nerc`). A re-run gives the same result. `make mines` tags in
+  `extract_mines.py`, since it writes straight to `data/layers/`. After it, rebuild
+  the tagged layers one id at a time with `build_tiles.py --only <id>`.
+- **World OSM layers — `make global-tiles`**, on each layer's merged, deduped
+  input before tippecanoe (`GLOBAL_FIELDS` / `LINE_FIELDS` in
+  `build_global_tiles.py`).
+
+**Never run a bare `make tiles` after `make global-tiles`.** It also rebuilds the
+world `osm_*` ids from one region's intermediates, replacing the world archives
+with untagged regional ones. Use `build_tiles.py --only <id>` for US layers.
+
+**What stays untagged.** The per-continent OSM download packs (built from the
+continental intermediates, which are not joined); the sibling `.csv` that
+`geo_common.write_shp_csv` writes beside each `.gpkg` (nothing reads it); and
+the `.dbf` of every `-shp.zip` pack. A DBF string holds 254 characters and a
+long pipeline crosses up to 86 counties, so `build_releases.py` leaves the
+region columns out of the shapefile. The CSV in the same zip keeps them, as do
+the GeoJSON packs and the map tiles.
+
+**`REGION_STATS`.** Every tag call logs one line per field —
+`REGION_STATS <label> <field> n=… absent=… none=… multi=… maxlen=…` — so a build
+log shows coverage without a separate pass: `rg REGION_STATS <log>`.
+
+**Tile budget.** Tags make features less alike, so `--coalesce-densest-as-needed`
+merges fewer of them and low-zoom tiles grow. HIFLD transmission lines tile with
+`max_tile_bytes: 1000000` (as the OSM voltage bands do) so every line still
+draws at z2–z5. After a tag change, check the build log for `Going to try
+keeping` and compare drawn line length per zoom against the published archive.
+
+### Region tag report (`scripts/region_report.py`)
+
+The report measures the region fields over paths you pass in:
+
+```bash
+python3 scripts/region_report.py \
+  --input data/build/<layer>.geojsonl data/layers/eia_generators.geojson.gz \
+  --archive tmp/<build>/kv50.pmtiles=data/layers/osm_transmission_lines_kv50.pmtiles
+```
+
+- **`--input`** (`.geojsonl`, `.gpkg`, `.csv` (region columns only), or a
+  `.geojson[.gz]` that ships as is): per region field, shares of *all* features
+  that lack the key, are blank, are `none` (the bare string or `|none|`), are
+  malformed (`|`, `||`, `TX|NM`, `none` inside a longer list), or carry more
+  than one value; list length max and p99; distinct codes and strings; maxlen,
+  the longest value (a DBF string tops out at 254 characters).
+- **`--sample-pmtiles PATH[:Z]`**: the same table over the features
+  `tippecanoe-decode` writes for one zoom, so what the tiles carry is measured.
+  Z defaults to the archive's maxzoom; the decode is streamed.
+- **`--archive PATH[=PUBLISHED]`** (`.pmtiles` or a shipped `.geojson.gz`):
+  bytes and headroom to the 100 MiB per-file cap (`CEILING_BYTES` in
+  `build_global_tiles.py`), per-zoom tile p50/p95/max for PMTiles, and the size
+  delta against the file at `PUBLISHED` (default: `PATH`) on the local
+  `origin/data-static` ref — `git fetch` first for a current comparison.
+  `PATH` is split at the last `=` unless the whole argument is an existing file.
+- **Repository headroom:** the estimate `publish_data.sh` runs before a publish
+  (see [hosting-plan.md](hosting-plan.md) § *Repository headroom*), over the
+  set it would push — every path `validate_build.py --list-expected` names, with
+  each archive standing in for its `PUBLISHED` path. Files over the per-file cap
+  are left out, blobs are deduped by hash, and only blobs not already in the
+  `data-static` tree count. The sum plus the repository size (from `gh`, or
+  `--repo-kb`) is checked against `SIZE_CEILING_KB`.
+
+The script exits 1 when any archive is over the per-file cap, and 2 — before
+printing any table — when a path is missing or a `.gpkg` is not a GeoPackage.
+
 ---
 
 ## Windows
@@ -129,9 +236,11 @@ polygon-filter format). The eight continental polygons are vendored at
 | `an` | Antarctica | `antarctica-latest.osm.pbf` |
 
 The polygons overlap rather than meeting on a shared edge, so features near boundaries
-(e.g., Türkiye, Caucasus, western Russia) exist in both extracts. Deduplication is
-handled during transmission global tiling (`scripts/build_global_tiles.py`; see
-[hosting-plan.md](hosting-plan.md)).
+(e.g., Türkiye, Caucasus, western Russia) exist in both extracts. Every world layer
+is deduplicated when `scripts/build_global_tiles.py` merges the continental
+intermediates, on `osm_id` for transmission, `(osm_type, osm_id)` for data centers
+and `(osm_id, geometry)` elsewhere (see [hosting-plan.md](hosting-plan.md)). The
+per-continent download packs keep their overlap.
 
 ### Reproducing extracts from the OSM planet file
 

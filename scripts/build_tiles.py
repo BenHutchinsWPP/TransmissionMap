@@ -18,6 +18,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -82,7 +83,7 @@ def build_layer(layer):
         # tmp name keeps the .pmtiles suffix — tippecanoe picks output format
         # from the extension.
         out_tmp = OUT / f"{lid}.tmp.pmtiles"
-        tip = ["tippecanoe", "-o", out_tmp, "-l", lid,
+        tip = ["tippecanoe", "-o", out_tmp, "-l", lid, "-t", tempfile.gettempdir(),
                f"--minimum-zoom={layer['min_zoom']}",
                f"--maximum-zoom={layer['max_zoom']}", *layer.get("flags", [])]
         if "simplification" in layer:

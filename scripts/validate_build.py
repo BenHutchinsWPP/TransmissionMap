@@ -107,9 +107,9 @@ def styled_fields(text: str) -> set[str]:
     return set(re.findall(r'paletteColor\("([^"]+)"\)', text))
 
 
-# Per-continent builds (`osm_generators_eu.pmtiles`) are inputs to the global
-# join, not layers the frontend fetches — `make global-tiles` folds the eight of
-# them into the one archive `assets/constants.ts` names. They are legitimately
+# Per-continent builds (`osm_generators_eu.pmtiles`) are by-products of `make
+# continental-all`, not layers the frontend fetches — `make global-tiles` builds
+# the one archive `assets/constants.ts` names from the continental intermediates. They are legitimately
 # unreferenced, so long as their global counterpart is a real expected layer.
 CONTINENT_CODES = ("na", "eu", "as", "sa", "af", "oc", "ca", "an")
 
@@ -148,7 +148,7 @@ def list_expected() -> int:
     """Print every data/layers path assets/constants.ts fetches, one per line.
 
     scripts/publish_data.sh reads this so the push carries only what the
-    frontend actually loads — the per-continent join inputs stay local.
+    frontend actually loads — the per-continent archives stay local.
     """
     for want in sorted(expected_layers(CONSTANTS.read_text())):
         print(want)

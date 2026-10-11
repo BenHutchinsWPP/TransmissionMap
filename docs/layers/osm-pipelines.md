@@ -15,6 +15,7 @@ For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_pipelines_lines.pmtiles` (routes, PMTiles z5–12) · `data/layers/osm_pipelines_points.geojson.gz` (points) |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/pipeline_routes.gpkg` + `data/build/pipeline_points.csv` → `tippecanoe -l osm_pipelines_lines` |
+| **Region tags** | Routes `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`; points `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`; by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack
 
@@ -34,7 +35,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 - **Routes:** `man_made=pipeline` line features
 - **Points:** `pipeline=*` point features (valves, pig launchers, meter stations)
 - **Row filter:** non-fuel routes dropped (`scripts/enrich_osm_tags.py`, `_FUEL_SUBSTANCES` allowlist) — only pipelines carrying a generator fuel (natural gas, oil/crude, refined products & NGL, hydrogen, coal) or untagged are kept. Water, sewage, industrial gases, petrochemical feedstock, etc. removed (14,110 rows).
-- **Columns kept (routes):** `osm_id`, `name`, `substance`, `operator`, `pipeline`, `op_wikidat`
+- **Columns kept (routes):** `osm_id`, `name`, `substance`, `operator`, `pipeline`, `op_wikidat`, plus the region tags listed in the Source table
 - **Map styling:** routes colored by `substance`, bucketed to generator-fuel type
 
 ## Fields — routes

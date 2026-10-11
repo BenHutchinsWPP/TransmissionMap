@@ -15,6 +15,7 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 | **Attribution** | "US DOT BTS / FRA North American Rail Network" |
 | **Served** | `data/layers/railroads.pmtiles` — PMTiles, z4–13 |
 | **Built by** | `scripts/tile_manifest.yaml` (`railroads` block) → `build_tiles.py` — `ogr2ogr` field subset + `tippecanoe` |
+| **Region tags** | None — a context layer, see [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Raw input** | `data/raw/railroads/narn_rail_lines.geojson` (~345 MB, **not committed**) |
 
 > **Download origin:** the BTS feature service, paged by `ogr2ogr` (the Hub's one-file

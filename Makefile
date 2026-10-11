@@ -23,12 +23,18 @@ RAW_OSM     := data/raw/osm
 BUILD       := data/build
 PORT        ?= 8000
 
+# Tile builds write tens of GB of temp files (Python tempfile, tippecanoe -t);
+# keep them on the project disk rather than a small tmpfs /tmp.
+BUILD_TMP   := $(CURDIR)/tmp/build-tmp
+pipeline region-tags continental-osm continental-all global-tiles tiles: export TMPDIR := $(BUILD_TMP)
+$(shell mkdir -p $(BUILD_TMP))
+
 # Files used to detect that a stage has run; let `make` skip work intelligently.
 PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
+.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -36,13 +42,14 @@ help:
 	@echo "  make pipeline    OSM PBF → SHP/CSV in $(BUILD)/"
 	@echo "  make continental-osm REGION=<region>  build all OSM layers for a continent (e.g. REGION=eu / REGION=oceania)"
 	@echo "  make continental-all build all OSM layers for all 8 continental extracts"
-	@echo "  make global-tiles    join the 8 continental builds into one world tileset per layer, under the 100 MiB per-file host ceiling (transmission is re-tiled and split by voltage class)"
+	@echo "  make global-tiles    merge and dedupe the continental intermediates into one world tileset per layer (transmission is then cut into six voltage-class archives)"
 	@echo "  make land        build PAD-US + Tribal land layers → $(BUILD)/{padus,tribal_lands}.gpkg (no OSM needed)"
 	@echo "  make regions     build NERC/BA/Retail region layers → $(BUILD)/ (manual parquet input)"
 	@echo "  make natgas      build HIFLD natural gas pipelines + points → $(BUILD)/ (manual parquet input)"
 	@echo "  make wind        build NREL/NLR Wind Resource raster → data/layers/nlr_wind_100m.pmtiles + COG in data/build/"
 	@echo "  make solar       build Global Solar Atlas PVOUT raster → data/layers/gsa_solar_pvout.pmtiles + COG in data/build/"
 	@echo "  make geo         build IHFC heat flow raster → data/layers/ihfc_geo_heatflow.pmtiles + COG in data/build/"
+	@echo "  make region-tags tag the US intermediates in $(BUILD)/ with the regions they fall in (needs the boundary files)"
 	@echo "  make hydro-pts   build NREL/DOE hydrothermal points → data/layers/nrel_hydrothermal_pts.geojson.gz"
 	@echo "  make popden      build WorldPop 2020 population density → data/layers/worldpop_pop_density.pmtiles + COG in data/build/"
 	@echo "  make boundaries  build shared county-boundary PMTiles (Census TIGER) → data/layers/county_boundaries.pmtiles"
@@ -166,6 +173,7 @@ pipeline:
 	    echo "  [skip] world boundaries — download failed (see script header)"
 	@echo "── Renaming intermediate SHPs → final snake_case names ──"
 	@$(MAKE) _rename
+	@$(MAKE) region-tags
 	@echo ""
 	@echo "Done. Outputs in $(BUILD)/:"
 	@ls -lh $(BUILD)/ 2>/dev/null | awk 'NR>1 {print "  " $$NF "  (" $$5 ")"}'
@@ -187,16 +195,14 @@ continental-all:
 	@$(PY) $(SCRIPTS)/process_continental_osm.py --all
 
 # ── One world tileset per layer ────────────────────────────────────────────
-# Folds the 8 continental builds into the planet-wide archives the map reads,
-# then caps the archives that would otherwise pass the host's 100 MiB per-file
-# ceiling. Transmission is the exception: it is re-tiled from the continental
-# GeoPackages in one global pass and cut into six voltage-class archives.
+# Merges and dedupes the continental intermediates and tiles each layer once
+# into the planet-wide archives the map reads. Transmission is then cut into
+# six voltage-class archives.
 # Download packs stay per-continent. See docs/hosting-plan.md.
 #   make global-tiles
 #   make global-tiles LAYER=osm_substations_points
-#   make global-tiles TRIM_ONLY=1   # just the ceiling caps, skip the joins
 global-tiles:
-	@$(PY) $(SCRIPTS)/build_global_tiles.py $(if $(LAYER),--only $(LAYER)) $(if $(TRIM_ONLY),--trim-only)
+	@$(PY) $(SCRIPTS)/build_global_tiles.py $(if $(LAYER),--only $(LAYER))
 
 # Helper: copy a GeoPackage from one stem to another.
 # Usage: $(call cp_shp,src_stem,dst_stem)
@@ -275,6 +281,39 @@ hydro-pts:
 # hover LUT + COG download. License CC BY 4.0 (attribution required).
 popden:
 	@bash $(SCRIPTS)/build_population_density.sh
+
+# ── Region tags: states / counties / BA / NERC / retail on the US intermediates ──
+# Runs after every boundary file exists (the last step of `make pipeline`) and
+# tags each intermediate in place; a re-run gives the same result.
+# Tagged: the assets people filter on. Points carry states, counties, ba, nerc
+# and retail; lines carry the same without retail (the owner field already
+# names whose line it is). Context layers (PAD-US, critical habitat, tribal
+# lands, BOEM leases, railroads) are backdrops and carry no region tags.
+# `make mines` tags in extract_mines.py. See docs/pipeline.md § Region tags.
+REGION_TAG_FILES := generator_eia.csv substation_hifld.csv hifld_natgas_points.csv \
+    hifld_natgas_lines.gpkg transmission_hifld.gpkg \
+    ogf_planned_transmission.gpkg westtec_10yr.gpkg \
+    hydrothermal/nrel_hydrothermal_points.geojson
+region-tags:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@missing=0; for pair in countries.gpkg:world-boundaries admin1_boundaries.gpkg:world-boundaries \
+	    us_states.gpkg:census-boundaries county_boundaries.geojson:boundaries \
+	    eia_ba.gpkg:pipeline nerc_regions.gpkg:regions retail_territories.gpkg:regions; do \
+	    f=$${pair%%:*}; t=$${pair##*:}; \
+	    if [ ! -f "$(BUILD)/$$f" ]; then echo "ERROR: missing $(BUILD)/$$f (make $$t)"; missing=1; fi; \
+	done; [ $$missing -eq 0 ] || exit 1
+	@for f in $(REGION_TAG_FILES); do \
+	    echo "=== Region tags: $$f ==="; \
+	    case $$f in \
+	        generator_eia.csv) opts="--prefer state=states --prefer ba_code=ba --prefer nerc_region=nerc";; \
+	        hifld_natgas_lines.gpkg|transmission_hifld.gpkg|ogf_planned_transmission.gpkg|westtec_10yr.gpkg) \
+	            opts="--fields states,counties,ba,nerc";; \
+	        *) opts="";; \
+	    esac; \
+	    $(PY) $(SCRIPTS)/region_join.py tag --scope usa $(BUILD)/$$f $$opts || exit 1; \
+	done
+	@gzip -9 -c $(BUILD)/hydrothermal/nrel_hydrothermal_points.geojson > data/layers/nrel_hydrothermal_points.geojson.gz
+	@echo "[done] region tags; data/layers/nrel_hydrothermal_points.geojson.gz"
 
 # ── Large active/retired mines (MSHA, filtered) ─────────────────────────────
 # Extract → filtered GeoJSON (peak employment >= 50), then gzip for serving.

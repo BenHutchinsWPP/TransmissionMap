@@ -10,13 +10,16 @@ so the frontend has one URL per layer and pans across continents without
 swapping sources. See docs/hosting-plan.md and docs/pipeline.md.
 
 Three kinds of output:
-  * PMTiles already tiled per continent  → `tile-join` (no re-tiling)
-  * Polygon layers shipped as GeoJSON    → one `tippecanoe` pass over all eight
-  * Small point layers shipped as GeoJSON → concatenated FeatureCollection
+  * Point and line layers (RETILE, transmission) → the eight continental
+    intermediates merged and deduped, then one `tippecanoe` pass
+  * Polygon layers (TILE_POLYGONS)              → the same, one pass over all eight
+  * Small point layers (CONCAT_GEOJSON)         → concatenated FeatureCollection
 
-Point layers are joined with `-pk` so no substation or generator is ever dropped
-or coalesced; the only thing the global build changes is the zoom floor (see
-MIN_ZOOM_FLOOR).
+Every world layer is built from one merged input, so the Geofabrik seam copies
+are dropped once at the merge (see _merge_deduped) and each archive carries a
+single maxzoom by construction. The merged input is then tagged with the global
+region fields (countries and admin1 everywhere, plus counties, ba, nerc and
+retail inside the US) by region_join.py, before tippecanoe or the dump.
 
 Usage:
   python scripts/build_global_tiles.py                 # everything
@@ -27,13 +30,15 @@ Usage:
 import argparse
 import gzip
 import json
+import hashlib
 import logging
+import re
 import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,67 +51,102 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD_DIR = ROOT / "data" / "build"
 LAYERS_DIR = ROOT / "data" / "layers"
 
-# Continental codes, in the order tile-join reads them.
-#
-# Note this order does NOT resolve the Geofabrik overlaps. tile-join concatenates
-# the features of a tile that several inputs carry, it does not pick a winner:
-# `europe-latest` and `asia-latest` both cover the Caucasus and western Russia,
-# and measured over the world archive, the z6 tile on Volgograd holds 2,549 of
-# its 2,649 ways twice. Nothing clips the extracts to continent polygons — see
-# docs/hosting-plan.md.
+# Continental codes, in the order the merges read them. On a seam copy the first
+# continent in this order supplies the kept feature. `europe-latest` and
+# `asia-latest` both cover the Caucasus and western Russia, and nothing clips the
+# extracts to continent polygons — see docs/hosting-plan.md.
 REGION_CODES = ["na", "eu", "as", "sa", "af", "oc", "ca", "an"]
 
 CEILING_BYTES = 100 * 2**20  # GitHub hard-rejects any file past this.
 
-# Publishing ceiling: no file over 100 MiB. `process_continental_osm.py` now
-# builds each layer at a size that clears it, so a fresh build needs nothing
-# here; `--trim` is the catch-up path for archives already on disk from an
-# earlier build. Measured with tile-join:
-#   osm_generators            120.3 MB → 63.1 MB  (z14 → z13)
-#   osm_substations_points    106.0 MB → 83.5 MB  (z14 → z13)
-# Keyed by artifact stem so one continent can be capped on its own — but a layer
-# that is joined into one world archive must cap every continent the same, or
-# the joined maxzoom exceeds what some regions carry and they draw blank there
-# instead of overzooming.
-MAX_ZOOM_CAP: Dict[str, int] = {
-    "osm_generators": 13,
-    "osm_substations_points": 13,
-}
+# tippecanoe stderr lines that mean features were thinned or a zoom was extended.
+# run_cmd logs them even when the command succeeds, so a build that quietly
+# dropped points shows it in its log.
+DROP_WARNING_RE = re.compile(r"Going to try|too many features|with detail|dropping")
 
-# Tile attributes nothing in assets/ or src/ reads — no style, filter, popup or
-# search. Dropping them is lossless for the map. Empty because every layer now
-# selects its columns at tile time (process_continental_osm.py / the tile
-# manifest); this is the catch-up path for an archive already on disk.
-DROP_ATTRS: Dict[str, List[str]] = {}
+# ogr2ogr reads a CSV's geometry only from these open options (the continental
+# CSVs carry `lon`/`lat` columns).
+CSV_OPEN_OPTIONS = ["-oo", "X_POSSIBLE_NAMES=lon", "-oo", "Y_POSSIBLE_NAMES=lat",
+                    "-oo", "KEEP_GEOM_COLUMNS=NO"]
 
-# Zoom floor applied when joining. A planet-wide point layer puts every feature
-# on Earth in the z0 tile; below these zooms the dots overlap into a smear that
-# costs hundreds of KiB to say nothing. Raising the floor drops no features —
-# the same points are all present from the floor up.
-MIN_ZOOM_FLOOR: Dict[str, int] = {
-    "osm_substations_points": 4,
-}
+# Point and line layers re-tiled planet-wide from the continental intermediates,
+# one merged input and one tippecanoe pass each. Values follow
+# process_continental_osm.py's continental builds, with two world-only choices:
+#  * No `--extend-zooms-if-still-dropping`: with no zoom cap it lets an archive
+#    advertise z14, so each spec's `max_zoom` is exactly what `pmtiles show`
+#    reports.
+#  * Substations start at z4 — below that a single tile holds most of the
+#    substations on Earth — and every point is present from z4 up.
+#
+# `dedupe_key` names what identifies one OSM element across two extracts (see
+# _merge_deduped). These sources carry no `osm_type`, so the key pairs `osm_id`
+# with the geometry as written: a seam copy has the same id and the same
+# coordinates, while a node and a way sharing a number differ in geometry. The
+# key is read for the merge only; the merged file carries just `select`, so
+# pipelines (which do not tile `osm_id`) coalesce on the same attributes as the
+# continental builds.
+# Region fields (scripts/region_join.py) each kind of asset is tagged with:
+# assets people filter on get the full global set; lines drop `retail`, since
+# the owner field already answers "whose line".
+GLOBAL_FIELDS = ("countries", "admin1", "counties", "ba", "nerc", "retail")
+LINE_FIELDS = ("countries", "admin1", "counties", "ba", "nerc")
 
-# Layers already tiled per continent — joined tile-for-tile, never re-tiled.
-# Transmission is not among them: it is re-tiled from the continental GeoPackages
-# by retile_transmission() below, which is what lets it dedupe the Geofabrik
-# overlaps and carry full vertex detail at maxzoom.
-JOIN_PMTILES = [
-    "osm_substations_points",
-    "osm_generators",
-    "osm_pipelines_lines",
+RETILE = [
+    {
+        "base": "osm_substations_points",
+        "src_stem": "substation_osm",
+        "src_ext": ".csv",
+        "select": ["osm_id", "name", "nominal_kv", "operator", "sub_type"],
+        "dedupe_key": ("osm_id", "geometry"),
+        "fields": GLOBAL_FIELDS,
+        "min_zoom": 4,
+        "max_zoom": 13,
+        "max_tile_bytes": 500000,
+        "simplification": None,
+        # Points are never dropped or coalesced.
+        "flags": ["-r1", "--no-tile-size-limit", "--no-feature-limit",
+                  "--preserve-input-order"],
+    },
+    {
+        "base": "osm_generators",
+        "src_stem": "generator_osm",
+        "src_ext": ".csv",
+        "select": ["osm_id", "name", "source", "gen_method", "gen_type", "output_mw",
+                   "operator"],
+        "dedupe_key": ("osm_id", "geometry"),
+        "fields": GLOBAL_FIELDS,
+        "min_zoom": 7,
+        "max_zoom": 13,
+        "max_tile_bytes": 2000000,
+        "simplification": None,
+        "flags": ["--drop-densest-as-needed"],
+    },
+    {
+        "base": "osm_pipelines_lines",
+        "src_stem": "pipeline_routes",
+        "src_ext": ".gpkg",
+        "select": ["name", "substance", "operator"],
+        "dedupe_key": ("osm_id", "geometry"),
+        "fields": LINE_FIELDS,
+        "min_zoom": 2,
+        "max_zoom": 12,
+        "max_tile_bytes": 500000,
+        "simplification": 4,
+        "flags": ["--drop-densest-as-needed", "--coalesce-densest-as-needed"],
+    },
 ]
 
 # ── Transmission: one global re-tile, split by voltage ────────────────────────
 #
-# Transmission is the one layer that is re-tiled rather than joined. Three things
-# fall out of tiling the planet in a single pass that a tile-join cannot give:
+# Transmission follows the RETILE pattern (merge, dedupe, one tippecanoe pass)
+# with a zoom ladder and a voltage split on top. Three things fall out of tiling
+# the planet in a single pass:
 #
 #  1. **Dedupe.** Geofabrik's continental extracts overlap — europe-latest and
-#     asia-latest both cover western Russia, Türkiye and the Caucasus — and
-#     `tile-join` concatenates a shared tile's features rather than picking a
-#     winner. Merging the sources first and keeping the first feature per osm_id
-#     removes 23,833 redundant copies (1.7% of 1,366,072) before tippecanoe runs.
+#     asia-latest both cover western Russia, Türkiye and the Caucasus. Merging
+#     the sources first and keeping the first feature per osm_id (transmission
+#     is ways only, so the bare id is unique) removes 23,833 redundant copies
+#     (1.7% of 1,366,072) before tippecanoe runs.
 #  2. **One maxzoom by construction.** A PMTiles archive carries a single
 #     maxzoom, so joining continents built to different depths makes the archive
 #     advertise the deepest one and the shallower regions draw blank above their
@@ -130,6 +170,7 @@ TRANSMISSION_MAX_ZOOM = 11
 TRANSMISSION_SELECT = ["osm_id", "nominal_kv", "operator", "name",
                        "is_undergrnd", "is_dc", "minz"]
 TRANSMISSION_DROP_AFTER_TILING = ["minz"]
+TRANSMISSION_DEDUPE_KEY = ("osm_id",)
 
 # Which lines a transmission tile carries, by zoom. `minz` is the per-feature
 # zoom floor `enrich_osm_tags.py::_add_minzoom` writes from voltage, length and
@@ -200,6 +241,9 @@ TRANSMISSION_BANDS = [
 # any substation fence line or plant boundary carries, and MapLibre overzooms
 # past a source's maximum on its own. Carrying these to z14 would more than
 # double both archives for detail no one can see.
+#
+# Seam copies are dropped on the RETILE key, `(osm_id, geometry)`: these
+# GeoPackages carry no `osm_type`.
 TILE_POLYGONS = [
     {
         "base": "osm_substations_polygons",
@@ -207,6 +251,8 @@ TILE_POLYGONS = [
         "min_zoom": 9,
         "max_zoom": 12,
         "select": ["osm_id", "name", "nominal_kv", "operator", "sub_type"],
+        "dedupe_key": ("osm_id", "geometry"),
+        "fields": GLOBAL_FIELDS,
     },
     {
         "base": "osm_plants_polygons",
@@ -214,15 +260,20 @@ TILE_POLYGONS = [
         "min_zoom": 5,
         "max_zoom": 12,
         "select": ["osm_id", "name", "source", "output_mw", "operator", "start_date"],
+        "dedupe_key": ("osm_id", "geometry"),
+        "fields": GLOBAL_FIELDS,
     },
 ]
 
-# Point layers small enough to stay a single gzipped FeatureCollection.
-CONCAT_GEOJSON = [
-    "osm_plants_points",
-    "osm_datacenters",
-    "osm_pipelines_points",
-]
+# Point layers small enough to stay a single gzipped FeatureCollection, each with
+# the key its seam copies are dropped on. Data centers carry `osm_type`, which
+# separates a node from a way of the same number; the other two do not, so they
+# pair `osm_id` with the geometry.
+CONCAT_GEOJSON = {
+    "osm_plants_points": ("osm_id", "geometry"),
+    "osm_datacenters": ("osm_type", "osm_id"),
+    "osm_pipelines_points": ("osm_id", "geometry"),
+}
 
 
 # Every world artifact and the continental inputs it is built from. A join is
@@ -230,8 +281,8 @@ CONCAT_GEOJSON = [
 # continental rebuild is indistinguishable from a frontend bug once published —
 # so the mtimes are compared before and after every run.
 def _build_plan() -> List[tuple]:
-    plan = [(base, [LAYERS_DIR / f"{base}.pmtiles"],
-             _inputs(base + "_{code}.pmtiles")) for base in JOIN_PMTILES]
+    plan = [(spec["base"], [LAYERS_DIR / f"{spec['base']}.pmtiles"], _retile_inputs(spec))
+            for spec in RETILE]
     plan.append((
         TRANSMISSION_BASE,
         [LAYERS_DIR / f"{TRANSMISSION_BASE}_{b['suffix']}.pmtiles" for b in TRANSMISSION_BANDS],
@@ -281,6 +332,12 @@ def run_cmd(cmd: List[str], desc: str, dry_run: bool = False):
     if proc.returncode != 0:
         log.error("%s failed (exit %d)\n%s", desc, proc.returncode, proc.stderr[-2000:])
         raise SystemExit(proc.returncode)
+    hits = [line.strip() for line in re.split(r"[\r\n]+", proc.stderr)
+            if DROP_WARNING_RE.search(line)]
+    for line in hits[:200]:
+        log.warning("    stderr: %s", line)
+    if len(hits) > 200:
+        log.warning("    stderr: … %d more matching lines", len(hits) - 200)
     log.info("    done in %.1fs", time.time() - started)
 
 
@@ -294,94 +351,97 @@ def _report(out: Path):
     log.info("  ✓ %s (%.1f MiB)", out.name, out.stat().st_size / 2**20)
 
 
-def join_pmtiles(base: str, dry_run: bool = False):
-    srcs = _inputs(base + "_{code}.pmtiles")
-    if not srcs:
-        log.warning("[skip] %s — no continental archives built", base)
-        return
-    out = LAYERS_DIR / f"{base}.pmtiles"
-    floor = MIN_ZOOM_FLOOR.get(base)
-    cmd = ["tile-join", "-f", "-pk", "-o", str(out)]
-    if floor is not None:
-        cmd += [f"-Z{floor}"]
-    cmd += [str(p) for p in srcs]
-    log.info("=== %s ← %d continental archives%s ===", base, len(srcs),
-             f", z{floor}+" if floor is not None else "")
-    run_cmd(cmd, f"tile-join {out.name}", dry_run)
-    if not dry_run:
-        _report(out)
+def _retile_inputs(spec: dict) -> List[Path]:
+    return [BUILD_DIR / f"{spec['src_stem']}_{c}{spec['src_ext']}" for c in REGION_CODES]
 
 
-def trim_pmtiles(path: Path, base: str, dry_run: bool = False) -> bool:
-    """Re-write `path` under the publishing ceiling. Returns True if it ran.
+def _seam_key(feature: dict, key_fields) -> Optional[tuple]:
+    """The dedupe key of one GeoJSON feature, or None when a key field is missing.
 
-    Rewrites in place through a temp file. The archive is a build product —
-    `data/build/*.gpkg` and process_continental_osm.py are the source of truth —
-    so nothing is lost that a re-tile would not restore, and a second run is a
-    no-op because the cap and the attribute list are already applied.
+    `geometry` stands for the geometry as written, compared through a digest so
+    the seen-set stays small for long lines.
     """
-    cap  = MAX_ZOOM_CAP.get(path.stem, MAX_ZOOM_CAP.get(base))
-    drop = DROP_ATTRS.get(base, [])
-    if cap is None and not drop:
-        return False
-    if not path.exists():
-        log.warning("[skip] trim %s — not built", path.name)
-        return False
-
-    before = path.stat().st_size
-    cmd = ["tile-join", "-f", "-pk"]
-    if cap is not None:
-        cmd += [f"-z{cap}"]
-    for attr in drop:
-        cmd += ["-x", attr]
-    # The temp name must keep the .pmtiles extension: tile-join picks its output
-    # format from the suffix, and anything else silently writes mbtiles.
-    tmp = path.with_name(path.stem + ".trim.pmtiles")
-    cmd += ["-o", str(tmp), str(path)]
-    log.info("=== trim %s%s%s ===", path.name,
-             f" z≤{cap}" if cap is not None else "",
-             f" −{','.join(drop)}" if drop else "")
-    run_cmd(cmd, f"tile-join {path.name}", dry_run)
-    if dry_run:
-        return True
-    tmp.replace(path)
-    after = path.stat().st_size
-    log.info("  ✓ %s %.1f → %.1f MiB%s", path.name, before / 2**20, after / 2**20,
-             "" if after <= CEILING_BYTES else "  ⚠ still over the 100 MiB ceiling")
-    return True
+    props = feature.get("properties") or {}
+    parts = []
+    for field in key_fields:
+        if field == "geometry":
+            text = json.dumps(feature.get("geometry"), separators=(",", ":"))
+            parts.append(hashlib.blake2b(text.encode(), digest_size=16).digest())
+        else:
+            value = props.get(field)
+            if value is None:
+                return None
+            parts.append(value)
+    return tuple(parts)
 
 
-def _merge_deduped(srcs: List[Path], out: Path, select: List[str]) -> tuple[int, int]:
-    """Write every source to one GeoJSONSeq, keeping the first feature per osm_id.
+def _warn_unkeyed(unkeyed: int, key_fields):
+    if unkeyed:
+        log.warning("  %d features lack a dedupe key field (%s) and were kept without deduping",
+                    unkeyed, ", ".join(key_fields))
+
+
+def _merge_deduped(srcs: List[Path], out: Path, select: List[str],
+                   key_fields=TRANSMISSION_DEDUPE_KEY) -> tuple:
+    """Write every source to one GeoJSONSeq, keeping the first feature per key.
 
     Returns (features read, features written). Geofabrik's continental extracts
-    overlap — nothing clips them to continent polygons — so the same way arrives
-    from two extracts and would otherwise be tiled twice. Streaming, because the
-    merged file is ~1 GB.
+    overlap — nothing clips them to continent polygons — so the same element
+    arrives from two extracts and would otherwise be tiled twice. A feature
+    missing a key field is always kept. The key columns are read for the merge,
+    and the written file carries only `select`. Streaming, because a merged
+    file reaches ~1 GB.
     """
+    extra = [f for f in key_fields if f != "geometry" and f not in select]
     seen: set = set()
-    read = kept = 0
-    with tempfile.TemporaryDirectory(prefix="global-tx-") as tmp, open(out, "w") as sink:
+    read = kept = unkeyed = 0
+    with tempfile.TemporaryDirectory(prefix="global-merge-") as tmp, \
+            open(out, "w", encoding="utf-8") as sink:
         for src in srcs:
             seq = Path(tmp) / (src.stem + ".geojsonl")
             run_cmd(
                 ["ogr2ogr", "-f", "GeoJSONSeq", str(seq), str(src),
-                 "-select", ",".join(select),
+                 *(CSV_OPEN_OPTIONS if src.suffix == ".csv" else []),
+                 "-select", ",".join(select + extra),
                  "-lco", "COORDINATE_PRECISION=6"],
                 f"ogr2ogr {seq.name}",
             )
-            with open(seq) as fh:
+            with open(seq, encoding="utf-8") as fh:
                 for line in fh:
                     read += 1
-                    osm_id = json.loads(line)["properties"].get("osm_id")
-                    if osm_id is not None and osm_id in seen:
-                        continue
-                    if osm_id is not None:
-                        seen.add(osm_id)
+                    feature = json.loads(line)
+                    key = _seam_key(feature, key_fields)
+                    if key is None:
+                        unkeyed += 1
+                    else:
+                        if key in seen:
+                            continue
+                        seen.add(key)
                     kept += 1
+                    if extra:
+                        for field in extra:
+                            feature["properties"].pop(field, None)
+                        line = json.dumps(feature, ensure_ascii=False) + "\n"
                     sink.write(line)
             seq.unlink()
+    _warn_unkeyed(unkeyed, key_fields)
     return read, kept
+
+
+def _tag_regions(seq: Path, fields):
+    """Add the global region fields to a merged, deduped GeoJSONSeq in place.
+
+    Tagging follows the dedupe, so each element is joined once, and precedes
+    tippecanoe, so the fields ride into the tiles. The join logs REGION_STATS.
+    """
+    import region_join  # geo libraries load only when a build reaches this step
+    region_join.tag_file(seq, "global", fields=fields)
+
+
+def _log_merge(read: int, kept: int, key_fields):
+    log.info("  %d features read, %d kept — %d seam copies dropped (%.1f%%) on (%s)",
+             read, kept, read - kept, (read - kept) / read * 100 if read else 0,
+             ", ".join(key_fields))
 
 
 def split_transmission_bands(world: Path, out_dir: Path, base: str = TRANSMISSION_BASE):
@@ -408,8 +468,7 @@ def split_transmission_bands(world: Path, out_dir: Path, base: str = TRANSMISSIO
 def retile_transmission(dry_run: bool = False):
     """Re-tile transmission planet-wide, then cut it into voltage-class archives.
 
-    Not a tile-join: see the TRANSMISSION_BANDS block above for why this layer
-    is the exception.
+    See the TRANSMISSION_BANDS block above for the zoom ladder and the split.
     """
     srcs = [BUILD_DIR / f"{TRANSMISSION_SRC_STEM}_{c}.gpkg" for c in REGION_CODES]
     srcs = [p for p in srcs if p.exists()]
@@ -430,12 +489,12 @@ def retile_transmission(dry_run: bool = False):
     with tempfile.TemporaryDirectory(prefix="global-tx-", dir=BUILD_DIR) as tmp:
         merged = Path(tmp) / "transmission_world.geojsonl"
         read, kept = _merge_deduped(srcs, merged, TRANSMISSION_SELECT)
-        log.info("  %d features read, %d kept — %d redundant copies dropped (%.1f%%)",
-                 read, kept, read - kept, (read - kept) / read * 100 if read else 0)
+        _log_merge(read, kept, TRANSMISSION_DEDUPE_KEY)
+        _tag_regions(merged, LINE_FIELDS)
 
         world = Path(tmp) / "transmission_world.pmtiles"
         run_cmd(
-            ["tippecanoe", "-o", str(world), "-l", TRANSMISSION_BASE,
+            ["tippecanoe", "-o", str(world), "-l", TRANSMISSION_BASE, "-t", tmp,
              f"--minimum-zoom={TRANSMISSION_MIN_ZOOM}",
              f"--maximum-zoom={TRANSMISSION_MAX_ZOOM}",
              "-j", TRANSMISSION_ZOOM_LADDER,
@@ -450,6 +509,46 @@ def retile_transmission(dry_run: bool = False):
         split_transmission_bands(world, LAYERS_DIR)
 
 
+def retile(spec: dict, dry_run: bool = False):
+    """Merge a RETILE layer's continental intermediates, dedupe, tile once."""
+    base = spec["base"]
+    srcs = [p for p in _retile_inputs(spec) if p.exists()]
+    if not srcs:
+        log.warning("[skip] %s — no continental %s%s built", base, spec["src_stem"],
+                    spec["src_ext"])
+        return
+    out = LAYERS_DIR / f"{base}.pmtiles"
+    log.info("=== %s ← %d continental %s files, merged and re-tiled ===",
+             base, len(srcs), spec["src_ext"])
+    tip_args = [f"--minimum-zoom={spec['min_zoom']}", f"--maximum-zoom={spec['max_zoom']}",
+                *spec["flags"]]
+    if spec["simplification"]:
+        tip_args.append(f"--simplification={spec['simplification']}")
+    tip_args.append(f"--maximum-tile-bytes={spec['max_tile_bytes']}")
+
+    if dry_run:
+        log.info("  $ merge + dedupe %d files on (%s)", len(srcs), ", ".join(spec["dedupe_key"]))
+        log.info("  $ tippecanoe %s %s", out.name, " ".join(tip_args))
+        return
+
+    with tempfile.TemporaryDirectory(prefix="global-tiles-") as tmp:
+        merged = Path(tmp) / f"{base}.geojsonl"
+        read, kept = _merge_deduped(srcs, merged, spec["select"], spec["dedupe_key"])
+        _log_merge(read, kept, spec["dedupe_key"])
+        # tippecanoe needs at least one feature, and --force truncates the target
+        # before it reads the input — so an empty merge leaves the archive as it was.
+        if not kept:
+            log.warning("[skip] %s — the merged input has no features", base)
+            return
+        _tag_regions(merged, spec["fields"])
+        run_cmd(
+            ["tippecanoe", "-o", str(out), "-l", base, "-t", tmp, *tip_args,
+             "--read-parallel", "--force", str(merged)],
+            f"tippecanoe {out.name}",
+        )
+    _report(out)
+
+
 def tile_polygons(spec: dict, dry_run: bool = False):
     base, src_stem = spec["base"], spec["src"]
     srcs = [BUILD_DIR / f"{src_stem}_{c}.gpkg" for c in REGION_CODES]
@@ -459,28 +558,27 @@ def tile_polygons(spec: dict, dry_run: bool = False):
         return
     out = LAYERS_DIR / f"{base}.pmtiles"
     log.info("=== %s ← %d continental layers ===", base, len(srcs))
+    tip_args = [f"--minimum-zoom={spec['min_zoom']}", f"--maximum-zoom={spec['max_zoom']}",
+                # Footprints are the point of the layer — keep every one of them.
+                "--no-tile-size-limit", "--no-feature-limit"]
+
+    if dry_run:
+        log.info("  $ merge + dedupe %d GeoPackages on (%s)", len(srcs),
+                 ", ".join(spec["dedupe_key"]))
+        log.info("  $ tippecanoe %s %s", out.name, " ".join(tip_args))
+        return
 
     with tempfile.TemporaryDirectory(prefix="global-tiles-") as tmp:
-        seqs = []
-        for src in srcs:
-            seq = Path(tmp) / (src.stem + ".geojsonl")
-            run_cmd(
-                ["ogr2ogr", "-f", "GeoJSONSeq", str(seq), str(src),
-                 "-select", ",".join(spec["select"]),
-                 "-lco", "COORDINATE_PRECISION=6", "-lco", "RFC7946=NO"],
-                f"ogr2ogr {seq.name}", dry_run,
-            )
-            seqs.append(str(seq))
+        merged = Path(tmp) / f"{base}.geojsonl"
+        read, kept = _merge_deduped(srcs, merged, spec["select"], spec["dedupe_key"])
+        _log_merge(read, kept, spec["dedupe_key"])
+        _tag_regions(merged, spec["fields"])
         run_cmd(
-            ["tippecanoe", "-o", str(out), "-l", base,
-             f"--minimum-zoom={spec['min_zoom']}", f"--maximum-zoom={spec['max_zoom']}",
-             # Footprints are the point of the layer — keep every one of them.
-             "--no-tile-size-limit", "--no-feature-limit",
-             "--read-parallel", "--force", *seqs],
-            f"tippecanoe {out.name}", dry_run,
+            ["tippecanoe", "-o", str(out), "-l", base, "-t", tmp, *tip_args,
+             "--read-parallel", "--force", str(merged)],
+            f"tippecanoe {out.name}",
         )
-    if not dry_run:
-        _report(out)
+    _report(out)
 
 
 def concat_geojson(base: str, dry_run: bool = False):
@@ -489,17 +587,33 @@ def concat_geojson(base: str, dry_run: bool = False):
         log.warning("[skip] %s — no continental GeoJSON built", base)
         return
     out = LAYERS_DIR / f"{base}.geojson.gz"
+    key_fields = CONCAT_GEOJSON[base]
     log.info("=== %s ← %d continental files ===", base, len(srcs))
     if dry_run:
-        log.info("  $ concat %d → %s", len(srcs), out.name)
+        log.info("  $ concat + dedupe %d on (%s) → %s", len(srcs), ", ".join(key_fields),
+                 out.name)
         return
     features = []
+    seen: set = set()
+    read = unkeyed = 0
     for src in srcs:
         with gzip.open(src, "rt", encoding="utf-8") as f:
-            features.extend(json.load(f).get("features", []))
+            for feature in json.load(f).get("features", []):
+                read += 1
+                key = _seam_key(feature, key_fields)
+                if key is None:
+                    unkeyed += 1
+                else:
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                features.append(feature)
+    _warn_unkeyed(unkeyed, key_fields)
+    _log_merge(read, len(features), key_fields)
+    import region_join
+    region_join.tag_features(features, "global", base, fields=GLOBAL_FIELDS)
     with gzip.open(out, "wt", encoding="utf-8") as f:
         json.dump({"type": "FeatureCollection", "features": features}, f)
-    log.info("  %d features", len(features))
     _report(out)
 
 
@@ -509,15 +623,13 @@ def main(argv=None):
     ap.add_argument("--only", action="append", metavar="LAYER",
                     help="build just this layer (repeatable)")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, build nothing")
-    ap.add_argument("--trim-only", action="store_true",
-                    help="apply the publishing-ceiling trims to archives already built, skip the joins")
     ap.add_argument("--list", action="store_true", help="list buildable layers and exit")
     ap.add_argument("--check", action="store_true",
                     help="report which world artifacts are behind their continental inputs and exit")
     args = ap.parse_args(argv)
 
-    everything = (JOIN_PMTILES + [TRANSMISSION_BASE]
-                  + [s["base"] for s in TILE_POLYGONS] + CONCAT_GEOJSON)
+    everything = ([s["base"] for s in RETILE] + [TRANSMISSION_BASE]
+                  + [s["base"] for s in TILE_POLYGONS] + list(CONCAT_GEOJSON))
     if args.list:
         for name in everything:
             print(name)
@@ -533,18 +645,16 @@ def main(argv=None):
     LAYERS_DIR.mkdir(parents=True, exist_ok=True)
     log_staleness("before build")
     started = time.time()
-    for base in JOIN_PMTILES:
-        if not wanted or base in wanted:
-            if not args.trim_only:
-                join_pmtiles(base, args.dry_run)
-            trim_pmtiles(LAYERS_DIR / f"{base}.pmtiles", base, args.dry_run)
-    if (not wanted or TRANSMISSION_BASE in wanted) and not args.trim_only:
+    for spec in RETILE:
+        if not wanted or spec["base"] in wanted:
+            retile(spec, args.dry_run)
+    if not wanted or TRANSMISSION_BASE in wanted:
         retile_transmission(args.dry_run)
     for spec in TILE_POLYGONS:
-        if not wanted or (spec["base"] in wanted and not args.trim_only):
+        if not wanted or spec["base"] in wanted:
             tile_polygons(spec, args.dry_run)
     for base in CONCAT_GEOJSON:
-        if not wanted or (base in wanted and not args.trim_only):
+        if not wanted or base in wanted:
             concat_geojson(base, args.dry_run)
     log.info("Global build finished in %.1f min", (time.time() - started) / 60)
     if not args.dry_run:

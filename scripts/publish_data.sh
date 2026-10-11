@@ -19,8 +19,9 @@
 # copies.
 #
 # Only the layers assets/constants.ts actually fetches are published. The
-# per-continent join inputs (osm_generators_eu.pmtiles and friends) stay local:
-# `make global-tiles` folds them into the world archives the frontend names, so
+# per-continent archives (osm_generators_eu.pmtiles and friends) that `make
+# continental-all` leaves in data/layers/ stay local: `make global-tiles` builds
+# the world archives the frontend names from the continental intermediates, so
 # shipping them too would add ~0.5 GB of unread bytes to every push.
 #
 # Requires a PUBLIC repo for raw's anon CORS to work.

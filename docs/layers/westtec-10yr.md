@@ -12,6 +12,7 @@ group: Transmission.
 | **Dataset** | 10-Year Horizon Report — Planned Projects + Identified Upgrades shapefiles (February 2026 release; DBF `DATE_LAST_UPDATE` = 2026-02-19) |
 | **Served** | `data/layers/westtec_10yr.geojson.gz` |
 | **Built by** | `scripts/extract_westtec.py` → `build_tiles.py` |
+| **Region tags** | `states`, `counties`, `ba`, `nerc`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Download** | Auto-downloaded by the extract script to `data/raw/westtec/` (gitignored):<br>`https://www.westernpowerpool.org/static/shapefiles/WestTEC%2010yr%20Identified%20Upgrades.zip`<br>`https://www.westernpowerpool.org/static/shapefiles/WestTEC%2010yr%20Planned%20Projects.zip` |
 
 ## Build

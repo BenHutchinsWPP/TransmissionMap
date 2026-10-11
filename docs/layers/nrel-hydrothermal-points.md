@@ -14,8 +14,9 @@ Named low-temperature hydrothermal springs and wells (contiguous US + parts of A
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "NREL/DOE Geothermal Data Repository" |
 | **Citation** | Mullane, M., et al. (2016). *US Low-Temperature Hydrothermal Resource Potential*. GDR submission 842. NREL/DOE. https://gdr.openei.org/submissions/842 |
-| **Served** | `data/layers/nrel_hydrothermal_pts.geojson.gz` — gzipped GeoJSON point layer (~1,200 features, lazy-loaded) |
+| **Served** | `data/layers/nrel_hydrothermal_points.geojson.gz` — gzipped GeoJSON point layer (~1,200 features, lazy-loaded) |
 | **Built by** | `scripts/build_hydrothermal_pts.sh` → `data/build/hydrothermal/` → hosted GeoJSON + CSV |
+| **Region tags** | `states`, `counties`, `ba`, `nerc`, `retail`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Raw input** | `us_low_temp_hydro_shps_080316.zip` (auto-downloaded to `data/raw/hydrothermal/` — **zip not committed**, ~952 KB) |
 
 > **Download origin — live.** `scripts/build_hydrothermal_pts.sh` downloads the zip directly from
@@ -59,7 +60,7 @@ Fields dropped from the source: `UID`, `SYS_TYPE` (always "isolated system"), `G
 2. **Extract** the point shapefile (`us_low_temp_hydro_pt_080316.shp`) from the zip.
 3. **Convert** to GeoJSON via `ogr2ogr -f GeoJSON -t_srs EPSG:4326`.
 4. **Clean** with Python: rename fields from source (`GEO_AREA`→`name`, `STATE`→`state`, `COUNTY`→`county`, `RES_TEMP`→`temp_c`, `MIN_DEPTH`→`min_depth_m`, `MAX_DEPTH`→`max_depth_m`, `BENHEATMWT`→`heat_mwt`, `REFERENCE`→`reference`); drop features with null geometry and zero-value depth entries.
-5. **Gzip** to `data/layers/nrel_hydrothermal_pts.geojson.gz` for the app (decompressed client-side by `fetchGeojson`).
+5. **Gzip** to `data/layers/nrel_hydrothermal_points.geojson.gz` for the app (decompressed client-side by `fetchGeojson`).
 6. **Download pack** → `build_releases.py` reads the `.geojson.gz`, flattens properties + lon/lat columns to CSV, and bundles GeoJSON + CSV into `data/releases/nrel-hydrothermal-points.zip`.
 
 ## Caveats
