@@ -222,7 +222,8 @@ An OSM-derived credit must start with `OSM_CREDIT` (`src/registry/sources.ts`) b
 
 - adds every source before any layer, and skips a source or layer already on the map, so a plan can name a shared source (e.g. `countyBoundariesSource()` from `./layer-init.js`) that another plan also names;
 - starts each style layer as its registry layer is in state (`visible`/`none` from `defaultOn` and the URL): the entry listing it in `mapLayerIds`. Leave `layout.visibility` unset; set it only to pin `"none"` on a display-mode sibling (a heat layer) that `applyGenMode` shows;
-- registers each layer's own `filter` (null without one) as its base filter, which connects the layer to the filter UI: legend and `where` filters are combined with it, never replace it.
+- registers each layer's own `filter` (null without one) as its base filter, which connects the layer to the filter UI: legend and `where` filters are combined with it, never replace it;
+- holds back a PMTiles source (vector/raster with a `url`) that none of its layers starts drawing: it is added without its url, so a switched-off layer reads nothing from its archive. Show a style layer with `setMapLayerVisibility()` (`./layer-plan.js`), never `map.setLayoutProperty(id, "visibility", …)` — it sets the url on first show and reveals the layer once the archive's header lands. `setLayerVisibility()` already goes through it. `npm run lint` enforces it.
 
 Common shapes have helpers in `./layer-init.js` that return plans, source included: `planPolygon` (fill + outline), `planRaster`, `planTransmissionLines`, `planSubstationPoints`. Compose plans by spreading: `[...planPolygon({...}), { layer: labelSpec }]`.
 

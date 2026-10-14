@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // applyLayerPlan() against one recording fake map: the guards, source-before-
-// layer order, beforeId, starting visibility and base-filter registration it owns.
+// layer order, beforeId, starting visibility, base-filter registration and the
+// held tiled sources (no url until a layer on them is first shown) it owns.
 // Then the whole boot: every style layer addAllLayers() adds keeps its inline
 // filter through filters.ts's effectiveFilter(), which rebuilds a layer's
 // filter from the registered base whenever a legend filter or a `where` runs.
@@ -13,7 +14,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
-import { applyLayerPlan, type LayerPlan } from './layer-plan.js';
+import { applyLayerPlan, setMapLayerVisibility, type LayerPlan } from './layer-plan.js';
 import { BASE_LAYER_FILTERS } from './base-filters.js';
 import { addAllLayers } from './add-all-layers.js';
 import { effectiveFilter } from '../filters.js';
@@ -111,6 +112,63 @@ describe('applyLayerPlan', () => {
   it('every style layer belongs to at most one registry layer', () => {
     const ids = LAYERS.flatMap(l => l.mapLayerIds);
     expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+});
+
+describe('held tiled sources', () => {
+  /** A map whose sources record setUrl; land() fires a source's metadata or error. */
+  function heldMap() {
+    const rec = recordingMap();
+    const handlers: Record<string, ((e: object) => void)[]> = {};
+    const urls: Record<string, string> = {};
+    const vis: Record<string, string> = {};
+    Object.assign(rec.map, {
+      addSource: (id: string, spec: unknown) => rec.sources.set(id, { spec, setUrl: (u: string) => { urls[id] = u; } }),
+      on: (t: string, h: (e: object) => void) => { (handlers[t] ??= []).push(h); },
+      off: (t: string, h: (e: object) => void) => { handlers[t] = handlers[t].filter(f => f !== h); },
+      setLayoutProperty: (id: string, _p: string, v: string) => { vis[id] = v; },
+    });
+    const land = (sourceId: string, type = 'sourcedata') =>
+      [...(handlers[type] ?? [])].forEach(h => h({ type, sourceId, sourceDataType: 'metadata' }));
+    return { ...rec, urls, vis, land };
+  }
+  const tiled = (id: string, url: string): LayerPlan[number] => ({ source: id, spec: { type: 'vector', url } });
+
+  it('adds a source no starting layer draws without its url; one a layer draws, with it', () => {
+    const { map, sources } = heldMap();
+    state.layerVisibility = { padus: true };
+    applyLayerPlan(map, [
+      tiled('off', 'pmtiles://off'), tiled('on', 'pmtiles://on'),
+      { layer: line('crithab-fill', 'off') }, { layer: line('padus-fill', 'on') },
+    ]);
+    state.layerVisibility = {};
+    expect((sources.get('off') as { spec: object }).spec).toEqual({ type: 'vector' });
+    expect((sources.get('on') as { spec: object }).spec).toEqual({ type: 'vector', url: 'pmtiles://on' });
+  });
+
+  it('first show sets the url; layers wait hidden for the metadata, the last visibility asked wins', () => {
+    const { map, urls, vis, land } = heldMap();
+    applyLayerPlan(map, [tiled('h', 'pmtiles://h'), { layer: line('h-1', 'h') }, { layer: line('h-2', 'h') }]);
+    setMapLayerVisibility(map, 'h-1', 'visible');
+    setMapLayerVisibility(map, 'h-2', 'visible');
+    setMapLayerVisibility(map, 'h-2', 'none');
+    expect(urls).toEqual({ h: 'pmtiles://h' });
+    expect(vis).toEqual({});
+    land('h');
+    expect(vis).toEqual({ 'h-1': 'visible', 'h-2': 'none' });
+    setMapLayerVisibility(map, 'h-2', 'visible');
+    expect(vis['h-2']).toBe('visible');
+  });
+
+  it('a failed load leaves the layers hidden and the source held for the next show', () => {
+    const { map, urls, vis, land } = heldMap();
+    applyLayerPlan(map, [tiled('f', 'pmtiles://f'), { layer: line('f-1', 'f') }]);
+    setMapLayerVisibility(map, 'f-1', 'visible');
+    land('f', 'error');
+    expect(vis).toEqual({});
+    delete urls.f;
+    setMapLayerVisibility(map, 'f-1', 'visible');
+    expect(urls).toEqual({ f: 'pmtiles://f' });
   });
 });
 

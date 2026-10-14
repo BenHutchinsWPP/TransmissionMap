@@ -22,7 +22,8 @@ function sizeK(registryId: string): number {
 // into its shared cursor hit-test (they are not all in CLICKABLE_LAYERS).
 // Visibility-gated for the same reason as activeClickableLayers() in popup.ts:
 // every id handed to queryRenderedFeatures pulls its whole source into the
-// query, and under 3D terrain each source costs a GPU readback sweep.
+// query, and under 3D terrain each source projects the query onto the ground
+// again.
 export function hoverFillIds(): string[] {
   if (!state.map) return [];
   return LAYERS

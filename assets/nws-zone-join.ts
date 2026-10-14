@@ -32,7 +32,7 @@
 //       outline.
 // Deps: state-bus (on 'layer:visibility', on 'layer:data'), state (map, layerVisibility), constants (DATA),
 //       layers/layer-init.ts (ensureCountyBoundaries), layers/layer-source.ts
-//       (pmtilesUrl), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
+//       (pmtilesUrl), layers/layer-plan.ts (setMapLayerVisibility), src/colors/buckets.ts (NWS_GROUP_BUCKETS — same
 //       palette map-layers-conditions.ts's NWS_GROUP_COLOR paints the storm
 //       polygons with; reused here, not duplicated).
 // Wired from ui/ui.ts init() via initNwsZoneJoin(), which listens for the
@@ -59,6 +59,7 @@ import { state } from './state.js';
 import { DATA, COUNTY_SRC, COUNTY_SRC_LAYER } from './constants.js';
 import { ensureCountyBoundaries } from './layers/layer-init.js';
 import { pmtilesUrl } from './layers/layer-source.js';
+import { setMapLayerVisibility } from './layers/layer-plan.js';
 import { NWS_GROUP_BUCKETS } from '../src/colors/buckets.js';
 import { on } from './state-bus.js';
 
@@ -171,7 +172,6 @@ function ensureZoneLayers() {
     });
   }
   ensureCountyBoundaries();
-  const vis = alertsVisibility();
   // These layers lazy-add on first data load, which would land them on top of
   // the whole stack — anchor below the storm-polygon layer instead so all
   // area fills stay under infra lines/points (z-order design rule).
@@ -194,7 +194,7 @@ function ensureZoneLayers() {
       type: s.type,
       source: s.source,
       "source-layer": s.srcLayer,
-      layout: { visibility: vis },
+      layout: { visibility: "none" },  // shown by syncZoneVisibility()
       paint: s.paint,
     } as LayerSpecification, before);
   }
@@ -204,7 +204,7 @@ function syncZoneVisibility() {
   if (!state.map) return;
   const vis = alertsVisibility();
   for (const id of [...ZONE_FILL_LAYERS, ...ZONE_LINE_LAYERS]) {
-    if (state.map.getLayer(id)) state.map.setLayoutProperty(id, "visibility", vis);
+    if (state.map.getLayer(id)) setMapLayerVisibility(state.map, id, vis);
   }
 }
 

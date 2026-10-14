@@ -16,13 +16,15 @@
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
 //              view-state.ts (setLayerVisibility, settleExclusiveGroups, applyAllGenModes);
 //              ui-filters.ts (applyGenMode); ui/panel-mirror.ts (heatRampShown, modeOf).
-// Deps: layers/layer-data.ts (ensureLayerData), raster-probes.ts,
+// Deps: layers/layer-data.ts (ensureLayerData), layers/layer-plan.ts
+//       (setMapLayerVisibility — reads a held archive on first show), raster-probes.ts,
 //       tribal-disclaimer.ts, state-bus.ts.
 
 import { state } from './state.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-probes.js';
 import { ensureLayerData } from './layers/layer-data.js';
+import { setMapLayerVisibility } from './layers/layer-plan.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
 import { emit } from './state-bus.js';
 import type { LayerDef } from '../src/types.js';
@@ -78,7 +80,7 @@ export function heatRampShown(entry: LayerDef, on: boolean, mode: string): boole
 
 function applyLayout(layout: Record<string, 'visible' | 'none'>) {
   for (const [mlId, v] of Object.entries(layout)) {
-    if (state.map?.getLayer(mlId)) state.map.setLayoutProperty(mlId, "visibility", v);
+    if (state.map?.getLayer(mlId)) setMapLayerVisibility(state.map, mlId, v);
   }
 }
 

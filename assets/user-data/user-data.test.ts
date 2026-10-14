@@ -74,6 +74,7 @@ function makeStubMap() {
     addControl: vi.fn(), on: vi.fn(), once: vi.fn(), loaded: () => true,
     addSource: vi.fn(), addLayer: vi.fn(), getSource: () => undefined, getLayer: () => undefined,
     setLayoutProperty: vi.fn(), fitBounds: vi.fn(),
+    queryRenderedFeatures: vi.fn((): unknown[] => [{ id: 'hit' }]),
   };
 }
 
@@ -215,6 +216,23 @@ describe('initDraw', () => {
     initDraw();
     expect(FakeDraw.instances).toBe(1);
     expect(map.addControl).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers Draw-only hit-tests empty in view mode, and passes every other query through', () => {
+    const map = makeStubMap();
+    const query = map.queryRenderedFeatures;
+    state.map = map as unknown as typeof state.map;
+    initDraw();
+    const qrf = (layers: string[]) => state.map!.queryRenderedFeatures([0, 0], { layers });
+    const drawOnly = ['gl-draw-point-static.cold', 'gl-draw-point-static.hot'];
+    state.editMode = 'view';
+    expect(qrf(drawOnly)).toEqual([]);
+    expect(query).not.toHaveBeenCalled();
+    expect(qrf(['osm-substations', ...drawOnly])).toHaveLength(1);
+    expect(qrf([])).toHaveLength(1);
+    expect(state.map!.queryRenderedFeatures({ layers: drawOnly })).toHaveLength(1);
+    state.editMode = 'edit';
+    expect(qrf(drawOnly)).toHaveLength(1);
   });
 });
 

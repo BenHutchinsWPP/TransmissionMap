@@ -6,12 +6,13 @@
 //       resolveHits(); the HTML body comes from popup-format.ts.
 // Deps: state, src/registry (LAYERS — clickPriority), click-resolve.ts,
 //       popup-format.ts, map-input.ts (onMapTap/onMapHover), hover.ts,
-//       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts.
+//       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts;
+//       @maplibre/maplibre-gl-style-spec (picker swatches) is a lazy chunk,
+//       fetched on the first multi-feature click.
 
 import * as maplibregl from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
 import { type MapGeoJSONFeature } from 'maplibre-gl';
-import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
 import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
 import { highlightUserFeature, clearUserHighlight, copyFeatureToMyData } from './user-data/user-data.js';
@@ -48,7 +49,8 @@ function showNotCopyablePopup(lngLat: maplibregl.LngLat) {
     .addTo(state.map!);
 }
 
-function showEditPicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]) {
+async function showEditPicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]) {
+  if (!await swatchesReady()) return;
   const rows = features.map((f, i) =>
     `<button type="button" class="feat-pick-btn" data-i="${i}">${featureSwatch(f)}${escapeHtml(featureLabel(f))}</button>`
   ).join('');
@@ -99,9 +101,8 @@ const CURSOR_ONLY_LAYERS = ["osm-dc-clusters"];
 // Switched-off layers are dropped here, not after the query. Style
 // .queryRenderedFeatures marks a source as included for every layer id handed
 // to it regardless of visibility, and each included source projects the query
-// box separately — under 3D terrain each of those projections is a synchronous
-// GPU readback, so an all-layers list makes one click cost a readback sweep per
-// source. A hidden layer has nothing clickable in it either way.
+// box separately — under 3D terrain that is a ray walk over the DEM per
+// corner, so an all-layers list makes one click pay for a sweep per source. A hidden layer has nothing clickable in it either way.
 function activeClickableLayers() {
   if (!state.map) return [];
   const userLayerIds = state.userLayers.flatMap(l =>
@@ -146,10 +147,10 @@ function onMapClick(e: MapPointerEvent) {
     state.map.queryRenderedFeatures(box, { layers: activeLayers }),
     state.editMode === 'edit' ? 'edit' : 'view');
   switch (hit.kind) {
-    case 'copy-picker':  showEditPicker(e.lngLat, hit.features); return;
+    case 'copy-picker':  void showEditPicker(e.lngLat, hit.features); return;
     case 'copy':         showCopyPopup(e.lngLat, hit.feature); return;
     case 'not-copyable': showNotCopyablePopup(e.lngLat); return;
-    case 'picker':       showFeaturePicker(e.lngLat, hit.features); return;
+    case 'picker':       void showFeaturePicker(e.lngLat, hit.features); return;
     case 'single':       renderFeature(e.lngLat, hit.feature); return;
     case 'none':
       state.popup.remove();
@@ -216,13 +217,29 @@ const COLOR_PROP: Record<string, ColorPaintProperty> = {
   circle: 'circle-color', line: 'line-color',
   fill: 'fill-color', 'fill-extrusion': 'fill-extrusion-color',
 };
+// The style-spec expression engine only paints picker swatches, so it loads on
+// the first picker. A tap made while it loads supersedes the one that asked.
+// When the chunk cannot load (offline), the picker opens without swatches and
+// the next picker tries again.
+type CreateExpression = typeof import('@maplibre/maplibre-gl-style-spec').createExpression;
+let createExpression: CreateExpression | null = null;
+let createExpressionLoad: Promise<CreateExpression | null> | null = null;
+async function swatchesReady(): Promise<boolean> {
+  if (createExpression) return true;
+  const tap = lastTapAt;
+  createExpression = await (createExpressionLoad ??= import('@maplibre/maplibre-gl-style-spec')
+    .then(({ createExpression }) => createExpression)
+    .catch(() => { createExpressionLoad = null; return null; }));
+  return tap === lastTapAt;
+}
+
 // createExpression's TS sig wants a full property spec; only `type` matters at runtime.
 const COLOR_SPEC = { type: 'color', 'property-type': 'data-driven',
-  transition: false, overridable: false } as unknown as Parameters<typeof createExpression>[2];
+  transition: false, overridable: false } as unknown as Parameters<CreateExpression>[2];
 function featureColor(f: MapGeoJSONFeature): string | null {
   const lt = state.map!.getLayer(f.layer.id)?.type;
   const prop = lt && COLOR_PROP[lt];
-  if (!prop) return null;
+  if (!prop || !createExpression) return null;
   const raw = state.map!.getPaintProperty(f.layer.id, prop);
   if (raw == null) return null;
   const c = createExpression(raw, prop, COLOR_SPEC);
@@ -240,6 +257,7 @@ function featureIcon(f: MapGeoJSONFeature): string | null {
   let name: string;
   if (typeof raw === 'string') name = raw;
   else {
+    if (!createExpression) return null;
     const c = createExpression(raw, 'icon-image');
     if (c.result !== 'success') return null;
     name = String(c.value.evaluate({ zoom: state.map!.getZoom() }, f as never));
@@ -261,7 +279,8 @@ function featureSwatch(f: MapGeoJSONFeature): string {
 }
 
 // Multiple features under the cursor: list them, click one to drill in.
-function showFeaturePicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]) {
+async function showFeaturePicker(lngLat: maplibregl.LngLat, features: MapGeoJSONFeature[]) {
+  if (!await swatchesReady()) return;
   const rows = features.map((f, i) =>
     `<button type="button" class="feat-pick-btn" data-i="${i}">${featureSwatch(f)}${escapeHtml(featureLabel(f))}</button>`
   ).join('');
@@ -289,9 +308,9 @@ export function initPopups() {
   // layer at once, rather than a per-layer mouseenter/mouseleave pair.
   // MapLibre's layer-scoped delegates each run their own queryRenderedFeatures
   // on every mousemove — 50-odd of them here — and under 3D terrain a query
-  // projects its box through the terrain coords framebuffer, costing a
-  // synchronous GPU readback per corner per source. One shared query holds
-  // that at one readback per frame however many layers are clickable.
+  // projects its box onto the ground, a ray walk over the DEM per corner per
+  // source. One shared query holds that to one per frame however many layers
+  // are clickable.
   //
   // Querying everything together (rather than trusting the layer the delegate
   // fired for) is also what makes feature-state-joined layers behave: they
@@ -299,11 +318,10 @@ export function initPopups() {
   // unlit county covers the whole map. hitLit() (click-resolve.ts) decides, and a lit feature
   // underneath an unlit polygon still gets the pointer.
   //
-  // The hit-test is also skipped while the camera is in motion. A query costs
-  // one of those readbacks per box corner per source, which is affordable once
-  // the view is settled but not while every frame is already rendering the
-  // terrain surface — and a pointer shape during a drag has nothing to report
-  // anyway. moveend runs the deferred one so the cursor lands correct.
+  // The hit-test is also skipped while the camera is in motion: a pointer
+  // shape during a drag has nothing to report, and every frame is already
+  // busy re-rendering the view. moveend runs the deferred one so the cursor
+  // lands correct.
   let hoverPoint: [number, number] | null = null;
   let hoverFrame = 0;
   const updateCursor = () => {

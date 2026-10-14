@@ -45,11 +45,17 @@ type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Rec
 function recordingMap() {
   const layers = new Map<string, Spec>();
   const sources = new Set<string>();
+  // A held source's setUrl lands its metadata at once.
+  const handlers: Record<string, ((e: object) => void)[]> = {};
   const known: Record<string, unknown> = {
+    on: (t: string, h: (e: object) => void) => { (handlers[t] ??= []).push(h); },
+    off: (t: string, h: (e: object) => void) => { handlers[t] = (handlers[t] ?? []).filter(f => f !== h); },
     addLayer: (spec: Spec) => { layers.set(spec.id, structuredClone(spec)); },
     addSource: (id: string) => { sources.add(id); },
     getLayer: (id: string) => layers.get(id),
-    getSource: (id: string) => (sources.has(id) ? {} : undefined),
+    getSource: (id: string) => (sources.has(id) ? {
+      setUrl: () => [...(handlers.sourcedata ?? [])].forEach(h => h({ type: 'sourcedata', sourceId: id, sourceDataType: 'metadata' })),
+    } : undefined),
     getZoom: () => 5,
     getCenter: () => ({ lat: 39.5, lng: -98.35 }),
     getBearing: () => 0,

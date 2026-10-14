@@ -86,8 +86,8 @@ export function onMapTap(a: PointerHandler | string, b?: LayerTapHandler): Unsub
   const fn = b!;
   return subscribe(tapHandlers, e => {
     // Hidden layers are gated before the query, not by it: under 3D terrain
-    // each queryRenderedFeatures costs a GPU readback per source, and every
-    // hoverField layer registers one of these.
+    // each queryRenderedFeatures walks the DEM once per box corner for each
+    // source it includes, and every hoverField layer registers one of these.
     if (!state.map?.getLayer(layerId)) return;
     if (state.map.getLayoutProperty(layerId, 'visibility') === 'none') return;
     const features = state.map.queryRenderedFeatures(tapBox(e), { layers: [layerId] });

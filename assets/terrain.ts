@@ -4,11 +4,12 @@
 // and a 2D hillshade layer. Terrain and buildings only become visible once the
 // camera is pitched, so enabling either auto-tilts the map; hillshade renders
 // flat at pitch 0 and never touches the camera.
-// Also owns the per-frame memo on MapLibre's Terrain.pointCoordinate, which
-// every unproject and every hit-test under raised ground goes through.
+// Also caches MapLibre's per-frame terrain/drape tile matching
+// (cacheTerrainCoords), which otherwise recomputes the same answer every frame.
 // Owns the terrain tuning: TERRAIN_EXAGGERATION and the short on-map credit
 // TERRAIN_ATTRIB_SHORT (index.html carries the full wording).
-// Deps: state.js (state), constants.js (TERRAIN_TILE_URL). Called from ui/ui.ts (toggles),
+// Deps: state.js (state), constants.js (TERRAIN_TILE_URL), terrain-hint.js
+// (maybeShowRotateHint). Called from ui/ui.ts (toggles),
 // map.ts (apply3dFromState at load-end), basemap.ts (ensureBuildingsLayer after the OFM
 // style graft resolves, repositionHillshade from switchBasemap).
 
@@ -37,7 +38,7 @@ const TERRAIN_EXAGGERATION = 1;
 // A second raster-dem source over the same tile URL as terrain-dem, kept
 // separate because setTerrain() re-tunes the source it binds: that source's
 // tile manager switches to a 512px covering size with roundZoom off, which is
-// the resolution a hillshade layer reading it would get. MapLibre 6.2
+// the resolution a hillshade layer reading it would get. MapLibre
 // warnOnce's on the shared case for exactly that reason.
 //
 // Two consequences worth knowing. A hillshade layer at visibility 'none' asks
@@ -64,48 +65,6 @@ function syncPitch() {
   }
 }
 
-// The v5 baseline measured Terrain.pointCoordinate() answering "what ground
-// coordinate is under this screen pixel" with a blocking gl.readPixels on the
-// terrain coords framebuffer — one GPU stall, ~13-15ms once the GPU is busy.
-// v6.2 still performs that pointCoordinate readPixels; its DEM lookup/transform
-// cache does not replace this exact-screen-point memo. Every unproject routes
-// through it while terrain is on, and queryRenderedFeatures re-asks it for the
-// SAME handful of points once per source (SourceCache.tilesIn projects the
-// query box itself), so one click across ~40 sources paid for ~400 stalls.
-//
-// The framebuffer only changes when the camera matrix changes or tiles reload,
-// which MapLibre itself relies on (Painter.maybeDrawDepth's dirty check), so
-// one answer per point per frame is enough. Keys are the exact screen
-// coordinates, not rounded: the redundancy being collapsed is literally the
-// same numbers repeated per source, so exact keys hit just as often without
-// merging two genuinely different pixels.
-const coordCache = new Map<string, unknown>();
-let coordCacheBound = false;
-const wrapped = new WeakSet<object>();
-
-function memoizePointCoordinate() {
-  const map = state.map, terrain = map?.terrain;
-  // setTerrain() builds a fresh Terrain each time it is switched on, so the
-  // wrap has to be re-applied per instance; the cache and its listeners are
-  // module-level and bound once.
-  if (!map || !terrain || wrapped.has(terrain)) return;
-  wrapped.add(terrain);
-  coordCache.clear();
-  const raw = terrain.pointCoordinate.bind(terrain);
-  terrain.pointCoordinate = (p) => {
-    const key = p.x + ',' + p.y;
-    // has(), not a falsy check: the real function returns null for a pixel
-    // showing sky rather than ground, and that answer is worth caching too.
-    if (!coordCache.has(key)) coordCache.set(key, raw(p));
-    return coordCache.get(key) as ReturnType<typeof raw>;
-  };
-  if (!coordCacheBound) {
-    coordCacheBound = true;
-    map.on('render', () => coordCache.clear());
-    map.on('move', () => coordCache.clear());
-  }
-}
-
 function ensureDemSource(id: string) {
   if (!state.map || state.map.getSource(id)) return;
   state.map.addSource(id, {
@@ -116,6 +75,31 @@ function ensureDemSource(id: string) {
     maxzoom: 15,
     attribution: TERRAIN_ATTRIB_SHORT,
   });
+}
+
+// Every frame, MapLibre matches each visible tile of every draped source
+// against every terrain tile (TerrainTileManager._getTerrainCoordsForRegularTile),
+// allocating a matrix per pair — ~4 ms a frame at street level with a dozen
+// draped sources. The answer depends only on the source tile's key and the set
+// of renderable terrain tiles, and callers only read it, so it is kept until
+// that set changes. setTerrain() builds a fresh Terrain each time, hence the
+// per-instance wrap.
+const coordsWrapped = new WeakSet<object>();
+
+function cacheTerrainCoords() {
+  const tm = state.map?.terrain?.tileManager;
+  if (!tm || coordsWrapped.has(tm)) return;
+  coordsWrapped.add(tm);
+  const raw = tm._getTerrainCoordsForRegularTile.bind(tm);
+  const cache = new Map<string, ReturnType<typeof raw>>();
+  let tileSet = '';
+  tm._getTerrainCoordsForRegularTile = (tileID) => {
+    const set = tm._renderableTilesKeys.join();
+    if (set !== tileSet) { cache.clear(); tileSet = set; }
+    let coords = cache.get(tileID.key);
+    if (!coords) cache.set(tileID.key, coords = raw(tileID));
+    return coords;
+  };
 }
 
 // Terrain runs under both projections. MapLibre warns that it is not fully
@@ -129,7 +113,7 @@ export function setTerrain3d(on: boolean) {
   if (on) {
     ensureDemSource(TERRAIN_SOURCE_ID);
     state.map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
-    memoizePointCoordinate();
+    cacheTerrainCoords();
   } else {
     state.map.setTerrain(null);
   }

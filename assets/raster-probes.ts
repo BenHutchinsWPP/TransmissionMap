@@ -225,7 +225,7 @@ export function updateRasterArrow(id: string, value: number | null) {
 
 // Reads every visible probed raster at the bubble's current screen position.
 // A pointer event already carries the unprojected position, so it hands it over
-// rather than paying for a second terrain readback.
+// rather than paying for a second terrain ray walk.
 function resampleBubble(at?: { lng: number; lat: number }) {
   if (!state.map || !bubblePoint) return;
   const { lng, lat } = at ?? state.map.unproject([bubblePoint.x, bubblePoint.y]);
@@ -255,10 +255,10 @@ export function initRasterProbes() {
   // misses: idle is the only one that fires for a change that moves nothing —
   // a terrain or projection switch, or a raster layer switched on under a
   // parked bubble — while moveend still arrives when a source never finishes
-  // loading and the map is therefore never idle. Neither fires per frame, which
-  // matters because under 3D terrain map.unproject() reads the terrain coords
-  // framebuffer back off the GPU; idle stays per-settle only for as long as
-  // nothing in the app schedules an unconditional repaint.
+  // loading and the map is therefore never idle. Neither fires per frame, so
+  // the unproject (a ray walk over the DEM under 3D terrain) runs once per
+  // settle; idle stays per-settle only for as long as nothing in the app
+  // schedules an unconditional repaint.
   state.map.on("moveend", () => resampleBubble());
   state.map.on("idle", () => resampleBubble());
 }

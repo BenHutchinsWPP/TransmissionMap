@@ -5,17 +5,22 @@
 // MapboxDraw and its draw.* listeners are attached, to replay shapes loaded
 // from storage before this lazy chunk was ready), user-data-colors.js,
 // tool-mode.js (deactivate measure tool without importing measure.js → avoids
-// a circular dep). MapboxDraw API calls fire no draw.* events, so an edit
-// made through the API saves explicitly.
-// initDraw() is idempotent.
+// a circular dep), layers/layer-plan.js (setMapLayerVisibility). MapboxDraw
+// API calls fire no draw.* events, so an edit made through the API saves
+// explicitly.
+// initDraw() is idempotent. In view mode it answers Draw's own hit-tests empty
+// (skipStaticHitTests) — static shapes take no input — and syncDrawLayers()
+// keeps only the current mode's fill/line layers shown (each shown run costs
+// a terrain pass per frame under 3D terrain).
 
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import type { IControl, GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
+import type { IControl, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from "maplibre-gl";
 import { state } from '../state.js';
 import { showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { clearUserHighlight, commitUserData, saveUserData, restoreDrawnFeatures } from './user-data.js';
 import { toolHooks } from '../tool-mode.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
+import { setMapLayerVisibility } from '../layers/layer-plan.js';
 
 type DrawFeature = GeoJSON.Feature & { id: string };
 type DrawFeatureEvent<Type extends string> = {
@@ -40,6 +45,9 @@ type DrawEventType = {
   'draw.selectionchange': DrawFeatureEvent<'draw.selectionchange'> & { points: GeoJSON.Feature<GeoJSON.Point>[] };
 };
 
+// Fills and lines come first: under 3D terrain MapLibre drapes each run of
+// fill/line layers in its own pass over the terrain, every frame, so Draw's
+// draped layers form one run per source (cold, hot) rather than one per gap.
 function drawStyles() {
   const ORANGE = '#f97316';
   const BLUE   = '#3b82f6';
@@ -52,17 +60,22 @@ function drawStyles() {
   return [
     { id: 'gl-draw-polygon-fill-inactive',       type: 'fill',   filter: ['all',['==','active','false'],['==','$type','Polygon'],['!=','mode','static']], paint: { 'fill-color': COLOR, 'fill-outline-color': COLOR, 'fill-opacity': 0.35 } },
     { id: 'gl-draw-polygon-fill-active',         type: 'fill',   filter: ['all',['==','active','true'], ['==','$type','Polygon']], paint: { 'fill-color': BLUE,   'fill-outline-color': BLUE,   'fill-opacity': 0.35 } },
-    { id: 'gl-draw-polygon-midpoint',            type: 'circle', filter: ['all',['==','$type','Point'],['==','meta','midpoint']], paint: { 'circle-radius': 4, 'circle-color': BLUE } },
+    { id: 'gl-draw-polygon-fill-static',         type: 'fill',   filter: ['all',['==','mode','static'],['==','$type','Polygon']], paint: { 'fill-color': COLOR, 'fill-outline-color': COLOR, 'fill-opacity': 0.35 } },
     { id: 'gl-draw-polygon-stroke-inactive',     type: 'line',   filter: ['all',['==','active','false'],['==','$type','Polygon'],['!=','mode','static']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
     { id: 'gl-draw-polygon-stroke-active',       type: 'line',   filter: ['all',['==','active','true'], ['==','$type','Polygon']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': BLUE,   'line-width': 2 } },
     { id: 'gl-draw-line-inactive',               type: 'line',   filter: ['all',['==','active','false'],['==','$type','LineString'],['!=','mode','static']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
     { id: 'gl-draw-line-active',                 type: 'line',   filter: ['all',['==','active','true'], ['==','$type','LineString']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': BLUE,   'line-width': 2 } },
+    { id: 'gl-draw-polygon-stroke-static',       type: 'line',   filter: ['all',['==','mode','static'],['==','$type','Polygon']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
+    { id: 'gl-draw-line-static',                 type: 'line',   filter: ['all',['==','mode','static'],['==','$type','LineString']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
+    { id: 'gl-draw-polygon-midpoint',            type: 'circle', filter: ['all',['==','$type','Point'],['==','meta','midpoint']], paint: { 'circle-radius': 4, 'circle-color': BLUE } },
     { id: 'gl-draw-polygon-and-line-vertex-stroke-inactive', type: 'circle', filter: ['all',['==','meta','vertex'],['==','$type','Point'],['!=','mode','static']], paint: { 'circle-radius': 6, 'circle-color': '#fff' } },
     { id: 'gl-draw-polygon-and-line-vertex-inactive',        type: 'circle', filter: ['all',['==','meta','vertex'],['==','$type','Point'],['!=','mode','static']], paint: { 'circle-radius': 4, 'circle-color': COLOR } },
     { id: 'gl-draw-point-point-stroke-inactive', type: 'circle', filter: ['all',['==','active','false'],['==','$type','Point'],['==','meta','feature'],['!=','mode','static']], paint: { 'circle-radius': 6, 'circle-opacity': 1, 'circle-color': '#fff' } },
     { id: 'gl-draw-point-inactive',              type: 'circle', filter: ['all',['==','active','false'],['==','$type','Point'],['==','meta','feature'],['!=','mode','static']], paint: { 'circle-radius': 4, 'circle-color': COLOR } },
     { id: 'gl-draw-point-stroke-active',         type: 'circle', filter: ['all',['==','$type','Point'],['==','active','true'],['!=','meta','midpoint']], paint: { 'circle-radius': 8, 'circle-color': '#fff' } },
     { id: 'gl-draw-point-active',                type: 'circle', filter: ['all',['==','$type','Point'],['==','active','true'],['!=','meta','midpoint']], paint: { 'circle-radius': 5, 'circle-color': BLUE } },
+    { id: 'gl-draw-point-point-stroke-static',   type: 'circle', filter: ['all',['==','mode','static'],['==','$type','Point'],['==','meta','feature']], paint: { 'circle-radius': 6, 'circle-opacity': 1, 'circle-color': '#fff' } },
+    { id: 'gl-draw-point-static',                type: 'circle', filter: ['all',['==','mode','static'],['==','$type','Point'],['==','meta','feature']], paint: { 'circle-radius': 4, 'circle-color': COLOR } },
     { id: 'gl-draw-label-point',   type: 'symbol', filter: ['all',['==','meta','feature'],['==','$type','Point']],
       layout: { 'text-field': LABEL, 'text-font': LABEL_FONT, 'text-size': LABEL_SIZE, 'text-variable-anchor': ['top','bottom'], 'text-radial-offset': 0.9, 'text-optional': true },
       paint: LABEL_PAINT },
@@ -72,11 +85,6 @@ function drawStyles() {
     { id: 'gl-draw-label-polygon', type: 'symbol', filter: ['all',['==','meta','feature'],['==','$type','Polygon']],
       layout: { 'text-field': LABEL, 'text-font': LABEL_FONT, 'text-size': LABEL_SIZE, 'text-optional': true },
       paint: LABEL_PAINT },
-    { id: 'gl-draw-polygon-fill-static',         type: 'fill',   filter: ['all',['==','mode','static'],['==','$type','Polygon']], paint: { 'fill-color': COLOR, 'fill-outline-color': COLOR, 'fill-opacity': 0.35 } },
-    { id: 'gl-draw-polygon-stroke-static',       type: 'line',   filter: ['all',['==','mode','static'],['==','$type','Polygon']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
-    { id: 'gl-draw-line-static',                 type: 'line',   filter: ['all',['==','mode','static'],['==','$type','LineString']], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': COLOR, 'line-width': 2 } },
-    { id: 'gl-draw-point-point-stroke-static',   type: 'circle', filter: ['all',['==','mode','static'],['==','$type','Point'],['==','meta','feature']], paint: { 'circle-radius': 6, 'circle-opacity': 1, 'circle-color': '#fff' } },
-    { id: 'gl-draw-point-static',                type: 'circle', filter: ['all',['==','mode','static'],['==','$type','Point'],['==','meta','feature']], paint: { 'circle-radius': 4, 'circle-color': COLOR } },
   ];
 }
 
@@ -92,6 +100,41 @@ const StaticMode = {
   },
 };
 
+// MapboxDraw hit-tests its own layers on every mousemove, mousedown and
+// mouseup, in every mode. In view mode its shapes are 'static' and take no
+// input, so nothing reads the answer — yet each query still runs, and under
+// 3D terrain projects its box onto the ground. A query naming only Draw's
+// layers (gl-draw-*.cold/.hot) comes from Draw alone, so view mode answers it
+// empty.
+function skipStaticHitTests(map: MapLibreMap) {
+  const query = map.queryRenderedFeatures.bind(map) as (...a: unknown[]) => MapGeoJSONFeature[];
+  map.queryRenderedFeatures = ((...args: unknown[]) => {
+    const layers = (args[1] as { layers?: string[] } | undefined)?.layers;
+    if (state.editMode === 'view' && layers?.length && layers.every(id => id.startsWith('gl-draw-')))
+      return [];
+    return query(...args);
+  }) as MapLibreMap['queryRenderedFeatures'];
+}
+
+// Each draped run costs its terrain pass even when empty, and hidden layers
+// form no run — so only the runs this mode can paint stay shown: the edit
+// layers in edit mode, the static ones in view mode while a shape exists.
+const DRAPED_DRAW_LAYERS = drawStyles()
+  .filter(s => s.type === 'fill' || s.type === 'line')
+  .flatMap(s => [`${s.id}.cold`, `${s.id}.hot`]);
+
+function syncDrawLayers() {
+  const map = state.map, draw = state.draw;
+  if (!map || !draw) return;
+  const edit = state.editMode === 'edit';
+  const anyShape = draw.getAll().features.length > 0;
+  for (const id of DRAPED_DRAW_LAYERS) {
+    if (!map.getLayer(id)) continue;
+    const isStatic = id.includes('-static.');
+    setMapLayerVisibility(map, id, (edit ? !isStatic : isStatic && anyShape) ? 'visible' : 'none');
+  }
+}
+
 export function initDraw() {
   if (!state.map || state.draw) return;
   toolHooks.exitEdit = () => setMode('view');
@@ -103,6 +146,12 @@ export function initDraw() {
     modes: { ...MapboxDraw.modes, static: StaticMode as unknown as MapboxDraw.DrawCustomMode },
   });
   state.map.addControl(state.draw as unknown as IControl);
+  skipStaticHitTests(state.map);
+  // Draw re-renders by setting its sources' data (and re-adds its layers after
+  // a style change), so a shape added or removed through the API is seen here.
+  state.map.on('sourcedata', e => {
+    if (e.sourceId?.startsWith('mapbox-gl-draw-')) syncDrawLayers();
+  });
   if (state.map.loaded()) {
     if (state.editMode === 'view') state.draw.changeMode('static');
   } else {
@@ -165,6 +214,7 @@ export function setMode(mode: string) {
   if (state.draw) {
     state.draw.changeMode((mode === 'view' ? 'static' : 'simple_select') as string);
   }
+  syncDrawLayers();
   state.selectedDrawId = null;
   setDefaultPickerDisplay(state.drawDefaultColor);
   clearUserHighlight();

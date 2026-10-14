@@ -5,6 +5,10 @@ import type { LayerDef } from '../src/types.js';
 // ─── Mocks (must come before importing the module under test) ─────────────────
 
 vi.mock('./layers/layer-data.js', () => ({ ensureLayerData: vi.fn() }));
+vi.mock('./layers/layer-plan.js', () => ({
+  setMapLayerVisibility: (map: { setLayoutProperty: (id: string, p: string, v: string) => void }, id: string, v: string) =>
+    map.setLayoutProperty(id, 'visibility', v),
+}));
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
   ensureRasterLut: vi.fn(),
