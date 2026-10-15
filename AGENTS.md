@@ -358,7 +358,7 @@ turns public datasets into PMTiles consumed by the frontend.
 - `npm run preview` — preview production build locally
 - `npm run typecheck` — TypeScript check only (cheapest gate; run before claiming any code change done)
 - `npm test` — run Vitest unit suite (`*.test.ts`); `npm run test:watch` to watch
-- `make test-pipeline` — pipeline smoke tests (`scripts/test_*.py`, stdlib unittest, no `data/` or network needed); CI runs the same on any `scripts/**` push (`pipeline-tests.yml`). Run it after touching any `scripts/*.py`.
+- `make test-pipeline` — pipeline smoke tests (`scripts/test_*.py`, no `data/` or network needed), run twice: stdlib only (`python3 -S`, what the CI runners and the moratorium refresh see — a test that needs PyYAML imports it inside the test and skips without it), then with PyYAML for the manifest checks. CI runs them on any `scripts/**` push (`pipeline-tests.yml`, PyYAML pinned in `scripts/requirements-tests.txt`). Run it after touching any `scripts/*.py`.
 - Per-dataset build targets exist too (e.g. `make wind`, `make seismic`) — run `make help` for the current list
 
 ## Working style

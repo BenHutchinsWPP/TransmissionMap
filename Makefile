@@ -61,7 +61,7 @@ help:
 	@echo "  make world-boundaries  build countries + admin-1 boundaries (geoBoundaries CGAZ) → $(BUILD)/{countries,admin1_boundaries}.gpkg"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
 	@echo "  make stable-ids  check every served layer's stable feature ids: 0 missing, 0 duplicate (ARGS=\"--only <id> --max-tiles N\")"
-	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
+	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib-only pass then with PyYAML; no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
 	@echo "  make data-manifest  build per-layer provenance → data/layers/manifest.json (Data Credits page)"
@@ -454,6 +454,9 @@ stable-ids:
 	@$(PY) $(SCRIPTS)/stable_ids.py $(ARGS)
 
 test-pipeline:
+	@echo "stdlib only (what CI's runners see):"
+	@python3 -S -m unittest discover -s scripts -p "test_*.py"
+	@echo "with PyYAML (the manifest checks):"
 	@python3 -m unittest discover -s scripts -p "test_*.py"
 
 # ── Tiles: data/build/ → data/layers/ ──────────────────────────────────────

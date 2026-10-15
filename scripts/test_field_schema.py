@@ -12,8 +12,6 @@ import re
 import unittest
 from pathlib import Path
 
-import yaml
-
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_TS = ROOT / "src" / "registry" / "field-schema.ts"
 TILE_MANIFEST = ROOT / "scripts" / "tile_manifest.yaml"
@@ -42,6 +40,7 @@ def schema_fields() -> dict[str, set[str]]:
 
 
 def manifest_selects() -> dict[str, list[str] | None]:
+    import yaml
     manifest = yaml.safe_load(TILE_MANIFEST.read_text())
     return {e["id"]: e.get("select") for e in manifest["layers"]}
 
@@ -57,6 +56,10 @@ class FieldSchemaInTiles(unittest.TestCase):
             self.assertTrue(names, f"{dataset} yielded no fields (named constant?)")
 
     def test_every_schema_field_is_selected(self):
+        try:
+            import yaml  # noqa: F401
+        except ImportError:  # the stdlib-only CI runners; `make test-pipeline` has it
+            self.skipTest("PyYAML is not installed")
         selects = manifest_selects()
         for dataset, names in schema_fields().items():
             with self.subTest(dataset=dataset):
