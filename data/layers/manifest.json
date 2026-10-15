@@ -1,0 +1,598 @@
+{
+  "generated_utc": "2026-10-15T03:30:05Z",
+  "note": "source_rows counts records in each layer's tile-build input (tile_manifest.yaml `src`) \u2014 the same rows ogr2ogr/tippecanoe consume \u2014 not the tiled output. Tippecanoe dedupes, clips, and drops features per zoom, so a count decoded from PMTiles reflects one zoom's survivors, not the dataset.",
+  "layers": {
+    "eia_generators": {
+      "label": "EIA Generators",
+      "source": "U.S. Energy Information Administration, Form EIA-860",
+      "url": "https://www.eia.gov/electricity/data/eia860/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "eia",
+      "source_rows": 34795,
+      "coverage": {
+        "fid": 34795,
+        "plant_code": 34795,
+        "plant_name": 34795,
+        "technology": 34795,
+        "energy_source": 34795,
+        "nameplate_mw": 34795,
+        "nerc_region": 33708,
+        "ba_code": 33563,
+        "state": 34795,
+        "op_year": 34793,
+        "status": 34795,
+        "gen_status": 34795,
+        "retirement_year": 5344,
+        "utility_name": 34795,
+        "sector_name": 34795,
+        "pipelines": 6272,
+        "prime_mover": 34795,
+        "states": 34795,
+        "counties": 34795,
+        "ba": 34795,
+        "nerc": 34795,
+        "retail": 34795
+      },
+      "data_as_of": "2026-10-11",
+      "bytes": 1335821
+    },
+    "osm_plants_polygons": {
+      "label": "OSM Plants (Polygons)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 18023,
+      "coverage": {
+        "fid": 0,
+        "name": 12429,
+        "source": 17713,
+        "output_mw": 11952,
+        "operator": 11480,
+        "start_date": 10226
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": null
+    },
+    "osm_plants_points": {
+      "label": "OSM Plants (Points)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 18047,
+      "coverage": {
+        "fid": 0,
+        "name": 12450,
+        "source": 17733,
+        "output_mw": 11971,
+        "operator": 11497,
+        "start_date": 10239
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": 4510984
+    },
+    "hifld_substations": {
+      "label": "HIFLD Substations",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+      "url": "https://www.arcgis.com/home/item.html?id=ef04dc8231c9491e804a008e5faa7d3a",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-substations",
+      "source_rows": 56363,
+      "coverage": {
+        "hifld_id": 56363,
+        "name": 18738,
+        "max_kv": 41689,
+        "min_kv": 36182,
+        "kv_range": 56363,
+        "states": 56363,
+        "counties": 56363,
+        "ba": 56363,
+        "nerc": 56363,
+        "retail": 56363
+      },
+      "data_as_of": "2026-05-28",
+      "bytes": 1287679
+    },
+    "osm_substations_points": {
+      "label": "OSM Substations (Points)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 82678,
+      "coverage": {
+        "fid": 0,
+        "name": 33230,
+        "nominal_kv": 61793,
+        "operator": 33921,
+        "sub_type": 50984
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": 89663412
+    },
+    "osm_substations_polygons": {
+      "label": "OSM Substations (Polygons)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 81179,
+      "coverage": {
+        "fid": 0,
+        "name": 33142,
+        "nominal_kv": 61425,
+        "operator": 33723,
+        "sub_type": 50506
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": null
+    },
+    "osm_generators": {
+      "label": "OSM Generators",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 158352,
+      "coverage": {
+        "fid": 0,
+        "name": 3746,
+        "source": 156382,
+        "gen_method": 154415,
+        "gen_type": 140677,
+        "output_mw": 77661,
+        "operator": 20145
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": 84390216
+    },
+    "osm_datacenters": {
+      "label": "OSM Data Centers",
+      "source": "OpenStreetMap contributors; IM3 Open Source Data Center Atlas (PNNL/DOE)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 1913,
+      "coverage": {
+        "fid": 0,
+        "name": 1296,
+        "operator": 1246,
+        "website": 316,
+        "addr_city": 722,
+        "addr_state": 672,
+        "start_date": 22,
+        "im3_sqft": 1478,
+        "im3_ref": 392
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": 191239
+    },
+    "railroads": {
+      "label": "Railroads (BTS NARN)",
+      "source": "US DOT Bureau of Transportation Statistics (NTAD); rail geometry from the Federal Railroad Administration (FRA)",
+      "url": "https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines/about",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "bts-narn",
+      "source_rows": 302771,
+      "coverage": {
+        "RROWNER1": 299341,
+        "NET": 302771,
+        "PASSNGR": 22200,
+        "TRACKS": 302615,
+        "DIVISION": 89206,
+        "SUBDIV": 184695,
+        "BRANCH": 89064,
+        "STATEAB": 302731
+      },
+      "data_as_of": "2026-10-11",
+      "bytes": 74028701
+    },
+    "osm_pipelines_points": {
+      "label": "OSM Pipelines (Points)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 14427,
+      "data_as_of": "2026-10-09",
+      "bytes": 541561
+    },
+    "osm_pipelines_lines": {
+      "label": "OSM Pipelines (Lines)",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 100965,
+      "coverage": {
+        "fid": 0,
+        "name": 54304,
+        "substance": 73189,
+        "operator": 68188
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": 72817253
+    },
+    "hifld_natgas_points": {
+      "label": "HIFLD Natural Gas & Petroleum Facility Points",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD); original data from EIA",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-natgas",
+      "source_rows": 3602,
+      "coverage": {
+        "fid": 3602,
+        "fac_type": 3602,
+        "name": 3602,
+        "operator": 1506,
+        "state": 3569,
+        "status": 3602,
+        "detail": 3564,
+        "states": 3602,
+        "counties": 3602,
+        "ba": 3602,
+        "nerc": 3602,
+        "retail": 3602
+      },
+      "data_as_of": "2026-06-03",
+      "bytes": 141698
+    },
+    "eia_crude_pipelines": {
+      "label": "UNKNOWN",
+      "source": "UNKNOWN",
+      "url": "UNKNOWN",
+      "licence": "UNKNOWN",
+      "source_id": "eia-atlas",
+      "source_rows": 236,
+      "coverage": {
+        "name": 236,
+        "operator": 236
+      },
+      "data_as_of": "2026-06-30",
+      "bytes": 28265
+    },
+    "eia_product_pipelines": {
+      "label": "UNKNOWN",
+      "source": "UNKNOWN",
+      "url": "UNKNOWN",
+      "licence": "UNKNOWN",
+      "source_id": "eia-atlas",
+      "source_rows": 329,
+      "coverage": {
+        "name": 329,
+        "operator": 329
+      },
+      "data_as_of": "2026-06-30",
+      "bytes": 25383
+    },
+    "hifld_natgas_lines": {
+      "label": "HIFLD Natural Gas & Petroleum Pipeline Lines",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD); original data from EIA",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-natgas",
+      "source_rows": 33094,
+      "coverage": {
+        "fid": 33094,
+        "pipe_type": 33094,
+        "operator": 33094,
+        "name": 133,
+        "states": 33094,
+        "counties": 33094,
+        "ba": 33094,
+        "nerc": 33094
+      },
+      "data_as_of": "2026-06-03",
+      "bytes": 27902199
+    },
+    "countries": {
+      "label": "Countries (geoBoundaries CGAZ)",
+      "source": "geoBoundaries (William & Mary geoLab)",
+      "url": "https://www.geoboundaries.org/",
+      "licence": "CC BY 4.0 (attribution required)",
+      "source_id": "cgaz-adm0",
+      "edition": "geoBoundaries CGAZ (main branch)",
+      "source_rows": 218,
+      "coverage": {
+        "name": 218,
+        "iso_a3": 218,
+        "color_idx": 218
+      },
+      "data_as_of": "2026-08-25",
+      "bytes": 4084630
+    },
+    "admin1_boundaries": {
+      "label": "States / Provinces (geoBoundaries CGAZ Admin-1)",
+      "source": "geoBoundaries (William & Mary geoLab)",
+      "url": "https://www.geoboundaries.org/",
+      "licence": "CC BY 4.0 (attribution required)",
+      "source_id": "cgaz-adm1",
+      "edition": "geoBoundaries CGAZ (main branch)",
+      "source_rows": 3224,
+      "coverage": {
+        "code": 3224,
+        "name": 3224,
+        "iso_a3": 3224,
+        "country": 3224,
+        "color_idx": 3224
+      },
+      "data_as_of": "2026-08-25",
+      "bytes": 4272804
+    },
+    "us_states": {
+      "label": "Census States",
+      "source": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+      "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "census-states",
+      "edition": "cb_2025_us_state_500k",
+      "source_rows": 56,
+      "coverage": {
+        "geoid": 56,
+        "stusps": 56,
+        "name": 56,
+        "color_idx": 56
+      },
+      "data_as_of": "2026-08-25",
+      "bytes": 312738
+    },
+    "us_zcta": {
+      "label": "US ZIP Codes / ZCTAs (Census)",
+      "source": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+      "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "census-zcta",
+      "edition": "cb_2020_us_zcta520_500k",
+      "source_rows": 33791,
+      "coverage": {
+        "zcta5": 33791,
+        "color_idx": 33791
+      },
+      "data_as_of": "2026-08-25",
+      "bytes": 57715747
+    },
+    "nerc_regions": {
+      "label": "HIFLD NERC Regions",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-nerc",
+      "edition": "HIFLD via SeerAI parquet",
+      "source_rows": 16,
+      "coverage": {
+        "code": 16,
+        "sub_nm": 16,
+        "region": 16,
+        "state": 16,
+        "website": 16
+      },
+      "data_as_of": "2026-06-03",
+      "bytes": 339886
+    },
+    "control_areas": {
+      "label": "HIFLD Control Areas (Balancing Authorities)",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-ba",
+      "edition": "HIFLD via SeerAI parquet",
+      "source_rows": 71,
+      "coverage": {
+        "name": 71,
+        "state": 71,
+        "color_idx": 71,
+        "tot_cap": 64,
+        "peak_ld": 65,
+        "min_ld": 65,
+        "avail_cap": 64,
+        "year": 66,
+        "website": 57
+      },
+      "data_as_of": "2026-06-03",
+      "bytes": 593372
+    },
+    "eia_ba": {
+      "label": "EIA Balancing Authorities",
+      "source": "U.S. Energy Information Administration (EIA)",
+      "url": "https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "eia-ba",
+      "edition": "EIA Balancing Authorities FeatureServer",
+      "source_rows": 85,
+      "coverage": {
+        "name": 85,
+        "abbrev": 85,
+        "area_sqmi": 85,
+        "color": 85
+      },
+      "data_as_of": "2026-08-20",
+      "bytes": 837885
+    },
+    "retail_territories": {
+      "label": "HIFLD Retail Service Territories",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-retail",
+      "edition": "HIFLD via SeerAI parquet",
+      "source_rows": 2931,
+      "coverage": {
+        "id": 2931,
+        "name": 2931,
+        "type": 1246,
+        "state": 2931,
+        "customers": 2907,
+        "retail_mwh": 1225,
+        "sumr_peak": 1244,
+        "wntr_peak": 1244,
+        "hold_co": 2931,
+        "ctrl_area": 2833,
+        "year": 2919
+      },
+      "data_as_of": "2026-06-03",
+      "bytes": 16543421
+    },
+    "tribal_lands": {
+      "label": "Tribal Lands (AIANNH)",
+      "source": "U.S. Census Bureau, TIGER/Line",
+      "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-tribal",
+      "source_rows": 867,
+      "data_as_of": "2026-10-11",
+      "bytes": 4697944
+    },
+    "bia_tribal_lands": {
+      "label": "Tribal Lands (BIA AIAN-LAR)",
+      "source": "Bureau of Indian Affairs (BIA)",
+      "url": "https://onemap-bia-geospatial.hub.arcgis.com/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "bia-bogs",
+      "source_rows": 335,
+      "coverage": {
+        "LARNAME": 335,
+        "AGENCY": 335
+      },
+      "data_as_of": null,
+      "bytes": 2003840
+    },
+    "padus": {
+      "label": "PAD-US Protected & Managed Lands",
+      "source": "USGS Gap Analysis Project",
+      "url": "https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "usgs-padus",
+      "source_rows": 125120,
+      "data_as_of": null,
+      "bytes": 72052007
+    },
+    "crithab": {
+      "label": "Critical Habitat (ESA)",
+      "source": "US Fish & Wildlife Service \u2014 ECOS",
+      "url": "https://ecos.fws.gov/ecp/report/table/critical-habitat.html",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "fws-crithab",
+      "source_rows": 873,
+      "data_as_of": null,
+      "bytes": 77250070
+    },
+    "hifld_transmission_lines": {
+      "label": "HIFLD Transmission Lines",
+      "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+      "url": "https://source.coop/repositories/seerai/hifld/description/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "hifld-power",
+      "source_rows": 94619,
+      "coverage": {
+        "ID": 94619,
+        "VOLTAGE": 94619,
+        "VOLT_CLASS": 94618,
+        "OWNER": 94618,
+        "TYPE": 94619,
+        "STATUS": 94619,
+        "SUB_1": 94619,
+        "SUB_2": 94619,
+        "states": 94619,
+        "counties": 94619,
+        "ba": 94619,
+        "nerc": 94619
+      },
+      "data_as_of": null,
+      "bytes": 46777091
+    },
+    "osm_transmission_lines": {
+      "label": "OSM Transmission Lines",
+      "source": "OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright",
+      "licence": "ODbL 1.0 (attribution + share-alike required)",
+      "source_id": "osm",
+      "source_rows": 335568,
+      "coverage": {
+        "fid": 0,
+        "nominal_kv": 335568,
+        "operator": 119517,
+        "name": 36532,
+        "is_undergrnd": 335568,
+        "is_dc": 335568,
+        "minz": 335568
+      },
+      "data_as_of": "2026-10-09",
+      "bytes": null
+    },
+    "county_boundaries": {
+      "label": "County Boundaries",
+      "source": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+      "url": "https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "census-counties",
+      "edition": "cb_2025_us_county_500k",
+      "source_rows": 3235,
+      "coverage": {
+        "GEOID": 3235,
+        "NAME": 3235,
+        "STUSPS": 3235,
+        "STATE_NAME": 3235,
+        "color_idx": 3235
+      },
+      "data_as_of": null,
+      "bytes": 2660934
+    },
+    "nws_zones": {
+      "label": "NWS Zones (Forecast / Fire / Marine)",
+      "source": "NOAA National Weather Service (WSOM zone shapefiles)",
+      "url": "https://www.weather.gov/source/gis/Shapefiles/WSOM/",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "noaa-nws",
+      "source_rows": 8382,
+      "coverage": {
+        "ugc": 8382,
+        "type": 8382,
+        "name": 8382,
+        "key": 8382
+      },
+      "data_as_of": null,
+      "bytes": 7567988
+    },
+    "ogf_planned_transmission": {
+      "label": "OGF Planned Transmission",
+      "source": "Our Grid Future (Horizon Energy Systems)",
+      "url": "https://ourgridfuture.org",
+      "licence": "Custom \u2014 free for non-commercial use, attribution required",
+      "source_id": "ogf",
+      "source_rows": 714,
+      "data_as_of": null,
+      "bytes": 963389
+    },
+    "boem_wind_leases": {
+      "label": "Offshore Wind Leases (BOEM)",
+      "source": "Bureau of Ocean Energy Management (BOEM)",
+      "url": "https://www.boem.gov/renewable-energy/mapping-and-data",
+      "licence": "Public domain (US federal work, 17 U.S.C. \u00a7 105)",
+      "source_id": "boem",
+      "source_rows": 51,
+      "data_as_of": null,
+      "bytes": 60645
+    },
+    "admin_lines": {
+      "label": "Natural Earth Admin Lines",
+      "source": "Natural Earth",
+      "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "licence": "Public domain",
+      "source_id": "UNKNOWN",
+      "source_rows": 454,
+      "data_as_of": null,
+      "bytes": 146807
+    },
+    "westtec_10yr": {
+      "label": "WestTEC 10 Yr",
+      "source": "WestTEC, a Western Power Pool initiative",
+      "url": "https://www.westernpowerpool.org/",
+      "licence": "UNKNOWN",
+      "source_id": "westtec",
+      "source_rows": 106,
+      "data_as_of": null,
+      "bytes": 116691
+    }
+  }
+}
