@@ -1,6 +1,6 @@
 // Layer registry entries — substations and transmission lines.
 import type { DataKey, LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_CREDIT } from './sources.js';
+import { OSM_CREDIT, HIFLD_CREDIT, OSM_NATIVE_FID } from './sources.js';
 
 // OSM transmission ships as six planet-wide archives split by voltage class —
 // one world file is past the host's 100 MiB per-file ceiling. This table is the
@@ -73,7 +73,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.osmSubstations",
     group:         "substations",
     sourceId:      "osm",
-    data:          { kind: "pmtiles", key: "osm_substations_points", credit: OSM_CREDIT },
+    data:          { kind: "pmtiles", key: "osm_substations_points", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:       "osm_substations_points",
     swatch:        "#f97316",
     defaultOn:     false,
@@ -94,7 +94,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.osmSubPolygons",
     group:         "substations",
     sourceId:      "osm",
-    data:          { kind: "pmtiles", key: "osm_substations_polygons", credit: OSM_CREDIT },
+    data:          { kind: "pmtiles", key: "osm_substations_polygons", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:       "osm_substations_polygons",
     swatch:        "#f97316",
     defaultOn:     false,
@@ -117,7 +117,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.hifldSubstations",
     group:         "substations",
     sourceId:      "hifld-substations",
-    data:          { kind: "geojson", key: "hifld_substations", credit: HIFLD_CREDIT },
+    data:          { kind: "geojson", key: "hifld_substations", credit: HIFLD_CREDIT, id: { field: "hifld_id" } },
     dataset:       "hifld_substations",
     swatch:        "#a78bfa",
     defaultOn:     false,
@@ -140,7 +140,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.osmLines",
     group:               "transmission",
     sourceId:            "osm",
-    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT },
+    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:             "osm_transmission_lines",
     swatch:              "#3b82f6",
     defaultOn:           true,
@@ -163,7 +163,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.hifldLines",
     group:               "transmission",
     sourceId:            "hifld-power",
-    data:                { kind: "pmtiles", key: "hifld_transmission_lines", credit: HIFLD_CREDIT },
+    data:                { kind: "pmtiles", key: "hifld_transmission_lines", credit: HIFLD_CREDIT, id: { field: "ID" } },
     dataset:             "hifld_transmission_lines",
     swatch:              "#ef4444",
     defaultOn:           false,
@@ -206,7 +206,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:       "layer.ogfPlanned",
     group:          "transmission",
     sourceId:       "ogf",
-    data:           { kind: "geojson", key: "ogf_planned_transmission", credit: '<a href="https://ourgridfuture.org">Our Grid Future</a>' },
+    data:           { kind: "geojson", key: "ogf_planned_transmission", credit: '<a href="https://ourgridfuture.org">Our Grid Future</a>', id: { field: "RecordID" } },
     swatch:         "#06b6d4",
     defaultOn:      false,
     ogfStatusLayer: true,

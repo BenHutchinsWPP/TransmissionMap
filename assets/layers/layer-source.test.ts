@@ -25,7 +25,7 @@ describe('layerSource', () => {
   it('turns a geojson layer into an empty credited source the loader fills', () => {
     const s = step('mines');
     expect(s.source).toBe('mines');
-    expect(s.spec).toEqual({ type: 'geojson', data: EMPTY_FC, attribution: credit('mines') });
+    expect(s.spec).toEqual({ type: 'geojson', data: EMPTY_FC, promoteId: 'mine_id', attribution: credit('mines') });
     expect(s.spec.data).toBe(EMPTY_FC);
   });
 
@@ -41,6 +41,13 @@ describe('layerSource', () => {
         type: 'vector', url: pmtilesUrl('osm_transmission_lines_kv300'), attribution: OSM_CREDIT,
       } });
     expect(step('osm-datacenters', { spec: { cluster: true } }).spec).toMatchObject({ type: 'geojson', cluster: true });
+  });
+
+  it('promotes a declared id column, and leaves a native tile id alone', () => {
+    expect(step('hifld-transmission-lines').spec).toMatchObject({ type: 'vector', promoteId: 'ID' });
+    expect(step('osm-plants-points').spec).toMatchObject({ type: 'geojson', promoteId: 'fid' });
+    expect(step('osm-generators').spec).not.toHaveProperty('promoteId');
+    expect(step('padus').spec).not.toHaveProperty('promoteId');
   });
 
   it('refuses a layer that declares no data', () => {
@@ -95,11 +102,11 @@ describe('registry data declarations', () => {
     }
   });
 
-  it('agree on kind and credit wherever they share a file', () => {
+  it('agree on kind, credit and stable id wherever they share a file', () => {
     for (const l of declared) {
       const owner = layerById(layerSourceId(l.id))!;
-      expect({ kind: l.data!.kind, credit: l.data!.credit }, l.id)
-        .toEqual({ kind: owner.data!.kind, credit: owner.data!.credit });
+      expect({ kind: l.data!.kind, credit: l.data!.credit, id: l.data!.id }, l.id)
+        .toEqual({ kind: owner.data!.kind, credit: owner.data!.credit, id: owner.data!.id });
     }
   });
 });

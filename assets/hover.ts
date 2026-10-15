@@ -1,6 +1,8 @@
 // ─── Polygon hover highlight + vector line click-highlight ───────────────────
 // Imported by: map.ts (init calls), popup.ts (highlightLine/clearLineHighlight,
 // hoverFillIds for its shared cursor hit-test)
+// Deps: feature-id.ts (featureId/featureIdExpr — the polygon key a feature
+// without its hoverField falls back to).
 // Highlight widths follow the base layer's size override each time one is
 // shown (style-overrides.ts's scaleBy over state.styleOverrides).
 
@@ -9,6 +11,7 @@ import type { ExpressionSpecification, FilterSpecification, LayerSpecification, 
 import { LAYERS } from '../src/registry/index.js';
 import { onMapTap, tapBox } from './map-input.js';
 import { scaleBy, effectiveOverride } from './style-overrides.js';
+import { featureId, featureIdExpr } from './feature-id.js';
 
 function sizeK(registryId: string): number {
   return effectiveOverride(registryId).size ?? 1;
@@ -17,6 +20,8 @@ function sizeK(registryId: string): number {
 // ─── Polygon hover ────────────────────────────────────────────────────────────
 // Config is driven by LayerDef.hoverField; fill/source/source-layer are derived
 // from the existing map style at init time so no duplication with layer builders.
+// A feature without its hoverField is keyed by its stable id instead: the OSM
+// polygon archives carry `osm_id` until rebuilt with native ids, then only the id.
 
 // The hover-highlight fills, which are also the extra layers popup.ts folds
 // into its shared cursor hit-test (they are not all in CLICKABLE_LAYERS).
@@ -75,8 +80,10 @@ export function initPolygonHover() {
 
     onMapTap(fill, function onPolygonFillClick(_e, features) {
       if (state.editMode === 'edit' || state.measure.active) return;
-      const val = features[0].properties[field];
-      if (val == null) return;
+      const own = features[0].properties[field];
+      const val = own ?? featureId(layer.id, features[0]);
+      const key = own != null ? ["get", field] : featureIdExpr(layer.id);
+      if (val == null || !key) return;
 
       const same = activeHl === hl && activeVal === String(val);
       if (activeHl && state.map!.getLayer(activeHl))
@@ -87,7 +94,7 @@ export function initPolygonHover() {
       } else {
         activeHl  = hl;
         activeVal = String(val);
-        state.map!.setFilter(hl, ["==", ["to-string", ["get", field]], activeVal]);
+        state.map!.setFilter(hl, ["==", ["to-string", key], activeVal]);
         state.map!.setPaintProperty(hl, "line-width", scaleBy(width, sizeK(layer.id)));
         state.map!.setLayoutProperty(hl, "visibility", "visible");
       }

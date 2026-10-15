@@ -372,6 +372,39 @@ describe('Data Center popup (osm-dc-circles)', () => {
   });
 });
 
+// ─── OSM ID link ──────────────────────────────────────────────────────────────
+// The link comes from the stable fid (osm_id × 10 + type digit): a property on
+// GeoJSON layers, the tile feature id on vector archives. Archives built before
+// ids carry osm_id and are linked as before.
+
+describe('OSM ID link', () => {
+  const href = (html: string | null) => html?.match(/openstreetmap\.org\/([a-z]+\/\d+)/)?.[1];
+  const tl = osmTlLayerIds("hv")[0];
+
+  it('decodes a native fid into the element type and id', () => {
+    expect(href(buildPopupHtml('osm-substations-points-hv', { name: 'S' }, 4535892832))).toBe('way/453589283');
+    expect(href(buildPopupHtml('osm-substations-polygons-fill', { name: 'S' }, 1233))).toBe('relation/123');
+    expect(href(buildPopupHtml(tl, { name: 'L' }, 9872))).toBe('way/987');
+  });
+
+  it('prefers a fid property (GeoJSON layers) over the legacy columns', () => {
+    const out = buildPopupHtml('osm-dc-circles', { name: 'D', fid: 1234561, osm_type: 'way', osm_id: 999 });
+    expect(href(out)).toBe('node/123456');
+  });
+
+  it('falls back to osm_id on an archive built before ids, ignoring its feature id', () => {
+    expect(href(buildPopupHtml('osm-substations-points-hv', { osm_id: '42' }, 7))).toBe('node/42');
+    expect(href(buildPopupHtml(tl, { osm_id: 42 }))).toBe('way/42');
+    expect(href(buildPopupHtml('osm-dc-circles', { osm_type: 'relation', osm_id: 5 }))).toBe('relation/5');
+  });
+
+  it('skips the link when neither names an OSM object', () => {
+    expect(buildPopupHtml('osm-dc-circles', { name: 'D', osm_id: 5 })).not.toContain('OSM ID');
+    expect(buildPopupHtml('osm-substations-points-hv', { name: 'S' }, 1234)).not.toContain('OSM ID');
+    expect(buildPopupHtml('osm-substations-points-hv', { name: 'S' })).not.toContain('OSM ID');
+  });
+});
+
 // ─── buildUserFeatureHtml() ───────────────────────────────────────────────────
 
 describe('buildUserFeatureHtml', () => {

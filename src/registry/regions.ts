@@ -2,7 +2,7 @@
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
 import { DCM_CLASSES } from '../colors/buckets.js';
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_CREDIT, CENSUS_CARTO_CREDIT, GEOBOUNDARIES_CREDIT } from './sources.js';
+import { OSM_CREDIT, HIFLD_CREDIT, CENSUS_CARTO_CREDIT, GEOBOUNDARIES_CREDIT, OSM_FID } from './sources.js';
 import { convDensity, densityLabel } from '../units.js';
 
 export const regionLayers: LayerDef[] = [
@@ -14,7 +14,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:      "layer.osmDatacenters",
     group:         "load",
     sourceId:      "osm",
-    data:          { kind: "geojson", key: "osm_datacenters", credit: OSM_CREDIT + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>" },
+    data:          { kind: "geojson", key: "osm_datacenters", credit: OSM_CREDIT + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>", id: OSM_FID },
     swatch:        "#6366f1",
     defaultOn:     false,
     mapLayerIds:   ["osm-dc-circles", "osm-dc-heat", "osm-dc-clusters", "osm-dc-cluster-count", "osm-dc-points", "osm-dc-heat-points"],
@@ -88,7 +88,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.nercRegions",
     group:        "regions",
     sourceId:     "hifld-nerc",
-    data:         { kind: "geojson", key: "nerc_regions", credit: HIFLD_CREDIT },
+    data:         { kind: "geojson", key: "nerc_regions", credit: HIFLD_CREDIT, id: { field: "sub_nm" } },
     dataset:      "nerc_regions",
     swatch:       "#3b82f6",
     defaultOn:    false,
@@ -127,7 +127,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.eiaBa",
     group:        "regions",
     sourceId:     "eia-ba",
-    data:         { kind: "geojson", key: "eia_ba", credit: '<a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33">EIA</a>' },
+    data:         { kind: "geojson", key: "eia_ba", credit: '<a href="https://www.arcgis.com/home/item.html?id=b1aa4dff71ca4e5aab1787a8a7568e33">EIA</a>', id: { field: "abbrev" } },
     swatch:       "#14b8a6",
     defaultOn:    false,
     hoverField:   "name",
@@ -146,7 +146,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.retailTerritories",
     group:        "regions",
     sourceId:     "hifld-retail",
-    data:         { kind: "pmtiles", key: "retail_territories", credit: HIFLD_CREDIT },
+    data:         { kind: "pmtiles", key: "retail_territories", credit: HIFLD_CREDIT, id: { field: "id" } },
     dataset:      "retail_territories",
     swatch:       "#f97316",
     defaultOn:    false,
@@ -166,7 +166,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.countries",
     group:        "regions",
     sourceId:     "cgaz-adm0",
-    data:         { kind: "geojson", key: "countries", credit: GEOBOUNDARIES_CREDIT },
+    data:         { kind: "geojson", key: "countries", credit: GEOBOUNDARIES_CREDIT, id: { field: "iso_a3" } },
     swatch:       "#8250b0",
     defaultOn:    false,
     hoverField:   "name",
@@ -182,7 +182,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.admin1",
     group:        "regions",
     sourceId:     "cgaz-adm1",
-    data:         { kind: "geojson", key: "admin1_boundaries", credit: GEOBOUNDARIES_CREDIT },
+    data:         { kind: "geojson", key: "admin1_boundaries", credit: GEOBOUNDARIES_CREDIT, id: { field: "code" } },
     swatch:       "#1f8f96",
     defaultOn:    false,
     hoverField:   "name",
@@ -198,7 +198,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.usStates",
     group:        "regions",
     sourceId:     "census-states",
-    data:         { kind: "geojson", key: "us_states", credit: CENSUS_CARTO_CREDIT },
+    data:         { kind: "geojson", key: "us_states", credit: CENSUS_CARTO_CREDIT, id: { field: "stusps" } },
     swatch:       "#2f6fad",
     defaultOn:    false,
     hoverField:   "name",
@@ -229,7 +229,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:     "layer.usZcta",
     group:        "regions",
     sourceId:     "census-zcta",
-    data:         { kind: "pmtiles", key: "us_zcta", credit: CENSUS_CARTO_CREDIT },
+    data:         { kind: "pmtiles", key: "us_zcta", credit: CENSUS_CARTO_CREDIT, id: { field: "zcta5" } },
     swatch:       "#c04a5e",
     defaultOn:    false,
     hoverField:   "zcta5",

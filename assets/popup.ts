@@ -204,7 +204,7 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   const props = f.state && Object.keys(f.state).length
     ? { ...(f.properties || {}), ...f.state }
     : (f.properties || {});
-  const html = buildPopupHtml(f.layer.id, props as Record<string, unknown>);
+  const html = buildPopupHtml(f.layer.id, props as Record<string, unknown>, f.id);
   if (html) {
     state.popup!.setLngLat(lngLat).setHTML(html).addTo(state.map!);
   }

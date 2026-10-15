@@ -63,8 +63,10 @@ turns public datasets into PMTiles consumed by the frontend.
 - `src/types.ts` — shared `LayerDef` interface and the registry/view types it
   carries (includes the optional `clickPriority` — map-layer id → click
   hit-test priority — `fromZoom` — minimum zoom to fetch the layer's data — and
-  `data` — `LayerData` `{ kind, key, credit }`: where the layer's map source gets
-  its data and who it credits — fields) and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
+  `data` — `LayerData` `{ kind, key, credit, id? }`: where the layer's map source gets
+  its data, who it credits and which column is each feature's stable id
+  (`FeatureIdDecl` `{ field, native? }`, mirroring `tile_manifest.yaml`'s
+  `id_field` / `native_id`) — fields) and `BucketedField` (the legend facet record). Single-owner types live beside their owner: `AppState` in
   `assets/state.ts`, `UserLayer` in `assets/user-data/user-data.ts`,
   `RasterMeta` in `assets/raster-probes.ts`
 - `src/units.ts` — display-unit preferences (temp/speed/distance/area/elevation/pressure)
@@ -100,6 +102,11 @@ turns public datasets into PMTiles consumed by the frontend.
     - `dev-console.ts` — dev-only `window.tm` (view API for the console); loaded by
       `src/main.ts` behind `import.meta.env.DEV`, never in the production bundle
     - `hover.ts` — polygon hover + line click-highlight
+    - `feature-id.ts` — stable feature ids: `featureId(layerId, feature)` (the id a
+      layer's `data.id` declares: the native tile id, or the promoted column),
+      `featureIdExpr` (the same inside a filter), `osmRef` (OSM `fid` = osm_id × 10 +
+      type digit 1 node/2 way/3 relation → the openstreetmap.org object); pure.
+      `feature-id.test.ts` also holds the registry ↔ `tile_manifest.yaml` `id_field` parity
     - `map-input.ts` — **the only module allowed to subscribe to MapLibre pointer
       events**; normalises mouse and touch into `onMapTap` / `onMapDoubleTap` /
       `onMapPoint` / `onMapHover` / `onMapContextMenu` (ESLint enforces the seam)
@@ -186,7 +193,7 @@ turns public datasets into PMTiles consumed by the frontend.
       show a style layer — `visibility.ts` and `nws-zone-join.ts` use it) reads the archive on first show;
       `npm run lint` rejects a raw `setLayoutProperty(id, "visibility", …)` outside the modules that own their sources
     - `layer-source.ts` — a registry layer's `data` declaration → its source: `layerSource(id)`
-      (credited vector/raster/GeoJSON spec by `kind`), `layerDataUrl`, `layerSourceId` (layers
+      (credited vector/raster/GeoJSON spec by `kind`; a non-native `data.id` becomes its `promoteId`), `layerDataUrl`, `layerSourceId` (layers
       declaring the same data share one source; `LAYER_SOURCE_ALIAS` for the rest), `SOURCE_DATA_URLS`
       (source-only GeoJSON), `pmtilesUrl` (non-registry join sources only)
     - `layer-init.ts` — shared plan helpers: `planPolygon`,

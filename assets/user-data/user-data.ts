@@ -1,5 +1,5 @@
 // ─── User data: layer management + My Data tab + selection highlight ──────────
-// Deps: state, utils, user-data-geom, user-data-colors, user-data-store (the
+// Deps: state, utils, feature-id, src/registry (LAYERS), user-data-geom, user-data-colors, user-data-store (the
 // persistence store: key, hold-back, flush, drawn cache) (no back-imports from url-state)
 // Exports the UserLayer type (state.userLayers); state.ts imports it type-only.
 // Builds the one store over window.localStorage, with the "storage full" alert
@@ -22,6 +22,8 @@ import { collectCoords, coordsBounds, showFeatureInfo, clearFeatureInfo } from '
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
 import { createUserDataStore } from './user-data-store.js';
+import { featureId } from '../feature-id.js';
+import { LAYERS } from '../../src/registry/index.js';
 
 // ─── User-layer palette + threshold ──────────────────────────────────────────
 const USER_LAYER_COLORS = [
@@ -443,11 +445,16 @@ const COPY_LAYER_NAME = 'Copied from map';
 // ponytail: queryRenderedFeatures returns tile-clipped geometry — lines/polygons
 // spanning tile boundaries get truncated. Points are exact. Full-geometry refetch
 // isn't feasible client-side from PMTiles; accept clipping or copy at higher zoom.
+// A native stable id rides on the tile feature id, not in the properties, so it
+// is written back under its declared field (OSM `fid`) for the copy's popup link.
 export function copyFeatureToMyData(f: MapGeoJSONFeature) {
+  const owner = LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
+  const decl = owner?.data?.id;
+  const nativeId = decl?.native ? featureId(owner!.id, f) : undefined;
   const clean: GeoJSON.Feature = {
     type: 'Feature',
     geometry: f.geometry,
-    properties: { ...f.properties, __src: f.layer.id },
+    properties: { ...f.properties, ...(nativeId != null && { [decl!.field]: nativeId }), __src: f.layer.id },
   };
   const layer = state.userLayers.find(l => l.filename === COPY_LAYER_NAME);
   if (!layer) {

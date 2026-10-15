@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { MapGeoJSONFeature } from 'maplibre-gl';
 import { state } from '../state.js';
+import { buildPopupHtml } from '../popup-format.js';
 import {
   saveUserData, loadUserData, restoreDrawnFeatures, addImportedLayer, renderMyDataTab, startInlineEdit,
+  copyFeatureToMyData,
 } from './user-data.js';
 import { initDraw, applyColorPick } from './user-data-draw.js';
 import { handleFileOpen } from './user-data-import.js';
@@ -335,5 +338,28 @@ describe('addImportedLayer', () => {
     const props = state.userLayers[0].geojson.features[0].properties!;
     expect(props).not.toHaveProperty('__src');
     expect(props.name).toBe('x');
+  });
+});
+
+describe('copyFeatureToMyData', () => {
+  const copy = (layerId: string, id: number | undefined, props: Record<string, unknown>) => {
+    state.map = makeStubMap() as unknown as typeof state.map;
+    copyFeatureToMyData({
+      type: 'Feature', id, geometry: { type: 'Point', coordinates: [-100, 40] },
+      properties: props, layer: { id: layerId },
+    } as unknown as MapGeoJSONFeature);
+    return state.userLayers[0].geojson.features[0].properties!;
+  };
+
+  it('keeps a native-id layer\'s tile feature id as fid, so the popup links to OSM', () => {
+    const props = copy('osm-substations-points-hv', 1234562, { name: 'Sub' });
+    expect(props.fid).toBe(1234562);
+    expect(props.__src).toBe('osm-substations-points-hv');
+    expect(buildPopupHtml('user-1', props)).toContain('openstreetmap.org/way/123456');
+  });
+
+  it('adds no fid for a layer without a native id', () => {
+    const props = copy('hifld-substations-hv', 1234562, { name: 'Sub' });
+    expect(props).not.toHaveProperty('fid');
   });
 });

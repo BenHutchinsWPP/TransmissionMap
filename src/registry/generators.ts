@@ -1,6 +1,6 @@
 // Layer registry entries — generators group (OSM plants/generators, EIA plants).
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT } from './sources.js';
+import { OSM_CREDIT, OSM_NATIVE_FID, OSM_FID } from './sources.js';
 
 export const generatorLayers: LayerDef[] = [
   {
@@ -10,7 +10,7 @@ export const generatorLayers: LayerDef[] = [
     titleKey:      "layer.osmPlants",
     group:         "generators",
     sourceId:      "osm",
-    data:          { kind: "geojson", key: "osm_plants_points", credit: OSM_CREDIT },
+    data:          { kind: "geojson", key: "osm_plants_points", credit: OSM_CREDIT, id: OSM_FID },
     dataset:       "osm_plants_points",
     swatch:        "#10b981",
     defaultOn:     false,
@@ -37,7 +37,7 @@ export const generatorLayers: LayerDef[] = [
     titleKey:      "layer.osmPlantPolygons",
     group:         "generators",
     sourceId:      "osm",
-    data:          { kind: "pmtiles", key: "osm_plants_polygons", credit: OSM_CREDIT },
+    data:          { kind: "pmtiles", key: "osm_plants_polygons", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:       "osm_plants_polygons",
     swatch:        "#10b981",
     defaultOn:     false,
@@ -60,7 +60,7 @@ export const generatorLayers: LayerDef[] = [
     titleKey:      "layer.osmGenerators",
     group:         "generators",
     sourceId:      "osm",
-    data:          { kind: "pmtiles", key: "osm_generators", credit: OSM_CREDIT },
+    data:          { kind: "pmtiles", key: "osm_generators", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:       "osm_generators",
     swatch:        "#3b82f6",
     defaultOn:     false,
@@ -81,7 +81,7 @@ export const generatorLayers: LayerDef[] = [
     titleKey:      "layer.eiaPlants",
     group:         "generators",
     sourceId:      "eia",
-    data:          { kind: "geojson", key: "eia_generators", credit: '<a href="https://www.eia.gov/electricity/data/eia860/">EIA-860</a>' },
+    data:          { kind: "geojson", key: "eia_generators", credit: '<a href="https://www.eia.gov/electricity/data/eia860/">EIA-860</a>', id: { field: "fid" } },
     dataset:       "eia_generators",
     swatch:        "#fbbf24",
     defaultOn:     false,

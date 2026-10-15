@@ -3,7 +3,10 @@
 // layer's data lives and who it credits; this module turns that into the source
 // a builder plans (layerSource), the GeoJSON URL the lazy loader fetches
 // (layerDataUrl) and the source a registry id draws from (layerSourceId:
-// layers declaring the same DATA key share the first one's source).
+// layers declaring the same DATA key share the first one's source). A declared
+// stable id (`data.id`) without `native` becomes the source's `promoteId`, so
+// feature.id — and feature-state — is that column; a native id is already the
+// tile's feature id. assets/feature-id.ts reads the same declaration.
 // Imported by: layer-init.ts (layerSource, pmtilesUrl), map-layers-*.ts (layerSource),
 //              layer-data.ts (layerDataUrl, layerSourceId),
 //              ../nws-zone-join.ts (pmtilesUrl).
@@ -22,10 +25,11 @@ export function pmtilesUrl(key: DataKey): string {
   return "pmtiles://" + new URL(DATA[key], location.href).href;
 }
 
-function sourceSpec(kind: LayerData["kind"], key: DataKey): SourceSpecification {
-  if (kind === "geojson") return { type: "geojson", data: EMPTY_FC };
+function sourceSpec({ kind, id }: LayerData, key: DataKey): SourceSpecification {
+  const promoteId = id && !id.native ? { promoteId: id.field } : {};
+  if (kind === "geojson") return { type: "geojson", data: EMPTY_FC, ...promoteId };
   const url = pmtilesUrl(key);
-  return kind === "raster" ? { type: "raster", url, tileSize: 256 } : { type: "vector", url };
+  return kind === "raster" ? { type: "raster", url, tileSize: 256 } : { type: "vector", url, ...promoteId };
 }
 
 /** The plan step adding registry layer `registryId`'s source, credited.
@@ -36,7 +40,7 @@ export function layerSource(registryId: string,
                             { id = registryId, key, spec }: { id?: string; key?: DataKey; spec?: object } = {}): PlanStep {
   const data = layerById(registryId)?.data;
   if (!data) throw new Error(`layerSource: ${registryId} declares no data`);
-  return { source: id, spec: { ...sourceSpec(data.kind, key ?? data.key), ...spec, attribution: data.credit } as SourceSpecification };
+  return { source: id, spec: { ...sourceSpec(data, key ?? data.key), ...spec, attribution: data.credit } as SourceSpecification };
 }
 
 // Registry ids drawing from a source that is not their own and not found by a

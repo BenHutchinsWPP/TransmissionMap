@@ -1,6 +1,6 @@
 // Layer registry entries — natural gas and OSM pipeline layers.
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_EIA_CREDIT } from './sources.js';
+import { OSM_CREDIT, HIFLD_EIA_CREDIT, OSM_NATIVE_FID, OSM_FID } from './sources.js';
 
 export const pipelineLayers: LayerDef[] = [
   {
@@ -10,7 +10,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:            "layer.gasPipelines",
     group:               "pipelines",
     sourceId:            "hifld-natgas",
-    data:                { kind: "pmtiles", key: "hifld_natgas_lines", credit: HIFLD_EIA_CREDIT },
+    data:                { kind: "pmtiles", key: "hifld_natgas_lines", credit: HIFLD_EIA_CREDIT, id: { field: "fid" } },
     dataset:             "hifld_natgas_lines",
     swatch:              "#f97316",
     defaultOn:           false,
@@ -34,7 +34,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:       "layer.gasFacilities",
     group:          "pipelines",
     sourceId:       "hifld-natgas",
-    data:           { kind: "geojson", key: "hifld_natgas_points", credit: HIFLD_EIA_CREDIT },
+    data:           { kind: "geojson", key: "hifld_natgas_points", credit: HIFLD_EIA_CREDIT, id: { field: "fid" } },
     dataset:        "hifld_natgas_points",
     swatch:         "#06b6d4",
     defaultOn:      false,
@@ -101,7 +101,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:          "layer.osmPipelines",
     group:             "pipelines",
     sourceId:          "osm",
-    data:              { kind: "pmtiles", key: "osm_pipelines_lines", credit: OSM_CREDIT },
+    data:              { kind: "pmtiles", key: "osm_pipelines_lines", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
     dataset:           "osm_pipelines_lines",
     swatch:            "#0d9488",
     defaultOn:         false,
@@ -123,7 +123,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:      "layer.pipelineEquipment",
     group:         "pipelines",
     sourceId:      "osm",
-    data:          { kind: "geojson", key: "osm_pipelines_points", credit: OSM_CREDIT },
+    data:          { kind: "geojson", key: "osm_pipelines_points", credit: OSM_CREDIT, id: OSM_FID },
     swatch:        "#64748b",
     defaultOn:     false,
     pipelineLayer: true,

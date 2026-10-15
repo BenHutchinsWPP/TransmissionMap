@@ -64,7 +64,7 @@ export const renewableLayers: LayerDef[] = [
     titleKey:    "layer.hydrothermal",
     group:       "renewable",
     sourceId:    "nrel-doe-hydrothermal",
-    data:        { kind: "geojson", key: "nrel_hydrothermal_points", credit: '<a href="https://gdr.openei.org/submissions/842">NREL/DOE</a>' },
+    data:        { kind: "geojson", key: "nrel_hydrothermal_points", credit: '<a href="https://gdr.openei.org/submissions/842">NREL/DOE</a>', id: { field: "UID" } },
     swatch:      "#f97316",
     defaultOn:   false,
     mapLayerIds: ["nrel-hydrothermal-points"],

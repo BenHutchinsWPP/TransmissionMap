@@ -1,6 +1,7 @@
 // Shared registry and view types: LayerDef and the shapes it carries (ramps,
 // buckets, scopes, downloads), FuelEntry, LayerSourceDef, StyleOverride and
-// BucketedField (the legend facet record), LayerData (where a layer's data lives).
+// BucketedField (the legend facet record), LayerData (where a layer's data lives)
+// and FeatureIdDecl (which column is each feature's stable id).
 // Types with a single owning module live beside it instead: AppState in
 // assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
 // assets/raster-probes.ts. Imports only the DATA type from assets/constants.ts.
@@ -113,7 +114,20 @@ export interface LayerData {
   kind: "pmtiles" | "raster" | "geojson";
   key: DataKey;     // DATA path (assets/constants.ts)
   credit: string;   // attribution HTML, shown while the source's layers are visible
+  // The stable feature id: the same value for the same real-world feature
+  // across rebuilds. Mirrors the layer's `id_field` / `native_id` in
+  // scripts/tile_manifest.yaml (assets/feature-id.test.ts holds them together);
+  // assets/feature-id.ts's featureId() reads it.
+  id?: FeatureIdDecl;
 }
+
+// `field` is the column carrying the id. Without `native`, layer-source.ts sets
+// the source's `promoteId` to it (a string or number property). With `native`,
+// tippecanoe consumed the integer column into the MVT feature id
+// (--use-attribute-for-id), so the tile carries no such property and the source
+// needs no promoteId. OSM layers use `fid` = osm_id × 10 + type digit (1 node,
+// 2 way, 3 relation); assets/feature-id.ts's osmRef() decodes it.
+export interface FeatureIdDecl { field: string; native?: true }
 
 export interface LayerDef {
   id: string;

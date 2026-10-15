@@ -1,4 +1,4 @@
-import type { LayerSourceDef, DownloadRegion } from '../types.js';
+import type { LayerSourceDef, DownloadRegion, FeatureIdDecl } from '../types.js';
 
 export const REGION_CODE_MAP: Record<DownloadRegion, string> = {
   'north-america': 'na',
@@ -21,6 +21,12 @@ export const HIFLD_EIA_CREDIT = '<a href="https://source.coop/repositories/seera
 export const EIA_ATLAS_CREDIT = '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>';
 export const CENSUS_CARTO_CREDIT = '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>';
 export const GEOBOUNDARIES_CREDIT = '<a href="https://www.geoboundaries.org/">geoBoundaries</a>';
+
+// Stable ids shared by the OSM layers (`data.id`, src/types.ts): `fid` =
+// osm_id × 10 + type digit. The vector archives carry it as the native MVT
+// feature id; the GeoJSON files carry it as a property MapLibre promotes.
+export const OSM_NATIVE_FID: FeatureIdDecl = { field: "fid", native: true };
+export const OSM_FID: FeatureIdDecl = { field: "fid" };
 
 // >>> ADD-LAYER: layer-sources — see docs/adding-a-layer.md §5 (a credit two or
 // more layers share goes above, beside OSM_CREDIT)

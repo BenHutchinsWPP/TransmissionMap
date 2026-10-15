@@ -135,7 +135,8 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   sourceId:    "my-source",         // key into LAYER_SOURCES (src/registry/sources.ts)
   // Where the map source's data lives and who it credits — see §6.
   // kind: "pmtiles" (vector tiles) | "raster" (raster tiles) | "geojson" (fetched on first enable)
-  data:        { kind: "geojson", key: "my_layer", credit: '<a href="https://example.org">My Source</a>' },
+  data:        { kind: "geojson", key: "my_layer", credit: '<a href="https://example.org">My Source</a>',
+                 id: { field: "my_id" } },  // stable feature id — see "Declaring the stable id" below
   swatch:      "#6366f1",           // color dot shown in panel row
   defaultOn:   false,               // visible on page load?
   mapLayerIds: ["my-layer-circles"],// all MapLibre layer IDs this entry controls
@@ -175,6 +176,28 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `clickPriority: { "my-layer-circles": 500 }` | **Required for a clickable layer.** Maps each of this entry's MapLibre layer ids to its click hit-test priority — higher number tested first when overlapping features exist. `assets/popup.ts` folds every `LayerDef.clickPriority` into its query order at module load; see §10. |
 | `exclusiveGroup: "county-choropleth"` | Optional. Layers sharing a group show one at a time — switching one on switches the others off and unticks their checkboxes (`setLayerVisibility()` in `assets/visibility.ts`). Give it to any new layer that paints the same shapes as an existing one, e.g. another county-keyed choropleth on `county_boundaries`. |
 | `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-data.ts`), which also gates any layer sharing the source and retries a held layer on zoom settle. Omit for anything fetched at its default visibility. |
+
+### Declaring the stable id
+
+An asset layer (anything region-tagged or in `FIELD_SCHEMA`) declares the column
+that carries each feature's stable id, the same value for the same real-world
+feature across rebuilds, as `data.id`. It is the key feature-state, links and
+id-based calls use, so pick the publisher's key, never a row number.
+
+- `id: { field: "ID" }`: a string or number property already in the data.
+  `assets/layers/layer-source.ts` sets the source's `promoteId` to it, so
+  `feature.id` is that value.
+- `id: { field: "fid", native: true }`: the tile build turned an integer column
+  into the MVT feature id (`--use-attribute-for-id`), so the tiles carry no such
+  property and the source needs no `promoteId`. The large OSM archives use this.
+  The OSM layers share `OSM_NATIVE_FID` / `OSM_FID` from `src/registry/sources.ts`.
+
+The declaration must match the layer's `id_field` (and `native_id: true`) in
+`scripts/tile_manifest.yaml`; `assets/feature-id.test.ts` fails when they drift.
+Layers sharing one data file declare the same id. Read the id with
+`featureId(layerId, feature)` from `assets/feature-id.ts`, never with a raw
+`properties.<column>`: a native id is not a property. A context layer with no
+natural key leaves `id` out.
 
 **Ramp stops** are `[value, "r,g,b"]` pairs matching the gdaldem color ramp — define them as `<X>_RAMP_STOPS` / `<X>_RAMP_MAX` in `src/colors/ramps.ts` and reference them here (see **§3R**). `minLabel`/`maxLabel` override the default "0" / `max+ unit` labels.
 
@@ -428,6 +451,7 @@ Update `docs/data-sources.md`:
 [ ] src/registry/sources.ts               — LAYER_SOURCES entry (if new source)
 [ ] src/registry/<group>.ts               — LayerDef entry (id, urlCode, label, group, swatch, mapLayerIds, data: { kind, key, credit }…)
 [ ] src/registry/<group>.ts               — clickPriority (clickable layers) / fromZoom (heavy point layers, optional)
+[ ] src/registry/<group>.ts               — data.id: the stable id column (asset layers), matching tile_manifest.yaml id_field / native_id (npm test checks)
 [ ] assets/layers/map-layers-*.ts         — planMyLayer() builder: layerSource(id) + style layers, no visibility
 [ ] assets/raster-probes.ts               — RASTER_PROBES entry (raster only)
 [ ] assets/layers/add-all-layers.ts       — ...planMyLayer() in the applyLayerPlan() list

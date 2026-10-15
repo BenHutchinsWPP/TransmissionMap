@@ -5,9 +5,11 @@
 // goes through a fmt* helper so it follows the File ▸ Settings… preference —
 // see docs/settings.md). Row labels must stay unit-neutral ("Area", not
 // "Acres") because the rendered value changes with that preference.
-// src/i18n/index.js (t), state.js (liveFcMeta — the moratorium file's as-of date).
+// src/i18n/index.js (t), state.js (liveFcMeta — the moratorium file's as-of date),
+// feature-id.js (osmRef — the OSM link from a feature's stable id).
 
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
+import { osmRef } from './feature-id.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
@@ -50,18 +52,20 @@ export function websiteRow(url: unknown) {
   return `<div class="popup-row"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(t('popup.website'))}</a></div>`;
 }
 
-// OSM object ID, hyperlinked to its openstreetmap.org page. `osmType` must be
-// node/way/relation — the URL 404s on the wrong type. The OGR OSM `lines` layer
-// is ways-only and substation points are nodes, so those are exact; polygon
-// substations are overwhelmingly ways (route relations are rare).
-// ponytail: relation-backed substation polygons mislink; add osm_type to the
-// pipeline if that ever matters.
+// OSM object ID, hyperlinked to its openstreetmap.org page. The type and id
+// come from the stable `fid` (feature-id.ts's osmRef): a GeoJSON layer carries
+// it as a property, a vector archive as the tile feature id (`id`). An archive
+// built before ids carries `osm_id` instead, with `osm_type` where it was
+// extracted, else `legacyType`, the type its layer mostly holds.
 const OSM_TYPES = new Set<unknown>(["node", "way", "relation"]);
-function osmLink(osmType: unknown, id: unknown) {
-  if (id == null || id === "" || !OSM_TYPES.has(osmType)) return "";
+function osmLink(p: Record<string, unknown>, id: unknown, legacyType?: string) {
+  const ref = osmRef(p.fid) ?? (p.osm_id == null ? osmRef(id) : null);
+  const type = ref?.type ?? p.osm_type ?? legacyType;
+  const osmId = ref?.id ?? p.osm_id;
+  if (osmId == null || osmId === "" || !OSM_TYPES.has(type)) return "";
   return `<div class="popup-row"><span class="popup-key">OSM ID</span> ` +
-    `<span class="popup-val"><a href="https://www.openstreetmap.org/${osmType}/${encodeURIComponent(String(id))}" ` +
-    `target="_blank" rel="noopener">${escapeHtml(id)}</a></span></div>`;
+    `<span class="popup-val"><a href="https://www.openstreetmap.org/${type}/${encodeURIComponent(String(osmId))}" ` +
+    `target="_blank" rel="noopener">${escapeHtml(osmId)}</a></span></div>`;
 }
 
 export function title(text: string) {
@@ -184,15 +188,16 @@ export function renderBa(p: Record<string, unknown>) {
     websiteRow(p.website as string);
 }
 
-// OSM substations come in two map layers: node points and way/relation polygons.
-// Same fields, different OSM object type for the ID link.
-function substationRenderer(osmType: "node" | "way") {
-  return (p: Record<string, unknown>) =>
+// OSM substations come in two map layers: points and way/relation polygons.
+// Same fields; the stable id names the OSM type, which an archive built before
+// ids lacks (legacyType is that archive's guess).
+function substationRenderer(legacyType: "node" | "way") {
+  return (p: Record<string, unknown>, id?: unknown) =>
     title((p.name as string) || t("popup.substation")) +
     row("popup.voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
     row("popup.type", p.sub_type) +
     row("popup.operator", p.operator) +
-    osmLink(osmType, p.osm_id);
+    osmLink(p, id, legacyType);
 }
 
 export function renderRetail(p: Record<string, unknown>) {
@@ -206,7 +211,9 @@ export function renderRetail(p: Record<string, unknown>) {
     websiteRow(p.website as string);
 }
 
-const POPUP_RENDERERS: Record<string, (p: Record<string, unknown>) => string> = {};
+// A renderer gets the feature's properties and its MapLibre feature id.
+type Renderer = (p: Record<string, unknown>, id?: unknown) => string;
+const POPUP_RENDERERS: Record<string, Renderer> = {};
 
 // ── Joined zone/county alert-list popups (nws-zone-fill / nws-county-fill) ──
 // Several alerts can name one zone/county; list all of them (not just the
@@ -307,13 +314,13 @@ const _defs = [
     row("popup.voltage", p.voltage_kv ? `${p.voltage_kv} kV` : null) +
     row("popup.lineType", p.line_type) +
     row("popup.length", p.length_mi ? fmtDistanceMi(Number(p.length_mi)) : null)],
-  [OSM_TL_POPUP_IDS, (p: Record<string, unknown>) =>
+  [OSM_TL_POPUP_IDS, (p: Record<string, unknown>, id?: unknown) =>
     title((p.name as string) || t("popup.transmissionLine")) +
     row("popup.voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
     row("popup.current", p.is_dc ? "DC" : null) +
     row("popup.placement", p.is_undergrnd ? t("popup.underground") : null) +
     row("popup.operator", p.operator) +
-    osmLink("way", p.osm_id)],
+    osmLink(p, id, "way")],
   [["hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown", "hifld-transmission-lines-dc"], (p: Record<string, unknown>) =>
     title(p.SUB_1 && p.SUB_2 ? p.SUB_1 + " → " + p.SUB_2 : t("popup.hifldTransmissionLine")) +
     row("popup.voltage", p.VOLTAGE ? p.VOLTAGE + " kV" : null) +
@@ -370,7 +377,7 @@ const _defs = [
   [["osm-pipelines-points"], (p: Record<string, unknown>) =>
     title((p.pipeline as string) || t("popup.pipelineFeature")) +
     row("popup.operator", p.operator)],
-  [["osm-dc-circles", "osm-dc-points", "osm-dc-heat-points"], (p: Record<string, unknown>) =>
+  [["osm-dc-circles", "osm-dc-points", "osm-dc-heat-points"], (p: Record<string, unknown>, id?: unknown) =>
     title((p.name as string) || t("popup.dataCenter")) +
     row("popup.operator", p.operator) +
     row("popup.siteCode", p.im3_ref) +
@@ -379,8 +386,8 @@ const _defs = [
     row("popup.state", p.addr_state) +
     row("popup.since", p.start_date) +
     row("popup.size", Number(p.im3_sqft) > 0 ? fmtAreaSqFt(Number(p.im3_sqft)) + " (IM3)" : null) +
-    // osm_type absent in pre-2026-07 builds; skip the link rather than guess the type
-    osmLink(p.osm_type, p.osm_id)],
+    // no fid and no osm_type (pre-2026-07 builds): skip the link rather than guess the type
+    osmLink(p, id)],
   [["mines-icons"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.mine")) +
     row("popup.commodity", p.commodity) +
@@ -585,7 +592,7 @@ const _defs = [
     row("popup.area", p.acres ? fmtAreaAcres(Number(p.acres)) : null) +
     row("popup.leaseDate", p.date) +
     row("popup.term", p.term)],
-] as [string[], (p: Record<string, unknown>) => string][];
+] as [string[], Renderer][];
 
 for (const [ids, fn] of _defs) {
   for (const id of ids) POPUP_RENDERERS[id] = fn;
@@ -606,7 +613,8 @@ export function buildUserFeatureHtml(p: Record<string, unknown>) {
   return html;
 }
 
-export function buildPopupHtml(layerId: string, properties: Record<string, unknown>) {
+// `id` is the clicked feature's MapLibre id (a native stable id rides there).
+export function buildPopupHtml(layerId: string, properties: Record<string, unknown>, id?: unknown) {
   if (layerId.startsWith("user-")) {
     // Features copied from a main layer carry __src = origin layer id; reuse its
     // formatted popup so the source's data/labels survive the copy.
@@ -614,5 +622,5 @@ export function buildPopupHtml(layerId: string, properties: Record<string, unkno
     if (typeof src === "string" && Object.hasOwn(POPUP_RENDERERS, src)) return POPUP_RENDERERS[src](properties);
     return buildUserFeatureHtml(properties);
   }
-  return Object.hasOwn(POPUP_RENDERERS, layerId) ? POPUP_RENDERERS[layerId](properties) : null;
+  return Object.hasOwn(POPUP_RENDERERS, layerId) ? POPUP_RENDERERS[layerId](properties, id) : null;
 }
