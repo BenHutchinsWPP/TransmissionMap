@@ -8,7 +8,8 @@ Reads   WORK/inputs/additions.csv, BUILD/moratoriums.csv (build.py: upstream row
           bans_nj.csv, bans_other.csv,  bans.csv   permanent bans (and a few moratoria)
           sweep.csv, moratoriums.csv    new moratoria, plus kind=correction|extension|replacement of upstream rows
           reverify.csv                  fixes to our additions.csv rows (pass 1 only; encoded in FIX below)
-          updates.csv                   file,id,field,old,new,...: patch any input row; field=DROP removes it
+          updates.csv                   file,id,field,old,new,...: patch any input row; field=DROP removes it;
+                                        field=confirmed, new=<YYYY-MM-DD> records that a person checked the row's source
           eia_ids.csv                   id,eia_id,...: EIA-861 utility number per row id (pass3 only)
         then WORK/inputs/research/weekly/<YYYY-MM-DD>/ in date order (written by refresh/run.py), same files; its rows
         carry that folder's date as last_verified.
@@ -17,7 +18,8 @@ Writes  BUILD/research_additions.csv  additions.csv schema; sync.py reads it in 
           - upstream rows changed by research (id nm-<upstream_id>, upstream_id set, so sync.py swaps them in);
           - new research rows (level=state rows for state agencies).
         BUILD/qa_research.csv   rows not geocoded, duplicates dropped, upstream rows changed, weak sources.
-Every research row is verify_flag=True (shown as "unconfirmed").
+Every research row is verify_flag=True (shown as "unconfirmed") until an updates.csv line sets its `confirmed`;
+so is every upstream row a research row changed, until that research row is confirmed.
 
 eia_id (EIA-861 utility number = HIFLD Retail Service Territory `ID`) lets build_layer.py draw a
 utility row as its service territory. Precedence: the row's own eia_id column, then
@@ -157,7 +159,7 @@ for d in PASSES:
             frames.append(rd(f"{d}/{f}").rename(columns={"service_area_counties": "county"})
                           .assign(_file=os.path.relpath(f"{d}/{f}", R), checked_on=checked))
 res = pd.concat(frames, ignore_index=True).fillna("")
-for c in ("kind", "upstream_id", "eia_id"):
+for c in ("kind", "upstream_id", "eia_id", "confirmed"):
     if c not in res:
         res[c] = ""
 res["kind"] = res.kind.replace("", "new")
@@ -294,7 +296,7 @@ def research_row(r, lvl):
                 type=t, scope=clip(r.sectors.replace("_", " "), 120), status=st, date_adopted=r.date_adopted,
                 date_expires=r.date_expires, duration_days=days(r.duration), extended=st == "extended",
                 summary=clip(r.summary), source_urls=urls(r.source_urls), upstream_id="", last_verified=r.checked_on,
-                verify_flag=True, status_inferred=False, date_uncertainty=unc(r),
+                verify_flag=not r.confirmed, status_inferred=False, date_uncertainty=unc(r),
                 expiry_source="source" if r.date_expires else "", fips_method="point_in_polygon", eia_id=eia(r.id, r.eia_id))
 
 
@@ -321,9 +323,9 @@ for r in res.itertuples():
             continue
         before = (o["status"], o["date_adopted"], o["date_expires"])
         if r.kind == "replacement":  # the old row keeps its own summary and sources; the new row carries the new ones
-            o.update(source_urls=urls(o["source_urls"], first_url(r.source_urls)), verify_flag=True, last_verified=r.checked_on)
+            o.update(source_urls=urls(o["source_urls"], first_url(r.source_urls)), verify_flag=not r.confirmed, last_verified=r.checked_on)
         else:
-            o.update(summary=clip(r.summary), source_urls=urls(r.source_urls, o["source_urls"]), verify_flag=True, last_verified=r.checked_on)
+            o.update(summary=clip(r.summary), source_urls=urls(r.source_urls, o["source_urls"]), verify_flag=not r.confirmed, last_verified=r.checked_on)
         if r.kind == "correction":
             o["status"], o["extended"] = r.status, r.status == "extended" or o["extended"] == "True"
             if r.date_adopted:
