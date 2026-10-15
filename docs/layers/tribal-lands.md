@@ -50,4 +50,4 @@ American Indian / Alaska Native / Native Hawaiian areas from Census TIGER/Line.
   Do not use for land-tenure, jurisdiction, or sovereignty determinations.
 - Includes statistical areas that are **not** reservations (State-/Tribal-Designated
   Statistical Areas, Oklahoma Tribal Statistical Areas) — see `area_type`.
-- TIGER/Line 2025 vintage; Census refreshes annually. Bump the download year for newer data.
+- TIGER/Line 2026 vintage; Census refreshes annually. Bump the download year for newer data.
