@@ -21,7 +21,16 @@ Upgrades" rows get scenario = their `Assessment` value (IDA/SRA/Congestion);
 "Planned Projects" has no such flag and *is* the Base Case by definition, so
 its rows get scenario = "Base Case". `line_type` (AC/DC) only exists on the
 Planned file -- Identified rows get None. Length is recomputed in EPSG:5070
-(never trust the source `Shape_Leng`, which is dropped).
+(never trust the source `Shape_Leng`, which is dropped). A row identical to an
+earlier one in every raw field and in its geometry is dropped: Identified
+Upgrades carries "Add a new Mead - Liberty - West Wing 500 kV line" three times.
+
+Ids and crosswalk (scripts/westtec_ogf.py): `fid` is a content id (no publisher
+key exists), and `ogf_ids` lists the Our Grid Future RecordIDs of the same line
+(`|R-0195|R-0494|`) from the reviewed table scripts/westtec_ogf_crosswalk.csv.
+The build fails when a feature, or an OGF "WestTEC 10 Yr Plan" record in
+data/build/ogf_planned_transmission.gpkg, has no row there -- run
+`scripts/westtec_ogf.py seed`, then review the new rows.
 
 License: published by WPP. No download pack is offered -- WPP publishes both
 shapefiles directly, so the layer links out to westernpowerpool.org rather
@@ -36,6 +45,7 @@ import geopandas as gpd
 import pandas as pd
 
 from geo_common import run_extraction
+import westtec_ogf
 
 BASE_URL = "https://www.westernpowerpool.org/static/shapefiles/"
 RAW_DIR = Path("data/raw/westtec")
@@ -60,14 +70,16 @@ def fetch() -> None:
 def _load(zip_path: Path, layer: str) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(f"/vsizip/{zip_path}/{layer}")
     gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty]
-    return gdf[gdf.geometry.geom_type.isin(["LineString", "MultiLineString"])]
+    gdf = gdf[gdf.geometry.geom_type.isin(["LineString", "MultiLineString"])]
+    exact = gdf.drop(columns="geometry").assign(_wkb=gdf.geometry.to_wkb())
+    return gdf[~exact.duplicated()]
 
 
 def _length_mi(gdf: gpd.GeoDataFrame) -> pd.Series:
     return (gdf.geometry.to_crs("EPSG:5070").length / 1609.34).round(2)
 
 
-def build() -> gpd.GeoDataFrame:
+def build(join: bool = True) -> gpd.GeoDataFrame:
     identified = _load(IDENTIFIED_ZIP, IDENTIFIED_LAYER)
     identified_out = gpd.GeoDataFrame({
         "name": identified["Upgrade_Na"],
@@ -93,7 +105,7 @@ def build() -> gpd.GeoDataFrame:
     gdf = pd.concat([identified_out, planned_out], ignore_index=True)
     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs=identified.crs).to_crs("EPSG:4326")
 
-    assert len(gdf) == 108, f"expected 108 merged features, got {len(gdf)}"
+    assert len(gdf) == 106, f"expected 106 merged features, got {len(gdf)}"
     for col in ("name", "dataset", "scenario"):
         n_bad = (gdf[col].isna() | (gdf[col].astype(str).str.strip() == "")).sum()
         assert n_bad == 0, f"{col} has {n_bad} null/empty values"
@@ -102,13 +114,35 @@ def build() -> gpd.GeoDataFrame:
     assert set(gdf["dataset"]) == {"planned", "identified"}, \
         f"unexpected dataset values: {set(gdf['dataset'])}"
 
+    gdf.insert(0, "fid", [westtec_ogf.westtec_fid(r.dataset, r.scenario, r.name, r.voltage_kv,
+                                                  r.upgrade_type, r.geometry)
+                          for r in gdf.itertuples()])
+    assert gdf["fid"].is_unique, "WestTEC fid collision: add a field to westtec_fid()"
+    if join:
+        _join_crosswalk(gdf)
     return gdf
+
+
+def _join_crosswalk(gdf: gpd.GeoDataFrame) -> None:
+    rows = westtec_ogf.read_table()
+    ogf_records = (westtec_ogf.load_ogf_westtec()["RecordID"]
+                   if westtec_ogf.OGF_GPKG.exists() else [])
+    missing, unnamed, stale = westtec_ogf.uncovered(rows, gdf["fid"], ogf_records)
+    if not westtec_ogf.OGF_GPKG.exists():
+        print(f"  [skip] OGF coverage check: {westtec_ogf.OGF_GPKG} missing")
+    if stale:
+        print(f"  WARNING: crosswalk rows for fids no longer in the data: {stale}")
+    if missing or unnamed:
+        raise SystemExit(f"ERROR: {westtec_ogf.CROSSWALK.name} lacks rows for WestTEC fids {missing} "
+                         f"and OGF records {unnamed}; run scripts/westtec_ogf.py seed and review them")
+    gdf["ogf_ids"] = gdf["fid"].map(westtec_ogf.ogf_ids(rows))
 
 
 def summary(gdf):
     print(gdf["dataset"].value_counts().to_string())
     print()
     print(gdf["scenario"].value_counts().to_string())
+    print(f"\n{gdf['ogf_ids'].notna().sum()} features linked to Our Grid Future records")
     print(f"\n{len(gdf):,} WestTEC 10-Yr features")
 
 

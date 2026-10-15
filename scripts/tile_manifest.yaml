@@ -381,11 +381,13 @@ layers:
     format: geojson
     precision: 4
 
-  # Served raw (lazy-loaded), not tiled. 108 features -- too small to justify tiling.
+  # Served raw (lazy-loaded), not tiled. 106 features -- too small to justify tiling.
+  # `fid` is a content id (scripts/westtec_ogf.py); `ogf_ids` links Our Grid Future.
   - id: westtec_10yr
     src: data/build/westtec_10yr.gpkg
     format: geojson
     precision: 6
+    id_field: fid
 
 # Layers built by their own script rather than this manifest, listed only to
 # declare their stable feature id (same meaning as a layer's `id_field`).

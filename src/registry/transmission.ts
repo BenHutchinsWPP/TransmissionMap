@@ -189,7 +189,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:          "layer.westtec10yr",
     group:             "transmission",
     sourceId:          "westtec",
-    data:              { kind: "geojson", key: "westtec_10yr", credit: '<a href="https://www.westernpowerpool.org/">WestTEC (Western Power Pool)</a>' },
+    data:              { kind: "geojson", key: "westtec_10yr", credit: '<a href="https://www.westernpowerpool.org/">WestTEC (Western Power Pool)</a>', id: { field: "fid" } },
     swatch:            "#0891b2",
     defaultOn:         false,
     westtecColorLayer: true,

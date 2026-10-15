@@ -60,7 +60,9 @@ def write_shp_csv(gdf, shp, indent=""):
     out = Path(shp).with_suffix(".gpkg")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.unlink(missing_ok=True)
-    gdf.to_file(out, driver="GPKG")
+    # A GeoPackage reserves `fid` for its primary key; keep a `fid` column ordinary.
+    opts = {"layer_options": {"FID": "ogc_fid"}} if "fid" in gdf.columns else {}
+    gdf.to_file(out, driver="GPKG", **opts)
     print(f"{indent}Wrote {out}  ({len(gdf):,} features)")
 
     csv = out.with_suffix(".csv")

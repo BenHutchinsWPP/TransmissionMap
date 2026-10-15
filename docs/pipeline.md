@@ -210,6 +210,7 @@ together.
 | HIFLD natgas points | `fid` | `"<fac_type>:<publisher key>"` | `promoteId` |
 | HIFLD natgas lines | `fid` | `"ng:<FID>"` / `"hgl:<FID>"`, one feature per record | `promoteId` |
 | OGF planned transmission | `RecordID` | `R-0329` | `promoteId` |
+| WestTEC 10 Yr | `fid` | 12-hex content id (sha1 of attributes + part endpoints on a 0.01° grid; `scripts/westtec_ogf.py`) — the publisher has no key, so a content edit yields a new id | `promoteId` |
 | Mines / NREL hydrothermal | `mine_id` / `UID` | MSHA mine ID / publisher UID | `promoteId` (`built_elsewhere` in the manifest) |
 | Retail territories, NERC regions | `id` / `sub_nm` | HIFLD ID / region name | `promoteId` |
 | US states, ZCTA, tribal lands, EIA BAs, countries, admin-1 | `stusps`, `zcta5`, `geoid`, `abbrev`, `iso_a3`, `code` | the region-tag code | `promoteId` |
@@ -231,7 +232,8 @@ same id.
 **Footguns.**
 - A GeoPackage reserves `fid` for its own primary key. Write intermediates that carry
   a `fid` column with `layer_options=GPKG_FID_OPTIONS` (`{"FID": "ogc_fid"}`) so `fid`
-  stays an ordinary column.
+  stays an ordinary column. `geo_common.write_shp_csv` does this whenever the
+  frame has a `fid` column.
 - `tippecanoe --use-attribute-for-id=fid` needs the attribute typed as a number:
   pass `-T fid:int`. A string `fid` is skipped silently and the archive ships with no
   ids. `region_join.tag_file` must keep `fid` numeric for the same reason.

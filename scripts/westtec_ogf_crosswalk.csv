@@ -1,0 +1,130 @@
+westtec_fid,westtec_name,scenario,ogf_record_ids,status,note
+0e405abc24af,Add a new Mead - Liberty - West Wing 500 kV line,SRA,R-0684,confirmed,"Peacock–Liberty segment of the SRA Mead–Liberty–Westwing line; fw=1.0 fo=0.44. R-0696 (Congestion) shares part of the corridor, other scenario"
+8e3863a19cf1,Add a new Mead - Liberty - West Wing 500 kV line,SRA,R-0684,confirmed,"Mead–Peacock segment of the SRA Mead–Liberty–Westwing line; R-0684 ends at Mead; fw=1.0 fo=0.26. R-0696 (Congestion Mead–Westwing/Perkins) shares the corridor, other scenario"
+a527b9d95cc3,Add a new Mead - Liberty - West Wing 500 kV line,SRA,R-0684,confirmed,Liberty–Westwing segment of the SRA Mead–Liberty–Westwing line; R-0684 SRA 500 kV runs Mead–Liberty–Westwing; fw=1.0 fo=0.1
+93f32cede7c8,Afton North-Airport 345 kV Line (New),Base Case,R-0004,confirmed,Afton–Airport both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+830be2c1e64e,Afton-Afton North 345 kV Double Bundled Line (New),Base Case,R-0665,confirmed,Afton–Afton North both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+69f8207bba10,Amrad to Chavez Upgrade,SRA,R-0682,confirmed,Amrad–Chavez both ends match; SRA 345 kV; fw=1.0 fo=1.0
+e88110f0ffdd,Bethel-Round Butte 500kV upgrade,Base Case,R-0039,confirmed,Bethel–Round Butte both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+ca5ad37b052e,Big Eddy - Ostrander-Pearl rebuild,Base Case,R-0041,confirmed,"Drawn Big Eddy–Ostrander–Pearl–Chemawa (ends Big Eddy, Chemawa); the project (report: rebuild Big Eddy–Ostrander–Pearl) is the one R-0041 carries, which covers its Big Eddy–Ostrander part (fw=0.62 fo=1.0). Not linked: R-0370 and R-0343 lie on it but are separate WestTEC projects (features 477113481620, c5999f12b18a); R-0040 is drawn on the same alignment but OGF holds it outside the WestTEC plan"
+f997577db717,Big Eddy - Ostrander-Pearl rebuild,Base Case,R-0041,confirmed,Big Eddy–Ostrander both ends match R-0041; Base Case 500 kV; fw=1.0 fo=1.0
+571b54517ba7,Bolo Tie,Base Case,R-0667,confirmed,"Bolo Tie: both ends (unnamed 345 kV sub, Western Spirit Switchyard) match R-0667; Base Case 345 kV; fw=1.0 fo=1.0. R-0675 shares only the corridor near Western Spirit (fo=0.26)"
+023d087fec70,Bonanza to Lower Columbia 500kV Reinforcement Project,Base Case,R-0679,confirmed,"Bonanza (Ponderosa 0.3 km)–Six Mile segment of Bonanza to Lower Columbia; R-0679 (Base Case BPA project, not WestTEC-tagged in OGF) runs Bonanza–Six Mile–Longhorn with the same ends on a different route drawing (fw=0.35, Hausdorff 29 km). R-0136 (fw=0.87) shares the corridor but ends at Corral/Grassland"
+d4939ef2a6bd,Bonanza to Lower Columbia 500kV Reinforcement Project,Base Case,R-0679,confirmed,"Six Mile–Longhorn segment of Bonanza to Lower Columbia; lies wholly on R-0679 (fw=1.0), Longhorn end matches"
+eb9db006e87f,Bonanza to Lower Columbia 500kV Reinforcement Project,Base Case,R-0680,confirmed,"Six Mile–Ashe segment of Bonanza to Lower Columbia; R-0680 has the same ends, fw=1.0 fo=1.0, Hausdorff 0 km (not WestTEC-tagged in OGF). R-0673 (Cross-Cascades) only shares the corridor"
+5e50639b513b,Colorado River-Red Bluff 500 kV 1 Line Upgrade,Base Case,R-0116,confirmed,Colorado River–Red Bluff both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+4c1e72c8e37a,Colorado's Power Pathway,Base Case,R-0117,confirmed,Goose Creek–May Valley segment of R-0117; fw=1.0 fo=0.11
+a4de94050da9,Colorado's Power Pathway,Base Case,R-0117,confirmed,May Valley–Tundra segment of R-0117; fw=1.0 fo=0.24
+cab4254cd2cb,Colorado's Power Pathway,Base Case,R-0117,confirmed,Fort St Vrain–Canal Crossing segment; Fort St Vrain end matches R-0117; fw=0.91 fo=0.13
+d2ce648baab5,Colorado's Power Pathway,Base Case,R-0117,confirmed,Canal Crossing–Goose Creek segment of R-0117; fw=0.97 fo=0.27
+fd811bc72180,Colorado's Power Pathway,Base Case,R-0117,confirmed,Tundra–Harvest Mile segment; both are stations of R-0117 (Base Case 345 kV); fw=0.9 fo=0.24
+f6026ef6aab6,Colstrip - Broadview 500 kV series cap upgrade,Congestion,R-0704,confirmed,Colstrip–Broadview both ends match; Congestion 500 kV; fw=1.0 fo=1.0
+8e675aa0f5e2,Corral to Grassland Annex 500kV Line,Base Case,R-0136,confirmed,Corral (Redmond area)–Grassland both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+89d29df31610,Corral to Snow Goose 500kV Line,Base Case,R-0137,confirmed,Corral (Redmond area)–Snow Goose both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+38e39a9d0427,Cross Cascades North Upgrade TSEP 2022,Base Case,R-0495,confirmed,"Schultz–Raver both ends match R-0495; Base Case 500 kV reconductor; fw=1.0 fo=1.0, Hausdorff 0 km (the Aug-2026 name review found no match)"
+eb7521b8a22b,Cross-Cascades Project,Base Case,R-0673,confirmed,"Schultz–Longhorn, part of R-0673; fw=1.0 fo=0.61. R-0680 (Six Mile–Ashe) shares the Ashe approach only"
+9625e762d9b3,Cross-Cascades Project --> Line break at Schultz,Base Case,R-0673,confirmed,"White River–Schultz, part of R-0673 (Base Case 500 kV White River–Schultz–Longhorn); fw=1.0 fo=0.39"
+4e21709eed8c,Energize the existing Red Butte – St. George line at 345 kV,Base Case,R-0470,confirmed,Red Butte–St George both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+fcc5538ef5f0,Gateway Central: Limber to Terminal (Segment C),Base Case,R-0175,confirmed,"Terminal–Limber, Gateway Central segment C; both ends match R-0175; Base Case 345 kV; fw=0.98 fo=1.0. R-0176/R-0178 are separate connection works at Limber"
+c522d7f03e6b,Gateway West: Borah to Midpoint (E-North),Base Case,R-0180,confirmed,"Borah–Midpoint, Gateway West segment E; fw=1.0 fo=0.13. R-0689 (SRA) touches only at Midpoint"
+a631efb840f1,Gateway West: Bridger/Anticline to Populus (Segment D3),Base Case,R-0724,confirmed,"Anticline–Populus, Gateway West segment D3: R-0724 is the segment D3 record (Base Case 500 kV), fw=1.0 fo=0.98, both ends match; R-0180 is segment E only (fw=0.0)"
+b8aebc9e7c41,Gateway West: Cedar Hill to Hemingway (E-south),Base Case,R-0180,confirmed,"Cedar Hill (Artesian 2.9 km)–Hemingway, Gateway West segment E; R-0180 Base Case 500 kV segment E Populus–Hemingway; fw=1.0 fo=0.27"
+ff26375c9eb2,Gateway West: Cedar Hill to Midpoint (Segment E),Base Case,R-0180,confirmed,"Midpoint–Cedar Hill, Gateway West segment E; both ends are stations of R-0180, route drawn differently (fw=0.37). R-0522 (SWIP North, fw=0.34) shares the corridor but ends at Robinson Summit"
+14d6bec0dd18,Gateway West: Midpoint to Hemingway (Segment E8),Base Case,R-0180,confirmed,"Midpoint–Hemingway, Gateway West segment E8; fw=1.0 fo=0.2"
+58df1d3a8fad,Gateway West: Populus to Borah (E-North),Base Case,R-0180,confirmed,"Populus–Borah, Gateway West segment E; fw=1.0 fo=0.16"
+9a81fabd09e0,Gateway West: Populus to Cedar Hill (E-south),Base Case,R-0180,confirmed,"Populus–Cedar Hill, Gateway West segment E; both ends are stations of R-0180; fw=0.72 (route drawing differs)"
+4ae2f2ba312b,Grand Coulee - Columbia - Schultz  - Olympia 500-kV,Base Case,R-0195|R-0494,confirmed,Grand Coulee–Schultz–Olympia: R-0195 (Grand Coulee–Schultz) and R-0494 (Schultz–Olympia) each lie wholly on it (fo=1.0) and together cover it (fw 0.43+0.57); both Base Case 500 kV; the report lists the two rebuilds separately. R-0495 (Schultz–Raver) is its own feature 38e39a9d0427
+fb66b1128e90,Grassland Annex to B2H Tap Substation 500kV Line,Base Case,R-0678,confirmed,Grassland–B2H Tap both ends match; Base Case 500 kV; fw=1.0 fo=0.96
+141b011dc1a3,Greenlink North,Base Case,R-0196,confirmed,"Fort Churchill–Robinson Summit both ends match; Base Case 525 kV; fw=0.86 fo=0.86, Hausdorff 4 km"
+c52cc6428126,Greenlink West,Base Case,R-0197,confirmed,Fort Churchill–Harry Allen both ends match; Base Case 525 kV; fw=1.0 fo=1.0
+a4ce297d029c,Hassayampa - Pinal West 500kV #2,Base Case,R-0373,confirmed,"Jojoba–Pinal West, part of R-0373 (Base Case 500 kV, Hassayampa–Jojoba–Pinal West #2); fw=1.0 fo=0.62"
+1a2572aab0f1,Humboldt to Collinsville,Base Case,R-0327,confirmed,Humboldt–Collinsville both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+6dc9391b82e7,Humboldt to Fern Road,Base Case,R-0328,confirmed,Humboldt–Fern Road both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+861b272e6cc0,Imperial Valley–North of SONGS 500 kV Line and Substation,Base Case,R-0219,confirmed,Imperial Valley–North of SONGS both ends match; Base Case 500 kV; fw=0.93 fo=1.0
+97b472bf32e1,Jojoba to Rudd 500kV line,Base Case,R-0228,confirmed,Jojoba–Rudd both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+13ad113ffce6,Lantern – Comstock Meadows 345 kV line,Base Case,R-0668,confirmed,Comstock Meadows–Lantern both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+3ac9a9241be8,Laramie River - Dave Johnston 230 kV line reconductor,Congestion,R-0697,confirmed,"Laramie River–Dave Johnston both ends match; Congestion 230 kV; fw=1.0 fo=1.0. R-0388 (Base Case, Windstar–Stegall) only parallels"
+9b15fc86e0fb,Longhorn to Hemingway (B2H),Base Case,R-0053,confirmed,"Longhorn–Hemingway both ends match; Base Case 500 kV; fw=0.89 fo=0.90, Hausdorff 7 km (route drawing)"
+5d987f26ea6f,Mead - Perkins 345 kV line rebuild/reconductor,Congestion,R-0696,confirmed,"Westwing/Perkins–Mead both ends match; Congestion 500 kV; fw=1.0 fo=1.0. R-0684 (SRA) shares the corridor, other scenario"
+8951b3a8487c,Montana to Washington (M2W),Base Case,R-0664,confirmed,"Taft–Garrison segment of M2W; fw=1.0 fo=0.64. R-0690 (IDA) shares the line, other scenario"
+ac70398fa29d,Montana to Washington (M2W),Base Case,R-0664,confirmed,"Dworshak–Taft segment of M2W; R-0664 Base Case 500 kV is drawn Dworshak–Taft–Garrison; fw=1.0 fo=0.36. R-0690 (IDA Townsend–Ashe) shares the line, other scenario"
+cce43c45ba54,New Four Corners - Pintado 345 kV ckt 2,SRA,R-0688,confirmed,Four Corners–Pintado (unnamed 345 kV sub) both ends match; SRA 345 kV; fw=1.0 fo=1.0
+75d486ebd739,New Keeler - Pearl 500 kV line #2,SRA,R-0346,confirmed,"Pearl–Keeler both ends match R-0346 and R-0345; scenario decides: R-0346 is the SRA record, R-0345 the Base Case one (linked to 81c65910d60c); fw=1.0 fo=1.0. The report's SRA item on this line is the Keeler–Pearl #1 reconductor, which R-0346 also covers"
+1a8ddee578c0,New Manning - Metcalf line,SRA,R-0656,confirmed,Metcalf–Manning: Metcalf end and the unnamed Manning end both match R-0656; SRA 500 kV; fw=0.99 fo=1.0
+cf7771fb3d08,New Rio Puerco - San Juan 345 kV ckt 2,SRA,R-0687,confirmed,San Juan–Rio Puerco both ends match; SRA 345 kV; fw=1.0 fo=1.0
+ed5f176c2aab,New Townsend to Midpoint 500 kV line,SRA,R-0689,confirmed,Townsend–Midpoint both ends match; SRA 500 kV; fw=1.0 fo=1.0
+a1c606ddda90,North Gila - Imperial Valley #2,Base Case,R-0341,confirmed,North Gila–Imperial Valley both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+397fbafe5adb,North Plains Connector,Base Case,R-0349|R-0350,confirmed,"Colstrip–Center 345 kV switchyard: R-0349 (DC segment from Colstrip) and R-0350 (345 kV AC segment to Center) are the two segments of the same project, each wholly on this feature (fo=1.0, fw 0.87+0.13); both Base Case"
+38776d83d228,North of Marion: Marion-Chemawa-Pearl 500,Base Case,R-0342,confirmed,"Marion–Chemawa segment of North of Marion; lies wholly on R-0342 (Base Case 500 kV rebuild Chemawa–Santiam; Santiam is 3.5 km from Marion), fw=1.0 fo=0.92. R-0343 touches only at Chemawa (fw=0.02)"
+c5999f12b18a,North of Marion: Marion-Chemawa-Pearl 500,Base Case,R-0343,confirmed,Chemawa–Pearl segment of North of Marion; both ends match R-0343 (Base Case 500 kV rebuild Pearl–Chemawa); fw=1.0 fo=1.0
+81c65910d60c,North of Pearl 500-kV upgrade (incl. Pearl-Keeler #2 500),Base Case,R-0345,confirmed,"Pearl–Keeler both ends match R-0345 and R-0346; scenario decides: R-0345 is the Base Case record (R-0346 is SRA, linked to 75d486ebd739); fw=1.0 fo=1.0"
+bc6d441b3369,North of SONGS–Serrano 500 kV line,Base Case,R-0347,confirmed,North of SONGS–Serrano; Serrano end matches R-0347; Base Case 500 kV; fw=0.96 fo=0.74. R-0498 on the same corridor is 230 kV and outside the WestTEC plan
+558a76096431,Oquirrh-Terminal 345 kV #3 and #4 Double Circuit Line,Base Case,R-0365,confirmed,Oquirrh–Terminal both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+477113481620,Ostrander - Pearl #1 500,Base Case,R-0370,confirmed,Ostrander–Pearl both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+3c9640c1aaa1,Ostrander - Pearl 500kV Reconductor,SRA,,none,"Ostrander–Pearl (SRA reconductor): the only OGF record with these terminals is R-0370, a Base Case record already linked to the Base Case feature 477113481620; no OGF SRA record has Ostrander–Pearl terminals"
+94bc4a24fc06,Picante to Otero Upgrade,SRA,R-0683,confirmed,Picante–Otero (unnamed 345 kV sub) both ends match; SRA 345 kV; fw=1.0 fo=1.0
+feac18fb59e2,Rebuild Clines Corner - Guadalupe - Taiban Mesa to double circuit,SRA,R-0681,confirmed,Clines Corner (Los Cavos sub)–Taiban Mesa both ends match; SRA 345 kV; fw=1.0 fo=1.0
+9e416e3e06a1,Rebuild Hemingway - Summer Lake Ckt 1&2,IDA,R-0692,confirmed,Summer Lake–Burns segment of the IDA Hemingway–Summer Lake rebuild; fw=1.0 fo=0.46
+bf76f1e768ac,Rebuild Hemingway - Summer Lake Ckt 1&2,IDA,R-0692,confirmed,Burns–Hemingway segment of the IDA Hemingway–Summer Lake rebuild; R-0692 IDA 500 kV rebuild Summer Lake–Burns–Hemingway; fw=1.0 fo=0.54
+a2b3e5b675ef,Reconductor Ault to Archer,Congestion,R-0698,confirmed,"Ault–Archer both ends match R-0698; Congestion 230 kV; fw=1.0 fo=1.0. R-0699 ends at Terry Ranch Road, not Archer"
+e3ddf7075bbc,Reconductor Ault to Terry Ranch,Congestion,R-0699,confirmed,"Ault–Terry Ranch Road both ends match R-0699; Congestion 230 kV; fw=1.0 fo=1.0. R-0698 ends at Archer, 17 km off"
+8e488d5be0c7,Reconductor Diamond Tail – B-A ckt 1 and 2,IDA,R-0693,confirmed,B-A–Hagan (Diamond Tail) both ends match; IDA 345 kV; fw=1.0 fo=1.0
+797688bebe85,Reconductor Rio Puerco - Pintado ckt 1,IDA,R-0694,confirmed,Rio Puerco–Pintado (unnamed 345 kV sub) both ends match; IDA 345 kV; fw=1.0 fo=1.0
+47d857e0aeb9,Rio Puerco-Prosperity 345kV Line,Base Case,R-0670,confirmed,Rio Puerco–Prosperity (Los Picaros) both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+9a6c262bd247,RioSol,IDA,R-0474,confirmed,"Pinal Central–(unnamed east end) both ends match R-0474; IDA 500 kV; fw=0.99 fo=0.99. R-0528 (Base Case SunZia) shares the corridor, other scenario"
+689edcc1238b,SWIP-North,Base Case,R-0522,confirmed,Robinson Summit–Midpoint both ends match R-0522 (0.1–0.5 km); Base Case 500 kV; fw=0.36 fo=0.36 but Hausdorff 4 km: same line drawn on an offset route
+67bfadc01518,San Jose Area HVDC 230 kV Line (Newark - NRS),Base Case,R-0626,confirmed,"San Jose B–Evergreen segment; R-0626 (Base Case 230 kV, the San Jose area project) starts at San Jose B and is drawn through to Metcalf; fw=1.0 fo=0.27. The report notes this project was restructured to AC in the 2024-25 TPP"
+d0e319bd5443,San Jose Area HVDC 230 kV Line (Newark - NRS),Base Case,R-0626,confirmed,Evergreen–Metcalf segment; R-0626 ends at Metcalf; fw=1.0 fo=0.52
+e3371b147e7f,Second Four Corners - San Juan 345 kV line,SRA,R-0686,confirmed,San Juan–Four Corners both ends match R-0686; SRA 345 kV; fw=1.0 fo=1.0. R-0687 (SRA San Juan–Rio Puerco) shares only the San Juan end
+8a41e9bcdea3,Second Mead - Market Place 500 kV line,SRA,R-0685,confirmed,Mead–Marketplace both ends match; SRA 500 kV; fw=1.0 fo=1.0
+2fbc4613ec96,Serrano–Del Amo–Mesa 500 kV Transmission Reinforcement,Base Case,R-0497,confirmed,Del Amo–Center segment of Serrano–Del Amo–Mesa; fw=1.0 fo=0.16
+372d1f4c2639,Serrano–Del Amo–Mesa 500 kV Transmission Reinforcement,Base Case,R-0497,confirmed,Mesa–Center segment of Serrano–Del Amo–Mesa; Mesa end matches R-0497; fw=1.0 fo=0.32
+72da98b8a605,Serrano–Del Amo–Mesa 500 kV Transmission Reinforcement,Base Case,R-0497,confirmed,"Villa Park–Serrano segment of Serrano–Del Amo–Mesa; Serrano end matches R-0497 (Base Case 500 kV, Del Amo/Mesa/Serrano); fw=1.0 fo=0.09"
+9621ab1a425b,Serrano–Del Amo–Mesa 500 kV Transmission Reinforcement,Base Case,R-0497,confirmed,Barre–Del Amo segment of Serrano–Del Amo–Mesa; fw=1.0 fo=0.26
+eaad36ba0907,Serrano–Del Amo–Mesa 500 kV Transmission Reinforcement,Base Case,R-0497,confirmed,Villa Park–Barre segment of Serrano–Del Amo–Mesa; fw=1.0 fo=0.25
+494d11857fa6,Sigurd - Clover 345 kV line,Base Case,R-0111,confirmed,Clover–Sigurd both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+0681ba472db7,South of Knight:  Rock Creek-John Day 500 kV line upgrade,Base Case,R-0480,confirmed,Rock Creek–John Day both ends match; Base Case 500 kV; fw=1.0 fo=1.0
+1b454263e6b7,Spanish Fork - Mercer 345 kV line,Base Case,R-0523,confirmed,"Spanish Fork–Mercer (unnamed 345 kV sub) both ends match; Base Case 345 kV; fw=0.76 fo=0.74, Hausdorff 2 km"
+4e9558ef5b3e,SunZia,Base Case,R-0528,confirmed,"Pinal Central–(unnamed east end) both ends match R-0528; Base Case; WestTEC 500 kV DC vs OGF 525 kV DC; fw=0.97 fo=0.97. R-0474 (IDA) shares the corridor, other scenario"
+36ba5ab33621,Ten West Link,Base Case,R-0534,confirmed,"Colorado River–Delaney both ends match; Base Case 500 kV; fw=0.77 fo=0.77, Hausdorff 2 km"
+2fdba234faa0,Three Peaks - Purgatory Flat 345 kV line,Base Case,R-0674,confirmed,Three Peaks–Purgatory Flat (unnamed sub) both ends match; Base Case 345 kV; fw=1.0 fo=1.0
+08ca1cdbc329,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Little Goose–Central Ferry segment of IDA Townsend–Ashe; R-0690 IDA 500 kV Ashe–Townsend; fw=1.0 fo=0.03
+18292615c980,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Townsend–Garrison segment of IDA Townsend–Ashe; Townsend end matches R-0690; fw=1.0 fo=0.18
+823497287164,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Lower Monumental–Little Goose segment of IDA Townsend–Ashe; fw=1.0 fo=0.05
+a6046e58e084,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,"Taft–Garrison segment of IDA Townsend–Ashe; fw=1.0 fo=0.32. R-0664 (Base Case M2W) is drawn on the same line, other scenario"
+aab0db114314,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Central Ferry–Lower Granite segment of IDA Townsend–Ashe; fw=1.0 fo=0.04
+ae4befc43981,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Hatwai–Dworshak segment of IDA Townsend–Ashe; fw=1.0 fo=0.06
+ce221da92bfb,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Lower Granite–Hatwai segment of IDA Townsend–Ashe; fw=1.0 fo=0.07
+f6b181e68fc0,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,"Dworshak–Taft segment of IDA Townsend–Ashe; fw=1.0 fo=0.19. R-0664 (Base Case M2W) is drawn on the same line, other scenario"
+fb0522caa797,Townsend - Ashe 500kV Line #1,IDA,R-0690,confirmed,Lower Monumental–Ashe segment of IDA Townsend–Ashe; Ashe end matches R-0690; fw=1.0 fo=0.08
+13c9e50997fa,TransWest Express,Base Case,R-0541,confirmed,"DC part of TransWest Express (Intermountain area–Wyoming): R-0541 is the DC segment, same ends, fw=0.91 fo=0.91; R-0540 is the AC segment (feature d72832042aa8)"
+d72832042aa8,TransWest Express,Base Case,R-0540,confirmed,"AC part of TransWest Express (Intermountain area–Crystal–Eldorado): R-0540 is the AC segment, Eldorado end matches; fw=0.92 fo=0.94"
+5be63adefdf0,Uprate Hemingway - Summer Lake Ckt 1 via Substation upgrades,IDA,,none,"IDA uprate via substation upgrades on Summer Lake–Burns; OGF carries only the rebuild (R-0692, linked to the Rebuild features), no uprate record"
+7439d30d48b1,Uprate Hemingway - Summer Lake Ckt 1 via Substation upgrades,IDA,,none,"IDA uprate via substation upgrades (the report's IDA solution) on Burns–Hemingway; OGF carries only the rebuild (R-0692, linked to the Rebuild features), no uprate record"
+bd5630939ab6,Walker - Bonanza 500kV Line #1,IDA,R-0691,confirmed,Walker–Bonanza (Ponderosa 0.3 km) both ends match; IDA 500 kV; fw=1.0 fo=1.0
+b9644b331807,Western Spirit - Chavez County 345kV Line,Base Case,R-0675,confirmed,"Western Spirit–Chavez County: both ends match R-0675, fw=1.0 fo=1.0; R-0667 (Bolo Tie) ends 6 km off at its own sub and covers only the Western Spirit end (fw=0.26)"
+78fa2d69ba6e,Western Spirit - Hidden Mountain 345kV #2 Line,Base Case,R-0676,confirmed,Hidden Mountain end segment of Western Spirit–Hidden Mountain #2; Base Case 345 kV; fw=1.0 fo=0.2
+7b2828eeeb1f,Western Spirit - Hidden Mountain 345kV #2 Line,Base Case,R-0676,confirmed,Western Spirit end segment of Western Spirit–Hidden Mountain #2; fw=1.0 fo=0.81
+,,Base Case,R-0043,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0057,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0058,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0099,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0159,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0160,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0161,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0192,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0204,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0208,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0231,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0376,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0388,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0484,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0666,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0669,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,IDA,R-0695,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0700,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0701,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0702,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0703,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0712,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
+,,Base Case,R-0727,none,no WestTEC feature: a 230 kV (or lower) record; the shapefiles' five 230 kV features match other records
