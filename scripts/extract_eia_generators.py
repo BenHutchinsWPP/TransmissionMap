@@ -22,6 +22,9 @@ Files used (early-release builds append _Early_Release to the stem):
                                 Year. Proposed sheet: same cols, with Effective
                                 Year (planned online year) used as the op_year.
 
+Output: one row per generator, keyed by `fid` = "<plant_code>:<generator_id>",
+the layer's stable feature id (tile_manifest.yaml `id_field`).
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Usage:
   python scripts/extract_eia_generators.py
@@ -252,8 +255,12 @@ def build_output(plant_df: "pd.DataFrame", gen_df: "pd.DataFrame") -> "pd.DataFr
     )
     merged["mw_range"] = _cats.cat.add_categories("unknown").fillna("unknown").astype(str)
 
+    # Stable feature id: EIA's own plant + generator key. Generator ids never
+    # contain ':', so the pair is unambiguous; the plant-level key stays plant_code.
+    merged["fid"] = merged["plant_code"].astype(str) + ":" + merged["generator_id"].astype(str)
+
     col_order = [
-        "plant_code", "plant_name", "lat", "lon", "state", "nerc_region", "ba_code",
+        "fid", "plant_code", "plant_name", "lat", "lon", "state", "nerc_region", "ba_code",
         "generator_id", "technology", "energy_source", "nameplate_mw", "mw_range",
         "status", "op_year", "prime_mover", "retirement_year", "gen_status",
         "utility_name", "sector_name", "pipelines",

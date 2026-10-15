@@ -31,12 +31,14 @@ Outputs:
   data/build/hifld_natgas_lines.csv  — companion CSV with midpoint lat/lon
   data/build/hifld_natgas_points.csv — merged facility points (normalized schema)
 
-Normalized lines schema:
+Normalized lines schema (one feature per publisher record; multipart kept):
+  fid        stable feature id "ng:<FID>" / "hgl:<FID>" (publisher FID)
   pipe_type  Interstate | Intrastate | Gathering | HGL
   operator   operator/company name
   name       pipeline name (HGL only; nat gas has no name field)
 
 Normalized points schema:
+  fid        stable feature id "<fac_type>:<publisher key>" (see POINT_SOURCES)
   fac_type   facility type bucket id (lng_terminal|underground|trading_hub|spr|
              processing|pol_terminal|lng_storage|peak_shaving|border_cross)
   name       facility name
@@ -102,6 +104,7 @@ def load_natgas_lines() -> "gpd.GeoDataFrame":
     log.info("  %d features  |  CRS: %s", len(gdf), gdf.crs)
 
     out = gpd.GeoDataFrame({
+        "fid":       "ng:" + gdf["FID"].astype(str),
         "pipe_type": gdf["TYPEPIPE"].str.strip(),
         "operator":  _clean_col(gdf["Operator"].str.strip()),
         "name":      None,
@@ -121,6 +124,7 @@ def load_hgl_lines() -> "gpd.GeoDataFrame":
     log.info("  %d features  |  CRS: %s", len(gdf), gdf.crs)
 
     out = gpd.GeoDataFrame({
+        "fid":       "hgl:" + gdf["FID"].astype(str),
         "pipe_type": "HGL",
         "operator":  _clean_col(gdf["Opername"].str.strip()),
         "name":      _clean_col(gdf["Pipename"].str.strip()),
@@ -135,9 +139,7 @@ def build_lines(out_dir: Path) -> None:
     hgl = load_hgl_lines()
     gdf = gpd.GeoDataFrame(pd.concat([ng, hgl], ignore_index=True), crs=ng.crs)
 
-    # Explode MultiLineString → LineString so tippecanoe handles them cleanly
-    gdf = gdf.explode(index_parts=False).reset_index(drop=True)
-    log.info("Lines total: %d features after explode", len(gdf))
+    log.info("Lines total: %d features", len(gdf))
 
     # Truncate long strings to fit shapefile 254-char field limit
     for col in ("operator", "name"):
@@ -147,7 +149,9 @@ def build_lines(out_dir: Path) -> None:
     for f in out_dir.glob("hifld_natgas_lines.*"):
         f.unlink()
     log.info("Writing %s ...", out_shp)
-    gdf.to_file(str(out_shp), driver="GPKG")
+    # A GeoPackage names its primary key `fid` by default, which would swallow
+    # the string id column of the same name; give the key another name.
+    gdf.to_file(str(out_shp), driver="GPKG", layer_options={"FID": "ogc_fid"})
     log.info("  ✓ %s  (%d features)", out_shp.name, len(gdf))
 
     # Companion CSV (midpoint lat/lon)
@@ -165,8 +169,9 @@ def build_lines(out_dir: Path) -> None:
 # POINTS — one loader per dataset
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _pt_row(fac_type, name, operator, state, status, detail, lat, lon):
+def _pt_row(fid, fac_type, name, operator, state, status, detail, lat, lon):
     return {
+        "fid":      fid,
         "fac_type": fac_type,
         "name":     str(name)[:120] if name else "",
         "operator": str(operator)[:120] if operator else "",
@@ -243,37 +248,39 @@ def _upper_row(r):
                 lat=r.get("LATITUDE"), lon=r.get("LONGITUDE"))
 
 
-# (fac_type, parquet filename, log label, gdf pre-filter or None, row builder)
+# (fac_type, parquet filename, log label, gdf pre-filter or None, key column,
+#  row builder). The key column is the publisher's per-record id, unique within
+# its file; `fid` = "<fac_type>:<key>" is unique across all of them.
 POINT_SOURCES = [
     ("lng_terminal", "liquified-natural-gas-lng-import-and-export-terminals.parquet",
-     "LNG terminal", None,
+     "LNG terminal", None, "OBJECTID",
      # status/detail = Functions: Import / Export / Import/Export
      lambda r: dict(name=r.get("Facility"), operator=clean_sentinel(r.get("Operator")),
                     state=r.get("State"), status=r.get("Functions"),
                     detail=r.get("Functions"),
                     lat=r.get("Latitude"), lon=r.get("Longitude"))),
-    ("trading_hub", "natural-gas-trading-hubs.parquet", "trading hub", None,
+    ("trading_hub", "natural-gas-trading-hubs.parquet", "trading hub", None, "FID",
      lambda r: dict(name=r.get("HubName"), operator=None, state=None,
                     status="Active", detail=None,
                     lat=r.get("Latitude"), lon=r.get("Longitude"))),
-    ("spr", "strategic-petroleum-reserves.parquet", "SPR", None, _spr_row),
+    ("spr", "strategic-petroleum-reserves.parquet", "SPR", None, "OBJECTID", _spr_row),
     ("underground", "natural-gas-underground-storage.parquet",
-     "underground storage", None, _underground_row),
+     "underground storage", None, "OBJECTID", _underground_row),
     ("processing", "natural-gas-processing-plants.parquet",
-     "processing plant", None, _processing_row),
+     "processing plant", None, "OBJECTID", _processing_row),
     ("pol_terminal", "pol-terminals.parquet", "POL terminal",
-     lambda g: g[g["STATUS"] != "DISMANTLED"], _pol_terminal_row),
+     lambda g: g[g["STATUS"] != "DISMANTLED"], "TERM_ID", _pol_terminal_row),
     ("lng_storage", "above-ground-lng-storage-facilities.parquet",
      "above-ground LNG storage",
-     lambda g: g[g["STATUS"] != "ABANDONED"], _upper_row),
-    ("peak_shaving", "peak-shaving-facilities.parquet", "peak shaving", None,
+     lambda g: g[g["STATUS"] != "ABANDONED"], "AGLNGID", _upper_row),
+    ("peak_shaving", "peak-shaving-facilities.parquet", "peak shaving", None, "PSPID",
      _upper_row),
     ("border_cross", "border-crossings---natural-gas.parquet", "border crossing",
-     None, _border_row),
+     None, "FID", _border_row),
 ]
 
 
-def load_point_source(fac_type, filename, label, prefilter, row_fn) -> list:
+def load_point_source(fac_type, filename, label, prefilter, key_col, row_fn) -> list:
     log.info("Loading %ss ...", label)
     gdf = gpd.read_parquet(str(RAW_DIR / filename))
     if prefilter is not None:
@@ -282,7 +289,7 @@ def load_point_source(fac_type, filename, label, prefilter, row_fn) -> list:
     for _, r in gdf.iterrows():
         kwargs = row_fn(r)
         if kwargs is not None:
-            rows.append(_pt_row(fac_type=fac_type, **kwargs))
+            rows.append(_pt_row(fid=f"{fac_type}:{r[key_col]}", fac_type=fac_type, **kwargs))
     log.info("  %d %s records", len(rows), label)
     return rows
 

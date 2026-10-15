@@ -12,7 +12,10 @@ OSM substation geometry types:
   relation  — complex multipolygon substation (largest sites)
 
 Output:
-  power_substation_all.csv   — all three types merged, deduplicated by OSM ID
+  power_substation_all.csv   — all three types merged, deduplicated on `fid`
+                               (osm_common.osm_fid: the OSM id with its type),
+                               which the CSV and the polygon GeoPackage carry
+                               with `osm_type` and `osm_id`
 
 Usage:
   python extract_osm_substations.py                        # uses data/raw/osm/*.osm.pbf
@@ -31,7 +34,7 @@ from pathlib import Path
 
 from shapely.geometry import shape as _shape
 
-from osm_common import _run, _has, find_pbf
+from osm_common import GPKG_FID_OPTIONS, _run, _has, add_fid, find_pbf
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +214,7 @@ def extract_polygon_substations(pbf_path, tmp_dir):
     if rows:
         poly_df = gpd.GeoDataFrame(
             {
+                "osm_type":   [r["osm_type"]    for r in rows],
                 "osm_id":     [r["osm_id"]      for r in rows],
                 "name":       [r["name"]         for r in rows],
                 "operator":   [r["operator"]     for r in rows],
@@ -225,7 +229,7 @@ def extract_polygon_substations(pbf_path, tmp_dir):
         )
     else:
         poly_df = gpd.GeoDataFrame(columns=[
-            "osm_id", "name", "operator", "op_wikidta",
+            "osm_type", "osm_id", "name", "operator", "op_wikidta",
             "volt_raw", "nominal_kv", "sub_type", "ref", "geometry",
         ], crs="EPSG:4326")
 
@@ -325,15 +329,14 @@ def merge_and_write(poly_df, node_df, out_csv):
         sys.exit(1)
 
     # Canonical column order matching enrich_osm_tags.py sub_poly_fdefs / sub_pt_fdefs
-    COLS = ["lon", "lat", "osm_type", "osm_id", "name",
+    COLS = ["lon", "lat", "osm_type", "osm_id", "fid", "name",
             "operator", "op_wikidata", "voltage_raw", "nominal_kv", "sub_type", "ref"]
 
-    merged = pd.concat(frames, ignore_index=True).reindex(columns=COLS)
+    merged = add_fid(pd.concat(frames, ignore_index=True)).reindex(columns=COLS)
 
-    # De-duplicate by (osm_type, osm_id) — way/12345 and node/12345 are different objects.
+    # De-duplicate by fid — way/12345 and node/12345 are different objects.
     before = len(merged)
-    merged["_dedup_key"] = merged["osm_type"].astype(str) + "/" + merged["osm_id"].astype(str)
-    merged = merged.drop_duplicates(subset=["_dedup_key"], keep="first").drop(columns=["_dedup_key"])
+    merged = merged.drop_duplicates(subset=["fid"], keep="first")
     dupes = before - len(merged)
     if dupes:
         log.info("  Removed %d duplicate (osm_type, osm_id) pairs", dupes)
@@ -371,9 +374,6 @@ def merge_and_write(poly_df, node_df, out_csv):
         na_position="first",
     ).drop(columns=["_has_name"])
 
-    # osm_type (way/node/relation) served its purpose for deduplication; drop from output
-    merged = merged.drop(columns=["osm_type"], errors="ignore")
-
     # Scrub "nan"/"NaN"/"None" strings from all object columns (pandas NaN artifact)
     _nan_strings = {"nan", "NaN", "None", "none", "NULL", "null", "<NA>"}
     for col in merged.select_dtypes(include="object").columns:
@@ -402,11 +402,12 @@ def write_polygon_shp(poly_gdf, out_shp):
     """Write SubstationPolygons.shp from the GeoDataFrame of actual footprints.
 
     The SHP contains the same attribute columns as the CSV (with SHP-safe names)
-    so the two layers can be joined by osm_id.  Empty-string fields are normalised
+    so the two layers can be joined by fid.  Empty-string fields are normalised
     to None so they appear as proper nulls in most GIS apps.
 
     Fields (all ≤ 10 chars):
-      osm_id, name, operator, op_wikidta, volt_raw, nominal_kv, sub_type, ref
+      osm_type, osm_id, name, operator, op_wikidta, volt_raw, nominal_kv,
+      sub_type, ref, fid
     """
     if poly_gdf is None or poly_gdf.empty:
         log.warning("No polygon geometry available — SubstationPolygons.shp not written.")
@@ -439,7 +440,9 @@ def write_polygon_shp(poly_gdf, out_shp):
         lambda g: MultiPolygon([g]) if g.geom_type == "Polygon" else g
     )
 
-    gdf.to_file(str(Path(out_shp).with_suffix(".gpkg")), driver="GPKG")
+    gdf = add_fid(gdf)
+    gdf.to_file(str(Path(out_shp).with_suffix(".gpkg")), driver="GPKG",
+                layer_options=GPKG_FID_OPTIONS)
 
     log.info("")
     log.info("=" * 60)

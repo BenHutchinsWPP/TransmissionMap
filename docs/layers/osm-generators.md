@@ -15,6 +15,7 @@ For one-row-per-facility use [OSM Plants](osm-plants.md).
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_generators.pmtiles` — PMTiles, zoom 7–13. z14 alone was 48% of the archive; capping at z13 keeps it under the host's 100 MiB per-file ceiling and MapLibre overzooms above it. |
 | **Built by** | `extract_osm_generators.py` → `data/build/generator_osm.csv` → `tippecanoe -l osm_generators` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, served as the native vector-tile feature id; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack

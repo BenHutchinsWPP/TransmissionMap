@@ -10,6 +10,16 @@
 #   select      optional column allow-list (omit = keep all)
 #   where       optional ogr2ogr -where filter
 #   precision   optional COORDINATE_PRECISION (decimal places)
+#   id_field    the column holding the layer's stable feature id: the same value
+#               for the same real-world feature across rebuilds. The frontend
+#               registry declares the same field (LayerData.id); a parity test
+#               holds the two together. Must be in `select` when one is given.
+#               `scripts/stable_ids.py` (`make stable-ids`) checks every archive
+#               for missing and duplicate ids.
+#   native_id   true → the served archive carries id_field as the vector-tile
+#               feature id (tippecanoe --use-attribute-for-id, which consumes the
+#               attribute) instead of a property the frontend promotes. Integer
+#               ids only. A geojson-format build keeps it as a property.
 #   --- pmtiles only ---
 #   min_zoom / max_zoom   required
 #   simplification        optional
@@ -22,28 +32,35 @@ layers:
   - id: eia_generators
     src: data/build/generator_eia.csv
     format: geojson
-    select: [plant_code, plant_name, technology, energy_source, nameplate_mw, nerc_region, ba_code, state, op_year, status, gen_status, retirement_year, utility_name, sector_name, pipelines, prime_mover, states, counties, ba, nerc, retail]
+    id_field: fid
+    select: [fid, plant_code, plant_name, technology, energy_source, nameplate_mw, nerc_region, ba_code, state, op_year, status, gen_status, retirement_year, utility_name, sector_name, pipelines, prime_mover, states, counties, ba, nerc, retail]
 
   - id: osm_plants_polygons
     src: data/build/plant_polygons.gpkg
     format: geojson
     precision: 6
-    select: [osm_id, name, source, output_mw, operator, start_date]
+    id_field: fid
+    native_id: true
+    select: [fid, name, source, output_mw, operator, start_date]
 
   - id: osm_plants_points
     src: data/build/plant_osm.csv
     format: geojson
-    select: [osm_id, name, source, output_mw, operator, start_date]
+    id_field: fid
+    select: [fid, name, source, output_mw, operator, start_date]
 
   - id: hifld_substations
     src: data/build/substation_hifld.csv
     format: geojson
+    id_field: hifld_id
     select: [hifld_id, name, max_kv, min_kv, kv_range, states, counties, ba, nerc, retail]
 
   - id: osm_substations_points
     src: data/build/substation_osm.csv
     format: pmtiles
-    select: [osm_id, name, nominal_kv, operator, sub_type]
+    id_field: fid
+    native_id: true
+    select: [fid, name, nominal_kv, operator, sub_type]
     min_zoom: 0
     # z13 keeps every substation (nothing is dropped at any zoom) and brings the
     # world archive from 106 MB to 84 MB, under the 100 MiB publishing ceiling.
@@ -54,12 +71,16 @@ layers:
     src: data/build/substation_polygons.gpkg
     format: geojson
     precision: 6
-    select: [osm_id, name, nominal_kv, operator, sub_type]
+    id_field: fid
+    native_id: true
+    select: [fid, name, nominal_kv, operator, sub_type]
 
   - id: osm_generators
     src: data/build/generator_osm.csv
     format: pmtiles
-    select: [osm_id, name, source, gen_method, gen_type, output_mw, operator]
+    id_field: fid
+    native_id: true
+    select: [fid, name, source, gen_method, gen_type, output_mw, operator]
     min_zoom: 7
     # z14 alone was 48% of the archive. z13 takes the world file from 120 MB to
     # 63 MB, under the 100 MiB publishing ceiling, with no features dropped.
@@ -70,7 +91,8 @@ layers:
   - id: osm_datacenters
     src: data/build/datacenter_osm.csv
     format: geojson
-    select: [osm_id, osm_type, name, operator, website, addr_city, addr_state, start_date, im3_sqft, im3_ref]
+    id_field: fid
+    select: [fid, name, operator, website, addr_city, addr_state, start_date, im3_sqft, im3_ref]
 
   - id: railroads
     src: data/raw/railroads/narn_rail_lines.geojson
@@ -85,22 +107,29 @@ layers:
   - id: osm_pipelines_points
     src: data/build/pipeline_points.csv
     format: geojson
+    id_field: fid
     where: "pipeline != 'valve'"
 
   - id: osm_pipelines_lines
     src: data/build/pipeline_routes.gpkg
     format: pmtiles
-    select: [name, substance, operator]
+    id_field: fid
+    native_id: true
+    select: [fid, name, substance, operator]
     precision: 6
     min_zoom: 2
-    max_zoom: 12
+    # z11 with --simplify-only-low-zooms keeps the world archive under the
+    # 100 MiB ceiling once every feature carries its id; mirrors
+    # build_global_tiles.py.
+    max_zoom: 11
     simplification: 4
-    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+    flags: [--simplify-only-low-zooms, --drop-densest-as-needed, --coalesce-densest-as-needed]
 
   - id: hifld_natgas_points
     src: data/build/hifld_natgas_points.csv
     format: geojson
-    select: [fac_type, name, operator, state, status, detail, states, counties, ba, nerc, retail]
+    id_field: fid
+    select: [fid, fac_type, name, operator, state, status, detail, states, counties, ba, nerc, retail]
 
   - id: eia_crude_pipelines
     src: data/build/eia_crude_pipelines.geojson
@@ -117,7 +146,8 @@ layers:
   - id: hifld_natgas_lines
     src: data/build/hifld_natgas_lines.gpkg
     format: pmtiles
-    select: [pipe_type, operator, name, states, counties, ba, nerc]
+    id_field: fid
+    select: [fid, pipe_type, operator, name, states, counties, ba, nerc]
     precision: 6
     min_zoom: 2
     max_zoom: 12
@@ -136,6 +166,7 @@ layers:
   - id: countries
     src: data/build/countries.gpkg
     format: geojson
+    id_field: iso_a3
     select: [name, iso_a3, color_idx]
     precision: 5
     simplify: 0.005
@@ -148,7 +179,8 @@ layers:
   - id: admin1_boundaries
     src: data/build/admin1_boundaries.gpkg
     format: geojson
-    select: [name, iso_a3, country, color_idx]
+    id_field: code
+    select: [code, name, iso_a3, country, color_idx]
     precision: 5
     simplify: 0.01
 
@@ -158,6 +190,7 @@ layers:
   - id: us_states
     src: data/build/us_states.gpkg
     format: geojson
+    id_field: stusps
     select: [geoid, stusps, name, color_idx]
     precision: 5
     simplify: 0.005
@@ -167,6 +200,7 @@ layers:
   - id: us_zcta
     src: data/build/us_zcta.gpkg
     format: pmtiles
+    id_field: zcta5
     select: [zcta5, color_idx]
     min_zoom: 4
     max_zoom: 11
@@ -178,6 +212,7 @@ layers:
   - id: nerc_regions
     src: data/build/nerc_regions.gpkg
     format: geojson
+    id_field: sub_nm
     select: [code, sub_nm, region, state, website]
     precision: 5
     simplify: 0.005
@@ -196,6 +231,7 @@ layers:
   - id: eia_ba
     src: data/build/eia_ba.gpkg
     format: geojson
+    id_field: abbrev
     select: [name, abbrev, area_sqmi, color]
     precision: 5
     simplify: 0.001
@@ -203,7 +239,8 @@ layers:
   - id: retail_territories
     src: data/build/retail_territories.gpkg
     format: pmtiles
-    select: [name, type, state, customers, retail_mwh, sumr_peak, wntr_peak, hold_co, ctrl_area, year]
+    id_field: id
+    select: [id, name, type, state, customers, retail_mwh, sumr_peak, wntr_peak, hold_co, ctrl_area, year]
     precision: 5
     min_zoom: 2
     max_zoom: 10
@@ -213,6 +250,7 @@ layers:
   - id: tribal_lands
     src: data/build/tribal_lands.gpkg
     format: geojson
+    id_field: geoid
     precision: 5
 
   - id: bia_tribal_lands
@@ -246,6 +284,7 @@ layers:
   - id: hifld_transmission_lines
     src: data/build/transmission_hifld.gpkg
     format: pmtiles
+    id_field: ID
     select: [ID, VOLTAGE, VOLT_CLASS, OWNER, TYPE, STATUS, SUB_1, SUB_2, states, counties, ba, nerc]
     precision: 6
     min_zoom: 2
@@ -265,7 +304,9 @@ layers:
     # Mirrors TRANSMISSION_ZOOM_LADDER in scripts/build_global_tiles.py.
     # minz must stay in `select`: tippecanoe evaluates -j against the emitted
     # properties, so dropping it makes the filter match nothing.
-    select: [osm_id, nominal_kv, operator, name, is_undergrnd, is_dc, minz]
+    id_field: fid
+    native_id: true
+    select: [fid, nominal_kv, operator, name, is_undergrnd, is_dc, minz]
     precision: 6
     min_zoom: 2
     max_zoom: 11
@@ -295,6 +336,7 @@ layers:
   - id: county_boundaries
     src: data/build/county_boundaries.geojson
     format: pmtiles
+    id_field: GEOID
     select: [GEOID, NAME, STUSPS, STATE_NAME, color_idx]
     min_zoom: 2
     max_zoom: 8
@@ -314,6 +356,7 @@ layers:
   - id: nws_zones
     src: data/build/nws_zones.geojson
     format: pmtiles
+    id_field: key
     select: [ugc, type, name, key]
     min_zoom: 2
     max_zoom: 8
@@ -324,6 +367,7 @@ layers:
   - id: ogf_planned_transmission
     src: data/build/ogf_planned_transmission.gpkg
     format: geojson
+    id_field: RecordID
 
   - id: boem_wind_leases
     src: data/build/boem_wind_leases.geojson
@@ -343,3 +387,12 @@ layers:
     format: geojson
     precision: 6
 
+# Layers built by their own script rather than this manifest, listed only to
+# declare their stable feature id (same meaning as a layer's `id_field`).
+# build_tiles.py ignores this list; stable_ids.py checks the served
+# data/layers/<id>.geojson.gz.
+built_elsewhere:
+  - id: mines                     # scripts/extract_mines.py (`make mines`)
+    id_field: mine_id
+  - id: nrel_hydrothermal_points  # scripts/build_hydrothermal_pts.sh (`make hydro-pts`)
+    id_field: UID

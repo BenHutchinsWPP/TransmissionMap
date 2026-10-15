@@ -35,7 +35,7 @@ import tempfile
 from pathlib import Path
 
 from osm_common import (
-    _run, _has, find_pbf,
+    _run, _has, add_fid, find_pbf, osm_fid,
     parse_output_mw as _parse_output_mw,
     normalise_plant_source as _normalise_source,
 )
@@ -62,7 +62,8 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Output field schema
 # ---------------------------------------------------------------------------
-COLS = ["lon", "lat", "osm_id", "name", "source", "output_mw", "operator", "start_date"]
+COLS = ["lon", "lat", "osm_type", "osm_id", "fid", "name", "source", "output_mw",
+        "operator", "start_date"]
 
 # Deduplication radius: polygon centroid within this distance of a node → drop polygon
 _DEDUP_RADIUS_M = 500   # larger than generators since plants are big facilities
@@ -172,7 +173,7 @@ def extract_polygon_plants(pbf_path, tmp_dir):
 
     log.info("Step 3/3: Parsing GeoJSON-Seq, extracting centroids ...")
     rows = []
-    geom_dict = {}   # osm_id (str) → Shapely geometry (full polygon, for polygon SHP output)
+    geom_dict = {}   # fid → Shapely geometry (full polygon, for polygon SHP output)
     skipped = 0
 
     with open(plant_geojson) as f:
@@ -212,15 +213,16 @@ def extract_polygon_plants(pbf_path, tmp_dir):
 
             output_raw = props.get("plant:output:electricity", "")
             osm_id = props.get("@id")
+            osm_type = props.get("@type", "way")
             if osm_id is not None:
                 try:
-                    geom_dict[str(osm_id)] = shp_shape(geom)
+                    geom_dict[osm_fid(osm_id, osm_type)] = shp_shape(geom)
                 except Exception:
                     pass
             rows.append({
                 "lon":        clon,
                 "lat":        clat,
-                "osm_type":   props.get("@type", "way"),
+                "osm_type":   osm_type,
                 "osm_id":     osm_id,
                 "name":       props.get("name", "").strip(),
                 "source":     _normalise_source(props.get("plant:source", "")),
@@ -231,7 +233,9 @@ def extract_polygon_plants(pbf_path, tmp_dir):
 
     log.info("  Plant polygons/relations: %d  (skipped: %d)", len(rows), skipped)
     log.info("  Polygon geometries captured: %d", len(geom_dict))
-    captured_ids = {int(r["osm_id"]) for r in rows if r["osm_id"] is not None}
+    # Relations already exported as multipolygons; the site-relation pass skips them.
+    captured_ids = {int(r["osm_id"]) for r in rows
+                    if r["osm_id"] is not None and r["osm_type"] == "relation"}
     return pd.DataFrame(rows), plant_pbf, captured_ids, geom_dict
 
 
@@ -248,7 +252,7 @@ def merge_and_write(node_df, poly_df, site_df, out_csv, dedup_radius_m=_DEDUP_RA
         log.error("No plant features extracted.")
         sys.exit(1)
 
-    merged = pd.concat(frames, ignore_index=True).reindex(columns=["lon","lat","osm_type","osm_id","name","source","output_mw","operator","start_date"])
+    merged = add_fid(pd.concat(frames, ignore_index=True)).reindex(columns=COLS)
 
     poly_rows = merged[merged["osm_type"].isin(["way", "relation"])]
     node_rows = merged[merged["osm_type"] == "node"]
@@ -286,7 +290,6 @@ def merge_and_write(node_df, poly_df, site_df, out_csv, dedup_radius_m=_DEDUP_RA
     n_nodes = (merged["osm_type"] == "node").sum()
     n_polys = (merged["osm_type"] == "way").sum()
     n_sites = (merged["osm_type"] == "relation").sum()
-    merged  = merged.drop(columns=["osm_type"], errors="ignore")
 
     # Normalise empty strings → None
     for col in ["source", "operator", "start_date"]:

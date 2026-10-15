@@ -189,6 +189,62 @@ printing any table — when a path is missing or a `.gpkg` is not a GeoPackage.
 
 ---
 
+### Stable ids
+
+An asset layer's features carry a **stable id**: the same value for the same
+real-world feature across rebuilds, so the app can address a feature (feature-state,
+links, id-based calls) and a later analysis copy can join to it. It is the
+publisher's key, never a row number or an `OBJECTID`. Each layer's column is
+declared once as `id_field` in `scripts/tile_manifest.yaml` (plus `native_id: true`
+for an integer id served as the vector-tile feature id), and the frontend registry
+declares the same column (`LayerData.id`); `assets/feature-id.test.ts` holds the two
+together.
+
+| Dataset | Id field | Form | Mechanism |
+|---|---|---|---|
+| OSM substations, generators, plants, pipelines, transmission lines | `fid` | integer, `osm_id * 10 + t` (t = 1 node, 2 way, 3 relation) | native tile id on the large vector archives (`native_id`); `promoteId` on the GeoJSON ones (plants points, pipelines points) |
+| OSM data centers | `fid` | same integer | `promoteId` (GeoJSON) |
+| EIA generators | `fid` | `"<plant_code>:<generator_id>"` | `promoteId` |
+| HIFLD substations | `hifld_id` | the publisher `ID` | `promoteId` |
+| HIFLD transmission lines | `ID` | publisher ID | `promoteId` |
+| HIFLD natgas points | `fid` | `"<fac_type>:<publisher key>"` | `promoteId` |
+| HIFLD natgas lines | `fid` | `"ng:<FID>"` / `"hgl:<FID>"`, one feature per record | `promoteId` |
+| OGF planned transmission | `RecordID` | `R-0329` | `promoteId` |
+| Mines / NREL hydrothermal | `mine_id` / `UID` | MSHA mine ID / publisher UID | `promoteId` (`built_elsewhere` in the manifest) |
+| Retail territories, NERC regions | `id` / `sub_nm` | HIFLD ID / region name | `promoteId` |
+| US states, ZCTA, tribal lands, EIA BAs, countries, admin-1 | `stusps`, `zcta5`, `geoid`, `abbrev`, `iso_a3`, `code` | the region-tag code | `promoteId` |
+
+**Where ids are built.** In the extract scripts, so the `data/build/` intermediates
+(continental OSM CSV/GeoPackages and the US CSVs) and the merged world inputs already
+carry the id column. Later copies of the data, such as a GeoParquet analysis export,
+read it from there instead of recomputing. `osm_common.osm_fid()` builds the OSM id
+and keeps `osm_type` beside it; the last digit makes the type readable
+(`4535892832` is way `453589283`), and `assets/feature-id.ts` `osmRef()` decodes it
+for popup links.
+
+**World merge.** `build_global_tiles.py` dedupes the seam copies of each OSM layer on
+`fid`; the first continent in `REGION_CODES` keeps its copy. Transmission is tiled once
+with ids assigned beforehand, then cut into the six voltage-class archives with
+`tile-join`, which carries the ids through: a way sits in exactly one band with the
+same id.
+
+**Footguns.**
+- A GeoPackage reserves `fid` for its own primary key. Write intermediates that carry
+  a `fid` column with `layer_options=GPKG_FID_OPTIONS` (`{"FID": "ogc_fid"}`) so `fid`
+  stays an ordinary column.
+- `tippecanoe --use-attribute-for-id=fid` needs the attribute typed as a number:
+  pass `-T fid:int`. A string `fid` is skipped silently and the archive ships with no
+  ids. `region_join.tag_file` must keep `fid` numeric for the same reason.
+- `native_id` consumes the attribute, so the tiles carry no `fid` property; read it
+  through `featureId(layerId, feature)`, not `properties.fid`.
+
+**Checking.** `make stable-ids` (`scripts/stable_ids.py`; `ARGS="--only <id>
+--max-tiles N"`) decodes each served archive at its max zoom and exits non-zero on any
+missing id or true duplicate. A duplicate is the same id twice within one tile, or
+shared between the archives of a split layer (the transmission bands). A line cut
+across tiles repeats its id in several tiles and counts once. Run it after every tile
+or extract rebuild.
+
 ## Windows
 
 **Viewing the map** needs nothing special — it's a static site, so native Windows

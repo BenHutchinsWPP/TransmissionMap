@@ -14,6 +14,7 @@ OSM transmission line and cable features, worldwide.
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_transmission_lines_kv{0,50,100,125,200,300}.pmtiles` — six planet-wide PMTiles archives, zoom 2–11, one per voltage class. `make global-tiles` re-tiles the layer from the eight continental GeoPackages in one pass (deduping the seam overlaps) and cuts the classes out of the result. See [hosting-plan.md](../hosting-plan.md). |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/transmission_lines.gpkg` → `tippecanoe -l osm_transmission_lines` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, the native tile id in every voltage-class archive; a way keeps one id in exactly one band; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack

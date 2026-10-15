@@ -16,7 +16,8 @@ Portal: https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp
 Output:
   data/layers/mines.geojson  (gzipped to .gz by build step)
 
-Properties kept per feature: name, status (active|retired), cat (commodity
+Properties kept per feature: mine_id (MSHA MINE_ID, the stable feature id; a
+string, leading zeros kept), name, status (active|retired), cat (commodity
 category id), commodity (human string), operator, employees (peak), state.
 """
 
@@ -107,6 +108,7 @@ def build(mines_path: Path, prod_path: Path, threshold: int) -> dict:
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [round(lon, 5), round(lat, 5)]},
                 "properties": {
+                    "mine_id": mid,
                     "name": row["CURRENT_MINE_NAME"].strip() or "Mine",
                     "status": status,
                     "cat": categorize(sic),

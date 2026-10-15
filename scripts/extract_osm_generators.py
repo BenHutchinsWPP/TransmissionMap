@@ -42,7 +42,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from osm_common import _run, _has, find_pbf, parse_output_mw as _parse_output_mw
+from osm_common import _run, _has, add_fid, find_pbf, parse_output_mw as _parse_output_mw
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,7 +64,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Output field schema
 # ---------------------------------------------------------------------------
-COLS = ["lon", "lat", "osm_type", "osm_id", "name", "ref",
+COLS = ["lon", "lat", "osm_type", "osm_id", "fid", "name", "ref",
         "source", "gen_method", "gen_type", "output_mw",
         "operator", "start_date", "manufactur"]
 
@@ -265,7 +265,7 @@ def merge_and_write(node_df, poly_df, out_csv, dedup_radius_m=_DEDUP_RADIUS_M):
         log.error("No generators extracted.")
         sys.exit(1)
 
-    merged = pd.concat(frames, ignore_index=True).reindex(columns=COLS)
+    merged = add_fid(pd.concat(frames, ignore_index=True)).reindex(columns=COLS)
 
     # Deduplicate polygon rows against node rows by proximity
     poly_rows = merged[merged["osm_type"].isin(["way", "relation"])]
@@ -313,10 +313,8 @@ def merge_and_write(node_df, poly_df, out_csv, dedup_radius_m=_DEDUP_RADIUS_M):
     for col in merged.select_dtypes(include="object").columns:
         merged[col] = merged[col].replace(_nan_strings, None)
 
-    # osm_type served its purpose for deduplication; capture stats then drop from output
     n_nodes = (merged["osm_type"] == "node").sum()
     n_polys = merged["osm_type"].isin(["way", "relation"]).sum()
-    merged  = merged.drop(columns=["osm_type"], errors="ignore")
 
     merged.to_csv(str(out_csv), index=False)
 

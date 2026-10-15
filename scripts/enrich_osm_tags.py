@@ -9,6 +9,7 @@ Skips files whose ``_processed`` sibling already exists.
 Lines:      nominal_kv, cables, circuits, frequency, location, operator, op_wikidata, line_type, wires, ref, const, minz
 Pipelines:  pipeline, facil_type, substance, operator, op_wikidata  (lines)
             pipeline, operator                                       (points)
+All:        osm_type + fid, the stable feature id (osm_common.osm_fid)
 """
 
 import re
@@ -19,6 +20,8 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+
+from osm_common import GPKG_FID_OPTIONS, add_fid
 
 # ---------------------------------------------------------------------------
 # Field type constants (replaces osgeo.ogr constants)
@@ -89,11 +92,14 @@ def _best_kv(vs):
 # Layer processing
 # ---------------------------------------------------------------------------
 
-def _process_layer(shp_path, path_out, fdefs, keep_src_fields=None, post_hook=None):
+def _process_layer(shp_path, path_out, fdefs, keep_src_fields=None, post_hook=None,
+                   osm_type=None):
     """Read shp_path, add extra fields from fdefs, write path_out + .csv.
 
     fdefs: [(name, type_const, parser_fn)]
     keep_src_fields: optional frozenset of lowercase field names to carry forward.
+    osm_type: the OSM element type every row is (OGR's `lines` layer holds ways,
+      `points` nodes); with it the output carries `osm_type` and the stable `fid`.
     """
     gdf = gpd.read_file(str(shp_path))
     col_lower = {c.lower(): c for c in gdf.columns}
@@ -164,12 +170,16 @@ def _process_layer(shp_path, path_out, fdefs, keep_src_fields=None, post_hook=No
     if post_hook is not None:
         gdf = post_hook(gdf)
 
+    if osm_type and 'osm_id' in gdf.columns:
+        gdf['osm_type'] = osm_type
+        gdf = add_fid(gdf)
+
     # Write GeoPackage (single file, no 10-char column limit unlike Shapefile).
     out_path = path_out.with_suffix('.gpkg')
     # Delete any existing output first (old .shp sidecars + stale .gpkg)
     for f in path_out.parent.glob(path_out.stem + '.*'):
         f.unlink()
-    gdf.to_file(str(out_path), driver='GPKG')
+    gdf.to_file(str(out_path), driver='GPKG', layer_options=GPKG_FID_OPTIONS)
 
     # Write CSV (lon/lat + non-geometry, non-other_tags fields)
     csv_path = path_out.with_suffix('.csv')
@@ -470,13 +480,13 @@ def main():
         return gdf
 
     jobs = [
-        ("Power lines",       "power_line*lines*.shp",         line_fdefs,          None,                 _line_post_hook),
-        ("Pipeline routes",   "pipeline_lines*.shp",           pipeline_line_fdefs, PIPELINE_LINE_FIELDS, _drop_nonfuel),
-        ("Pipeline features", "pipeline_feature_lines*.shp",   pipeline_line_fdefs, PIPELINE_LINE_FIELDS, None),
-        ("Pipeline feat pts", "pipeline_feature_points*.shp",  pipeline_pt_fdefs,   PIPELINE_PT_FIELDS,   None),
+        ("Power lines",       "power_line*lines*.shp",         line_fdefs,          None,                 _line_post_hook, "way"),
+        ("Pipeline routes",   "pipeline_lines*.shp",           pipeline_line_fdefs, PIPELINE_LINE_FIELDS, _drop_nonfuel,   "way"),
+        ("Pipeline features", "pipeline_feature_lines*.shp",   pipeline_line_fdefs, PIPELINE_LINE_FIELDS, None,            "way"),
+        ("Pipeline feat pts", "pipeline_feature_points*.shp",  pipeline_pt_fdefs,   PIPELINE_PT_FIELDS,   None,            "node"),
     ]
 
-    for label, pat, fdefs, keep_src, post_hook in jobs:
+    for label, pat, fdefs, keep_src, post_hook, osm_type in jobs:
         files = find_shps(d, pat)
         if not files:
             print(f"  [{label}] no matching files")
@@ -485,7 +495,7 @@ def main():
             out = shp.parent / f"{shp.stem}_processed{shp.suffix}"
             print(f"  [{label}] {shp.name} -> {out.name}")
             try:
-                _process_layer(shp, out, fdefs, keep_src, post_hook=post_hook)
+                _process_layer(shp, out, fdefs, keep_src, post_hook=post_hook, osm_type=osm_type)
             except Exception as e:
                 print(f"    ERROR: {e}")
 

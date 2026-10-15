@@ -259,6 +259,8 @@ turns public datasets into PMTiles consumed by the frontend.
   `extract_cgaz_boundaries.py` for world countries/admin-1), `fetch_*.py`
   (live feeds), `build_*.{sh,py}` (rasters/tiles/releases), `osm_common.py` +
   `geo_common.py` shared
+- `scripts/stable_ids.py` — `make stable-ids`: decodes each served archive at its max zoom and
+  fails on a missing or duplicate stable id; ids are built in the extracts (`docs/pipeline.md` § *Stable ids*)
 - `scripts/region_join.py` — region tags (`|TX|NM|`, `|none|`): which states, counties,
   BAs, NERC regions and utility territories (worldwide: countries, admin-1) each asset
   falls in; run by `make region-tags` on the US intermediates and by
@@ -292,6 +294,7 @@ turns public datasets into PMTiles consumed by the frontend.
 | Add a dataset to the pipeline | `docs/adding-a-dataset.md` (data half), then `docs/adding-a-layer.md` for frontend |
 | Add a map layer | `docs/adding-a-layer.md` ONLY, then `rg ">>> ADD-LAYER"` for insertion points |
 | Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (silent footguns: the shared `data-branch` concurrency group, and `maxAgeMs` must exceed the worst-case cron gap) |
+| Give a dataset a stable id / feature-id lookups | `docs/pipeline.md` § *Stable ids*, `assets/feature-id.ts` (silent footguns: a GeoPackage reserves `fid`, so write it with `GPKG_FID_OPTIONS` or the column is lost; and tippecanoe `--use-attribute-for-id=fid` silently skips an attribute not typed `-T fid:int`; a native id is not a property, so read it with `featureId()`) |
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (silent footguns: a non-standard facet's hand applier goes in `FACET_APPLIERS`, which is what `applyAllFilters()` runs, and claim a unique URL code — see `docs/url-state.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (silent footgun: a convertible ramp's legend label must use `RampDef.fmt`, not `unit`/`maxLabel` — those freeze at module-load time) |
 | Undo/redo, what goes on the stack | `assets/undo.ts`, `docs/adr/0004-undo-replays-url-write-snapshots.md` (silent footgun: a control that writes the URL without `url:write` — calling `writeUrlState()` directly — updates the link but is not undoable) |
@@ -339,6 +342,7 @@ turns public datasets into PMTiles consumed by the frontend.
 - `make tiles` — build PMTiles from extracted data; once `make global-tiles` has run, rebuild one layer with `build_tiles.py --only <id>` instead (the bare target replaces the world `osm_*` archives with one region's)
 - `make global-tiles` — join the 8 continental OSM builds into one world tileset per layer, region-tagged;
   transmission is re-tiled globally instead and cut into six voltage-class archives
+- `make stable-ids` — check every served layer's stable feature ids: 0 missing, 0 duplicate (`ARGS="--only <id> --max-tiles N"`); run after a tile or extract rebuild
 - `make data-manifest` — build per-layer provenance → `data/layers/manifest.json` (Data Credits dialog); runs cleanly with no `data/` present, emitting null facts rather than failing
 - `make publish-data` — force-push the layers `constants.ts` names + `data/releases` to the orphan `data-static` branch (the prod host)
 - `make validate` — check tile_manifest output matches `assets/constants.ts` (run after wiring a new layer)

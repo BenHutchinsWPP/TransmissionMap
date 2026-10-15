@@ -13,6 +13,7 @@ Three administrative-boundary polygon layers giving regulatory context to the in
 | **Download origin** | [SeerAI HIFLD Archive](https://source.coop/repositories/seerai/hifld/description/) (source.coop) / Geodesic API — **manually placed** at `data/raw/hifld/regions/` |
 | **Served** | `data/layers/nerc_regions.geojson.gz` (16 feats, simplified) · `data/layers/control_areas.geojson.gz` (71 feats, simplified) · `data/layers/retail_territories.pmtiles` (z2–10) — NERC/BA are too small to tile and serve whole geometry so they copy cleanly in edit mode; Retail (~2,900 feats) stays PMTiles |
 | **Built by** | `extract_regions.py` → `data/build/{nerc_regions,control_areas,retail_territories}.{shp,csv}` |
+| **Stable id** | NERC regions `sub_nm`; retail territories `id` (the HIFLD ID, also the `retail` tag code); strings, promoted |
 
 > The HIFLD Open portal closed September 16, 2025; datasets have been archived by SeerAI on source.coop.
 

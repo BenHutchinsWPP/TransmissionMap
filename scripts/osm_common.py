@@ -1,4 +1,6 @@
-"""Shared helpers for the OSM extract scripts (substations, generators, plants)."""
+"""Shared helpers for the OSM extract scripts (substations, generators, plants,
+data centers, lines and pipelines), including `osm_fid`, the stable feature id
+every OSM intermediate and world layer carries."""
 
 import glob
 import logging
@@ -42,6 +44,41 @@ SHARED_FILTER_TAGS = [
     "building=data_center",
     "building=data_centre",
 ]
+
+
+# Stable feature id. OSM numbers nodes, ways and relations separately, so node
+# 123 and way 123 are different features; `fid` packs the type into the last
+# decimal digit: fid = osm_id * 10 + digit (1 node, 2 way, 3 relation). The
+# digit keeps it readable (4535892832 is way 453589283) and the largest id
+# (~1.4e11) stays far below 2**53, so it is exact in JavaScript and in
+# tippecanoe's integer feature ids. Built in the extracts, so data/build/
+# carries it; build_global_tiles.py dedupes the seam copies on it.
+OSM_TYPE_DIGIT = {"node": 1, "way": 2, "relation": 3}
+_DIGIT_TYPE = {d: t for t, d in OSM_TYPE_DIGIT.items()}
+
+# GeoPackage reserves `fid` for its own primary key, so an intermediate that
+# carries the `fid` column names its primary key `ogc_fid` instead:
+# `gdf.to_file(path, driver="GPKG", layer_options=GPKG_FID_OPTIONS)`.
+GPKG_FID_OPTIONS = {"FID": "ogc_fid"}
+
+
+def osm_fid(osm_id, osm_type):
+    """The stable feature id of one OSM element: osm_id * 10 + type digit."""
+    return int(osm_id) * 10 + OSM_TYPE_DIGIT[osm_type]
+
+
+def osm_ref(fid):
+    """Decode a fid back to (osm_type, osm_id)."""
+    fid = int(fid)
+    return _DIGIT_TYPE[fid % 10], fid // 10
+
+
+def add_fid(df):
+    """Set a nullable-integer `fid` column from a frame's `osm_id` and `osm_type`."""
+    import pandas as pd
+    ids = pd.to_numeric(df["osm_id"], errors="coerce").astype("Int64")
+    df["fid"] = ids * 10 + df["osm_type"].map(OSM_TYPE_DIGIT).astype("Int64")
+    return df
 
 
 def find_pbf(input_dir, need_tags=None, build_dir="data/build"):

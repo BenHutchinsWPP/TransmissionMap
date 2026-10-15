@@ -13,6 +13,7 @@ Polygon boundaries of the 85 balancing authorities and connected-operator areas 
 | **Attribution** | "U.S. Energy Information Administration" |
 | **Served** | `data/layers/eia_ba.geojson.gz` (~830 KB, gzipped GeoJSON, `simplify: 0.001`, `precision: 5`) — 85 features covering the US plus adjacent interconnected Canadian and Mexican balancing authorities (e.g. AESO, Alberta Electric System Operator). |
 | **Built by** | `scripts/extract_eia_ba.py` → `data/build/eia_ba.gpkg` + `eia_ba.csv` |
+| **Stable id** | `abbrev` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 
 ## Download pack
 

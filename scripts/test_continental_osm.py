@@ -1,7 +1,9 @@
-"""Smoke tests for process_continental_osm.py's continental region mappings and codes."""
+"""Smoke tests for process_continental_osm.py's continental region mappings and
+codes, and the stable `fid` its continental layers select."""
 import json
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from process_continental_osm import (
     CONTINENTAL_REGIONS,
@@ -89,6 +91,29 @@ class TestTransmissionZoomLadder(unittest.TestCase):
         # minz is what the filter reads; tippecanoe evaluates -j against the
         # emitted properties, so dropping it from `select` matches nothing.
         self.assertIn("is_undergrnd, is_dc, minz]", text)
+
+
+class TestContinentalStableIds(unittest.TestCase):
+    """The world build reads `fid` from the continental layers (the CONCAT
+    GeoJSONs) and intermediates, so every continental select carries it."""
+
+    def test_every_continental_select_carries_fid(self):
+        import process_continental_osm as pco
+        from build_global_tiles import NATIVE_ID_FLAGS
+        cmds = []
+        with mock.patch.object(Path, "exists", return_value=True), \
+             mock.patch.object(Path, "mkdir"), \
+             mock.patch.object(pco, "run_cmd", lambda cmd, **kw: cmds.append(cmd)):
+            pco.build_continental_tiles("na", dry_run=True)
+        selects = [c[c.index("-select") + 1].split(",") for c in cmds if "-select" in c]
+        # Every continental layer but pipeline points, which keeps all columns.
+        self.assertEqual(len(selects), 7)
+        for select in selects:
+            self.assertIn("fid", select)
+            self.assertNotIn("osm_id", select)
+        for cmd in (c for c in cmds if c[0] == "tippecanoe"):
+            for flag in NATIVE_ID_FLAGS:
+                self.assertIn(flag, cmd)
 
 
 if __name__ == "__main__":

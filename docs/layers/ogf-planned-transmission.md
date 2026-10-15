@@ -13,6 +13,7 @@ Planned and under-construction transmission projects from the Our Grid Future na
 | **Attribution** | Abramson et al., Horizon Energy Systems, 2026 — see citation in `index.html` |
 | **Served** | GeoJSON (lazy-loaded) — `data/layers/ogf_planned_transmission.geojson.gz` |
 | **Built by** | `scripts/extract_ogf.py` → `build_tiles.py` |
+| **Stable id** | `RecordID` (e.g. `R-0329`; string, promoted) |
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Raw input** | `data/raw/ogf/OurGridFuture_PlannedTx_Detailed_08202026.zip` (shapefile ZIP supplied by Horizon; manual placement; gitignored) |
 

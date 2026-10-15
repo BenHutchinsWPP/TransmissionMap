@@ -4,6 +4,8 @@ process_continental_osm.py — Process OSM energy infrastructure across continen
 
 Executes the full OSM extraction, tag enrichment, vector tiling (PMTiles / GeoJSON),
 and download pack release workflow for any or all Geofabrik continental extracts.
+Every continental intermediate carries `osm_type` and `fid`, the stable feature
+id (osm_common.osm_fid), which the continental layers and the world build select.
 
 Region code conventions:
   - 2-letter (default): na, eu, as, sa, af, oc, ca, an
@@ -29,6 +31,8 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from build_global_tiles import NATIVE_ID_FLAGS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -367,6 +371,8 @@ def _build_pmtiles_layer(src: Path, out_pmtiles: Path, layer_id: str,
         f"--minimum-zoom={min_zoom}",
         f"--maximum-zoom={max_zoom}",
         *(flags or []),
+        # `fid` becomes the feature id, as in the world build.
+        *(NATIVE_ID_FLAGS if select and "fid" in select else []),
     ]
     if simplification:
         tip.append(f"--simplification={simplification}")
@@ -401,7 +407,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
         layer_id="osm_substations_points",
         min_zoom=0,
         max_zoom=13,
-        select=["osm_id", "name", "nominal_kv", "operator", "sub_type"],
+        select=["fid", "name", "nominal_kv", "operator", "sub_type"],
         flags=["-r1", "--no-tile-size-limit", "--no-feature-limit", "--preserve-input-order"],
         dry_run=dry_run,
     )
@@ -410,7 +416,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
     _build_geojson_layer(
         src=BUILD_DIR / f"substation_polygons_{code}.gpkg",
         out_gz=LAYERS_DIR / f"osm_substations_polygons_{code}.geojson.gz",
-        select=["osm_id", "name", "nominal_kv", "operator", "sub_type"],
+        select=["fid", "name", "nominal_kv", "operator", "sub_type"],
         precision=6,
         dry_run=dry_run,
     )
@@ -423,7 +429,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
         min_zoom=7,
         max_zoom=13,
         max_tile_bytes=2000000,
-        select=["osm_id", "name", "source", "gen_method", "gen_type", "output_mw", "operator"],
+        select=["fid", "name", "source", "gen_method", "gen_type", "output_mw", "operator"],
         flags=["--drop-densest-as-needed", "--extend-zooms-if-still-dropping"],
         dry_run=dry_run,
     )
@@ -432,7 +438,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
     _build_geojson_layer(
         src=BUILD_DIR / f"plant_osm_{code}.csv",
         out_gz=LAYERS_DIR / f"osm_plants_points_{code}.geojson.gz",
-        select=["osm_id", "name", "source", "output_mw", "operator", "start_date"],
+        select=["fid", "name", "source", "output_mw", "operator", "start_date"],
         dry_run=dry_run,
     )
 
@@ -440,7 +446,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
     _build_geojson_layer(
         src=BUILD_DIR / f"plant_polygons_{code}.gpkg",
         out_gz=LAYERS_DIR / f"osm_plants_polygons_{code}.geojson.gz",
-        select=["osm_id", "name", "source", "output_mw", "operator", "start_date"],
+        select=["fid", "name", "source", "output_mw", "operator", "start_date"],
         precision=6,
         dry_run=dry_run,
     )
@@ -449,7 +455,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
     _build_geojson_layer(
         src=BUILD_DIR / f"datacenter_osm_{code}.csv",
         out_gz=LAYERS_DIR / f"osm_datacenters_{code}.geojson.gz",
-        select=["osm_id", "osm_type", "name", "operator", "website", "addr_city", "addr_state", "start_date", "im3_sqft", "im3_ref"],
+        select=["fid", "name", "operator", "website", "addr_city", "addr_state", "start_date", "im3_sqft", "im3_ref"],
         dry_run=dry_run,
     )
 
@@ -461,7 +467,7 @@ def build_continental_tiles(code: str, dry_run: bool = False):
         min_zoom=2,
         max_zoom=12,
         simplification=4,
-        select=["name", "substance", "operator"],
+        select=["fid", "name", "substance", "operator"],
         flags=["--drop-densest-as-needed", "--coalesce-densest-as-needed"],
         dry_run=dry_run,
     )

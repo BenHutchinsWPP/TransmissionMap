@@ -32,6 +32,9 @@ Placeholder names excluded:
 
 UNKNOWN* records are included with a blank name field.
 
+`hifld_id` is the publisher's `ID` column, the layer's stable feature id
+(tile_manifest.yaml `id_field`); OBJECTID is a row number and is not carried.
+
 Download: paginates FeatureServer (2 000 records/page) on first run → data/raw/hifld/electric_substations.csv
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -136,22 +139,23 @@ def _download_from_featureserver(dest_csv: Path) -> None:
 def load_and_filter(hifld_csv: Path) -> "pd.DataFrame":
     """Load HIFLD CSV, strip internal codes, return clean DataFrame."""
     log.info("Loading HIFLD data from %s ...", hifld_csv)
-    raw = pd.read_csv(hifld_csv, low_memory=False)
+    # dtype=str keeps the publisher ID exactly as written (no float coercion);
+    # the numeric columns are parsed below.
+    raw = pd.read_csv(hifld_csv, dtype=str)
     raw.columns = [c.strip().upper() for c in raw.columns]
 
     lat_col  = next((c for c in raw.columns if c in ("LATITUDE",  "LAT", "Y")), None)
     lon_col  = next((c for c in raw.columns if c in ("LONGITUDE", "LON", "LONG", "X")), None)
     name_col = next((c for c in raw.columns if c in ("NAME", "SUBST_NAME", "STATION")), None)
-    id_col   = next((c for c in raw.columns if c in ("ID", "OBJECTID", "FID")), None)
 
-    if not (lat_col and lon_col and name_col):
-        log.error("Cannot find lat/lon/name columns. Columns: %s", list(raw.columns))
+    if not (lat_col and lon_col and name_col and "ID" in raw.columns):
+        log.error("Cannot find lat/lon/name/ID columns. Columns: %s", list(raw.columns))
         sys.exit(1)
 
     raw = raw.rename(columns={lat_col: "lat", lon_col: "lon", name_col: "name"})
     raw["lat"] = pd.to_numeric(raw["lat"], errors="coerce")
     raw["lon"] = pd.to_numeric(raw["lon"], errors="coerce")
-    raw = raw.dropna(subset=["lat", "lon", "name"]).reset_index(drop=True)
+    raw = raw.dropna(subset=["lat", "lon", "name", "ID"]).reset_index(drop=True)
 
     name_up = raw["name"].str.strip().str.upper()
     is_code    = _is_code(name_up)
@@ -167,7 +171,7 @@ def load_and_filter(hifld_csv: Path) -> "pd.DataFrame":
     raw["min_kv"] = (pd.to_numeric(raw[min_volt_col], errors="coerce").replace(-999999.0, None)
                      if min_volt_col else None)
 
-    raw["hifld_id"] = raw[id_col].astype(str) if id_col else raw.index.astype(str)
+    raw["hifld_id"] = raw["ID"].str.strip()
 
     # Title-case real names; blank out UNKNOWN*
     raw["name_clean"] = raw["name"].where(is_real, other=None)

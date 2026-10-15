@@ -13,6 +13,7 @@ HIFLD transmission line segments (US, 69–765 kV).
 | **Download origin** | [SeerAI HIFLD Archive](https://source.coop/repositories/seerai/hifld/description/) (source.coop), GeoParquet — **manually placed** at `data/raw/hifld/transmission_lines.parquet` |
 | **Served** | `data/layers/hifld_transmission_lines.pmtiles` — PMTiles, zoom 2–11 |
 | **Built by** | `extract_hifld_lines.py` → `data/build/transmission_hifld.gpkg` → `tippecanoe -l hifld_transmission_lines` |
+| **Stable id** | `ID`, the publisher ID (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 > The HIFLD Open portal closed September 16, 2025; datasets have been archived by third parties.

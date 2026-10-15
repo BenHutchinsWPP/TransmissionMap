@@ -13,6 +13,7 @@ American Indian / Alaska Native / Native Hawaiian areas from Census TIGER/Line.
 | **Attribution** | "U.S. Census Bureau, TIGER/Line" |
 | **Served** | `data/layers/tribal_lands.geojson.gz` — lazy GeoJSON (full geometry; features copyable in the UI) |
 | **Built by** | `extract_tribal_lands.py` → `data/build/tribal_lands.{shp,csv}` |
+| **Stable id** | `geoid` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/aiannh/tl_2026_us_aiannh.zip` |
 
 > Was previously sourced from HIFLD (`seerai/hifld`), which only re-hosts this same

@@ -124,8 +124,28 @@ Two edits, no driver code:
        format: geojson                     # or pmtiles
        select: [name, operator, capacity]  # omit to keep all columns
        precision: 6                        # geojson: COORDINATE_PRECISION
+       id_field: my_id                     # stable feature id column (asset layers)
        # pmtiles only: min_zoom, max_zoom, simplification, flags: [...]
    ```
+
+### Choosing the stable id
+
+Every asset layer needs an id that names the same real-world feature across
+rebuilds ([pipeline.md § Stable ids](pipeline.md#stable-ids)). Build it in the
+extract script so `data/build/` carries it.
+
+- Use the publisher's stable key (`ID`, `RecordID`, `MINE_ID`, `UID`). Never a row
+  number, index, or `OBJECTID`, which can change between publications. Check it:
+  count nulls and duplicates over the built intermediate before relying on it.
+- OSM: `fid = osm_id * 10 + type digit` (1 node, 2 way, 3 relation), via
+  `osm_common.osm_fid()`; OSM ids repeat across element types. Write GeoPackages
+  with `GPKG_FID_OPTIONS` so `fid` stays a column.
+- No single column is unique: build a composite string (`"<plant_code>:<generator_id>"`,
+  `"<fac_type>:<key>"`) in the extract.
+- Declare it in the manifest block: `id_field: <column>` (must be in `select:`), plus
+  `native_id: true` for an integer id on a large pmtiles layer (served as the tile
+  feature id, tiled with `-T fid:int`). A layer built outside the manifest goes under
+  `built_elsewhere:`. A layer with no natural key leaves it out (context layers).
 
 ### Region tags — asset or context layer?
 
@@ -211,6 +231,7 @@ duplicate that here.
 [ ] .gitignore                    — ignore data/raw/<source>/  (NOT ignored by default; see >>> ADD-LAYER: gitignore. data/layers/ and data/releases/ are gitignored too)
 [ ] Makefile                      — pipeline step (manifest) OR standalone target (raster)
 [ ] scripts/tile_manifest.yaml    — one block  (manifest layers only)
+[ ] stable id                     — id_field (+ native_id) in the block, built in the extract; make stable-ids passes (0 missing, 0 duplicate)
 [ ] region tags                   — asset: REGION_TAG_FILES (+ --fields for lines) and the fields in select:; context layer: none
 [ ] run: extract script → make region-tags (asset) → build_tiles.py --only <id> → file appears in data/layers/
 [ ] release_manifest.yaml         — one pack per layer (point→csv_only; line/polygon→geojson+shp; raster→tif), or skip:true if non-redistributable

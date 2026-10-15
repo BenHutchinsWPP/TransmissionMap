@@ -25,6 +25,7 @@ _Counts approximate, from the EIA-860 2025 final edition (`eia8602025.zip`, rele
 | **Attribution requested** | "Source: U.S. Energy Information Administration, Form EIA-860" |
 | **Served** | `data/layers/eia_generators.geojson.gz` — gzipped GeoJSON |
 | **Built by** | `extract_eia_generators.py` → `data/build/generator_eia.csv` |
+| **Stable id** | `fid` = `"<plant_code>:<generator_id>"` (string, promoted); the plant-level key stays `plant_code` |
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, `retail`, by `make region-tags`; `states`, `ba` and `nerc` take the plant's reported `state`, `ba_code` and `nerc_region` where set — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Raw input** | `data/raw/eia/2___Plant_Y2025.xlsx` + `data/raw/eia/3_1_Generator_Y2025.xlsx` |
 

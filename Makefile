@@ -34,7 +34,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
+.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -60,6 +60,7 @@ help:
 	@echo "  make census-boundaries build US states + ZCTA boundaries (Census) → $(BUILD)/{us_states,us_zcta}.gpkg"
 	@echo "  make world-boundaries  build countries + admin-1 boundaries (geoBoundaries CGAZ) → $(BUILD)/{countries,admin1_boundaries}.gpkg"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
+	@echo "  make stable-ids  check every served layer's stable feature ids: 0 missing, 0 duplicate (ARGS=\"--only <id> --max-tiles N\")"
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib unittest, no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
@@ -444,6 +445,14 @@ validate: data-manifest
 # ── Pipeline smoke tests ─────────────────────────────────────────────────────
 # Pure-function tests over the fetch/parse scripts; stdlib unittest, no
 # network, no data/ inputs. Same command CI runs (pipeline-tests.yml).
+# ── Stable feature ids: missing/duplicate check over data/layers/ ──────────
+# Reads each layer's `id_field` from tile_manifest.yaml; exits non-zero on any
+# missing or duplicate id. A full pass decodes every world archive at its max
+# zoom; ARGS="--max-tiles 500" samples instead.
+stable-ids:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@$(PY) $(SCRIPTS)/stable_ids.py $(ARGS)
+
 test-pipeline:
 	@python3 -m unittest discover -s scripts -p "test_*.py"
 

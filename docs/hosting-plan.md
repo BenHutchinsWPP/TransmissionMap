@@ -82,6 +82,12 @@ every copy must stay in step.
 Reducing maxzoom shrinks the archive but degrades every reader's view; the
 voltage split is the lever to use instead.
 
+Pipeline lines and transmission both tile with `--maximum-tile-bytes=1000000`.
+tippecanoe thins any tile over the ceiling, and the densest tiles are filled by
+per-line ids and fields, not vertices, so simplification cannot bring them under
+500 KB (pipelines' Gulf Coast 4/3/6 is 507,607 bytes). At 1 MB both archives are
+byte-identical to a 20 MB build: nothing is dropped at any zoom.
+
 ## What the re-tile does
 
 Every world layer is built from one merged input: `build_global_tiles.py` reads
@@ -121,29 +127,31 @@ dedupe to the three small point layers it concatenates.
 ## Archive sizes with region tags
 
 Region tags ([pipeline.md § Region tags](pipeline.md#region-tags-scriptsregion_joinpy))
-make each tagged archive 10–25% larger than the published, untagged build. Measured
-on the 2026-10-14 build:
+keep each tagged archive within about 20% of the published, untagged build (hifld_natgas_lines, a small archive, is the outlier). Measured
+on the 2026-10-14 build, with stable feature ids:
 
 | archive | MiB | room to 100 MiB | vs published |
 |---|---|---|---|
-| `osm_pipelines_lines` | 94.2 | 5.8 | +21% |
-| `osm_substations_points` | 91.8 | 8.2 | +22% |
-| `osm_generators` | 89.0 | 11.0 | +18% |
-| `osm_transmission_lines_kv0` | 80.8 | 19.2 | +11% |
-| `osm_plants_polygons` | 79.8 | 20.2 | +14% |
-| `osm_transmission_lines_kv100` | 65.0 | 35.0 | +10% |
-| `osm_transmission_lines_kv200` | 59.6 | 40.4 | +11% |
-| `osm_transmission_lines_kv300` | 55.8 | 44.2 | +13% |
-| `osm_substations_polygons` | 52.0 | 48.0 | +25% |
-| `osm_transmission_lines_kv125` | 46.2 | 53.8 | +10% |
+| `osm_pipelines_lines` | 69.4 | 30.6 | -11% |
+| `osm_substations_points` | 85.5 | 14.5 | +14% |
+| `osm_generators` | 80.5 | 19.5 | +7% |
+| `osm_transmission_lines_kv0` | 73.7 | 26.3 | +1% |
+| `osm_plants_polygons` | 76.4 | 23.6 | +9% |
+| `osm_transmission_lines_kv100` | 59.6 | 40.4 | +1% |
+| `osm_transmission_lines_kv200` | 55.1 | 44.9 | +3% |
+| `osm_transmission_lines_kv300` | 52.0 | 48.0 | +5% |
+| `osm_substations_polygons` | 49.7 | 50.3 | +19% |
+| `osm_transmission_lines_kv125` | 42.6 | 57.4 | +1% |
 | `hifld_transmission_lines` | 44.6 | 55.4 | +16% |
-| `osm_transmission_lines_kv50` | 35.4 | 64.6 | +12% |
-| `hifld_natgas_lines` | 23.2 | 76.8 | +47% |
+| `osm_transmission_lines_kv50` | 32.7 | 67.3 | +3% |
+| `hifld_natgas_lines` | 26.6 | 73.4 | +69% |
 
-The first three are the ones to watch: a new tagged field, or a year of OSM
-growth, can take them past the ceiling. `scripts/region_report.py --archive`
-prints this table for any build. That publish adds 1.03 GB of new objects;
-with the repository at 1.15 GB, the total is 2.13 GB against
+Stable feature ids ride in the tile's native id slot on the large OSM archives,
+which left them smaller than before the ids (pipelines 94.2 to 69.4 MiB). The
+three largest are still the ones to watch: a new tagged field, or a year of OSM
+growth, can take them toward the ceiling. `scripts/region_report.py --archive`
+prints this table for any build. That publish adds 0.98 GB of new objects;
+with the repository at 1.29 GB, the total is 2.21 GB against
 `SIZE_CEILING_KB`.
 
 ## Substation zoom floor

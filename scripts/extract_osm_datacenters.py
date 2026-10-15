@@ -18,6 +18,7 @@ IM3 operator backfills OSM operator where OSM is null (via exact or spatial matc
 Fields extracted (all others dropped):
   osm_id       — OSM element ID
   osm_type     — node | way | relation (for OSM links + unambiguous ID joins)
+  fid          — stable feature id, osm_common.osm_fid(osm_id, osm_type); unique per row
   name         — facility name
   operator     — who operates it (Google, Amazon, Equinix, etc.); backfilled from IM3
   website      — URL when present
@@ -47,7 +48,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from osm_common import _run, _has, find_pbf
+from osm_common import _run, _has, add_fid, find_pbf
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,7 +65,7 @@ except ImportError:
     sys.stderr.write("ERROR: pandas/numpy/scipy not found. Run: source venv/bin/activate\n")
     sys.exit(1)
 
-COLS = ["lon", "lat", "osm_id", "osm_type", "name", "operator",
+COLS = ["lon", "lat", "osm_id", "osm_type", "fid", "name", "operator",
         "website", "addr_city", "addr_state", "start_date", "im3_sqft", "im3_ref"]
 
 _DEDUP_RADIUS_M = 100
@@ -198,7 +199,7 @@ def deduplicate(node_df, poly_df, radius_m=_DEDUP_RADIUS_M):
     if not frames:
         return pd.DataFrame(columns=COLS)
 
-    merged = pd.concat(frames, ignore_index=True).reindex(columns=COLS)
+    merged = add_fid(pd.concat(frames, ignore_index=True)).reindex(columns=COLS)
 
     if node_df.empty or poly_df.empty:
         return merged
@@ -412,9 +413,13 @@ def enrich_im3(df, im3_df, spatial_radius_m=_IM3_SPATIAL_RADIUS_M):
 
 
 def write_csv(df, out_csv):
-    # osm_type is kept: the frontend needs it to link the correct OSM object
-    # page (node/way/relation), and it disambiguates osm_id joins against
-    # external datasets (OSM node and way ID namespaces overlap).
+    # osm_type is kept: it disambiguates osm_id joins against external datasets
+    # (OSM node and way ID namespaces overlap). `fid` is the stable feature id;
+    # one row per fid, the first wins (a repeated IM3 key can duplicate a row).
+    before = len(df)
+    df = df.drop_duplicates(subset=["fid"], keep="first")
+    if len(df) < before:
+        log.info("  Removed %d duplicate fid rows", before - len(df))
     _nan_strings = {"nan", "NaN", "None", "none", "NULL", "null", "<NA>"}
     for col in df.select_dtypes(include="object").columns:
         df[col] = df[col].replace(_nan_strings, None)

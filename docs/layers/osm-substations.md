@@ -14,6 +14,7 @@ OSM substation points and polygon footprints, worldwide.
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_substations_points.pmtiles` (points, zoom 4–13) · `data/layers/osm_substations_polygons.pmtiles` (polygons). Points are capped at z13 to clear the host's 100 MiB per-file ceiling; no substation is dropped at any zoom and MapLibre overzooms above it. |
 | **Built by** | `extract_osm_substations.py` → `data/build/substation_osm.csv` + `data/build/substation_polygons.gpkg` → `build_global_tiles.py` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, served as the native vector-tile feature id on the points and polygons archives; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 Both layers are served as **PMTiles** vector tiles, joined from the 8 continental extracts. See [hosting & compression](../pipeline.md#hosting--compression).

@@ -15,6 +15,7 @@ For the US-federal natural-gas / petroleum dataset see [HIFLD natural gas](hifld
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_pipelines_lines.pmtiles` (routes, PMTiles z5–12) · `data/layers/osm_pipelines_points.geojson.gz` (points) |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/pipeline_routes.gpkg` + `data/build/pipeline_points.csv` → `tippecanoe -l osm_pipelines_lines` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283: native tile id on the routes archive, a promoted `fid` property on the points GeoJSON; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | Routes `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`; points `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`; by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack

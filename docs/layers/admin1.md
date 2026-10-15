@@ -15,6 +15,7 @@ background context for the US-focused infrastructure layers.
 | **Coverage** | 3,224 units across 218 countries |
 | **Served** | `data/layers/admin1_boundaries.geojson.gz` — gzipped GeoJSON, Douglas-Peucker 0.01° |
 | **Built by** | `scripts/extract_cgaz_boundaries.py` (`make world-boundaries`) → `data/build/admin1_boundaries.gpkg` |
+| **Stable id** | `code`, the admin-1 short code (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip` |
 
 ## Processing

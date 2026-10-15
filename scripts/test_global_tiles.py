@@ -28,6 +28,8 @@ from build_global_tiles import (
     TRANSMISSION_DROP_AFTER_TILING,
     TRANSMISSION_SELECT,
     TRANSMISSION_TIPPECANOE_FLAGS,
+    NATIVE_ID_FLAGS,
+    SEAM_KEY,
 )
 from region_join import REGION_FIELDS
 
@@ -77,7 +79,7 @@ class TestGlobalTileConfig(unittest.TestCase):
         # advertise z14; each spec's max_zoom must be the archive's maxzoom.
         self.assertEqual({s["base"]: s["max_zoom"] for s in RETILE},
                          {"osm_substations_points": 13, "osm_generators": 13,
-                          "osm_pipelines_lines": 12})
+                          "osm_pipelines_lines": 11})
         for spec in RETILE:
             self.assertNotIn("--extend-zooms-if-still-dropping", spec["flags"], spec["base"])
 
@@ -110,27 +112,44 @@ class TestGlobalTileConfig(unittest.TestCase):
             for spec in RETILE:
                 srcs = [Path(tmp) / f"{spec['src_stem']}_na{spec['src_ext']}"]
                 build_global_tiles._merge_deduped(srcs, Path(tmp) / "out.geojsonl",
-                                                  spec["select"], spec["dedupe_key"])
+                                                  spec["select"])
         self.assertEqual(len(calls), len(RETILE))
         for spec, cmd in zip(RETILE, calls):
             has_opts = " ".join(CSV_OPEN_OPTIONS) in " ".join(cmd)
             self.assertEqual(has_opts, spec["src_ext"] == ".csv", spec["base"])
 
-    def test_pipelines_do_not_tile_their_dedupe_key(self):
-        # An osm_id on every line makes every feature unique, and
-        # --coalesce-densest-as-needed then has nothing to merge.
-        self.assertNotIn("osm_id", RETILE_BY_BASE["osm_pipelines_lines"]["select"])
-        self.assertIn("osm_id", RETILE_BY_BASE["osm_pipelines_lines"]["dedupe_key"])
+    def test_pipelines_fit_the_ceiling_with_ids(self):
+        # A unique id per line limits coalescing; z11 with simplification kept
+        # off maxzoom is what fits the 100 MiB ceiling (stable-ids plan D7).
+        pipes = RETILE_BY_BASE["osm_pipelines_lines"]
+        self.assertEqual(pipes["max_zoom"], 11)
+        self.assertIn("--simplify-only-low-zooms", pipes["flags"])
+        # The densest z4 tile (4/3/6) is ~508 KB; below 1 MB it is thinned.
+        self.assertGreaterEqual(pipes["max_tile_bytes"], 1000000)
 
-    def test_dedupe_keys_identify_an_osm_element(self):
-        keys = ([s["dedupe_key"] for s in RETILE + TILE_POLYGONS]
-                + list(CONCAT_GEOJSON.values()))
-        for key in keys:
-            self.assertIn("osm_id", key)
-            # The bare id is shared by a node and a way of the same number.
-            self.assertTrue({"geometry", "osm_type"} & set(key), key)
-        # Data centers carry osm_type; the other sources do not.
-        self.assertEqual(CONCAT_GEOJSON["osm_datacenters"], ("osm_type", "osm_id"))
+    def test_every_world_layer_carries_the_stable_id(self):
+        # The seam dedupe and the native feature id both read `fid`; the bare
+        # osm_id is shared by a node and a way of the same number.
+        self.assertEqual(SEAM_KEY, "fid")
+        for select in [s["select"] for s in RETILE + TILE_POLYGONS] + [TRANSMISSION_SELECT]:
+            self.assertIn("fid", select)
+            self.assertNotIn("osm_id", select)
+
+    def test_vector_archives_use_fid_as_the_native_id(self):
+        # tippecanoe skips a string id attribute unless -T casts it.
+        self.assertEqual(NATIVE_ID_FLAGS, ["--use-attribute-for-id=fid", "-Tfid:int"])
+        with mock.patch.object(Path, "exists", return_value=True), \
+             self.assertLogs("global_tiles", "INFO") as cm:
+            for spec in RETILE:
+                build_global_tiles.retile(spec, dry_run=True)
+            for spec in TILE_POLYGONS:
+                build_global_tiles.tile_polygons(spec, dry_run=True)
+            build_global_tiles.retile_transmission(dry_run=True)
+        tippecanoe = [m for m in cm.output if "$ tippecanoe" in m]
+        self.assertEqual(len(tippecanoe), len(RETILE) + len(TILE_POLYGONS) + 1)
+        for line in tippecanoe:
+            for flag in NATIVE_ID_FLAGS:
+                self.assertIn(flag, line)
 
     def test_transmission_bands_tile_the_whole_voltage_range(self):
         # Contiguous and ascending, with an open bottom and an open top, so every
@@ -174,9 +193,9 @@ class TestGlobalTileConfig(unittest.TestCase):
         by_base = {s["base"]: s for s in TILE_POLYGONS}
         # voltageColorExpr("nominal_kv") paints the substation footprints.
         self.assertIn("nominal_kv", by_base["osm_substations_polygons"]["select"])
-        # hoverField: "osm_id" drives the click-highlight (src/registry/transmission.ts).
-        self.assertIn("osm_id", by_base["osm_substations_polygons"]["select"])
-        self.assertIn("osm_id", by_base["osm_plants_polygons"]["select"])
+        # The feature id (from fid) drives the hover highlight.
+        self.assertIn("fid", by_base["osm_substations_polygons"]["select"])
+        self.assertIn("fid", by_base["osm_plants_polygons"]["select"])
         for spec in TILE_POLYGONS:
             self.assertLess(spec["min_zoom"], spec["max_zoom"])
 
@@ -203,12 +222,13 @@ class TestSelectParity(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("ogr2ogr"), "ogr2ogr is not installed")
 class TestSeamDedupe(unittest.TestCase):
-    """A seam copy is the same element from two extracts: same id, same
-    geometry. It is kept once; a different element sharing the id is kept."""
+    """A seam copy is the same element from two extracts: same fid. It is kept
+    once, from the first continent, with its id; node 2 and way 2 (fids 21 and
+    22) are different elements and both kept."""
 
-    def _merge(self, select, key):
-        rows = {"na": "osm_id,lon,lat,name\n1,10.5,50.25,A\n2,11,51,B\n",
-                "eu": "osm_id,lon,lat,name\n1,10.5,50.25,A\n2,12,52,B2\n"}
+    def _merge(self, select):
+        rows = {"na": "fid,osm_id,lon,lat,name\n11,1,10.5,50.25,A\n21,2,11,51,B\n",
+                "eu": "fid,osm_id,lon,lat,name\n11,1,10.5,50.25,A-eu\n22,2,12,52,B2\n"}
         with tempfile.TemporaryDirectory() as tmp:
             srcs = []
             for code, text in rows.items():
@@ -217,21 +237,24 @@ class TestSeamDedupe(unittest.TestCase):
                 srcs.append(src)
             out = Path(tmp) / "merged.geojsonl"
             with self.assertLogs("global_tiles", "INFO"):
-                read, kept = build_global_tiles._merge_deduped(srcs, out, select, key)
+                read, kept = build_global_tiles._merge_deduped(srcs, out, select)
             features = [json.loads(line) for line in out.read_text().splitlines()]
         return read, kept, features
 
-    def test_same_id_same_coords_kept_once_different_coords_kept(self):
-        read, kept, features = self._merge(["osm_id", "name"], ("osm_id", "geometry"))
+    def test_seam_copy_kept_once_with_its_id(self):
+        read, kept, features = self._merge(["fid", "name"])
         self.assertEqual((read, kept), (4, 3))
-        self.assertEqual(sorted(f["properties"]["name"] for f in features), ["A", "B", "B2"])
+        self.assertEqual(sorted((f["properties"]["fid"], f["properties"]["name"])
+                                for f in features), [(11, "A"), (21, "B"), (22, "B2")])
         self.assertTrue(all(f["geometry"]["type"] == "Point" for f in features))
 
-    def test_merge_writes_only_select_columns(self):
-        _, _, features = self._merge(["name"], ("osm_id", "geometry"))
-        self.assertEqual(len(features), 3)
+    def test_merge_writes_only_select_columns_with_a_numeric_fid(self):
+        # tippecanoe and region_join keep a number a number; a CSV hands fid
+        # over as a string.
+        _, _, features = self._merge(["fid", "name"])
         for f in features:
-            self.assertEqual(list(f["properties"]), ["name"])
+            self.assertEqual(list(f["properties"]), ["fid", "name"])
+            self.assertIsInstance(f["properties"]["fid"], int)
 
 
 class TestConcatDedupe(unittest.TestCase):
@@ -242,7 +265,7 @@ class TestConcatDedupe(unittest.TestCase):
 
     def test_concat_tags_global_after_dedupe(self):
         base = "osm_datacenters"
-        feat = {"type": "Feature", "properties": {"osm_id": 1, "osm_type": "node"},
+        feat = {"type": "Feature", "properties": {"fid": 11},
                 "geometry": {"type": "Point", "coordinates": [0, 0]}}
         with tempfile.TemporaryDirectory() as tmp:
             for code in ("na", "eu"):
@@ -257,12 +280,14 @@ class TestConcatDedupe(unittest.TestCase):
     def test_concat_drops_seam_copies(self):
         def fc(*feats):
             return {"type": "FeatureCollection", "features": [
-                {"type": "Feature", "properties": {"osm_id": i, "osm_type": t},
-                 "geometry": {"type": "Point", "coordinates": xy}} for i, t, xy in feats]}
+                {"type": "Feature", "properties": {"fid": fid, "name": name},
+                 "geometry": {"type": "Point", "coordinates": [0, 0]}} for fid, name in feats]}
         base = "osm_datacenters"
         with tempfile.TemporaryDirectory() as tmp:
-            for code, data in (("na", fc((1, "node", [0, 0]), (2, "way", [1, 1]))),
-                               ("eu", fc((1, "node", [0, 0]), (2, "node", [5, 5])))):
+            # Node 1 on the seam; way 2 and node 2 are different elements. The
+            # continental GeoJSON comes from a CSV, so fid may arrive a string.
+            for code, data in (("na", fc(("11", "n1"), ("22", "w2"))),
+                               ("eu", fc((11, "n1-eu"), ("21", "n2")))):
                 with gzip.open(Path(tmp) / f"{base}_{code}.geojson.gz", "wt") as f:
                     json.dump(data, f)
             with mock.patch.object(build_global_tiles, "LAYERS_DIR", Path(tmp)), \
@@ -270,8 +295,8 @@ class TestConcatDedupe(unittest.TestCase):
                 build_global_tiles.concat_geojson(base)
             with gzip.open(Path(tmp) / f"{base}.geojson.gz", "rt") as f:
                 got = json.load(f)["features"]
-        self.assertEqual(sorted((f["properties"]["osm_type"], f["properties"]["osm_id"])
-                                for f in got), [("node", 1), ("node", 2), ("way", 2)])
+        self.assertEqual(sorted((f["properties"]["fid"], f["properties"]["name"]) for f in got),
+                         [(11, "n1"), (21, "n2"), (22, "w2")])
 
     def test_missing_key_column_warns(self):
         base = "osm_datacenters"
@@ -301,7 +326,7 @@ class TestTagRegions(unittest.TestCase):
              mock.patch("region_join.tag_features", side_effect=lambda f, *a, **k: f) as tag:
             with gzip.open(Path(tmp) / f"{base}_na.geojson.gz", "wt") as f:
                 json.dump({"type": "FeatureCollection", "features": [
-                    {"type": "Feature", "properties": {"osm_id": 1, "osm_type": "node"},
+                    {"type": "Feature", "properties": {"fid": 11},
                      "geometry": {"type": "Point", "coordinates": [0, 0]}}]}, f)
             with mock.patch.object(build_global_tiles, "LAYERS_DIR", Path(tmp)), \
                  self.assertLogs("global_tiles", "INFO"):

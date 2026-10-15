@@ -14,6 +14,7 @@ US state, DC, and territory polygons from the Census cartographic boundary serie
 | **Coverage** | 56 features — 50 states + DC + Puerto Rico + the four other territories |
 | **Served** | `data/layers/us_states.geojson.gz` — gzipped GeoJSON, simplified for whole-polygon serving (same rationale as [nerc_regions](hifld-regions.md): small enough to copy cleanly in edit mode) |
 | **Built by** | `scripts/extract_us_census_boundaries.py` (`make census-boundaries`) → `data/build/us_states.gpkg` |
+| **Stable id** | `stusps` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/census_boundaries/cb_2025_us_state_500k.zip` |
 
 ## Processing

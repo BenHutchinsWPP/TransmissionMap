@@ -15,6 +15,7 @@ positioned at the node location or the centroid of the building/campus polygon.
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_datacenters.geojson.gz` — gzipped GeoJSON points, lazy-loaded on first enable |
 | **Built by** | `scripts/extract_osm_datacenters.py` → `data/build/datacenter_osm.csv` → `scripts/build_tiles.py` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283; a promoted `fid` property on the GeoJSON; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack

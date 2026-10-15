@@ -28,7 +28,9 @@ ogr2ogr -f GeoJSON -t_srs EPSG:4326 "$BUILD/geo_hydro_raw.geojson" \
 python3 - << 'EOF'
 import json, sys
 
+# UID is the publisher's per-point id, kept as the layer's stable feature id.
 KEEP = {
+    "UID":        "UID",
     "GEO_AREA":   "name",
     "STATE":      "state",
     "COUNTY":     "county",

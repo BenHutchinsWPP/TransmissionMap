@@ -14,6 +14,7 @@ World country polygons — global background context for the US-focused infrastr
 | **Coverage** | 218 sovereign states |
 | **Served** | `data/layers/countries.geojson.gz` — gzipped GeoJSON, Douglas-Peucker 0.005° |
 | **Built by** | `scripts/extract_cgaz_boundaries.py` (`make world-boundaries`) → `data/build/countries.gpkg` |
+| **Stable id** | `iso_a3` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip` |
 
 ## Processing

@@ -15,6 +15,7 @@ Plant-level features — one row per facility (vs. one row per turbine in [OSM G
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
 | **Served** | `data/layers/osm_plants_points.geojson.gz` (points) · `data/layers/osm_plants_polygons.pmtiles` (polygons, vector tiles capped at z12) |
 | **Built by** | `extract_osm_plants.py` → `data/build/plant_osm.csv` + `data/build/plant_polygons.gpkg` → `build_global_tiles.py` |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283: native tile id on the polygons archive, a promoted `fid` property on the points GeoJSON; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 Point centroids are served as **gzipped GeoJSON**; plant polygon boundaries are served as **PMTiles** vector tiles.

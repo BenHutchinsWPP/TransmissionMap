@@ -14,6 +14,7 @@ HIFLD electric substations (US, ≥69 kV).
 | **Acquired** | 2026-05-28 |
 | **Served** | `data/layers/hifld_substations.geojson.gz` — gzipped GeoJSON |
 | **Built by** | `extract_hifld_substations.py` → `data/build/substation_hifld.csv` |
+| **Stable id** | `hifld_id`, the publisher `ID` (string, promoted; not the ArcGIS OBJECTID) |
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, `retail`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 > The HIFLD Open portal closed September 16, 2025. This layer is sourced from the live

@@ -6,6 +6,8 @@ Reads scripts/tile_manifest.yaml and builds every layer in order:
   pmtiles → ogr2ogr GeoJSONSeq → tippecanoe → .pmtiles (intermediate removed)
 
 `.csv` sources are treated as lon/lat point layers automatically.
+A pmtiles layer with `native_id: true` tiles its `id_field` as the vector-tile
+feature id (see the manifest header).
 Missing source files are skipped (not errors); `make validate` flags gaps.
 
 Usage:
@@ -88,6 +90,11 @@ def build_layer(layer):
                f"--maximum-zoom={layer['max_zoom']}", *layer.get("flags", [])]
         if "simplification" in layer:
             tip.append(f"--simplification={layer['simplification']}")
+        # The stable id becomes the MVT feature id. A CSV source reaches
+        # tippecanoe as a string, which it will not take as an id without -T.
+        if layer.get("native_id"):
+            f = layer["id_field"]
+            tip += [f"--use-attribute-for-id={f}", f"-T{f}:int"]
         tip += [f"--maximum-tile-bytes={layer.get('max_tile_bytes', 500000)}",
                 "--read-parallel", "--force", seq]
         run(tip)

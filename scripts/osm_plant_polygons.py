@@ -16,7 +16,7 @@ from shapely.geometry import Point, MultiPoint
 from shapely.ops import transform as shp_transform
 from pyproj import Transformer
 
-from osm_common import parse_output_mw, normalise_plant_source
+from osm_common import GPKG_FID_OPTIONS, normalise_plant_source, osm_fid, parse_output_mw
 
 log = logging.getLogger("extract_osm_plants")
 
@@ -143,12 +143,15 @@ def build_plant_polygons(poly_df, geom_dict, site_df, site_coord_dict, out_shp):
     skipped_no_geom = 0
     for _, row in poly_df.iterrows():
         oid = row.get("osm_id")
-        geom = geom_dict.get(str(oid)) if oid is not None else None
+        fid = osm_fid(oid, row["osm_type"]) if oid is not None else None
+        geom = geom_dict.get(fid)
         if geom is None:
             skipped_no_geom += 1
             continue
         records.append({
+            "osm_type":   row["osm_type"],
             "osm_id":     oid,
+            "fid":        fid,
             "name":       row.get("name") or "",
             "source":     row.get("source") or "",
             "output_mw":  row.get("output_mw"),
@@ -208,7 +211,9 @@ def build_plant_polygons(poly_df, geom_dict, site_df, site_coord_dict, out_shp):
 
             geom_4326 = shp_transform(to_4326, geom_3857)
             records.append({
+                "osm_type":   "relation",
                 "osm_id":     rid,
+                "fid":        osm_fid(rid, "relation"),
                 "name":       _a("name"),
                 "source":     _a("source"),
                 "output_mw":  attrs.get("output_mw"),
@@ -232,7 +237,7 @@ def build_plant_polygons(poly_df, geom_dict, site_df, site_coord_dict, out_shp):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     for f in out_path.parent.glob(out_path.stem + ".*"):
         f.unlink()
-    gdf.to_file(str(out_path), driver="GPKG")
+    gdf.to_file(str(out_path), driver="GPKG", layer_options=GPKG_FID_OPTIONS)
 
     log.info("")
     log.info("  ✓ Plant polygons: %d features → %s", len(gdf), out_path)
