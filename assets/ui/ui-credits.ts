@@ -38,7 +38,7 @@ interface ManifestLayerEntry {
   licence: string;
   source_id?: string;
   source_rows: number | null;
-  coverage: Record<string, number> | null;
+  coverage?: Record<string, number> | null; // absent for a layer with no `select:` fields
   data_as_of: string | null;
   bytes: number | null;
 }
@@ -76,7 +76,7 @@ function isManifestEntry(v: unknown): v is ManifestLayerEntry {
     isStringField(e.url) && isStringField(e.licence) &&
     (e.source_id === undefined || typeof e.source_id === 'string') &&
     isNullableNumber(e.source_rows) &&
-    isNullableCoverage(e.coverage) &&
+    (e.coverage === undefined || isNullableCoverage(e.coverage)) &&
     isNullableString(e.data_as_of) &&
     isNullableNumber(e.bytes);
 }

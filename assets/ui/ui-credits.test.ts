@@ -101,6 +101,16 @@ describe('renderDataCredits', () => {
     expect(osmDetail.textContent).toContain('OSM Plants (Polygons)');
   });
 
+  it('renders a layer whose entry has no coverage field', async () => {
+    const { coverage: _omitted, ...noCoverage } = VALID_MANIFEST.layers.osm_plants_polygons;
+    stubFetchOk({ ...VALID_MANIFEST, layers: { ...VALID_MANIFEST.layers, osm_plants_polygons: { ...noCoverage, data_as_of: '2026-10-09' } } });
+
+    await renderDataCredits();
+
+    const osmDetail = document.querySelector('[data-source-credit="osm"] .credits-group-layers')!;
+    expect(osmDetail.textContent).toContain('data as of 2026-10-09');
+  });
+
   it('keeps every hand-written credit, nested-span umbrella, display note and anchorless entry', async () => {
     stubFetchOk({
       ...VALID_MANIFEST,
