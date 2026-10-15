@@ -1729,3 +1729,7 @@ recorded_at,id,event,event_date,field,old,new,note
 2026-10-15,nm-mi-howell-township-2025,extended,,status,expired,extended,
 2026-10-15,nm-oh-rittman-2026,expired,2026-10-10,status,active,expired,
 2026-10-15,nm-wi-milwaukee-undated,adopted,,status,pending,active,
+2026-10-15,add-ca-poway-2026,corrected,,date_adopted,2026-10,2026-10-06,
+2026-10-15,add-or-oregon-2026,corrected,,type,executive order,permit pause,
+2026-10-15,nm-ca-eureka-2026,extended,,date_expires,2026-10-16,2027-08-31,
+2026-10-15,nm-wi-milwaukee-undated,corrected,,date_adopted,,2026-10-13,

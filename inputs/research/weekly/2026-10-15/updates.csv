@@ -1,0 +1,21 @@
+file,id,field,old,new,source_urls,source_quality,notes
+moratoriums.csv,add-ca-eureka-2026-ext,date_expires,,2027-08-31,https://lostcoastoutpost.com/2026/oct/7/last-night-eureka-city-council-new-homeless-shelte/,secondary,"The Oct 6 vote extended the 45-day urgency moratorium (Gov. Code 65858, which the ordinance cites); a first 65858(a) extension runs 10 months 15 days, so from 2026-10-16 to 2027-08-31. The article gives no end date."
+moratoriums.csv,add-or-oregon-2026,type,executive order,permit pause,https://www.centraloregondaily.com/news/regional/kotek-pauses-oregon-data-center-air-water-permits-until-july/article_5c260a47-ce83-4cae-b6a2-35cfa1018b11.html,secondary,"A letter from Gov. Kotek directing DEQ to pause air and water permits for data centers, not an executive order."
+bans.csv,add-ca-poway-2026,date_adopted,2026-10,2026-10-06,https://timesofsandiego.com/?p=400959,secondary,"Final adoption was scheduled for Oct. 6 (Times of San Diego, Sept. 15), and the Union-Tribune reported on Oct. 14 that Poway passed the ban 'last week'."
+bans.csv,add-ca-poway-2026,source_urls,,append https://timesofsandiego.com/?p=400959,https://timesofsandiego.com/?p=400959,secondary,Adds the report of the Sept. 15 introduction and the Oct. 6 adoption date.
+moratoriums.csv,add-wi-milwaukee-2026-corr,date_adopted,,2026-10-13,https://uwmpost.com/featured-news/milwaukee-common-council-votes-unanimously-to-approve-data-center-pause,secondary,'voted unanimously on Oct. 13 to approve a one-year pause'.
+bans.csv,add-ca-poway-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ar-little-rock-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ca-escondido-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ca-eureka-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ca-lake-elsinore-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ca-riverside-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ga-stephens-county-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-ky-lexington-fayette-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-mi-blair-township-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-mi-howell-township-2026-ext,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-nd-durbin-township-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-or-oregon-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-tn-millington-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-tn-shelby-county-2026,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
+moratoriums.csv,add-wi-milwaukee-2026-corr,confirmed,,2026-10-15,,,Source page read and checked against the row on 2026-10-15.
