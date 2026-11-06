@@ -1,0 +1,2845 @@
+[
+ {
+  "id": "eia-crude-pipelines",
+  "title": "Crude oil trunk pipelines",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/Crude_Oil_Trunk_Pipelines_1/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#6f4e37",
+   "opacity": 0.9,
+   "width": 1.8,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "U.S. Energy Information Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EIA)",
+  "source": "https://www.arcgis.com/home/item.html?id=bb2aee97117d403ea63bcfe6be4a12c8",
+  "host": "services2.arcgis.com",
+  "description": "US crude oil trunk pipelines (EIA)."
+ },
+ {
+  "id": "eia-product-pipelines",
+  "title": "Petroleum product pipelines",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/Petroleum_Products_Pipelines_1/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#c2255c",
+   "opacity": 0.9,
+   "width": 1.8,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "U.S. Energy Information Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EIA)",
+  "source": "https://www.arcgis.com/home/item.html?id=c745d9f4b81e42f3a54aee7aaa396975",
+  "host": "services2.arcgis.com",
+  "description": "US refined petroleum product pipelines (EIA)."
+ },
+ {
+  "id": "eia-sedimentary-basins",
+  "title": "Sedimentary basins (Lower 48)",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/FGr1D95XCGALKXqM/arcgis/rest/services/SedimentaryBasins_US_EIA/FeatureServer",
+  "layer": "109",
+  "style": {
+   "kind": "fill",
+   "color": "#b08968",
+   "opacity": 0.3,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "U.S. Energy Information Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EIA)",
+  "source": "https://www.arcgis.com/home/item.html?id=6542690951ca45f2a3c23a4325153d7d",
+  "host": "services7.arcgis.com",
+  "description": "Lower 48 sedimentary basin outlines (EIA)."
+ },
+ {
+  "id": "boem-wind-turbines",
+  "title": "Offshore wind turbine locations",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Offshore_Wind_-_Proposed_or_Installed_Turbine_Locations/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#005ce6",
+   "opacity": 0.85,
+   "radius": 3,
+   "by": {
+    "field": "OPTION_NUMBER",
+    "categories": [
+     [
+      "NA",
+      "#70a800"
+     ],
+     [
+      "1",
+      "#005ce6"
+     ],
+     [
+      "2",
+      "#ffaa00"
+     ],
+     [
+      "3",
+      "#ffaa00"
+     ]
+    ]
+   },
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "Bureau of Ocean Energy Management",
+  "licence": "CC BY-NC-ND 4.0 (BOEM ArcGIS item licence, read 2026-10-22): non-commercial use, no derivatives; data stay on BOEM's server",
+  "source": "https://www.arcgis.com/home/item.html?id=648285d6325b427fb12828762c542911",
+  "host": "services7.arcgis.com",
+  "description": "Proposed and installed offshore wind turbine positions (BOEM); green = installed."
+ },
+ {
+  "id": "boem-export-cables",
+  "title": "Offshore wind export cable corridors",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Offshore_Wind-_Proposed_Export_Cable_Corridors/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#31a354",
+   "opacity": 0.45,
+   "by": {
+    "field": "OPTION_NUMBER",
+    "categories": [
+     [
+      "1",
+      "#006837"
+     ],
+     [
+      "2",
+      "#31a354"
+     ],
+     [
+      "3",
+      "#78c679"
+     ],
+     [
+      "4",
+      "#c2e699"
+     ],
+     [
+      "5",
+      "#ffffcc"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Ocean Energy Management",
+  "licence": "CC BY-NC-ND 4.0 (BOEM ArcGIS item licence, read 2026-10-22): non-commercial use, no derivatives; data stay on BOEM's server",
+  "source": "https://www.arcgis.com/home/item.html?id=0e57fcbb8aaf49c5b8d0944a4ffeef08",
+  "host": "services7.arcgis.com",
+  "description": "Proposed export cable corridors for offshore wind (BOEM), shaded by build option."
+ },
+ {
+  "id": "boem-gom-wells",
+  "title": "Gulf of Mexico oil and gas wells",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Outer_Continental_Shelf_Oil_and_Natural_Gas_Wells_Gulf_of_Mexico_Region_NAD_27/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#495057",
+   "opacity": 0.7,
+   "radius": 2,
+   "minzoom": 7
+  },
+  "minzoom": 7,
+  "credit": "Bureau of Ocean Energy Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BOEM)",
+  "source": "https://www.arcgis.com/home/item.html?id=2d83fbec6ac74a579dd5f2f3ca115fa0",
+  "host": "services7.arcgis.com",
+  "description": "Outer Continental Shelf oil and natural gas wells, Gulf of Mexico (BOEM)."
+ },
+ {
+  "id": "blm-section-368",
+  "title": "Section 368 energy corridors",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services1.arcgis.com/KbxwQRRfWyEYLgp4/arcgis/rest/services/Energy_Designations/FeatureServer",
+  "layer": "2",
+  "style": {
+   "kind": "fill",
+   "color": "#37b24d",
+   "opacity": 0.45,
+   "by": {
+    "field": "Symbology",
+    "categories": [
+     [
+      "MM",
+      "#2b8a3e"
+     ],
+     [
+      "EO",
+      "#51cf66"
+     ],
+     [
+      "UO",
+      "#b2f2bb"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=2cf2ba232531496ab7cc91912f0f161a",
+  "host": "services1.arcgis.com",
+  "description": "Designated Section 368 energy corridors, current (BLM); Multi-Modal, Electric Only, Underground Only."
+ },
+ {
+  "id": "blm-solar-zones",
+  "title": "BLM solar energy zones",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services1.arcgis.com/KbxwQRRfWyEYLgp4/arcgis/rest/services/Energy_Designations/FeatureServer",
+  "layer": "10",
+  "style": {
+   "kind": "fill",
+   "color": "#fab005",
+   "opacity": 0.4,
+   "by": {
+    "field": "status",
+    "categories": [
+     [
+      "Developable",
+      "#fab005"
+     ],
+     [
+      "Non-developable",
+      "#e03131"
+     ]
+    ]
+   },
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=2cf2ba232531496ab7cc91912f0f161a",
+  "host": "services1.arcgis.com",
+  "description": "BLM solar energy zones, by developable status."
+ },
+ {
+  "id": "netl-coal-closure",
+  "title": "Coal closure energy communities",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/2024_Coal_Closure_Energy_Communities/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#4cca00",
+   "opacity": 0.5,
+   "by": {
+    "field": "symbol",
+    "categories": [
+     [
+      "Census tract with a coal closure",
+      "#4cca00"
+     ],
+     [
+      "Directly adjoins a tract with a coal closure",
+      "#a3ff73"
+     ]
+    ]
+   },
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "DOE National Energy Technology Laboratory",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (DOE NETL)",
+  "source": "https://arcgis.netl.doe.gov/portal/home/item.html?id=bc0fb23213804024a69a9fdd8a937b35",
+  "host": "arcgis.netl.doe.gov",
+  "description": "2024 census tracts with a coal mine or generator closure, and their neighbours (DOE NETL)."
+ },
+ {
+  "id": "epa-repowering",
+  "title": "RE-Powering mapper sites",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/RE_Powering_Mapper_Sites_2022/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#f59f00",
+   "opacity": 0.85,
+   "radius": 3,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "U.S. Environmental Protection Agency",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.epa.gov/re-powering/mapper-technical-document",
+  "host": "services.arcgis.com",
+  "description": "Contaminated land and mine sites screened for renewable energy (EPA RE-Powering)."
+ },
+ {
+  "id": "uswtdb",
+  "title": "US wind turbines (USWTDB)",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/US_Wind_Turbine_Database/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#35b779",
+   "opacity": 0.85,
+   "radius": 2.5,
+   "by": {
+    "field": "p_year",
+    "stops": [
+     [
+      1985,
+      "#440154"
+     ],
+     [
+      2000,
+      "#31688e"
+     ],
+     [
+      2012,
+      "#35b779"
+     ],
+     [
+      2024,
+      "#fde725"
+     ]
+    ]
+   },
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "USGS / LBNL / ACP",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS; Esri Living Atlas copy)",
+  "source": "https://energy.usgs.gov/uswtdb/",
+  "host": "services.arcgis.com",
+  "description": "Individual US wind turbines coloured by project year."
+ },
+ {
+  "id": "epa-cleanups",
+  "title": "EPA cleanup sites",
+  "category": "environment",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/Cleanups_in_my_Community_Sites/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#7048e8",
+   "opacity": 0.8,
+   "radius": 3,
+   "minzoom": 7
+  },
+  "minzoom": 7,
+  "credit": "U.S. Environmental Protection Agency",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.arcgis.com/home/item.html?id=d5b2a9f54e014424aa324263dd32b5bf",
+  "host": "services.arcgis.com",
+  "description": "Superfund, Brownfields and RCRA corrective-action sites (EPA)."
+ },
+ {
+  "id": "fema-flood-zones",
+  "title": "FEMA flood hazard zones",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer",
+  "layer": "28",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 12
+  },
+  "minzoom": 12,
+  "credit": "Federal Emergency Management Agency, National Flood Hazard Layer",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FEMA); NFHL disclaimer applies",
+  "source": "https://www.fema.gov/flood-maps/national-flood-hazard-layer",
+  "host": "hazards.fema.gov",
+  "description": "National Flood Hazard Layer flood zones (FEMA), drawn by the server."
+ },
+ {
+  "id": "nwi-wetlands",
+  "title": "National Wetlands Inventory",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.65,
+   "minzoom": 11
+  },
+  "minzoom": 11,
+  "credit": "U.S. Fish and Wildlife Service, National Wetlands Inventory",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USFWS)",
+  "source": "https://www.fws.gov/program/national-wetlands-inventory/wetlands-data",
+  "host": "fwspublicservices.wim.usgs.gov",
+  "description": "Mapped wetlands and deepwater habitats (USFWS), drawn by the server."
+ },
+ {
+  "id": "nhd-flowlines",
+  "title": "NHD flowlines",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "USGS The National Map: National Hydrography Dataset",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/national-hydrography/national-hydrography-dataset",
+  "host": "hydro.nationalmap.gov",
+  "description": "National Hydrography Dataset streams and rivers, small scale (USGS)."
+ },
+ {
+  "id": "usgs-hydro",
+  "title": "USGS hydrography (cached)",
+  "category": "environment",
+  "kind": "xyz",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "USGS The National Map",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/news/technical-announcement/new-hydro-map-service-available",
+  "host": "basemap.nationalmap.gov",
+  "description": "Cached USGS hydrography tiles."
+ },
+ {
+  "id": "noaa-slr-2ft",
+  "title": "Sea level rise, 2 ft",
+  "category": "environment",
+  "kind": "xyz",
+  "url": "https://coast.noaa.gov/arcgis/rest/services/dc_slr/slr_2ft/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "NOAA Office for Coastal Management",
+  "licence": "NOAA OCM; public domain, no warranty; not for navigation",
+  "source": "https://coast.noaa.gov/digitalcoast/data/slr.html",
+  "host": "coast.noaa.gov",
+  "description": "Low-lying areas flooded by 2 ft of sea level rise (NOAA Office for Coastal Management)."
+ },
+ {
+  "id": "drought-monitor",
+  "title": "US Drought Monitor",
+  "category": "environment",
+  "kind": "arcgis-feature",
+  "url": "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/US_Drought_Intensity_v1/FeatureServer",
+  "layer": "3",
+  "style": {
+   "kind": "fill",
+   "color": "#ffaa00",
+   "opacity": 0.55,
+   "by": {
+    "field": "dm",
+    "categories": [
+     [
+      0,
+      "#f0dfa6"
+     ],
+     [
+      1,
+      "#edc97b"
+     ],
+     [
+      2,
+      "#eb9550"
+     ],
+     [
+      3,
+      "#d94d23"
+     ],
+     [
+      4,
+      "#990000"
+     ]
+    ]
+   },
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "U.S. Drought Monitor (NDMC, USDA, NOAA)",
+  "licence": "Public domain (NDMC/USDA/NOAA); Esri Living Atlas live feed",
+  "source": "https://www.arcgis.com/home/item.html?id=9731f9062afd45f2be7b3bf2e050fbfa",
+  "host": "services9.arcgis.com",
+  "description": "Current drought intensity D0-D4 (NDMC, USDA, NOAA)."
+ },
+ {
+  "id": "nlcd-2021",
+  "title": "NLCD 2021 land cover",
+  "category": "environment",
+  "kind": "wms",
+  "url": "https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms",
+  "layer": "NLCD_2021_Land_Cover_L48",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "Multi-Resolution Land Characteristics Consortium",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (MRLC/USGS)",
+  "source": "https://catalog.data.gov/dataset/national-land-cover-database-nlcd-2021-land-cover-products",
+  "host": "www.mrlc.gov",
+  "description": "National Land Cover Database 2021, lower 48 (MRLC)."
+ },
+ {
+  "id": "usgs-geology",
+  "title": "State geologic map compilation",
+  "category": "environment",
+  "kind": "wms",
+  "url": "https://mrdata.usgs.gov/services/sgmc",
+  "layer": "sgmc2",
+  "version": "1.1.1",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.5,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "USGS Mineral Resources Data System",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.sciencebase.gov/catalog/item/5888bf4fe4b05ccb964bab9d",
+  "host": "mrdata.usgs.gov",
+  "description": "Geologic units of the conterminous US (USGS SGMC)."
+ },
+ {
+  "id": "ssurgo-soils",
+  "title": "SSURGO soil map units",
+  "category": "environment",
+  "kind": "wms",
+  "url": "https://sdmdataaccess.sc.egov.usda.gov/Spatial/SDM.wms",
+  "layer": "mapunitpoly",
+  "version": "1.1.1",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.5,
+   "minzoom": 12
+  },
+  "minzoom": 12,
+  "credit": "USDA Natural Resources Conservation Service",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDA NRCS)",
+  "source": "https://catalog.data.gov/dataset/soil-survey-geographic-database-ssurgo",
+  "host": "sdmdataaccess.sc.egov.usda.gov",
+  "description": "Detailed soil map unit polygons (USDA NRCS)."
+ },
+ {
+  "id": "jrc-surface-water",
+  "title": "Surface water occurrence",
+  "category": "environment",
+  "kind": "xyz",
+  "url": "https://storage.googleapis.com/global-surface-water/tiles2021/occurrence/{z}/{x}/{y}.png",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "EC JRC / Google; Pekel et al., Nature 2016",
+  "licence": "Copernicus programme data, free; cite Pekel et al. 2016",
+  "source": "https://global-surface-water.appspot.com/",
+  "host": "storage.googleapis.com",
+  "description": "Global surface water occurrence 1984-2021 (EC JRC)."
+ },
+ {
+  "id": "corine-2018",
+  "title": "Corine land cover 2018 (Europe)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://image.discomap.eea.europa.eu/arcgis/rest/services/Corine/CLC2018_WM/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "European Environment Agency / Copernicus Land Monitoring Service",
+  "licence": "Copernicus Land Monitoring Service: free, full and open; attribute EEA",
+  "source": "https://land.copernicus.eu/en/products/corine-land-cover/clc2018",
+  "host": "image.discomap.eea.europa.eu",
+  "description": "European land cover classes, 2018 (EEA, Copernicus)."
+ },
+ {
+  "id": "natural-earth-rivers",
+  "title": "Natural Earth rivers",
+  "category": "environment",
+  "kind": "geojson",
+  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_rivers_lake_centerlines.geojson",
+  "style": {
+   "kind": "line",
+   "color": "#4ab6c6",
+   "opacity": 0.9,
+   "width": 1.2
+  },
+  "credit": "Made with Natural Earth",
+  "licence": "Public domain (Natural Earth)",
+  "source": "https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-rivers-lake-centerlines/",
+  "host": "raw.githubusercontent.com",
+  "description": "World rivers and lake centerlines, 1:110m."
+ },
+ {
+  "id": "spc-outlook-day1",
+  "title": "SPC convective outlook, day 1",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "NOAA NWS Storm Prediction Center",
+  "licence": "Public domain (NOAA/NWS)",
+  "source": "https://www.spc.noaa.gov/products/outlook/day1otlk.html",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Storm Prediction Center day 1 categorical severe-weather outlook."
+ },
+ {
+  "id": "nhc-outlook",
+  "title": "NHC tropical weather outlook",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/tropical/rest/services/tropical/NHC_tropical_weather/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "NOAA National Weather Service, National Hurricane Center",
+  "licence": "Public domain (NOAA/NWS)",
+  "source": "https://www.nhc.noaa.gov/gis/",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "National Hurricane Center two- and seven-day tropical weather outlook."
+ },
+ {
+  "id": "nowcoast-cyclone-cone",
+  "title": "Tropical cyclone forecast cone",
+  "category": "hazards",
+  "kind": "wms",
+  "url": "https://nowcoast.noaa.gov/geoserver/ows",
+  "layer": "tropical_cyclones:tropical_cyclone_cone_of_uncertainty_forecast",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "NOAA nowCOAST",
+  "licence": "Public domain (NOAA); Fees none, AccessConstraints none",
+  "source": "https://www.nhc.noaa.gov/aboutcone.shtml",
+  "host": "nowcoast.noaa.gov",
+  "description": "Forecast cone of uncertainty for active tropical cyclones (NOAA nowCOAST)."
+ },
+ {
+  "id": "usgs-qfaults",
+  "title": "Quaternary faults",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://earthquake.usgs.gov/arcgis/rest/services/haz/Qfaults/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "USGS Earthquake Hazards Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/programs/earthquake-hazards/faults",
+  "host": "earthquake.usgs.gov",
+  "description": "Quaternary fault and fold database of the US (USGS), drawn by the server."
+ },
+ {
+  "id": "usgs-quakes-day",
+  "title": "Earthquakes, past day (M2.5+)",
+  "category": "hazards",
+  "kind": "geojson",
+  "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson",
+  "style": {
+   "kind": "circle",
+   "color": "#ff6b6b",
+   "opacity": 0.7,
+   "radius": 5,
+   "by": {
+    "field": "mag",
+    "stops": [
+     [
+      2.5,
+      "#ffd43b"
+     ],
+     [
+      5,
+      "#f76707"
+     ],
+     [
+      7,
+      "#c92a2a"
+     ]
+    ]
+   },
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "USGS Earthquake Hazards Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php",
+  "host": "earthquake.usgs.gov",
+  "description": "Live feed of earthquakes magnitude 2.5 and above in the past day (USGS)."
+ },
+ {
+  "id": "blm-surface-management",
+  "title": "Surface management agency",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_LimitedScale/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.55,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=6bf2e737c59d4111be92420ee5ab0b46",
+  "host": "gis.blm.gov",
+  "description": "Federal land manager by agency (BLM Surface Management Agency), drawn by the server."
+ },
+ {
+  "id": "usfs-forest-boundaries",
+  "title": "National Forest boundaries",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_ForestSystemBoundaries_01/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#2f9e44",
+   "opacity": 0.25,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "USDA Forest Service Enterprise Data Warehouse",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDA Forest Service)",
+  "source": "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=Administrative+Forest+Boundaries",
+  "host": "apps.fs.usda.gov",
+  "description": "Administrative National Forest and Grassland boundaries (USDA Forest Service)."
+ },
+ {
+  "id": "usfs-ownership",
+  "title": "Forest Service land ownership",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_BasicOwnership_02/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.5,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "USDA Forest Service",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDA Forest Service)",
+  "source": "https://catalog.data.gov/dataset/surface-ownership-parcels-feature-layer",
+  "host": "apps.fs.usda.gov",
+  "description": "Forest Service basic land ownership parcels, drawn by the server."
+ },
+ {
+  "id": "federal-lands-2017",
+  "title": "USA federal lands (2017)",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_National_Park_Service_Lands_20170930/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#7048e8",
+   "opacity": 0.3,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "National Park Service via Esri Living Atlas",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NPS; 2017-09-30 snapshot)",
+  "source": "https://www.arcgis.com/home/item.html?id=5ebb85755b864aefa150c012c82f6624",
+  "host": "services.arcgis.com",
+  "description": "Federal land units including National Park Service lands, snapshot of 2017-09-30 (Esri Living Atlas)."
+ },
+ {
+  "id": "faa-airports",
+  "title": "Aviation facilities",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Aviation_Facilities/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#1971c2",
+   "opacity": 0.85,
+   "radius": 3,
+   "by": {
+    "field": "SITE_TYPE_CODE",
+    "categories": [
+     [
+      "A",
+      "#1971c2"
+     ],
+     [
+      "H",
+      "#f08c00"
+     ],
+     [
+      "G",
+      "#868e96"
+     ],
+     [
+      "S",
+      "#37b24d"
+     ]
+    ]
+   },
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "U.S. DOT Bureau of Transportation Statistics (FAA NASR)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDOT BTS / FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=1551114f78e34d8395fd77bf41cd8a80",
+  "host": "services.arcgis.com",
+  "description": "Airports (blue), heliports (orange), gliderports (grey) and seaplane bases (green) (NTAD, FAA)."
+ },
+ {
+  "id": "faa-obstacles",
+  "title": "FAA digital obstacle file",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Digital_Obstacle_File/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#ae3ec9",
+   "opacity": 0.8,
+   "radius": 2,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "Federal Aviation Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=e202ff4e4cf943bda02ff63c0c44c9b7",
+  "host": "services6.arcgis.com",
+  "description": "Towers, stacks and other tall obstacles (FAA)."
+ },
+ {
+  "id": "faa-class-airspace",
+  "title": "FAA controlled airspace",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Class_Airspace/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#228be6",
+   "opacity": 0.25,
+   "by": {
+    "field": "CLASS",
+    "categories": [
+     [
+      "B",
+      "#1971c2"
+     ],
+     [
+      "C",
+      "#9c36b5"
+     ],
+     [
+      "D",
+      "#228be6"
+     ],
+     [
+      "E",
+      "#e599f7"
+     ]
+    ]
+   },
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "Federal Aviation Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=c6a62360338e408cb1512366ad61559e",
+  "host": "services6.arcgis.com",
+  "description": "Class B, C, D and E airspace (FAA)."
+ },
+ {
+  "id": "faa-uas-facility-map",
+  "title": "FAA UAS facility map",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/FAA_UAS_FacilityMap_Data/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#fcc419",
+   "opacity": 0.4,
+   "by": {
+    "field": "CEILING",
+    "categories": [
+     [
+      0,
+      "#e03131"
+     ],
+     [
+      50,
+      "#f76707"
+     ],
+     [
+      100,
+      "#fcc419"
+     ],
+     [
+      200,
+      "#a9e34b"
+     ],
+     [
+      400,
+      "#40c057"
+     ]
+    ]
+   },
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "Federal Aviation Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=4254d2f81e5241cc8ba5883b63ae397c",
+  "host": "services6.arcgis.com",
+  "description": "Maximum drone altitude grid near airports, in feet AGL (FAA)."
+ },
+ {
+  "id": "national-highway-system",
+  "title": "National Highway System",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_National_Highway_System/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#f59f00",
+   "opacity": 0.9,
+   "width": 1.5,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "U.S. DOT Bureau of Transportation Statistics (FHWA)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDOT BTS / FHWA)",
+  "source": "https://www.arcgis.com/home/item.html?id=dce9f09392eb474c8ad8e6a78416279b",
+  "host": "services.arcgis.com",
+  "description": "National Highway System routes (NTAD, FHWA)."
+ },
+ {
+  "id": "census-tracts",
+  "title": "Census tracts",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "U.S. Census Bureau, TIGERweb",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (US Census Bureau)",
+  "source": "https://www.census.gov/data/developers/data-sets/TIGERweb-map-service.html",
+  "host": "tigerweb.geo.census.gov",
+  "description": "Census tract boundaries (US Census Bureau TIGERweb), drawn by the server."
+ },
+ {
+  "id": "natural-earth-countries",
+  "title": "World countries (Natural Earth)",
+  "category": "boundaries",
+  "kind": "geojson",
+  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson",
+  "style": {
+   "kind": "line",
+   "color": "#868e96",
+   "opacity": 0.9,
+   "width": 0.8
+  },
+  "credit": "Made with Natural Earth",
+  "licence": "Public domain (Natural Earth)",
+  "source": "https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/",
+  "host": "raw.githubusercontent.com",
+  "description": "Country outlines, 1:110m."
+ },
+ {
+  "id": "natural-earth-admin1",
+  "title": "States and provinces (Natural Earth)",
+  "category": "boundaries",
+  "kind": "geojson",
+  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_1_states_provinces.geojson",
+  "style": {
+   "kind": "line",
+   "color": "#adb5bd",
+   "opacity": 0.9,
+   "width": 0.6
+  },
+  "credit": "Made with Natural Earth",
+  "licence": "Public domain (Natural Earth)",
+  "source": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-1-states-provinces/",
+  "host": "raw.githubusercontent.com",
+  "description": "First-level administrative boundaries, 1:50m."
+ },
+ {
+  "id": "usgs-topo",
+  "title": "USGS Topo",
+  "category": "imagery",
+  "kind": "xyz",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "USGS The National Map: National Boundaries Dataset, 3DEP, GNIS, NHD, Structures, Transportation (USGS TNM)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.sciencebase.gov/catalog/item/544171f4e4b0b0a643c73c28",
+  "host": "basemap.nationalmap.gov",
+  "description": "USGS topographic map."
+ },
+ {
+  "id": "usgs-imagery",
+  "title": "USGS Imagery",
+  "category": "imagery",
+  "kind": "xyz",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "USGS The National Map: National Boundaries Dataset, 3DEP, GNIS, NHD, Structures, Transportation (USGS TNM)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/programs/national-geospatial-program/national-map",
+  "host": "basemap.nationalmap.gov",
+  "description": "USGS aerial imagery."
+ },
+ {
+  "id": "usgs-imagery-topo",
+  "title": "USGS Imagery Topo",
+  "category": "imagery",
+  "kind": "xyz",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "USGS The National Map: National Boundaries Dataset, 3DEP, GNIS, NHD, Structures, Transportation (USGS TNM)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.sciencebase.gov/catalog/item/581d0521e4b08da350d5240a",
+  "host": "basemap.nationalmap.gov",
+  "description": "USGS imagery with topographic overlay."
+ },
+ {
+  "id": "usgs-shaded-relief",
+  "title": "USGS Shaded Relief",
+  "category": "imagery",
+  "kind": "xyz",
+  "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.6,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "USGS The National Map: National Boundaries Dataset, 3DEP, GNIS, NHD, Structures, Transportation (USGS TNM)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.sciencebase.gov/catalog/item/544172ece4b0b0a643c73c75",
+  "host": "basemap.nationalmap.gov",
+  "description": "USGS shaded relief."
+ },
+ {
+  "id": "usgs-3dep-hillshade",
+  "title": "3DEP elevation",
+  "category": "imagery",
+  "kind": "arcgis-image",
+  "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.45,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "USGS 3D Elevation Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/3d-elevation-program/about-3dep-products-services",
+  "host": "elevation.nationalmap.gov",
+  "description": "USGS 3D Elevation Program, rendered by the server."
+ },
+ {
+  "id": "nasa-black-marble",
+  "title": "Black Marble night lights",
+  "category": "imagery",
+  "kind": "xyz",
+  "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.8,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "NASA EOSDIS GIBS / VIIRS",
+  "licence": "NASA Earthdata open data policy; public domain, citation requested",
+  "source": "https://www.earthdata.nasa.gov/data/projects/black-marble",
+  "host": "gibs.earthdata.nasa.gov",
+  "description": "VIIRS Black Marble annual night-lights composite, 2016 (NASA GIBS)."
+ },
+ {
+  "id": "gebco-bathymetry",
+  "title": "GEBCO bathymetry",
+  "category": "imagery",
+  "kind": "wms",
+  "url": "https://wms.gebco.net/mapserv",
+  "layer": "GEBCO_LATEST",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 0
+  },
+  "minzoom": 0,
+  "credit": "GEBCO Compilation Group; GEBCO_2024 Grid",
+  "licence": "GEBCO terms: free, attribution to GEBCO; not for navigation",
+  "source": "https://www.gebco.net/data-products/gridded-bathymetry-data",
+  "host": "wms.gebco.net",
+  "description": "Global ocean and land elevation grid (GEBCO)."
+ },
+ {
+  "id": "goes-east-visible",
+  "title": "GOES East visible",
+  "category": "weather",
+  "kind": "xyz",
+  "url": "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes-east-vis-1km-900913/{z}/{x}/{y}.png",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "Iowa Environmental Mesonet / NOAA GOES",
+  "licence": "Free; underlying NOAA data public domain",
+  "source": "https://mesonet.agron.iastate.edu/GIS/goes.phtml",
+  "host": "mesonet.agron.iastate.edu",
+  "description": "GOES East visible satellite imagery (Iowa Environmental Mesonet)."
+ },
+ {
+  "id": "nowcoast-sea-surface-temp",
+  "title": "Sea surface temperature",
+  "category": "weather",
+  "kind": "wms",
+  "url": "https://nowcoast.noaa.gov/geoserver/ows",
+  "layer": "sea_surface_temperature:global_sea_surface_temperature",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "NOAA nowCOAST",
+  "licence": "Public domain (NOAA); Fees none, AccessConstraints none",
+  "source": "UNKNOWN",
+  "host": "nowcoast.noaa.gov",
+  "description": "Global sea surface temperature (NOAA nowCOAST)."
+ },
+ {
+  "id": "nowcoast-lightning",
+  "title": "Lightning strike density",
+  "category": "weather",
+  "kind": "wms",
+  "url": "https://nowcoast.noaa.gov/geoserver/ows",
+  "layer": "lightning_detection:ldn_lightning_strike_density",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "NOAA nowCOAST",
+  "licence": "Public domain (NOAA); Fees none, AccessConstraints none",
+  "source": "https://ocean.weather.gov/lightning/",
+  "host": "nowcoast.noaa.gov",
+  "description": "Lightning strike density (NOAA nowCOAST)."
+ },
+ {
+  "id": "nowcoast-water-vapor",
+  "title": "GOES water vapor",
+  "category": "weather",
+  "kind": "wms",
+  "url": "https://nowcoast.noaa.gov/geoserver/ows",
+  "layer": "satellite:goes_water_vapor_imagery",
+  "style": {
+   "kind": "raster",
+   "color": "#ffffff",
+   "opacity": 0.7,
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "NOAA nowCOAST",
+  "licence": "Public domain (NOAA); Fees none, AccessConstraints none",
+  "source": "UNKNOWN",
+  "host": "nowcoast.noaa.gov",
+  "description": "GOES water vapor imagery (NOAA nowCOAST)."
+ },
+ {
+  "id": "noaa-radar-impact-zones",
+  "title": "NEXRAD wind-turbine impact zones",
+  "category": "hazards",
+  "kind": "arcgis-feature",
+  "url": "https://coast.noaa.gov/arcgis/rest/services/Hosted/WeatherRadarImpactZones/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#868e96",
+   "opacity": 0.35,
+   "by": {
+    "field": "impactzone",
+    "categories": [
+     [
+      "No Build Zone",
+      "#c92a2a"
+     ],
+     [
+      "Mitigation Zone",
+      "#f76707"
+     ],
+     [
+      "Consultation Zone",
+      "#fab005"
+     ],
+     [
+      "Notification Zone",
+      "#74c0fc"
+     ]
+    ]
+   },
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "NOAA Radar Operations Center; NOAA Office for Coastal Management (MarineCadastre.gov)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=ded06598afdb4768982454c6ff37bebd",
+  "host": "coast.noaa.gov",
+  "description": "Zones where wind turbines may interfere with NEXRAD weather radars: no-build, mitigation, consultation, notification (NOAA ROC)."
+ },
+ {
+  "id": "faa-military-training-routes",
+  "title": "Military training routes",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/MTRSegment/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#7048e8",
+   "opacity": 0.8,
+   "width": 1.5,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "Federal Aviation Administration, Aeronautical Information Services",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=0c6899de28af447c801231ed7ba7baa6",
+  "host": "services6.arcgis.com",
+  "description": "Low-altitude military training route segments (FAA), a tall-structure and wind siting check."
+ },
+ {
+  "id": "faa-special-use-airspace",
+  "title": "Special use airspace",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Special_Use_Airspace/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#868e96",
+   "opacity": 0.2,
+   "by": {
+    "field": "TYPE_CODE",
+    "categories": [
+     [
+      "MOA",
+      "#7048e8"
+     ],
+     [
+      "R",
+      "#c92a2a"
+     ],
+     [
+      "P",
+      "#862e9c"
+     ],
+     [
+      "W",
+      "#1c7ed6"
+     ],
+     [
+      "A",
+      "#f59f00"
+     ],
+     [
+      "D",
+      "#e8590c"
+     ]
+    ]
+   },
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "Federal Aviation Administration, Aeronautical Information Services",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=dd0d1b726e504137ab3c41b21835d05b",
+  "host": "services6.arcgis.com",
+  "description": "Military operations areas, restricted, prohibited, warning, alert and danger areas (FAA)."
+ },
+ {
+  "id": "epa-nonattainment-ozone-2015",
+  "title": "Ozone nonattainment areas (2015 standard)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://geodata.epa.gov/arcgis/rest/services/OAR_OAQPS/NonattainmentAreas/MapServer",
+  "layer": "2",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "U.S. EPA Office of Air Quality Planning and Standards (Green Book)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.epa.gov/green-book/green-book-gis-download",
+  "host": "geodata.epa.gov",
+  "description": "Areas not meeting the 2015 8-hour ozone NAAQS (EPA Green Book); drives new-source air permitting."
+ },
+ {
+  "id": "epa-nonattainment-pm25-2012",
+  "title": "PM2.5 nonattainment areas (2012 annual standard)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://geodata.epa.gov/arcgis/rest/services/OAR_OAQPS/NonattainmentAreas/MapServer",
+  "layer": "7",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "U.S. EPA Office of Air Quality Planning and Standards (Green Book)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.epa.gov/green-book/green-book-gis-download",
+  "host": "geodata.epa.gov",
+  "description": "Areas not meeting the 2012 annual PM2.5 NAAQS (EPA Green Book)."
+ },
+ {
+  "id": "epa-class1-areas",
+  "title": "Class I air quality areas",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://geodata.epa.gov/arcgis/rest/services/OAR_OAQPS/Class1_Areas/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "U.S. EPA OAQPS; data EPA, NPS, USFS, FWS, BIA",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://catalog.data.gov/dataset/mandatory-class-1-federal-areas-web-service",
+  "host": "geodata.epa.gov",
+  "description": "Mandatory Class I federal areas (national parks, wilderness) protected under PSD visibility rules."
+ },
+ {
+  "id": "usgs-uspvdb",
+  "title": "Large-scale solar PV footprints (USPVDB)",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://energy.usgs.gov/arcgis/rest/services/Hosted/uspvdbDyn/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#f08c00",
+   "opacity": 0.6,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "U.S. Geological Survey and Lawrence Berkeley National Laboratory (USPVDB)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://energy.usgs.gov/uspvdb/",
+  "host": "energy.usgs.gov",
+  "description": "Digitised footprints of US ground-mounted PV plants of 1 MW and up, with capacity and tracking type (USGS/LBNL)."
+ },
+ {
+  "id": "boem-cable-interconnections",
+  "title": "Offshore wind grid interconnections",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Offshore_Wind_-_Proposed_or_Installed_Cable_Interconnections/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#005ce6",
+   "opacity": 0.9,
+   "radius": 5,
+   "by": {
+    "field": "STATUS",
+    "categories": [
+     [
+      "Installed",
+      "#2f9e44"
+     ],
+     [
+      "Proposed",
+      "#005ce6"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Ocean Energy Management, Office of Renewable Energy Programs",
+  "licence": "CC BY-NC-ND 4.0 (BOEM ArcGIS item licence, read 2026-10-22): non-commercial use, no derivatives; data stay on BOEM's server",
+  "source": "https://www.arcgis.com/home/item.html?id=7981c1579b254528a127d3677a7868f8",
+  "host": "services7.arcgis.com",
+  "description": "Onshore points where offshore wind export cables connect to the grid, with injected MW (BOEM)."
+ },
+ {
+  "id": "boem-offshore-substations",
+  "title": "Offshore wind substations",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Offshore_Wind_-_Proposed_or_Installed_Substations/FeatureServer",
+  "layer": "1",
+  "style": {
+   "kind": "circle",
+   "color": "#005ce6",
+   "opacity": 0.9,
+   "radius": 4,
+   "by": {
+    "field": "STATUS",
+    "categories": [
+     [
+      "Installed",
+      "#2f9e44"
+     ],
+     [
+      "Proposed",
+      "#005ce6"
+     ]
+    ]
+   },
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "Bureau of Ocean Energy Management, Office of Renewable Energy Programs",
+  "licence": "CC BY-NC-ND 4.0 (BOEM ArcGIS item licence, read 2026-10-22): non-commercial use, no derivatives; data stay on BOEM's server",
+  "source": "https://www.arcgis.com/home/item.html?id=1dc4178929e2447a82e369d219b8eb52",
+  "host": "services7.arcgis.com",
+  "description": "Proposed and installed offshore and onshore substations of offshore wind projects (BOEM)."
+ },
+ {
+  "id": "boem-cable-landings",
+  "title": "Offshore wind cable landings",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/Offshore_Wind_-_Proposed_or_Installed_Offshore_Landings/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#005ce6",
+   "opacity": 0.9,
+   "radius": 4,
+   "by": {
+    "field": "STATUS",
+    "categories": [
+     [
+      "Installed",
+      "#2f9e44"
+     ],
+     [
+      "Proposed",
+      "#005ce6"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Ocean Energy Management, Office of Renewable Energy Programs",
+  "licence": "CC BY-NC-ND 4.0 (BOEM ArcGIS item licence, read 2026-10-22): non-commercial use, no derivatives; data stay on BOEM's server",
+  "source": "https://www.arcgis.com/home/item.html?id=db463b20ce0f4b60ba743099fe3e31a0",
+  "host": "services7.arcgis.com",
+  "description": "Where offshore wind export cables come ashore (BOEM)."
+ },
+ {
+  "id": "usfs-roadless-areas",
+  "title": "Inventoried roadless areas (2001 rule)",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_InventoriedRoadlessAreas2001_01/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "USDA Forest Service",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDA Forest Service)",
+  "source": "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=roadless",
+  "host": "apps.fs.usda.gov",
+  "description": "National Forest areas under the 2001 Roadless Rule, where road building and most new rights-of-way are restricted."
+ },
+ {
+  "id": "blm-acec",
+  "title": "Areas of critical environmental concern",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_ACEC/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://catalog.data.gov/dataset/blm-natl-areas-of-critical-environmental-concern",
+  "host": "gis.blm.gov",
+  "description": "BLM-designated ACECs, special-management areas that often exclude or limit energy development."
+ },
+ {
+  "id": "blm-wilderness-study-areas",
+  "title": "BLM wilderness and wilderness study areas",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_NLCS_WLD_WSA/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://catalog.data.gov/dataset/blm-natl-nlcs-wilderness-study-areas-polygons",
+  "host": "gis.blm.gov",
+  "description": "BLM wilderness study areas (National Conservation Lands), managed to keep wilderness character."
+ },
+ {
+  "id": "netl-energy-communities-msa",
+  "title": "IRA energy communities (MSA / non-MSA, 2024)",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/2024_MSAs_NonMSAs_that_are_Energy_Communities/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#1971c2",
+   "opacity": 0.3,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "U.S. Department of Energy, National Energy Technology Laboratory",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (DOE/NETL)",
+  "source": "https://edx.netl.doe.gov/dataset/ira-energy-community-data-layers",
+  "host": "arcgis.netl.doe.gov",
+  "description": "Counties in MSAs and non-MSAs that qualify as IRA energy communities by fossil-fuel employment and unemployment (2024)."
+ },
+ {
+  "id": "cejst-disadvantaged",
+  "title": "CEJST disadvantaged communities (v1.0)",
+  "category": "boundaries",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/CEJST_Disadvantaged_Communities_2022/FeatureServer",
+  "layer": "2",
+  "style": {
+   "kind": "fill",
+   "color": "#adb5bd",
+   "opacity": 0.4,
+   "by": {
+    "field": "sn_c",
+    "categories": [
+     [
+      1,
+      "#862e9c"
+     ],
+     [
+      0,
+      "#dee2e6"
+     ]
+    ]
+   },
+   "minzoom": 10
+  },
+  "minzoom": 10,
+  "credit": "Council on Environmental Quality (CEJST v1.0), hosted by DOE/NETL",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (CEQ / DOE)",
+  "source": "https://arcgis.netl.doe.gov/portal/home/item.html?id=a8674b345a7245cab5787e8a0c4dee26",
+  "host": "arcgis.netl.doe.gov",
+  "description": "Census tracts the Climate and Economic Justice Screening Tool flagged as disadvantaged (purple)."
+ },
+ {
+  "id": "cdc-svi-2022-tracts",
+  "title": "Social vulnerability index 2022 (tracts)",
+  "category": "boundaries",
+  "kind": "arcgis-feature",
+  "url": "https://services3.arcgis.com/ZvidGQkLaDJxRSJ2/arcgis/rest/services/CDC_ATSDR_Social_Vulnerability_Index_2022_USA/FeatureServer",
+  "layer": "2",
+  "style": {
+   "kind": "fill",
+   "color": "#dee2e6",
+   "opacity": 0.5,
+   "by": {
+    "field": "RPL_THEMES",
+    "stops": [
+     [
+      0,
+      "#fff5eb"
+     ],
+     [
+      0.5,
+      "#fd8d3c"
+     ],
+     [
+      1,
+      "#7f2704"
+     ]
+    ]
+   },
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "CDC/ATSDR Geospatial Research, Analysis, and Services Program; US Census Bureau",
+  "licence": "Public, no constraints; cite CDC/ATSDR/GRASP (CDC item licence on ArcGIS Online)",
+  "source": "https://www.arcgis.com/home/item.html?id=f2af3fd35858443293b75d5f73c7d4d3",
+  "host": "services3.arcgis.com",
+  "description": "Overall CDC/ATSDR social vulnerability percentile by census tract (darker = more vulnerable)."
+ },
+ {
+  "id": "noaa-submarine-cables",
+  "title": "Submarine cable areas",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://coast.noaa.gov/arcgis/rest/services/Hosted/SubmarineCables/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#1098ad",
+   "opacity": 0.5,
+   "by": {
+    "field": "status",
+    "categories": [
+     [
+      "In Service",
+      "#1098ad"
+     ],
+     [
+      "Under Construction",
+      "#f59f00"
+     ],
+     [
+      "Out of Service",
+      "#868e96"
+     ],
+     [
+      "Abandoned",
+      "#adb5bd"
+     ]
+    ]
+   },
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "NOAA Office for Coastal Management (MarineCadastre.gov)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.arcgis.com/home/item.html?id=92482906ec41411cbe07da3d4d2a381b",
+  "host": "coast.noaa.gov",
+  "description": "Charted submarine power and telecom cable areas in US waters (MarineCadastre)."
+ },
+ {
+  "id": "dot-military-bases",
+  "title": "Military installations",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Military_Bases/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#5c940d",
+   "opacity": 0.3,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "OASD Sustainment (DISDI) via U.S. DOT Bureau of Transportation Statistics (NTAD)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (DoD / BTS)",
+  "source": "https://www.arcgis.com/home/item.html?id=3940b83dea374cd59c86a98c6935e059",
+  "host": "services.arcgis.com",
+  "description": "Military installations, ranges and training areas (DoD, FY2024 via NTAD)."
+ },
+ {
+  "id": "ut-energy-corridors",
+  "title": "Utah energy corridors",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/EnergyCorridorAreas/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#e64980",
+   "opacity": 0.35,
+   "by": {
+    "field": "DesigUse",
+    "categories": [
+     [
+      "All",
+      "#e64980"
+     ],
+     [
+      "Electric-only",
+      "#f59f00"
+     ]
+    ]
+   },
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "Utah Geospatial Resource Center (UGRC)",
+  "licence": "UGRC item licence: provided as a public service, as is, no warranty (no open licence named)",
+  "source": "https://www.arcgis.com/home/item.html?id=3c39e10f78c34cd981f28bde8ad76e14",
+  "host": "services1.arcgis.com",
+  "description": "Designated and planned energy corridors in Utah, all-use and electric-only (UGRC)."
+ },
+ {
+  "id": "eia-tight-oil-shale-plays",
+  "title": "Tight oil and shale gas plays",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/FGr1D95XCGALKXqM/arcgis/rest/services/TightOil_ShaleGas_Plays_Lower48_EIA/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#8d6e63",
+   "opacity": 0.3,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "U.S. Energy Information Administration; Enverus; USGS",
+  "licence": "None (public use) per EIA item licence; EIA data public domain",
+  "source": "https://www.arcgis.com/home/item.html?id=3f001fba00dc4add8dbd00542d61e4da",
+  "host": "services7.arcgis.com",
+  "description": "Lower-48 tight oil and shale gas play outlines (EIA)."
+ },
+ {
+  "id": "netl-co2-pipelines",
+  "title": "CO2 pipelines",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/CO2_Active_Pipelines/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#495057",
+   "opacity": 0.9,
+   "width": 1.8,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "DOE/NETL, digitised from PHMSA NPMS public map (2023)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (DOE/NETL)",
+  "source": "https://arcgis.netl.doe.gov/portal/home/item.html?id=02a293354bf441778e38815468f06f5a",
+  "host": "arcgis.netl.doe.gov",
+  "description": "Active CO2 transport pipelines in the US, digitised from the PHMSA public map (NETL)."
+ },
+ {
+  "id": "nacei-power-plants",
+  "title": "North American power plants 100 MW+",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer",
+  "layer": "15",
+  "style": {
+   "kind": "circle",
+   "color": "#868e96",
+   "opacity": 0.85,
+   "radius": 3,
+   "by": {
+    "field": "PrimSource",
+    "categories": [
+     [
+      "Natural Gas",
+      "#e8590c"
+     ],
+     [
+      "Coal",
+      "#343a40"
+     ],
+     [
+      "Nuclear",
+      "#ae3ec9"
+     ],
+     [
+      "Hydroelectric",
+      "#1c7ed6"
+     ],
+     [
+      "Wind",
+      "#37b24d"
+     ],
+     [
+      "Solar",
+      "#fab005"
+     ],
+     [
+      "Petroleum",
+      "#a61e4d"
+     ],
+     [
+      "Geothermal",
+      "#c2255c"
+     ]
+    ]
+   },
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "North American Cooperation on Energy Information (NACEI), Natural Resources Canada",
+  "licence": "Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada)",
+  "source": "https://open.canada.ca/data/en/dataset/40fbe40c-01cd-49d3-8add-0d20ed64c90d",
+  "host": "geoappext.nrcan.gc.ca",
+  "description": "Power plants of 100 MW or more in Canada, the US and Mexico (NACEI, 2017)."
+ },
+ {
+  "id": "nrcan-clean-generation",
+  "title": "Canada clean power stations",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://geoappext.nrcan.gc.ca/arcgis/rest/services/Energy/clean_energy_generating_stations_fgp/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#37b24d",
+   "opacity": 0.85,
+   "radius": 3,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "Natural Resources Canada",
+  "licence": "Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada)",
+  "source": "https://open.canada.ca/data/en/dataset/65d3db23-b83c-4f49-ab93-65c59ee0e6aa",
+  "host": "geoappext.nrcan.gc.ca",
+  "description": "Hydro, wind, solar, nuclear, biomass and tidal generating stations in Canada (NRCan, 2016-2019)."
+ },
+ {
+  "id": "eccc-cpcad",
+  "title": "Canada protected and conserved areas",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://maps-cartes.ec.gc.ca/arcgis/rest/services/CWS_SCF/CPCAD/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "Environment and Climate Change Canada (CPCAD)",
+  "licence": "Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada)",
+  "source": "https://www.canada.ca/en/environment-climate-change/services/national-wildlife-areas/protected-conserved-areas-database.html",
+  "host": "maps-cartes.ec.gc.ca",
+  "description": "Canadian protected and conserved areas, including OECMs and IPCAs (ECCC)."
+ },
+ {
+  "id": "eea-natura-2000",
+  "title": "Natura 2000 sites",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://bio.discomap.eea.europa.eu/arcgis/rest/services/ProtectedSites/Natura2000_Dyna_WM/MapServer",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "European Environment Agency",
+  "licence": "CC BY 4.0 (EEA legal notice, https://www.eea.europa.eu/en/legal-notice)",
+  "source": "https://www.eea.europa.eu/en/datahub/datahubitem-view/6fc8ad2d-195d-40f4-bdec-576e7d1268e4",
+  "host": "bio.discomap.eea.europa.eu",
+  "description": "EU Natura 2000 network: Habitats Directive and Birds Directive sites (EEA)."
+ },
+ {
+  "id": "conanp-protected-areas",
+  "title": "Mexico federal protected areas",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/CONAMP_Federal_Protected_Areas_in_Mexico_2026/FeatureServer",
+  "layer": "1",
+  "style": {
+   "kind": "fill",
+   "color": "#2f9e44",
+   "opacity": 0.35,
+   "minzoom": 7
+  },
+  "minzoom": 7,
+  "credit": "CONANP via NOAA National Centers for Environmental Information (Gulf Atlas)",
+  "licence": "Public domain unless noted; credit NOAA NCEI and CONANP (item licence)",
+  "source": "https://www.arcgis.com/home/item.html?id=55daee83624a49d696c1425a9b84035c",
+  "host": "services2.arcgis.com",
+  "description": "Mexico's federal natural protected areas (ANP), 2026 (CONANP)."
+ },
+ {
+  "id": "fws-refuges",
+  "title": "National wildlife refuges",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/National_Wildlife_Refuge_System_Boundaries/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#2b8a3e",
+   "opacity": 0.35,
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "U.S. Fish and Wildlife Service, National Wildlife Refuge System, Division of Realty",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (FWS)",
+  "source": "https://www.arcgis.com/home/item.html?id=745ed874c1394da3a9aae50267c9e049",
+  "host": "services.arcgis.com",
+  "description": "National Wildlife Refuge System and wetland management district boundaries (FWS)."
+ },
+ {
+  "id": "nps-wilderness",
+  "title": "NPS wilderness",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.nps.gov/arcgis/rest/services/Wilderness/NPS_Legislated_Wilderness/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "National Park Service, Wilderness Stewardship Division",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NPS)",
+  "source": "UNKNOWN",
+  "host": "mapservices.nps.gov",
+  "description": "Legislated wilderness on National Park Service lands."
+ },
+ {
+  "id": "usgs-wbd-huc8",
+  "title": "Watersheds (HUC-8 subbasins)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.7,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "U.S. Geological Survey, Watershed Boundary Dataset",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.usgs.gov/national-hydrography/watershed-boundary-dataset",
+  "host": "hydro.nationalmap.gov",
+  "description": "HUC-8 subbasin boundaries (USGS WBD), the unit for water permits and many environmental reviews."
+ },
+ {
+  "id": "usfs-wui-2020",
+  "title": "Wildland-urban interface (2020)",
+  "category": "hazards",
+  "kind": "xyz",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_WUI_2020_01/MapServer/tile/{z}/{y}/{x}",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "USDA Forest Service Northern Research Station; University of Wisconsin SILVIS Lab",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USDA Forest Service)",
+  "source": "https://catalog.data.gov/dataset/wildland-urban-interface-2020-map-service",
+  "host": "apps.fs.usda.gov",
+  "description": "Where houses meet or intermingle with wildland vegetation (2020), a wildfire-ignition and liability screen."
+ },
+ {
+  "id": "noaa-danger-zones",
+  "title": "Danger zones and restricted areas (marine)",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://coast.noaa.gov/arcgis/rest/services/Hosted/DangerZonesRestrictedAreas/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#c92a2a",
+   "opacity": 0.3,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "NOAA Office for Coastal Management (MarineCadastre.gov)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://catalog.data.gov/dataset/danger-zones-and-restricted-areas",
+  "host": "coast.noaa.gov",
+  "description": "Military danger zones and restricted areas in US coastal waters (33 CFR 334)."
+ },
+ {
+  "id": "noaa-marine-sanctuaries",
+  "title": "National marine sanctuaries",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://coast.noaa.gov/arcgis/rest/services/Hosted/NationalMarineSanctuaries/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#0c8599",
+   "opacity": 0.3,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "NOAA Office of National Marine Sanctuaries via MarineCadastre.gov",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.fisheries.noaa.gov/inport/item/67947",
+  "host": "coast.noaa.gov",
+  "description": "National marine sanctuary boundaries, a constraint for offshore wind and cable routes."
+ },
+ {
+  "id": "boem-ocs-withdrawals",
+  "title": "OCS withdrawal areas",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/G5Ma95RzqJRPKsWL/arcgis/rest/services/OCS_Withdrawal_Areas/FeatureServer",
+  "layer": "6",
+  "style": {
+   "kind": "fill",
+   "color": "#862e9c",
+   "opacity": 0.25,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "Bureau of Ocean Energy Management, Office of Strategic Resources",
+  "licence": "Public domain (usa.gov/publicdomain/label/1.0, BOEM item licence)",
+  "source": "https://www.arcgis.com/home/item.html?id=4bc59b53f6cf44a1a4a5fe5174ffa6fa",
+  "host": "services7.arcgis.com",
+  "description": "Outer Continental Shelf areas withdrawn from oil and gas, renewable, mineral or sand leasing (BOEM)."
+ },
+ {
+  "id": "spc-fire-weather-day1",
+  "title": "Fire weather outlook (day 1)",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/fire_weather/SPC_firewx/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "NOAA National Weather Service, Storm Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.spc.noaa.gov/products/fire_wx/overview.html",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "SPC day-1 elevated, critical and extremely critical fire-weather areas; empty on quiet days."
+ },
+ {
+  "id": "usace-nid-dams",
+  "title": "Dams (National Inventory of Dams)",
+  "category": "hazards",
+  "kind": "arcgis-feature",
+  "url": "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/NID_v1/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#1c7ed6",
+   "opacity": 0.85,
+   "radius": 3,
+   "by": {
+    "field": "HAZARD_POTENTIAL",
+    "categories": [
+     [
+      "High",
+      "#c92a2a"
+     ],
+     [
+      "Significant",
+      "#f59f00"
+     ],
+     [
+      "Low",
+      "#1c7ed6"
+     ],
+     [
+      "Undetermined",
+      "#adb5bd"
+     ]
+    ]
+   },
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "U.S. Army Corps of Engineers, National Inventory of Dams (Esri US Federal Data mirror)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USACE)",
+  "source": "https://nid.sec.usace.army.mil/",
+  "host": "services2.arcgis.com",
+  "description": "US dams with hazard potential and purpose (USACE NID, mirrored by Esri; updated weekly)."
+ },
+ {
+  "id": "census-urban-areas",
+  "title": "Urban areas (2020)",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Urban/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.5,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "U.S. Census Bureau, TIGERweb",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (Census)",
+  "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html",
+  "host": "tigerweb.geo.census.gov",
+  "description": "2020 Census urban areas."
+ },
+ {
+  "id": "census-congressional-districts",
+  "title": "Congressional districts",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.7
+  },
+  "credit": "U.S. Census Bureau, TIGERweb",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (Census)",
+  "source": "https://www.census.gov/programs-surveys/geography/guidance/geo-areas/congressional-dist.html",
+  "host": "tigerweb.geo.census.gov",
+  "description": "Current congressional district boundaries (TIGERweb)."
+ },
+ {
+  "id": "blm-plss-townships",
+  "title": "PLSS townships",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://gis.blm.gov/arcgis/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.7,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "Bureau of Land Management, CadNSDI",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=283939812bc34c11bad695a1c8152faf",
+  "host": "gis.blm.gov",
+  "description": "Public Land Survey System township grid (BLM CadNSDI), the land description used in leases and ROW grants."
+ },
+ {
+  "id": "usgs-nshm-faults",
+  "title": "Fault sources (NSHM 2023)",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://earthquake.usgs.gov/arcgis/rest/services/haz/NSHM_Fault_Sources/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.8
+  },
+  "credit": "U.S. Geological Survey, National Seismic Hazard Model",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://www.sciencebase.gov/catalog/item/651d97a6d34e44db0e2d44e7",
+  "host": "earthquake.usgs.gov",
+  "description": "Fault sources used in the 2023 US National Seismic Hazard Model."
+ },
+ {
+  "id": "cpc-8-14-day-temp",
+  "title": "8-14 day temperature outlook",
+  "category": "weather",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_8_14_day_outlk/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.55
+  },
+  "credit": "NOAA NWS Climate Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.cpc.ncep.noaa.gov/products/GIS/GIS_DATA/us_tempprcpfcst/index.php",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Probability of above or below normal temperature 8-14 days out (CPC), for load and gas-burn outlooks."
+ },
+ {
+  "id": "wpc-winter-storm-severity",
+  "title": "Winter storm severity index",
+  "category": "weather",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/wpc_wssi/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "NOAA NWS Weather Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.wpc.ncep.noaa.gov/wwd/wssi/wssi.php",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "WPC Winter Storm Severity Index, overall impact for days 1-3; empty without a forecast storm."
+ },
+ {
+  "id": "eia-padd",
+  "title": "Petroleum Administration for Defense Districts (PADD)",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/FGr1D95XCGALKXqM/arcgis/rest/services/PADD_EIA/FeatureServer",
+  "layer": "1",
+  "style": {
+   "kind": "fill",
+   "color": "#868e96",
+   "opacity": 0.3,
+   "by": {
+    "field": "PADD_name",
+    "categories": [
+     [
+      "East Coast",
+      "#4263eb"
+     ],
+     [
+      "Midwest",
+      "#2f9e44"
+     ],
+     [
+      "Gulf Coast",
+      "#e8590c"
+     ],
+     [
+      "Rocky Mountain",
+      "#9c36b5"
+     ],
+     [
+      "West Coast",
+      "#1098ad"
+     ]
+    ]
+   },
+   "minzoom": 2
+  },
+  "minzoom": 2,
+  "credit": "U.S. Energy Information Administration",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EIA)",
+  "source": "https://www.arcgis.com/home/item.html?id=7ac1fefcccb149d7a8b3cd1ddaab7585",
+  "host": "services7.arcgis.com",
+  "description": "The five PADD regions EIA reports petroleum supply, stocks and prices by."
+ },
+ {
+  "id": "doe-ccus-projects",
+  "title": "DOE-funded carbon management projects",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/Active_DOE_funded_CCUS_Activities/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#495057",
+   "opacity": 0.9,
+   "radius": 4.5,
+   "by": {
+    "field": "cm_activity_type",
+    "categories": [
+     [
+      "CO2 Capture Technology",
+      "#1971c2"
+     ],
+     [
+      "CO2 Storage",
+      "#7950f2"
+     ],
+     [
+      "CO2 Utilization/Conversion",
+      "#2f9e44"
+     ],
+     [
+      "Carbon Dioxide Removal (CDR)",
+      "#e8590c"
+     ]
+    ]
+   },
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "DOE National Energy Technology Laboratory",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (DOE/NETL)",
+  "source": "https://arcgis.netl.doe.gov/portal/home/item.html?id=8a86139e5c36404598bc58181f6e269a",
+  "host": "arcgis.netl.doe.gov",
+  "description": "DOE-funded carbon capture, storage, utilisation and removal projects by activity type (NETL, as of July 2022)."
+ },
+ {
+  "id": "usgs-co2-storage",
+  "title": "Geologic CO2 storage assessment units",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/USGS_National_Assessment_of_CO2_Storage_Polygons/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#7950f2",
+   "opacity": 0.15,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "U.S. Geological Survey (hosted by DOE NETL)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); USGS data; the NETL item lists Open Data Commons Attribution, so credit USGS",
+  "source": "https://pubs.usgs.gov/circ/1386/",
+  "host": "arcgis.netl.doe.gov",
+  "description": "Storage assessment units from the USGS national assessment of geologic CO2 storage resources (2013), for CCS siting."
+ },
+ {
+  "id": "epa-lmop-landfill-gas",
+  "title": "Landfill gas energy projects",
+  "category": "energy",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/LMOP_Projects/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#868e96",
+   "opacity": 0.9,
+   "radius": 4,
+   "by": {
+    "field": "project_type_category",
+    "categories": [
+     [
+      "Electricity",
+      "#f59f00"
+     ],
+     [
+      "Renewable Natural Gas",
+      "#2f9e44"
+     ],
+     [
+      "Direct",
+      "#1c7ed6"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "U.S. EPA Landfill Methane Outreach Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); US EPA Data Licensing Agreement for public use",
+  "source": "https://www.epa.gov/lmop/project-and-landfill-data-state",
+  "host": "services.arcgis.com",
+  "description": "Operational landfill gas projects (EPA LMOP): power generation, renewable natural gas and direct use, with MW where reported."
+ },
+ {
+  "id": "dot-alt-fuel-stations",
+  "title": "EV charging and alternative fuel stations",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/Alternative_Fueling_Stations/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "circle",
+   "color": "#868e96",
+   "opacity": 0.85,
+   "radius": 3,
+   "by": {
+    "field": "fuel_type_code",
+    "categories": [
+     [
+      "ELEC",
+      "#1c7ed6"
+     ],
+     [
+      "E85",
+      "#2f9e44"
+     ],
+     [
+      "LPG",
+      "#e8590c"
+     ],
+     [
+      "BD",
+      "#82c91e"
+     ],
+     [
+      "CNG",
+      "#9c36b5"
+     ],
+     [
+      "RD",
+      "#66a80f"
+     ],
+     [
+      "LNG",
+      "#c2255c"
+     ],
+     [
+      "HY",
+      "#15aabf"
+     ]
+    ]
+   },
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "DOE Alternative Fuels Data Center, via USDOT BTS (NTAD)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); NTAD dataset, no use restriction (USDOT BTS)",
+  "source": "https://afdc.energy.gov/stations",
+  "host": "services.arcgis.com",
+  "description": "Public and private EV charging (blue) and other alternative fuel stations (DOE AFDC via NTAD), refreshed often; drawn from about zoom 9."
+ },
+ {
+  "id": "dot-alt-fuel-corridors",
+  "title": "Alternative fuel corridors",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Alternative_Fuel_Corridors/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "line",
+   "color": "#adb5bd",
+   "opacity": 0.9,
+   "width": 2.2,
+   "by": {
+    "field": "ELECTRICVE",
+    "categories": [
+     [
+      "Signage Ready",
+      "#2f9e44"
+     ],
+     [
+      "Signage Pending",
+      "#f59f00"
+     ]
+    ]
+   },
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Federal Highway Administration, via USDOT BTS (NTAD)",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); NTAD dataset, no use restriction (USDOT BTS)",
+  "source": "https://www.fhwa.dot.gov/environment/alternative_fuel_corridors/",
+  "host": "services.arcgis.com",
+  "description": "FHWA-designated alternative fuel corridors, coloured by EV status (ready or pending), where highway charging load concentrates."
+ },
+ {
+  "id": "usace-principal-ports",
+  "title": "Principal ports",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/Principal_Ports/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#1c7ed6",
+   "opacity": 0.25,
+   "minzoom": 5
+  },
+  "minzoom": 5,
+  "credit": "U.S. Army Corps of Engineers",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); publicly available without use restrictions (USACE)",
+  "source": "https://www.arcgis.com/home/item.html?id=16d570a7aa054943aabf52b0032a3b57",
+  "host": "services7.arcgis.com",
+  "description": "The top 150 US ports by tonnage (USACE Waterborne Commerce), with import and export totals; delivery points for transformers and turbine parts."
+ },
+ {
+  "id": "usace-navigation-channels",
+  "title": "Federal navigation channels",
+  "category": "transport",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/National_Channel_Framework/FeatureServer",
+  "layer": "1",
+  "style": {
+   "kind": "fill",
+   "color": "#f08c00",
+   "opacity": 0.45,
+   "minzoom": 8
+  },
+  "minzoom": 8,
+  "credit": "U.S. Army Corps of Engineers",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no explicit use constraints stated (USACE eHydro)",
+  "source": "https://www.arcgis.com/home/item.html?id=9227967a2748410983352b501c0c7b39",
+  "host": "services7.arcgis.com",
+  "description": "Federally maintained navigation channel areas (USACE National Channel Framework), for submarine cable and pipeline crossings."
+ },
+ {
+  "id": "usace-regulatory-districts",
+  "title": "USACE regulatory districts",
+  "category": "boundaries",
+  "kind": "arcgis-feature",
+  "url": "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/usace_regulatory_boundary/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#495057",
+   "opacity": 0.15,
+   "minzoom": 3
+  },
+  "minzoom": 3,
+  "credit": "U.S. Army Corps of Engineers",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); publicly available without use restrictions (USACE)",
+  "source": "https://www.arcgis.com/home/item.html?id=70805e1a8fd74e42b0a9585088d6d151",
+  "host": "services7.arcgis.com",
+  "description": "Which USACE district office handles a Clean Water Act Section 404 or Rivers and Harbors Act Section 10 permit."
+ },
+ {
+  "id": "hud-opportunity-zones",
+  "title": "Opportunity zones",
+  "category": "boundaries",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Opportunity_Zones/FeatureServer",
+  "layer": "13",
+  "style": {
+   "kind": "fill",
+   "color": "#d6336c",
+   "opacity": 0.35,
+   "minzoom": 7
+  },
+  "minzoom": 7,
+  "credit": "U.S. Department of Housing and Urban Development",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (HUD)",
+  "source": "https://www.arcgis.com/home/item.html?id=ef143299845841f8abb95969c01f88b5",
+  "host": "services.arcgis.com",
+  "description": "Census tracts designated as Qualified Opportunity Zones (HUD)."
+ },
+ {
+  "id": "census-places",
+  "title": "Incorporated places",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6,
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "U.S. Census Bureau",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (Census)",
+  "source": "https://www.census.gov/data/developers/data-sets/TIGERweb-map-service.html",
+  "host": "tigerweb.geo.census.gov",
+  "description": "City, town and village limits (TIGERweb, current), the local land-use jurisdictions; drawn from about zoom 9."
+ },
+ {
+  "id": "census-county-subdivisions",
+  "title": "County subdivisions (townships)",
+  "category": "boundaries",
+  "kind": "arcgis-export",
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6,
+   "minzoom": 9
+  },
+  "minzoom": 9,
+  "credit": "U.S. Census Bureau",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (Census)",
+  "source": "https://www.census.gov/data/developers/data-sets/TIGERweb-map-service.html",
+  "host": "tigerweb.geo.census.gov",
+  "description": "Towns and townships (TIGERweb, current), which set zoning for wind and solar in much of the Northeast and Midwest."
+ },
+ {
+  "id": "blm-national-monuments",
+  "title": "BLM national monuments and conservation areas",
+  "category": "land",
+  "kind": "arcgis-feature",
+  "url": "https://services1.arcgis.com/KbxwQRRfWyEYLgp4/arcgis/rest/services/BLM_Natl_NLCS_National_Monuments_National_Conservation_Areas_Polygons/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#b08900",
+   "opacity": 0.4,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "Bureau of Land Management",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=8defb341035545ed9560effea919484e",
+  "host": "services1.arcgis.com",
+  "description": "BLM national monuments and national conservation areas (National Conservation Lands), where new rights-of-way are mostly excluded or limited."
+ },
+ {
+  "id": "blm-pfyc",
+  "title": "Potential fossil yield classification",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://gis.blm.gov/arcgis/rest/services/geophysical/BLM_Natl_PFYC/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.45,
+   "minzoom": 10
+  },
+  "minzoom": 10,
+  "credit": "Bureau of Land Management, Paleontology Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (BLM)",
+  "source": "https://www.arcgis.com/home/item.html?id=068a3f5506eb423bb025943deba67822",
+  "host": "gis.blm.gov",
+  "description": "Paleontological sensitivity of geologic units (BLM PFYC), which sets survey and monitoring needs for ground disturbance on federal land; from about zoom 10."
+ },
+ {
+  "id": "nps-nrhp",
+  "title": "National Register of Historic Places",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.85,
+   "minzoom": 6
+  },
+  "minzoom": 6,
+  "credit": "National Park Service, Cultural Resources GIS",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NPS)",
+  "source": "https://www.nps.gov/subjects/nationalregister/data-downloads.htm",
+  "host": "mapservices.nps.gov",
+  "description": "Properties listed on the National Register (points), the first list a Section 106 historic-properties review checks."
+ },
+ {
+  "id": "usfs-wild-scenic-rivers",
+  "title": "Wild and scenic rivers",
+  "category": "land",
+  "kind": "arcgis-export",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_WildScenicRiverSegments_01/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.85
+  },
+  "credit": "USDA Forest Service",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USFS)",
+  "source": "https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=wild+scenic",
+  "host": "apps.fs.usda.gov",
+  "description": "Designated National Wild and Scenic River corridors under every managing agency (USFS Enterprise Data Warehouse)."
+ },
+ {
+  "id": "epa-nonattainment-so2-2010",
+  "title": "SO2 nonattainment areas (2010 standard)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://geodata.epa.gov/arcgis/rest/services/OAR_OAQPS/NonattainmentAreas/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "U.S. EPA Office of Air Quality Planning and Standards",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.epa.gov/green-book/green-book-gis-download",
+  "host": "geodata.epa.gov",
+  "description": "Areas not meeting the 2010 1-hour SO2 NAAQS (EPA Green Book), often around coal plants and smelters."
+ },
+ {
+  "id": "epa-nonattainment-ozone-2008",
+  "title": "Ozone nonattainment areas (2008 standard)",
+  "category": "environment",
+  "kind": "arcgis-export",
+  "url": "https://geodata.epa.gov/arcgis/rest/services/OAR_OAQPS/NonattainmentAreas/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "U.S. EPA Office of Air Quality Planning and Standards",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (EPA)",
+  "source": "https://www.epa.gov/green-book/green-book-gis-download",
+  "host": "geodata.epa.gov",
+  "description": "Areas not meeting the 2008 8-hour ozone NAAQS (EPA Green Book); several keep stricter offset rules than under the 2015 standard."
+ },
+ {
+  "id": "epa-sole-source-aquifers",
+  "title": "Sole source aquifers",
+  "category": "environment",
+  "kind": "arcgis-feature",
+  "url": "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/Sole_Source_Aquifers_August_2019/FeatureServer",
+  "layer": "0",
+  "style": {
+   "kind": "fill",
+   "color": "#4dabf7",
+   "opacity": 0.35,
+   "minzoom": 4
+  },
+  "minzoom": 4,
+  "credit": "U.S. Environmental Protection Agency",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no access or use constraints (EPA)",
+  "source": "https://www.epa.gov/dwssa",
+  "host": "services.arcgis.com",
+  "description": "EPA-designated sole source aquifers; a federally funded project over one gets EPA review."
+ },
+ {
+  "id": "cpc-seasonal-temp",
+  "title": "Seasonal temperature outlook",
+  "category": "weather",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_sea_temp_outlk/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.55
+  },
+  "credit": "NOAA NWS Climate Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.cpc.ncep.noaa.gov/products/predictions/long_range/seasonal.php",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Probability of above or below normal temperature for the next three-month season (CPC), for seasonal load planning."
+ },
+ {
+  "id": "cpc-seasonal-drought",
+  "title": "Seasonal drought outlook",
+  "category": "weather",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_drought_outlk/MapServer",
+  "layer": "4",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.55
+  },
+  "credit": "NOAA NWS Climate Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.cpc.ncep.noaa.gov/products/Drought/",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Where drought is expected to develop, persist or end over the season (CPC); hydro output and thermal cooling water."
+ },
+ {
+  "id": "cpc-hazards-temp-3-7-day",
+  "title": "Temperature hazards, days 3-7",
+  "category": "weather",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/cpc_weather_hazards/MapServer",
+  "layer": "1",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "NOAA NWS Climate Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.cpc.ncep.noaa.gov/products/predictions/threats/threats.php",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Excessive heat and much-below-normal cold expected 3-7 days out (CPC hazards outlook); empty when none is forecast."
+ },
+ {
+  "id": "wpc-river-flood-outlook",
+  "title": "Significant river flood outlook",
+  "category": "hazards",
+  "kind": "arcgis-export",
+  "url": "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/sig_riv_fld_outlk/MapServer",
+  "layer": "0",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.6
+  },
+  "credit": "NOAA NWS Weather Prediction Center",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (NOAA)",
+  "source": "https://www.wpc.ncep.noaa.gov/nationalfloodoutlook/",
+  "host": "mapservices.weather.noaa.gov",
+  "description": "Where significant river flooding is possible, likely or occurring over the next week (WPC); empty on quiet weeks."
+ },
+ {
+  "id": "usgs-3dep-lidar",
+  "title": "3DEP lidar coverage",
+  "category": "imagery",
+  "kind": "arcgis-export",
+  "url": "https://index.nationalmap.gov/arcgis/rest/services/3DEPElevationIndex/MapServer",
+  "layer": "8",
+  "style": {
+   "kind": "raster",
+   "color": "#000000",
+   "opacity": 0.5
+  },
+  "credit": "U.S. Geological Survey 3D Elevation Program",
+  "licence": "Public domain (US federal work, 17 U.S.C. 105); no use restriction stated (USGS)",
+  "source": "https://apps.nationalmap.gov/lidar-explorer/",
+  "host": "index.nationalmap.gov",
+  "description": "Where 3DEP lidar point clouds are available (USGS index, refreshed weekly), for route surveys and terrain work."
+ }
+]

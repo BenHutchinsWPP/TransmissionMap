@@ -1,0 +1,93 @@
+/* Linked services: the Add dialog (ui-services.ts), the My Data rows and the
+   pending-link card (ui-linked-services.ts). Loaded with those lazy chunks. */
+.svc-dialog { max-width: 760px; }
+
+.svc-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.svc-tabs button {
+  flex: 1; padding: 7px 10px; font: 600 13px var(--font);
+  border: 1px solid var(--panel-border); border-radius: 8px;
+  background: #fff; color: var(--text-mid); cursor: pointer;
+}
+.svc-tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.svc-error { font-size: 12.5px; color: #b42318; margin-bottom: 10px; overflow-wrap: anywhere; }
+.svc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.svc-chip {
+  padding: 4px 10px; font: 12px var(--font); border-radius: 999px;
+  border: 1px solid var(--panel-border); background: #fff; color: var(--text-mid); cursor: pointer;
+}
+.svc-chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+.svc-grid { align-items: start; }
+.svc-card-lib { min-width: 0; gap: 4px; padding: 10px 12px; }
+.svc-card-head { display: flex; align-items: center; gap: 8px; }
+.svc-card-head .exp-card-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.svc-card-head .svc-btn { flex: none; }
+.svc-meta { font-size: 11.5px; color: var(--text-light); overflow-wrap: anywhere; padding-left: 30px; }
+.svc-meta--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: normal; }
+
+.svc-details { padding-left: 30px; font-size: 12px; color: var(--text-mid); }
+.svc-details summary {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; border-radius: 4px;
+  font-size: 11.5px; font-weight: 600; color: var(--accent); cursor: pointer; list-style: none;
+}
+.svc-details summary::-webkit-details-marker { display: none; }
+.svc-details summary::before {
+  content: ""; width: 0; height: 0; border-left: 4px solid currentColor;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.12s;
+}
+.svc-details[open] summary::before { transform: rotate(90deg); }
+.svc-details summary:hover { text-decoration: underline; }
+.svc-details summary:focus-visible, .svc-details .svc-source:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.svc-details-body { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--panel-border); line-height: 1.45; }
+.svc-details-body p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.svc-details-body p:last-child { margin-bottom: 0; }
+.svc-details .svc-source { color: var(--accent); font-weight: 600; text-decoration: none; border-radius: 3px; }
+.svc-details .svc-source:hover { text-decoration: underline; }
+
+.svc-sw { flex: none; width: 22px; height: 16px; opacity: var(--svc-o, 1); }
+.svc-sw--fill { background: var(--svc-c); border-radius: 3px; }
+.svc-sw--line { height: 0; border-top: 3px solid var(--svc-c); align-self: center; }
+.svc-sw--circle { width: 12px; height: 12px; margin: 2px 5px; border-radius: 50%; background: var(--svc-c); }
+.svc-sw--raster { border-radius: 3px; background: repeating-linear-gradient(45deg, var(--svc-c) 0 4px, transparent 4px 8px); border: 1px solid var(--svc-c); }
+
+.svc-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--text-mid); }
+.svc-field[hidden], #svcPaste [hidden] { display: none; }
+.svc-field input[type="text"], .svc-field select {
+  width: 100%; padding: 7px 10px; font: 13px var(--font);
+  border: 1px solid var(--panel-border); border-radius: 8px;
+}
+.svc-layer-row { display: flex; gap: 8px; }
+.svc-layer-row input { flex: 1; min-width: 0; }
+.svc-detected { font-size: 12.5px; color: var(--text-mid); margin: 0 0 10px; overflow-wrap: anywhere; }
+.svc-detected--bad { color: #b42318; }
+.svc-warn {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; padding: 10px 12px;
+  border: 1px solid #d99a00; border-radius: 8px; background: rgba(217, 154, 0, 0.1); font-size: 12.5px;
+}
+.svc-warn p { flex: 1 1 100%; margin: 0; overflow-wrap: anywhere; font-weight: 600; }
+
+/* My Data rows */
+.svc-row { padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
+.svc-row-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.svc-row-title { font-size: 12px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.svc-row-host { font-size: 11px; color: var(--text-light); overflow-wrap: anywhere; }
+.svc-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 4px; color: #8a5a00; background: rgba(217, 154, 0, 0.18);
+}
+.svc-row-status { font-size: 11px; color: var(--text-light); overflow-wrap: anywhere; }
+.svc-row-status:empty { display: none; }
+.svc-row-actions { display: flex; gap: 6px; margin-top: 4px; }
+
+.svc-card { flex-wrap: wrap; max-width: min(360px, calc(100vw - 24px)); }
+.svc-card-text { flex: 1 1 100%; }
+
+@media (max-width: 480px) {
+  .svc-dialog .credits-content { padding: 14px; }
+  .svc-dialog .exp-grid { grid-template-columns: 1fr; }
+}
+@media (pointer: coarse) {
+  .svc-details summary { min-height: 32px; }
+  .svc-card-head .svc-btn { min-height: 36px; min-width: 52px; }
+}
