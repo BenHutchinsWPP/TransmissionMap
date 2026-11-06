@@ -2,7 +2,8 @@
 // The single place in the app that subscribes to MapLibre's pointer events.
 // Every other module takes taps, pointer positions and hover from here.
 // Imported by: popup.ts, measure.ts, raster-probes.ts, hover.ts,
-//   layers/map-layers-{load,wecc}.ts, and the panels that close when the reader
+//   layers/map-layers-{load,wecc}.ts, grid-ops/grid-ops.ts (a bubble tap opens the
+//   Grid Ops tab), and the panels that close when the reader
 //   goes back to the map — ui/{ui,ui-menubar,ui-search,ui-geocoder,ui-openwith}.ts.
 //   Wired by map.ts.
 // Depends on: state.js (state.map). No other imports.

@@ -6,9 +6,8 @@
 //       the app pick up the new preferences and live subscribers can re-render.
 //       Lazy chunk: loaded only on File > Settings… (see ui-menubar.ts), so it
 //       stays out of the initial bundle, matching the ui-diagnostics.ts and
-//       draw-chunk.ts pattern. It owns only #settingsBody; the dialog chrome
-//       (#settingsDialog, #closeSettings, backdrop click) lives in
-//       index.html / ui.ts.
+//       draw-chunk.ts pattern. It owns #settingsBody; the dialog chrome (#settingsDialog, #closeSettings, backdrop
+//       click) lives in index.html / ui.ts.
 // Deps: src/units.js (UnitPrefs, UNIT_OPTIONS, DEFAULT_UNITS, getUnits, setUnits),
 //       units-store.js (saveUnits), state-bus.js (emit), utils/utils.js
 //       (escapeHtml — any user-visible string injected as HTML gets escaped),

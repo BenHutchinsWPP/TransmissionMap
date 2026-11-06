@@ -7,17 +7,22 @@
 // resolves a parsed link over the same defaults, so the two can't disagree.
 // Every code → value lookup is a Map, so only the codes listed resolve; a
 // retired bucket code resolves through LEGACY_BUCKET_CODES.
-// The view's `where` and `style` sections travel in one compact param, `vx`
-// (encodeVx/decodeVx below): a trust boundary — every entry is validated with
-// src/registry/view-validate.ts's validateWhere() and validateStyleOverride(),
+// The view's `where`, `style`, `sel` and `sv` (linked services) sections travel in
+// one compact param, `vx` (encodeVx/decodeVx below): a trust boundary — every entry
+// is validated with src/registry/view-validate.ts's validateWhere(),
+// validateStyleOverride(), selectionIdsError() (plus the MAX_SELECTION_IDS cap)
+// and serviceFromLinkEntry() (plus the MAX_SERVICES / MAX_SERVICES_JSON-byte caps, per entry),
 // and parseUrlState() reports what it dropped instead of throwing.
+// The map-wide Area filter travels as `af=<kind char>.<code>[.<code>…]`
+// (AREA_KIND_CODES), checked with validateArea(); a bad one is dropped whole.
 // Touches no app state or location/history. Module-level side effects:
 // encodeVx() keeps a one-entry cache of its last result (vxCache) and writes a
 // diag-log.ts event when a vx passes the link cap (VX_LINK_MAX_CHARS);
 // formatUrlState() builds the default view once, on first use, and compares
 // against it read-only.
-// Deps: fflate (deflate for vx), view-validate.ts, diag-log.ts, the registry
-// (incl. displayModes, conditions.ts), ui/ui-legends.ts (LEGEND_FILTERS),
+// Deps: fflate (deflate for vx), view-validate.ts, services/service-spec.ts (caps, LinkedService), diag-log.ts, the registry
+// (incl. displayModes, conditions.ts, area-filter.ts), src/colors/route-constraints.ts
+// (the `rc` concern ids), ui/ui-legends.ts (LEGEND_FILTERS),
 // filters.ts (MW_SLIDER_MAX), src/colors/ramps.ts (year-filter bounds),
 // src/i18n (isValidLocale). fflate deflates synchronously, as parse/format run
 // synchronously on cold boot; it is in the boot bundle via pmtiles.
@@ -25,14 +30,20 @@
 
 import { LAYERS, displayModes } from '../src/registry/index.js';
 import { WEATHER_VARIABLES, NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
+import { DEFAULT_CONCERN, isConcernId } from '../src/colors/route-constraints.js';
 import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
 import { MW_SLIDER_MAX } from './filters.js';
 import { YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
 import { isValidLocale } from '../src/i18n/index.js';
-import type { LayerScope, StyleOverride } from '../src/types.js';
+import type { LayerScope, Selection, StyleOverride } from '../src/types.js';
 import type { Condition } from '../src/registry/condition-compile.js';
 import { Inflate, deflateSync, strToU8, strFromU8 } from 'fflate';
-import { validateWhere, validateStyleOverride } from '../src/registry/view-validate.js';
+import {
+  validateWhere, validateStyleOverride, validateArea, selectionIdsError, normalizeSelection, selectionSize, MAX_SELECTION_IDS,
+  serviceLinkEntry, serviceFromLinkEntry, servicesLinkBytes,
+} from '../src/registry/view-validate.js';
+import { MAX_SERVICES, MAX_SERVICES_JSON, type LinkedService } from './services/service-spec.js';
+import { AREA_KIND_CODES, normalizeArea, type AreaFilter, type AreaKind } from '../src/registry/area-filter.js';
 import { recordDiagEvent } from './diag-log.js';
 
 // Layer-list scopes only. Continental download packs are picked per-download in
@@ -80,15 +91,21 @@ function _setsEqual(a: Set<unknown>, b: Set<unknown>) {
 // An unknown basemap code (such as the retired `v`) falls back to the default.
 const BM_CODE_TO_TYPE = new Map(Object.entries({ l: "light", d: "dark", s: "street", t: "topo", a: "aerial", h: "hydro" }));
 const BM_TYPE_TO_CODE = invert(BM_CODE_TO_TYPE);
+/** Every basemap a link can name. */
+export const BASEMAPS: readonly string[] = [...BM_CODE_TO_TYPE.values()];
 const GM_CHAR_TO_MODE = new Map(Object.entries({ i: "icons", h: "heat", b: "both", c: "clusters" }));
 const GM_MODE_TO_CHAR = invert(GM_CHAR_TO_MODE);
 const OC_CHAR_TO_MODE = new Map(Object.entries({ r: "region", s: "status" }));
 const OC_MODE_TO_CHAR = invert(OC_CHAR_TO_MODE);
 const WC_CHAR_TO_MODE = new Map(Object.entries({ s: "scenario", d: "dataset" }));
 const WC_MODE_TO_CHAR = invert(WC_CHAR_TO_MODE);
+// Grid Operations grouping; "ba" is the default and never written.
+const GG_CHAR_TO_MODE = new Map(Object.entries({ r: "region", i: "interconnect", w: "wecc" }));
+const GG_MODE_TO_CHAR = invert(GG_CHAR_TO_MODE);
 // Weather Forecast variable dropdown — codes come from WEATHER_VARIABLES.urlCode.
 const WV_CODE_TO_ID = new Map(WEATHER_VARIABLES.map(v => [v.urlCode, v.id]));
 const WV_ID_TO_CODE = invert(WV_CODE_TO_ID);
+const AF_CHAR_TO_KIND = new Map(Object.entries(AREA_KIND_CODES).map(([k, c]) => [c, k as AreaKind]));
 
 export interface UrlStateData {
   layerVisibility: Record<string, boolean>;
@@ -101,6 +118,14 @@ export interface UrlStateData {
   westtecColorBy: string;
   weatherVar: string;
   nriHazard: string;
+  // Routing constraints concern (src/colors/route-constraints.ts CONCERNS id); in the link as `rc`.
+  routeConcern: string;
+  // Grid Operations: hour-ending epoch ms (null = latest), grouping, glyph, numbers on bubbles
+  // (null = auto: shown unless grouped by WECC area); `gt`, `gg`, `gd`, `gn`.
+  gridHour: number | null;
+  gridGroup: string;
+  gridGlyph: string;
+  gridNumbers: boolean | null;
   smokeOpacity: number;
   basemap: string;
   projection: string;
@@ -111,6 +136,12 @@ export interface UrlStateData {
   // Both keyed by registry id (LayerDef.id); in the link as the `vx` param.
   where?: Record<string, Condition[]>;
   style?: Record<string, StyleOverride>;
+  // The map-wide Area filter (src/registry/area-filter.ts); in the link as `af`.
+  area?: AreaFilter | null;
+  // Selected features (src/types.ts Selection); in the link's `vx` as `sel`.
+  sel?: Selection | null;
+  // Linked GIS services (assets/services/service-spec.ts); in the link's `vx` as `sv`.
+  services?: LinkedService[];
   lang?: string;
   region: LayerScope;
   // Active Map Experience (assets/experiences.ts). The caller resolves the
@@ -195,6 +226,11 @@ export function defaultView(): UrlStateData {
     westtecColorBy: 'scenario',
     weatherVar: WEATHER_VARIABLES[0].id,
     nriHazard: DEFAULT_NRI_HAZARD,
+    routeConcern: DEFAULT_CONCERN,
+    gridHour: null,
+    gridGroup: 'ba',
+    gridGlyph: 'bubble',
+    gridNumbers: null,
     smokeOpacity: 1,
     basemap: 'light',
     projection: 'mercator',
@@ -204,16 +240,23 @@ export function defaultView(): UrlStateData {
     basemapLabels: true,
     where: {},
     style: {},
+    area: null,
+    sel: null,
+    services: [],
     lang: 'en',
     region: 'usa',
   };
 }
 
-// ─── `vx`: the view's where + style sections ─────────────────────────────────
+// ─── `vx`: the view's where, style, selection and services sections ─────────
 // Value = marker + base64url (no padding) of the UTF-8 JSON
-// {"v":1,"w":{…where},"s":{…style}} — keys sorted at every level, `w`/`s`
-// omitted when empty, the whole param omitted when both are. Marker `j`: the
-// JSON as is; `z`: raw deflate (fflate), used only when it is shorter.
+// {"v":1,"w":{…where},"s":{…style},"sel":{"m":"i"|"k","ids":{…}},"sv":[…]} — keys
+// sorted at every level, each section omitted when empty, the whole param
+// omitted when all are. `sel.m` is the mode (i isolate, k keep); its ids are
+// deduplicated and sorted. `sv` lists the linked services in view order, each
+// in view-validate.ts's link form (serviceLinkEntry). Marker `j`: the JSON as
+// is; `z`: raw deflate (fflate), used only when it is shorter. `v` stays 1 with
+// `sel` and `sv`: a decoder that predates one drops the unknown section and keeps the rest.
 const VX_VERSION = 1;
 const VX_RAW = 'j';
 const VX_DEFLATE = 'z';
@@ -223,6 +266,8 @@ const VX_MAX_BYTES = 64 * 1024;  // decoded JSON, enforced while inflating
 // yields at most ~66 KB and the cap trips before a bomb gets any further.
 const VX_CHUNK = 64;
 const B64URL = /^[A-Za-z0-9_-]*$/;
+const SEL_CHAR_TO_MODE = new Map(Object.entries({ i: 'isolate', k: 'keep' } as const));
+const SEL_MODE_TO_CHAR = invert(SEL_CHAR_TO_MODE);
 
 function sortKeys(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(sortKeys);
@@ -269,19 +314,28 @@ function inflateCapped(bytes: Uint8Array): Uint8Array | string {
 
 let vxCache = { json: '', value: '' };
 
-function encodeVx(where: UrlStateData['where'], style: UrlStateData['style']): string {
+function encodeVx(
+  where: UrlStateData['where'], style: UrlStateData['style'], sel: UrlStateData['sel'], services: UrlStateData['services'],
+): string {
   const w = Object.fromEntries(Object.entries(where ?? {}).filter(([, cs]) => cs.length));
   const s = Object.fromEntries(Object.entries(style ?? {})
     .filter(([, o]) => Object.values(o).some(v => v !== undefined)));
+  const ids = sel ? normalizeSelection(sel).ids : {};
   const hasW = Object.keys(w).length > 0;
   const hasS = Object.keys(s).length > 0;
-  if (!hasW && !hasS) return '';
-  const json = JSON.stringify(sortKeys({ v: VX_VERSION, ...(hasW && { w }), ...(hasS && { s }) }));
+  const hasSel = Object.values(ids).some(l => l.length);
+  const hasSv = !!services?.length;
+  if (!hasW && !hasS && !hasSel && !hasSv) return '';
+  const json = JSON.stringify(sortKeys({
+    v: VX_VERSION, ...(hasW && { w }), ...(hasS && { s }),
+    ...(hasSel && { sel: { m: SEL_MODE_TO_CHAR.get(sel!.mode), ids } }),
+    ...(hasSv && { sv: services!.map(serviceLinkEntry) }),
+  }));
   if (json === vxCache.json) return vxCache.value;
   const raw = strToU8(json);
   const packed = deflateSync(raw, { level: 9 });
   const value = packed.length < raw.length ? VX_DEFLATE + toB64url(packed) : VX_RAW + toB64url(raw);
-  // Still written: the view file (V6) is the way to share a view this large.
+  // Still written: the view file is the way to share a view this large.
   if (value.length > VX_LINK_MAX_CHARS) {
     recordDiagEvent('link', `vx is ${value.length} chars, over the ${VX_LINK_MAX_CHARS} a link reopens with`);
   }
@@ -294,7 +348,47 @@ const isRecord = (x: unknown): x is Record<string, unknown> =>
 
 // Every problem is pushed onto `dropped`; a bad entry drops only itself, a bad
 // payload only the param.
-function decodeVx(param: string, dropped: string[], maxChars: number): Pick<UrlStateData, 'where' | 'style'> {
+// A `sel` section: a bad layer entry drops only itself; a bad mode, an unknown
+// key or more than MAX_SELECTION_IDS ids drops the whole selection.
+function decodeSel(section: Record<string, unknown>, dropped: string[]): Selection | undefined {
+  const fail = (why: string) => { dropped.push('vx.sel: ' + why); return undefined; };
+  const { m, ids, ...rest } = section;
+  if (Object.keys(rest).length) return fail(`unknown key "${Object.keys(rest)[0]}"`);
+  const mode = typeof m === 'string' ? SEL_CHAR_TO_MODE.get(m) : undefined;
+  if (!mode) return fail(`unknown mode ${JSON.stringify(m)}`);
+  if (!isRecord(ids)) return fail('ids is not an object');
+  const kept: Selection['ids'] = {};
+  for (const id of Object.keys(ids)) {
+    const err = selectionIdsError(id, ids[id]);
+    if (err) { dropped.push(`vx.sel.${id}: ${err}`); continue; }
+    kept[id] = ids[id] as (string | number)[];
+  }
+  const total = selectionSize(kept);
+  if (total > MAX_SELECTION_IDS) return fail(`takes at most ${MAX_SELECTION_IDS} ids (this one has ${total})`);
+  return Object.keys(kept).length ? normalizeSelection({ mode, ids: kept }) : undefined;
+}
+
+// An `sv` section: each entry is checked on its own and a bad one drops only
+// itself (`vx.sv.<n>`, n its index in the link), as does one past MAX_SERVICES,
+// a repeated id, or one that takes the kept entries' link form past MAX_SERVICES_JSON
+// UTF-8 bytes.
+function decodeServices(section: unknown[], dropped: string[]): LinkedService[] {
+  const kept: LinkedService[] = [];
+  section.forEach((e, n) => {
+    const why = (reason: string) => dropped.push(`vx.sv.${n}: ${reason}`);
+    if (kept.length >= MAX_SERVICES) return why(`a view links at most ${MAX_SERVICES} services`);
+    const r = serviceFromLinkEntry(e);
+    if (!r.ok) return why(r.reason);
+    if (kept.some(k => k.id === r.result.id)) return why(`repeats the id "${r.result.id}"`);
+    if (servicesLinkBytes([...kept, r.result]) > MAX_SERVICES_JSON) return why(`the services pass ${MAX_SERVICES_JSON} bytes`);
+    kept.push(r.result);
+  });
+  return kept;
+}
+
+type VxSections = Pick<UrlStateData, 'where' | 'style' | 'sel' | 'services'>;
+
+function decodeVx(param: string, dropped: string[], maxChars: number): VxSections {
   const fail = (why: string) => { dropped.push('vx: ' + why); return {}; };
   if (param.length > maxChars) return fail(`longer than ${maxChars} characters`);
   const marker = param[0];
@@ -312,13 +406,21 @@ function decodeVx(param: string, dropped: string[], maxChars: number): Pick<UrlS
   if (!isRecord(payload)) return fail('not an object');
   if (payload.v !== VX_VERSION) return fail(`unknown version ${JSON.stringify(payload.v)}`);
 
-  const out: Pick<UrlStateData, 'where' | 'style'> = {};
+  const out: VxSections = {};
   for (const key of Object.keys(payload)) {
     if (key === 'v') continue;
     const section = payload[key];
-    if (key !== 'w' && key !== 's') { dropped.push(`vx.${key}: unknown section`); continue; }
+    if (key === 'sv') {
+      if (Array.isArray(section)) out.services = decodeServices(section, dropped);
+      else dropped.push('vx.sv: not a list');
+      continue;
+    }
+    if (key !== 'w' && key !== 's' && key !== 'sel') { dropped.push(`vx.${key}: unknown section`); continue; }
     if (!isRecord(section)) { dropped.push(`vx.${key}: not an object`); continue; }
-    if (key === 'w') {
+    if (key === 'sel') {
+      const sel = decodeSel(section, dropped);
+      if (sel) out.sel = sel;
+    } else if (key === 'w') {
       const where: Record<string, Condition[]> = {};
       for (const id of Object.keys(section)) {
         const err = validateWhere(id, section[id]);
@@ -339,7 +441,7 @@ function decodeVx(param: string, dropped: string[], maxChars: number): Pick<UrlS
   return out;
 }
 
-// A parsed link, plus what it carried that was dropped (only `vx` drops today),
+// A parsed link, plus what it carried that was dropped (`vx` entries and `af`),
 // one human-readable reason per dropped setting; absent when nothing was.
 export type ParsedUrlState = Partial<UrlStateData> & { dropped?: string[] };
 
@@ -416,6 +518,21 @@ export function parseUrlState(
   const nr = params.get('nr')?.toUpperCase();
   if (nr && NRI_HAZARDS.some(h => h.id === nr)) data.nriHazard = nr;
 
+  // Grid Operations hour (UTC hour-ending, YYYYMMDDHH), grouping and glyph
+  const gt = params.get('gt');
+  const gtm = gt && /^(\d{4})(\d{2})(\d{2})(\d{2})$/.exec(gt);
+  if (gtm) {
+    const ms = Date.UTC(+gtm[1], +gtm[2] - 1, +gtm[3], +gtm[4]);
+    if (new Date(ms).getUTCHours() === +gtm[4] && +gtm[1] >= 2015) data.gridHour = ms;
+  }
+  const gg = params.get('gg');
+  const ggMode = gg && GG_CHAR_TO_MODE.get(gg);
+  if (ggMode) data.gridGroup = ggMode;
+  if (params.get('gd') === 'd') data.gridGlyph = 'disc';
+  const gn = params.get('gn');
+  if (gn === '1') data.gridNumbers = true;
+  else if (gn === '0') data.gridNumbers = false;
+
   // Smoke opacity (integer percent, converted to a 0–1 factor)
   const so = params.get('so');
   if (so !== null && /^(?:100|[0-9]{1,2})$/.test(so)) data.smokeOpacity = Number(so) / 100;
@@ -454,13 +571,29 @@ export function parseUrlState(
   const exp = params.get('exp');
   if (exp && /^[a-z0-9-]{1,64}$/.test(exp)) data.experienceId = exp;
 
-  // where + style (see decodeVx)
-  const vx = params.get('vx');
-  if (vx !== null) {
-    const dropped: string[] = [];
-    Object.assign(data, decodeVx(vx, dropped, vxMaxChars));
-    if (dropped.length) data.dropped = dropped;
+  const dropped: string[] = [];
+
+  // Area filter: a kind char, then its codes, `.`-separated (codes are [0-9A-Za-z_])
+  const af = params.get('af');
+  if (af !== null) {
+    const [kc, ...codes] = af.split('.');
+    const area = { kind: AF_CHAR_TO_KIND.get(kc), codes };
+    const err = area.kind ? validateArea(area) : `unknown area kind "${kc}"`;
+    if (err) dropped.push('af: ' + err);
+    else data.area = normalizeArea(area as AreaFilter);
   }
+
+  // Routing constraints concern — a CONCERNS id as it stands
+  const rc = params.get('rc');
+  if (rc !== null) {
+    if (isConcernId(rc as unknown)) data.routeConcern = rc;
+    else dropped.push(`rc: unknown concern "${rc.slice(0, 64)}"`);
+  }
+
+  // where + style + sel + services (see decodeVx)
+  const vx = params.get('vx');
+  if (vx !== null) Object.assign(data, decodeVx(vx, dropped, vxMaxChars));
+  if (dropped.length) data.dropped = dropped;
 
   return data;
 }
@@ -521,6 +654,20 @@ export function formatUrlState(data: UrlStateData): string[] {
     parts.push('nr=' + data.nriHazard.toLowerCase());
   }
 
+  // Routing constraints concern (default omitted)
+  if (data.routeConcern && data.routeConcern !== dv.routeConcern) parts.push('rc=' + data.routeConcern);
+
+  // Grid Operations (latest hour, BA grouping and bubbles omitted)
+  if (data.gridHour != null && Number.isFinite(data.gridHour)) {
+    const d = new Date(data.gridHour);
+    const p2 = (n: number) => String(n).padStart(2, '0');
+    parts.push(`gt=${d.getUTCFullYear()}${p2(d.getUTCMonth() + 1)}${p2(d.getUTCDate())}${p2(d.getUTCHours())}`);
+  }
+  const ggc = GG_MODE_TO_CHAR.get(data.gridGroup);
+  if (data.gridGroup !== dv.gridGroup && ggc) parts.push('gg=' + ggc);
+  if (data.gridGlyph === 'disc') parts.push('gd=d');
+  if (data.gridNumbers != null) parts.push(data.gridNumbers ? 'gn=1' : 'gn=0');
+
   // Smoke opacity (default 100% omitted)
   const smokePercent = Math.round(data.smokeOpacity * 100);
   if (smokePercent !== Math.round(dv.smokeOpacity * 100)) parts.push('so=' + smokePercent);
@@ -550,9 +697,16 @@ export function formatUrlState(data: UrlStateData): string[] {
   if (data.region && data.region !== dv.region && VALID_REGIONS.has(data.region)) {
     parts.push(`region=${encodeURIComponent(data.region)}`);
   }
-  // where + style (default — both empty — omitted). Before `exp`, so the
-  // story-dirty string compare sees it.
-  const vx = encodeVx(data.where, data.style);
+  // Area filter (default — none — omitted); codes sorted, so equal views give
+  // equal links. Before `exp`, so the story-dirty compare sees it.
+  if (data.area) {
+    const a = normalizeArea(data.area);
+    parts.push('af=' + [AREA_KIND_CODES[a.kind], ...a.codes].join('.'));
+  }
+
+  // where + style + sel + services (default — all empty — omitted). Before
+  // `exp`, so the story-dirty string compare sees it.
+  const vx = encodeVx(data.where, data.style, data.sel, data.services);
   if (vx) parts.push('vx=' + vx);
 
   // Map Experience — always last, so url-state.ts can diff the parts above it

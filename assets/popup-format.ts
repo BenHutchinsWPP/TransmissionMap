@@ -6,10 +6,14 @@
 // see docs/settings.md). Row labels must stay unit-neutral ("Area", not
 // "Acres") because the rendered value changes with that preference.
 // src/i18n/index.js (t), state.js (liveFcMeta — the moratorium file's as-of date),
-// feature-id.js (osmRef — the OSM link from a feature's stable id).
+// src/registry/osm-fid.js (osmRef — the OSM link from a feature's stable id),
+// services/service-spec.js (SERVICE_LAYER_PREFIX — a linked service's feature
+// popup, looked up in state.services), src/colors/fuel.js + icons.js (the Grid
+// Operations fuel rows' colour and icon). LINE_LENGTH_SLOT: the hidden row the
+// transmission line popups leave for popup.ts's exact length.
 
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
-import { osmRef } from './feature-id.js';
+import { osmRef } from '../src/registry/osm-fid.js';
 import { osmTlLayerIds } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
@@ -19,6 +23,9 @@ import { nriHazard, nriHazardLabel, nriVersion } from './fema-nri.js';
 import { DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { DCM_CLASSES } from '../src/colors/buckets.js';
 import { state } from './state.js';
+import { SERVICE_LAYER_PREFIX, type LinkedService } from './services/service-spec.js';
+import { FUEL_LEGEND } from '../src/colors/fuel.js';
+import { ICON_SVG } from './icons.js';
 
 const _natgasFacLabel = Object.fromEntries(NATGAS_FAC_TYPE_BUCKETS.map(b => [b.id, b.label]));
 
@@ -53,7 +60,7 @@ export function websiteRow(url: unknown) {
 }
 
 // OSM object ID, hyperlinked to its openstreetmap.org page. The type and id
-// come from the stable `fid` (feature-id.ts's osmRef): a GeoJSON layer carries
+// come from the stable `fid` (osm-fid.ts's osmRef): a GeoJSON layer carries
 // it as a property, a vector archive as the tile feature id (`id`). An archive
 // built before ids carries `osm_id` instead, with `osm_type` where it was
 // extracted, else `legacyType`, the type its layer mostly holds.
@@ -295,6 +302,65 @@ function renderDcMoratorium(p: Record<string, unknown>) {
     footer(t("popup.dcmFooter", { date: asOf }));
 }
 
+// ─── Grid Operations (EIA-930) ───────────────────────────────────────────────
+// A bubble (a BA or a group of them) and an interchange arrow, from the
+// properties grid-ops/grid-ops.ts put on them: every number raw MW, so the hour
+// on the map can be read back off it. `fuels` and `ties` are JSON strings.
+const FUEL_ROW = new Map(FUEL_LEGEND.map(f => [f.id, f]));
+const mw = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? `${Math.round(v).toLocaleString(getLocale())} MW` : "–";
+const gridHourLine = (at: unknown) => typeof at === "number"
+  ? footer(t("gridOps.hourEnding", { time: new Intl.DateTimeFormat(getLocale(), {
+    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  }).format(new Date(at)) }))
+  : "";
+
+export function renderGridNode(p: Record<string, unknown>) {
+  const net = typeof p.net === "number" ? p.net : null;
+  const netText = net == null ? null
+    : t(net >= 0 ? "gridOps.exports" : "gridOps.imports", { mw: mw(Math.abs(net)) });
+  const fuels = parseJsonList<unknown>(p.fuels).filter((r): r is [string, number] =>
+    Array.isArray(r) && typeof r[0] === "string" && typeof r[1] === "number");
+  const genSum = fuels.reduce((s, [, v]) => s + Math.max(0, v), 0);
+  const fuelTable = fuels.length
+    ? `<details class="popup-row"><summary>${escapeHtml(t("gridOps.byFuel"))} (${fuels.length})</summary>` +
+      `<table class="popup-table"><thead><tr><th>${escapeHtml(t("gridOps.byFuel"))}</th><th>%</th><th>MW</th></tr></thead><tbody>` +
+      fuels.map(([id, v]) => {
+        const f = FUEL_ROW.get(id);
+        const icon = f && ICON_SVG[f.icon] ? `<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="vertical-align:-2px">${ICON_SVG[f.icon]}</svg> ` : "";
+        const swatch = `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${f?.color ?? "#d1d5db"};margin-right:4px"></span>`;
+        const pct = v > 0 && genSum > 0 ? `${Math.round(v / genSum * 100)}%` : "";
+        return `<tr><td>${swatch}${icon}${escapeHtml(f?.label ?? id)}</td><td>${pct}</td><td>${escapeHtml(mw(v))}</td></tr>`;
+      }).join("") + `</tbody></table>` + `</details>`
+    : "";
+  const ties = parseJsonList<{ with?: unknown; mw?: unknown; mine?: unknown; theirs?: unknown }>(p.ties)
+    .filter(r => typeof r.with === "string" && typeof r.mw === "number");
+  const tieTable = ties.length
+    ? `<details class="popup-row"><summary>${escapeHtml(t("gridOps.ties"))} (${ties.length})</summary>` +
+      `<table class="popup-table"><thead><tr><th>${escapeHtml(t("gridOps.ties"))}</th><th>${escapeHtml(t("gridOps.reportedBoth"))}</th><th>MW</th></tr></thead><tbody>` +
+      ties.map(r => {
+        const out = (r.mw as number) >= 0;
+        const both = `${typeof r.mine === "number" ? Math.round(r.mine).toLocaleString(getLocale()) : "–"} / ${typeof r.theirs === "number" ? Math.round(r.theirs).toLocaleString(getLocale()) : "–"}`;
+        return `<tr><td>${out ? "→" : "←"} ${escapeHtml(r.with)}</td><td>${escapeHtml(both)}</td><td>${escapeHtml(mw(Math.abs(r.mw as number)))}</td></tr>`;
+      }).join("") + `</tbody></table>` + `</details>`
+    : "";
+  const members = parseJsonList<unknown>(p.members).filter((m): m is string => typeof m === "string");
+  return title(`${p.name ?? p.id}${p.name && p.name !== p.id ? ` (${p.id})` : ""}`) +
+    rawRow(t("gridOps.load"), p.load == null ? null : mw(p.load)) +
+    rawRow(t("gridOps.gen"), p.gen == null ? null : mw(p.gen)) +
+    rawRow(t("gridOps.net"), netText) +
+    (members.length ? rawRow(t("gridOps.members"), members.join(", ")) : "") +
+    (typeof p.offArea === "string" && p.offArea.startsWith("gridOps.offArea.") ? `<div class="popup-row">${escapeHtml(t(p.offArea))}</div>` : "") +
+    fuelTable + tieTable + gridHourLine(p.at) + footer(t("gridOps.footer"));
+}
+
+export function renderGridEdge(p: Record<string, unknown>) {
+  const side = (v: unknown, who: unknown) => rawRow(t("gridOps.reportedBy", { ba: String(who) }), typeof v === "number" ? mw(v) : null);
+  return title(`${p.from} → ${p.to}`) +
+    rawRow(t("gridOps.flow"), mw(p.mw)) +
+    side(p.a, p.from) + side(p.b, p.to) +
+    footer(t("gridOps.edgeFooter"));
+}
+
 // >>> ADD-LAYER: popup-renderers — see docs/adding-a-layer.md §10. Add a
 // [ [mapLayerIds…], (p) => html ] tuple; the loop below registers it into POPUP_RENDERERS.
 // Raw scenario value → legend label, derived from the legend buckets so the
@@ -304,7 +370,14 @@ const WESTTEC_SCENARIO_LABELS: Record<string, string> = Object.fromEntries(
 
 const OSM_TL_POPUP_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown", "dc");
 
+// Where popup.ts puts a transmission line's exact length once its line-file
+// lookup lands (lines/line-read.ts); hidden until then, and when it fails.
+export const LINE_LENGTH_SLOT = "popup-line-length";
+const lengthSlot = `<div class="popup-row ${LINE_LENGTH_SLOT}" hidden></div>`;
+
 const _defs = [
+  [["bai-bubbles"], renderGridNode],
+  [["bai-arrows"], renderGridEdge],
   [["ogf-planned-lines"], renderOgfPlanned],
   [["westtec-lines"], (p: Record<string, unknown>) =>
     title(p.name as string) +
@@ -317,6 +390,7 @@ const _defs = [
   [OSM_TL_POPUP_IDS, (p: Record<string, unknown>, id?: unknown) =>
     title((p.name as string) || t("popup.transmissionLine")) +
     row("popup.voltage", p.nominal_kv ? p.nominal_kv + " kV" : null) +
+    lengthSlot +
     row("popup.current", p.is_dc ? "DC" : null) +
     row("popup.placement", p.is_undergrnd ? t("popup.underground") : null) +
     row("popup.operator", p.operator) +
@@ -324,6 +398,7 @@ const _defs = [
   [["hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown", "hifld-transmission-lines-dc"], (p: Record<string, unknown>) =>
     title(p.SUB_1 && p.SUB_2 ? p.SUB_1 + " → " + p.SUB_2 : t("popup.hifldTransmissionLine")) +
     row("popup.voltage", p.VOLTAGE ? p.VOLTAGE + " kV" : null) +
+    lengthSlot +
     row("popup.class", p.VOLT_CLASS) +
     row("popup.owner", p.OWNER) +
     row("popup.type", p.TYPE) +
@@ -386,7 +461,7 @@ const _defs = [
     row("popup.state", p.addr_state) +
     row("popup.since", p.start_date) +
     row("popup.size", Number(p.im3_sqft) > 0 ? fmtAreaSqFt(Number(p.im3_sqft)) + " (IM3)" : null) +
-    // no fid and no osm_type (pre-2026-07 builds): skip the link rather than guess the type
+    // no fid and no osm_type (an older build): skip the link rather than guess the type
     osmLink(p, id)],
   [["mines-icons"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.mine")) +
@@ -613,8 +688,34 @@ export function buildUserFeatureHtml(p: Record<string, unknown>) {
   return html;
 }
 
+// A linked service's feature: its title, every property as text (each key and
+// value escaped — a service is outside data), capped, and the service's credit.
+export const SERVICE_POPUP_MAX_PROPS = 30;
+export const SERVICE_POPUP_MAX_CHARS = 200;
+const clip = (v: string) => v.length > SERVICE_POPUP_MAX_CHARS ? v.slice(0, SERVICE_POPUP_MAX_CHARS - 1) + "…" : v;
+
+export function buildServiceFeatureHtml(service: Pick<LinkedService, "title" | "credit">, p: Record<string, unknown>) {
+  const entries = Object.entries(p).filter(([, v]) => v != null && v !== "");
+  let html = title(service.title);
+  for (const [k, v] of entries.slice(0, SERVICE_POPUP_MAX_PROPS))
+    html += rawRow(clip(k), clip(typeof v === "object" ? JSON.stringify(v) : String(v)));
+  if (entries.length > SERVICE_POPUP_MAX_PROPS)
+    html += footer(t("services.popup.more", { count: entries.length - SERVICE_POPUP_MAX_PROPS }));
+  if (service.credit) html += footer(service.credit);
+  return html;
+}
+
+function serviceOf(layerId: string) {
+  const id = layerId.slice(SERVICE_LAYER_PREFIX.length).replace(/-(fill|line|circle)$/, "");
+  return state.services.find(s => s.id === id);
+}
+
 // `id` is the clicked feature's MapLibre id (a native stable id rides there).
 export function buildPopupHtml(layerId: string, properties: Record<string, unknown>, id?: unknown) {
+  if (layerId.startsWith(SERVICE_LAYER_PREFIX)) {
+    const service = serviceOf(layerId);
+    return service ? buildServiceFeatureHtml(service, properties) : null;
+  }
   if (layerId.startsWith("user-")) {
     // Features copied from a main layer carry __src = origin layer id; reuse its
     // formatted popup so the source's data/labels survive the copy.
@@ -624,3 +725,5 @@ export function buildPopupHtml(layerId: string, properties: Record<string, unkno
   }
   return Object.hasOwn(POPUP_RENDERERS, layerId) ? POPUP_RENDERERS[layerId](properties, id) : null;
 }
+
+export const hasPopupRenderer = (mapLayerId: string) => Object.hasOwn(POPUP_RENDERERS, mapLayerId);

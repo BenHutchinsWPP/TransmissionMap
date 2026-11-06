@@ -20,9 +20,9 @@
 //       On-map staleness signal (isStale(), > MAX_AGE_MS): the age chip turns
 //       red and the timebar label drops relative day names for a dated one
 //       ("9/5 3 PM CDT", tinted), so an old bake can't read as live.
-// Deps: i18n (t, for the play button label and the age chip), state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, rasterLut),
+// Deps: i18n (t, for the play button label and the age chip), state-bus (on 'layer:visibility' and 'style:weather'), state (map, layerVisibility, weatherVar),
 //       constants (weatherLiveUrl, WEATHER_WASH_OPACITY), style-overrides (effectiveOverride), raster-probes
-//       (ensureRasterLut), registry/conditions (WEATHER_VARIABLES, for the
+//       (setWeatherLutStep, ensureRasterLut, updateRasterArrow), registry/conditions (WEATHER_VARIABLES, for the
 //       feed-down label), live-staleness (fmtAgeShort, for the age chip),
 //       diag-log.ts (recordDiagEvent — records refetch failures for the
 //       diagnostics panel), live-poll.ts (pollWhileVisible).
@@ -44,7 +44,7 @@
 import type { ImageSource } from 'maplibre-gl';
 import { state } from './state.js';
 import { weatherLiveUrl, WEATHER_WASH_OPACITY } from './constants.js';
-import { ensureRasterLut, updateRasterArrow } from './raster-probes.js';
+import { ensureRasterLut, setWeatherLutStep, updateRasterArrow } from './raster-probes.js';
 import { fmtAgeShort } from './live-staleness.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { recordDiagEvent } from './diag-log.js';
@@ -61,10 +61,7 @@ const PARTICLE_VARS = new Set(["wind", "tempwind", "windstream"]);
 export const WEATHER_FADE_MS = 300;
 // MapLibre's image-source `coordinates` 4-tuple: NW, NE, SE, SW.
 type ImageCorners = [[number, number], [number, number], [number, number], [number, number]];
-// 1×1 transparent GIF — crossfaded in place of a real webp for `noWash`
-// variables, so paintImage()'s existing A/B crossfade (which assumes the
-// front layer starts near full opacity) never flashes a stale texture: the
-// "flash" is transparent by construction.
+// 1×1 transparent GIF: the A/B crossfade target for `noWash` variables.
 const BLANK_PIXEL = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 // The Temp & Wind companion hover probe (see raster-probes.ts) — its wind LUT
 // shares the main probe's invalidate/ensure lifecycle in refetch().
@@ -96,9 +93,7 @@ let particleSuffix: string | undefined;
 // Starts/stops/restarts/retargets the particle animation to match current
 // visibility + selected variable + painted field. Safe to call
 // unconditionally after any visibility, variable, or data change — it no-ops
-// when nothing relevant moved. Called from refetch() (new bake, var switch,
-// or step change), the layer checkbox listener (show/hide), and
-// setWeatherVar() (variable switch while hidden).
+// when nothing relevant moved.
 async function syncWindParticles(): Promise<void> {
   const shouldRun = isVisible() && PARTICLE_VARS.has(state.weatherVar);
   if (!shouldRun) {
@@ -390,20 +385,10 @@ function paintCurrent(): void {
   // Warm the next step (wrapping, matching playback order) for smooth stepping.
   preloadStep((stepIdx + 1) % steps.length);
 
-  // The cached LUT belongs to the previous bake/variable/step — drop it so
-  // the hover bubble doesn't report stale values. weatherStepSuffix routes
-  // raster-probes' lut() to the scrubbed step's grid; every grid is gzipped,
-  // base included. ensureRasterLut self-guards on the loading flag,
-  // so the first enable (where visibility.ts already called it) doesn't
-  // double-fetch.
-  if (state.rasterLut[REGISTRY_ID]) {
-    delete state.rasterLut[REGISTRY_ID];
-    state.rasterLutLoading[REGISTRY_ID] = false;
-  }
-  // The Temp & Wind companion probe's wind LUT tracks the same lifecycle.
-  delete state.rasterLut[WIND_PROBE_ID];
-  state.rasterLutLoading[WIND_PROBE_ID] = false;
-  state.weatherStepSuffix = suffix;
+  // Point the hover LUTs at this bake and step; a grid for any other one stops
+  // being sampled, and one still in flight is discarded when it lands. The
+  // Temp & Wind companion probe's wind LUT follows the same step and bake.
+  setWeatherLutStep(suffix, generatedUtc ?? "");
   void ensureRasterLut(REGISTRY_ID);
   if (state.weatherVar === "tempwind") void ensureRasterLut(WIND_PROBE_ID);
   renderWeatherAge();
@@ -419,7 +404,7 @@ function repaint(): void {
 // Called when the variable dropdown in the layer row changes (ui-filters.ts).
 // Swaps which baked file the image/LUT point at; a no-op if it's already the
 // selected variable.
-// ── Time slider (Ventusky-style bottom bar) ──────────────────────────────────
+// ── Time slider (bottom bar) ──────────────────────────────────
 // #weatherTimebar in index.html: play button + range input over meta.steps +
 // a label with the scrubbed step's local day, time and short timezone, and a
 // thin marker on the track at the wall-clock "now". Shown only while the

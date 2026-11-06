@@ -6,9 +6,21 @@
 //       resolveHits(); the HTML body comes from popup-format.ts.
 // Deps: state, src/registry (LAYERS — clickPriority), click-resolve.ts,
 //       popup-format.ts, map-input.ts (onMapTap/onMapHover), hover.ts,
-//       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts;
+//       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts,
+//       feature-id.ts + ui/table-open.ts (the popup's "Show in table" for a
+//       queryable layer's feature; the table itself is a lazy chunk),
+//       a tap on a Proximity point (px-points) is the Proximity tab's, not a popup's;
+//       toolOwnsTap(e) tells other tap subscribers (grid-ops.ts) a tool owns the tap;
+//       services/service-spec.ts (SERVICE_LAYER_PREFIX — linked services' layers are clickable);
 //       @maplibre/maplibre-gl-style-spec (picker swatches) is a lazy chunk,
-//       fetched on the first multi-feature click.
+//       fetched on the first multi-feature click; src/units.ts (fmtDistance).
+//       A transmission line (LayerDef.data.analysis) gets its exact length and a
+//       Copy to My Data and Line tools buttons from the lazy lines/ chunk (line-read.ts lookup,
+//       line-copy.ts; Line tools opens the drawer's Line tab through ui/line-open.ts) once one IDX read lands: the popup renders first, a later
+//       click (popupToken) drops a stale answer, and nothing is added when the
+//       line files are not there. Edit mode copies such a line through the same
+//       chunk (resolveHits' `copy-tiled`); on a host without the line files it
+//       turns into the "can't copy" note.
 
 import * as maplibregl from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
@@ -17,29 +29,107 @@ import { state } from './state.js';
 import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
 import { highlightUserFeature, clearUserHighlight, copyFeatureToMyData } from './user-data/user-data.js';
 import { clearFeatureInfo } from './user-data/user-data-geom.js';
-import { buildPopupHtml } from './popup-format.js';
+import { buildPopupHtml, LINE_LENGTH_SLOT } from './popup-format.js';
+import { fmtDistance } from '../src/units.js';
 import { clearWeccHighlight } from './layers/map-layers-wecc.js';
 import { resolveHits, hitLit } from './click-resolve.js';
 import { ICON_SVG } from './icons.js';
 import { escapeHtml } from './utils/utils.js';
 import { t } from '../src/i18n/index.js';
 import { onMapTap, onMapHover, onMapPointLeave, tapBox, type MapPointerEvent } from './map-input.js';
+import { featureId } from './feature-id.js';
+import { openTable } from './ui/table-open.js';
+import { openLineTools } from './ui/line-open.js';
+import { SERVICE_LAYER_PREFIX } from './services/service-spec.js';
 
 function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   const name = featureLabel(f);
+  const owner = f.sourceLayer ? analysisOwner(f) : undefined;
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="copy-popup">
         <div class="copy-popup-name">${escapeHtml(name)}</div>
         <button type="button" class="copy-popup-btn">${escapeHtml(t('popup.copyToMyData'))}</button>
       </div>`)
     .addTo(state.map!);
-  state.popup!.getElement()
-    ?.querySelector('.copy-popup-btn')
-    ?.addEventListener('click', () => {
-      copyFeatureToMyData(f);
-      state.popup!.remove();
-    }, { once: true });
+  const btn = state.popup!.getElement()?.querySelector<HTMLButtonElement>('.copy-popup-btn');
+  btn?.addEventListener('click', () => {
+    if (owner) { void copyLine(owner.id, f, btn); return; }
+    const r = copyFeatureToMyData(f);
+    if (r.saved) { state.popup!.remove(); return; }
+    // The save failed: nothing was kept, so the button offers the file instead.
+    const chars = JSON.stringify(r.feature).length;
+    void import('./user-data/copy-fit.js').then(m => {
+      btn.disabled = false;
+      m.showCopyResult(btn, { ...m.toDownload([r.feature], null, f.layer.id, chars), storageFull: true });
+    });
+  }, { once: true });
 }
+
+// ─── Transmission lines: exact length and full-geometry copy (lines/ chunk) ──
+// Bumped by every click and every rendered popup, so a lookup that lands after
+// the visitor moved on is dropped.
+let popupToken = 0;
+
+function analysisOwner(f: { layer: { id: string } }) {
+  const owner = LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
+  return owner?.data?.analysis ? owner : undefined;
+}
+
+function addLineExtras(f: MapGeoJSONFeature, token: number) {
+  const owner = analysisOwner(f);
+  const id = owner && featureId(owner.id, f);
+  if (!owner || id === undefined) return;
+  void import('./lines/line-read.js')
+    .then(m => m.lookup(owner.id, id))
+    .then(got => {
+      const content = state.popup?.getElement()?.querySelector('.maplibregl-popup-content');
+      if (!got.ok || token !== popupToken || !state.popup?.isOpen() || !content) return;
+      const slot = content.querySelector<HTMLElement>('.' + LINE_LENGTH_SLOT);
+      if (slot) {
+        const key = Object.assign(document.createElement('span'), { className: 'popup-key', textContent: t('popup.length') });
+        const val = Object.assign(document.createElement('span'), { className: 'popup-val', textContent: fmtDistance(got.result.length_km * 1000) });
+        slot.replaceChildren(key, ' ', val);
+        slot.hidden = false;
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'popup-table-btn popup-copy-btn';
+      btn.textContent = t('popup.copyToMyData');
+      btn.addEventListener('click', () => void copyLine(owner.id, f, btn), { once: true });
+      const tools = document.createElement('button');
+      tools.type = 'button';
+      tools.className = 'popup-table-btn popup-line-tools-btn';
+      tools.textContent = t('line.tools');
+      tools.addEventListener('click', () => {
+        const properties = JSON.parse(JSON.stringify(f.properties ?? {})) as Record<string, unknown>;
+        state.popup?.remove();
+        void openLineTools({ layerId: owner.id, fid: id, properties }, state.map?.getCanvas());
+      });
+      content.append(btn, tools);
+    })
+    .catch(() => { /* the lines chunk did not load (offline): the popup stays as it is */ });
+}
+
+async function copyLine(layerId: string, f: MapGeoJSONFeature, btn: HTMLButtonElement) {
+  const id = featureId(layerId, f);
+  if (id === undefined) return;
+  btn.disabled = true;
+  btn.textContent = t('line.copying');
+  try {
+    const m = await import('./lines/line-copy.js');
+    const r = await m.copyLines(layerId, [{
+      fid: id, mapLayerId: f.layer.id,
+      properties: JSON.parse(JSON.stringify(f.properties ?? {})),
+      tileGeometry: JSON.parse(JSON.stringify(f.geometry)),
+    }]);
+    // No line files on this host: the edit-mode copy is the tiled "can't copy" note after all.
+    if (r.kind === 'refused' && r.reason === 'unavailable' && btn.isConnected && state.popup) showNotCopyablePopup(state.popup.getLngLat());
+    else m.showCopyResult(btn, r);
+  } catch {
+    btn.textContent = t('line.copyFailed', { reason: t('line.reason.offline') });
+  }
+}
+
 
 function showNotCopyablePopup(lngLat: maplibregl.LngLat) {
   state.popup!.setLngLat(lngLat)
@@ -107,7 +197,9 @@ function activeClickableLayers() {
   if (!state.map) return [];
   const userLayerIds = state.userLayers.flatMap(l =>
     [l.id + "-circle", l.id + "-line", l.id + "-fill"]);
-  return [...userLayerIds, ...CLICKABLE_LAYERS].filter(id =>
+  const serviceLayerIds = state.services.flatMap(s =>
+    ["-circle", "-line", "-fill"].map(x => SERVICE_LAYER_PREFIX + s.id + x));
+  return [...userLayerIds, ...serviceLayerIds, ...CLICKABLE_LAYERS].filter(id =>
     state.map!.getLayer(id) && state.map!.getLayoutProperty(id, "visibility") !== "none");
 }
 
@@ -123,9 +215,26 @@ function tryHighlightLine(feature: MapGeoJSONFeature) {
 const DOUBLE_TAP_MS = 350;
 let lastTapAt = -Infinity;
 
+// The route pane claims a tap on a hole in its similar-cost areas (it pins a cell card);
+// a claimed tap opens no feature popup. Set by ui-route.ts, asked here so the order of the
+// two tap subscribers does not matter.
+let routeTapClaims: ((e: MapPointerEvent) => boolean) | null = null;
+export function setRouteTapClaims(fn: ((e: MapPointerEvent) => boolean) | null) { routeTapClaims = fn; }
+
+// A tool holds the tap: the measure tool, the route pane's pick / inspect, or a tap it claims.
+const toolHoldsTap = (e: MapPointerEvent) =>
+  !!(state.measure.active || state.routePick || state.routeInspect || routeTapClaims?.(e));
+/** Whether a tool owns this tap — one of the above, or edit mode (whose taps copy
+ *  features) — so a panel such as the Grid Ops tab (grid-ops.ts) does not open on it. */
+export function toolOwnsTap(e: MapPointerEvent): boolean {
+  return toolHoldsTap(e) || state.editMode === 'edit';
+}
+
 function onMapClick(e: MapPointerEvent) {
-  if (state.measure.active) return;
+  if (toolHoldsTap(e)) return;
   if (!state.map || !state.popup) return;
+  // A tap on a Proximity point focuses its table row (ui/proximity-map.ts), not a feature popup.
+  if (state.map.getLayer('px-points') && state.map.queryRenderedFeatures(tapBox(e), { layers: ['px-points'] }).length) return;
   const at = performance.now();
   if (at - lastTapAt < DOUBLE_TAP_MS) return;
   lastTapAt = at;
@@ -133,6 +242,7 @@ function onMapClick(e: MapPointerEvent) {
   if (!activeLayers.length) return;
 
   const box = tapBox(e);
+  popupToken++;
 
   // Edit mode: click any feature (including user loaded layers) to get a Copy button.
   if (state.editMode === 'edit') {
@@ -145,10 +255,11 @@ function onMapClick(e: MapPointerEvent) {
 
   const hit = resolveHits(
     state.map.queryRenderedFeatures(box, { layers: activeLayers }),
-    state.editMode === 'edit' ? 'edit' : 'view');
+    state.editMode === 'edit' ? 'edit' : 'view', ft => !!analysisOwner(ft));
   switch (hit.kind) {
     case 'copy-picker':  void showEditPicker(e.lngLat, hit.features); return;
-    case 'copy':         showCopyPopup(e.lngLat, hit.feature); return;
+    case 'copy':
+    case 'copy-tiled':   showCopyPopup(e.lngLat, hit.feature); return;
     case 'not-copyable': showNotCopyablePopup(e.lngLat); return;
     case 'picker':       void showFeaturePicker(e.lngLat, hit.features); return;
     case 'single':       renderFeature(e.lngLat, hit.feature); return;
@@ -205,9 +316,33 @@ function renderFeature(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
     ? { ...(f.properties || {}), ...f.state }
     : (f.properties || {});
   const html = buildPopupHtml(f.layer.id, props as Record<string, unknown>, f.id);
+  const token = ++popupToken;
   if (html) {
     state.popup!.setLngLat(lngLat).setHTML(html).addTo(state.map!);
+    addShowInTable(f);
+    addLineExtras(f, token);
   }
+}
+
+// A feature of a queryable layer (a field schema and a stable id) gets a
+// "Show in table" button: the popup and its click highlights close, and the
+// drawer opens on its layer with this row active (the table's highlight).
+function addShowInTable(f: MapGeoJSONFeature) {
+  const owner = LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
+  if (!owner?.dataset || !owner.data?.id) return;
+  const id = featureId(owner.id, f);
+  const content = state.popup!.getElement()?.querySelector('.maplibregl-popup-content');
+  if (id === undefined || !content) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'popup-table-btn';
+  btn.textContent = t('table.open');
+  btn.addEventListener('click', () => {
+    state.popup?.remove();
+    clearUserHighlight(); clearLineHighlight(); clearWeccHighlight();
+    void openTable({ layerId: owner.id, focusId: id });
+  });
+  content.append(btn);
 }
 
 // Resolve a feature's rendered color by evaluating its layer's color paint
@@ -326,7 +461,7 @@ export function initPopups() {
   let hoverFrame = 0;
   const updateCursor = () => {
     hoverFrame = 0;
-    if (!state.map || !hoverPoint || state.map.isMoving()) return;
+    if (!state.map || !hoverPoint || state.routePick || state.map.isMoving()) return;
     // activeClickableLayers() and hoverFillIds() are already visibility-gated;
     // the cursor-only ids need the same treatment before joining them.
     const layers = [...new Set([...activeClickableLayers(), ...hoverFillIds(),
@@ -340,13 +475,13 @@ export function initPopups() {
     if (!hoverFrame) hoverFrame = requestAnimationFrame(updateCursor);
   };
   onMapHover(e => {
-    if (state.measure.active) return;
+    if (state.measure.active || state.routePick) return;
     hoverPoint = [e.point.x, e.point.y];
     scheduleCursor();
   });
   state.map.on("moveend", scheduleCursor);
   onMapPointLeave(() => {
     hoverPoint = null;
-    if (!state.measure.active) state.map!.getCanvas().style.cursor = "";
+    if (!state.measure.active && !state.routePick) state.map!.getCanvas().style.cursor = "";
   });
 }

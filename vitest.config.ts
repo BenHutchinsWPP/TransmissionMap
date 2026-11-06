@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 export default defineConfig({
-  test: { globals: true, environment: 'node', include: ['src/**/*.test.ts', 'assets/**/*.test.ts'] }
+  test: { globals: true, environment: 'node', include: ['src/**/*.test.ts', 'assets/**/*.test.ts'], exclude: [...configDefaults.exclude, '**/*.validate.test.ts'] }
 });

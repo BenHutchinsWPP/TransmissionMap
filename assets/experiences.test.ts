@@ -8,10 +8,12 @@
 // round-trip can't see, because leakage lives in the transition (section 2).
 //
 // Deps: experiences.js (the module under test), view-state.js, url-state-codec.js,
-//       registry/experiences.js, state.js.
+//       registry/experiences.js, state.js, services/service-hosts.js (isVetted).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Map as MaplibreMap } from 'maplibre-gl';
+import { isVetted } from './services/service-hosts.js';
+import type { LinkedService } from './services/service-spec.js';
 
 // ─── Mocks (must come before importing the module under test) ─────────────────
 // view-state.js stays real: resolving each view over the defaults is what makes
@@ -62,6 +64,7 @@ vi.mock('./layers/layer-data.js', () => ({ ensureLayerData: vi.fn() }));
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
   ensureRasterLut: vi.fn(),
+  setWeatherLutStep: vi.fn(),
   updateRasterArrow: vi.fn(),
 }));
 
@@ -155,6 +158,8 @@ function snapshot() {
     regionScope: state.regionScope,
     where: structuredClone(state.where),
     style: structuredClone(state.styleOverrides),
+    area: structuredClone(state.area),
+    sel: structuredClone(state.sel),
   };
 }
 
@@ -210,7 +215,8 @@ describe('every preset survives formatUrlState → parseUrlState', () => {
     });
   }
 
-  // No catalogue entry carries where/style yet; this one stands in for the first.
+  // ercot-island-grid carries where, area and style from the catalogue; this one
+  // adds a colour override and a `where` on a second dataset.
   it('a preset carrying where and style is carried whole by the link format', () => {
     const data = experienceUrlState({
       where: { 'osm-substations-points': [{ field: 'nominal_kv', op: '>=', value: 345 }] },
@@ -224,10 +230,37 @@ describe('every preset survives formatUrlState → parseUrlState', () => {
     expect(snapshot()).toEqual(direct);
   });
 
+  it('a preset carrying a selection is carried whole by the link format, and Reset clears it', () => {
+    const data = experienceUrlState({
+      layersOn: ['eia-generators'],
+      sel: { mode: 'isolate', ids: { 'eia-generators': ['1:1', '27:3'], 'nerc-regions': ['CA-MX US'] } },
+    });
+    applyView(data);
+    const direct = snapshot();
+    expect(direct.sel?.mode).toBe('isolate');
+    applyView(roundTrip(data));
+    expect(snapshot()).toEqual(direct);
+    applyView({});
+    expect(state.sel).toBeNull();
+    expect(currentView().sel).toBeNull();
+  });
+
+  // A story's linked services (`sv`) name library entries only, on vetted URLs,
+  // so a curated view never asks a visitor to approve an unvetted host (a
+  // libraryId alone grants nothing: trust is by URL). MapExperience.state has
+  // no services field yet; this holds the rule for the day one is added.
+  it('a story links vetted library services only', () => {
+    for (const e of EXPERIENCES) {
+      const services = (e.state as { services?: Pick<LinkedService, 'libraryId' | 'url' | 'kind'>[] }).services ?? [];
+      expect(services.filter(s => !s.libraryId), e.id).toEqual([]);
+      expect(services.filter(s => !isVetted(s.url, s.kind)), e.id).toEqual([]);
+    }
+  });
+
   it('switches layers off before it switches any on', () => {
-    // columbia-hydro clears the transmission network and brings generators up —
+    // coal-supply-chain clears the OSM network and brings generators up —
     // a story with both halves, so the seam between them is visible.
-    applyPreset(presetOf('columbia-hydro'));
+    applyPreset(presetOf('coal-supply-chain'));
     const firstOn = visibilityCalls.findIndex(([, on]) => on);
     const lastOff = visibilityCalls.map(([, on]) => on).lastIndexOf(false);
     expect(firstOn).toBeGreaterThanOrEqual(0);
@@ -243,20 +276,18 @@ describe('every preset survives formatUrlState → parseUrlState', () => {
     expect(state.terrain3d).toBe(true);
     expect(state.hillshade).toBe(true);
     expect([...state.legendFilters.fuel].sort()).toEqual(['hydro', 'pumped_storage']);
-    expect(state.layerVisibility['osm-transmission-lines']).toBe(false);
+    expect([...state.legendFilters.kv].sort()).toEqual(['500-549', '550+']);
     expect(state.layerVisibility['eia-generators']).toBe(true);
 
     applyPreset(presetOf('wecc-paths-and-plans'));
     expect(state.westtecColorBy).toBe('dataset');
 
     applyPreset(presetOf('wildfires-and-smoke'));
-    expect(state.smokeOpacity).toBe(0.7);
+    expect(state.smokeOpacity).toBe(0.6);
 
     applyPreset(presetOf('live-temperature-grid-load'));
     expect(state.weatherVar).toBe('temp');
 
-    applyPreset(presetOf('population-load-density'));
-    expect(state.genMode['osm-datacenters']).toBe('clusters');
   });
 });
 

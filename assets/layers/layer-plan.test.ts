@@ -14,7 +14,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
-import { applyLayerPlan, setMapLayerVisibility, type LayerPlan } from './layer-plan.js';
+import { applyLayerPlan, setMapLayerVisibility, setRasterUrl, type LayerPlan } from './layer-plan.js';
 import { BASE_LAYER_FILTERS } from './base-filters.js';
 import { addAllLayers } from './add-all-layers.js';
 import { effectiveFilter } from '../filters.js';
@@ -123,7 +123,10 @@ describe('held tiled sources', () => {
     const urls: Record<string, string> = {};
     const vis: Record<string, string> = {};
     Object.assign(rec.map, {
-      addSource: (id: string, spec: unknown) => rec.sources.set(id, { spec, setUrl: (u: string) => { urls[id] = u; } }),
+      addSource: (id: string, spec: { url?: string }) => {
+        const src = { spec, url: spec.url, setUrl: (u: string) => { urls[id] = u; src.url = u; } };
+        rec.sources.set(id, src);
+      },
       on: (t: string, h: (e: object) => void) => { (handlers[t] ??= []).push(h); },
       off: (t: string, h: (e: object) => void) => { handlers[t] = handlers[t].filter(f => f !== h); },
       setLayoutProperty: (id: string, _p: string, v: string) => { vis[id] = v; },
@@ -170,6 +173,46 @@ describe('held tiled sources', () => {
     setMapLayerVisibility(map, 'f-1', 'visible');
     expect(urls).toEqual({ f: 'pmtiles://f' });
   });
+
+  const raster = (id: string, url: string): LayerPlan => [
+    { source: id, spec: { type: 'raster', url, tileSize: 256 } },
+    { layer: { id: `${id}-1`, type: 'raster', source: id } as LayerSpecification },
+  ];
+
+  it('setRasterUrl on a held source swaps the url its first show loads', () => {
+    const { map, urls, vis, land } = heldMap();
+    applyLayerPlan(map, raster('rh', 'pmtiles://a'));
+    setRasterUrl(map, 'rh', 'pmtiles://b');
+    expect(urls).toEqual({});
+    setMapLayerVisibility(map, 'rh-1', 'visible');
+    expect(urls).toEqual({ rh: 'pmtiles://b' });
+    land('rh');
+    expect(vis['rh-1']).toBe('visible');
+  });
+
+  it('setRasterUrl on a live source reloads it, only for a new url', () => {
+    const { map, urls } = heldMap();
+    state.layerVisibility = { 'rl-1': true };
+    applyLayerPlan(map, raster('rl', 'pmtiles://a'));
+    state.layerVisibility = {};
+    setRasterUrl(map, 'rl', 'pmtiles://a');
+    expect(urls).toEqual({});
+    setRasterUrl(map, 'rl', 'pmtiles://b');
+    expect(urls).toEqual({ rl: 'pmtiles://b' });
+  });
+
+  it('a url set while the metadata loads is loaded, and held again if the load fails', () => {
+    const { map, urls, land } = heldMap();
+    applyLayerPlan(map, raster('rm', 'pmtiles://a'));
+    setMapLayerVisibility(map, 'rm-1', 'visible');
+    setRasterUrl(map, 'rm', 'pmtiles://b');
+    expect(urls).toEqual({ rm: 'pmtiles://b' });
+    land('rm', 'error');
+    setRasterUrl(map, 'rm', 'pmtiles://c');
+    delete urls.rm;
+    setMapLayerVisibility(map, 'rm-1', 'visible');
+    expect(urls).toEqual({ rm: 'pmtiles://c' });
+  });
 });
 
 describe('addAllLayers base filters', () => {
@@ -201,9 +244,10 @@ describe('addAllLayers sources', () => {
 
   // Sources with no attribution of their own: the search highlights draw app
   // data, the weather images credit GFS beside the timebar (image sources take
-  // no attribution), and the borders under the wash are public-domain Natural Earth.
+  // no attribution), the borders under the wash are public-domain Natural Earth,
+  // and the Grid Operations arrows share the credit their bubbles' source carries.
   const UNCREDITED = [
-    'highlight-lines', 'highlight-pts', 'weather-admin-lines', 'weather-live', 'weather-live-b',
+    'ba-interchange-edges', 'highlight-lines', 'highlight-pts', 'weather-admin-lines', 'weather-live', 'weather-live-b',
   ];
 
   it('credits every source but the pinned uncredited ones', () => {

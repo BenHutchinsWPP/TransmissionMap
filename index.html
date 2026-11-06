@@ -22,34 +22,62 @@
       <!-- ── Edit menubar ──────────────────────────────────────────────────── -->
       <nav class="menubar" id="menubar">
         <div class="menu-wrap">
-          <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.file">File</span> ▾</button>
+          <button class="menu-btn" id="fileMenuBtn" type="button" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.file">File</span> ▾</button>
           <div class="dropdown menu-dropdown" hidden role="menu">
-            <button class="menu-item" data-action="file-open" type="button" data-i18n="menu.fileOpen">Open…</button>
-            <button class="menu-item" data-action="save-geojson" type="button" data-i18n="menu.saveGeoJson">Save as GeoJSON…</button>
-            <button class="menu-item" data-action="save-kml" type="button" data-i18n="menu.saveKml">Save as KML…</button>
-            <button class="menu-item" data-action="save-view" type="button" data-i18n="menu.saveView">Save view…</button>
-            <button class="menu-item" data-action="undo" type="button" data-i18n="menu.undo" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
-            <button class="menu-item" data-action="redo" type="button" data-i18n="menu.redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" disabled>Redo</button>
-            <!-- Map Experiences is built and tested but not yet surfaced: uncomment
-                 to list it. The gallery, story card, catalogue and ?exp= deep links
-                 all remain in place behind this one entry point. -->
-            <!-- <button class="menu-item" data-action="open-experiences" type="button" data-i18n="menu.experiences">Experiences…</button> -->
-            <button class="menu-item" data-action="toggle-legends" type="button" data-i18n="menu.hideLegends">Hide legends</button>
-            <button class="menu-item" data-action="open-settings" type="button" data-i18n="menu.settings">Settings…</button>
-            <button class="menu-item" data-action="open-diagnostics" type="button" data-i18n="menu.diagnostics">Diagnostics…</button>
+            <!-- Phones only (the bar has no room for the Undo / Redo buttons there) -->
+            <button class="menu-item menu-phone-only" data-action="undo" type="button" role="menuitem" data-i18n="menu.undo" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
+            <button class="menu-item menu-phone-only" data-action="redo" type="button" role="menuitem" data-i18n="menu.redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" disabled>Redo</button>
+            <div class="menu-sep menu-phone-only" role="separator"></div>
+            <div class="menu-sub">
+              <button class="menu-item menu-sub-btn" type="button" role="menuitem" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.open">Open</span><span class="menu-caret" aria-hidden="true">▸</span></button>
+              <div class="dropdown menu-submenu" hidden role="menu">
+                <button class="menu-item" data-action="open-view-file" type="button" role="menuitem" data-i18n="menu.viewFile">View file</button>
+                <button class="menu-item" data-action="file-open" type="button" role="menuitem" data-i18n="menu.dataFile">Data file (GeoJSON/KML/CSV)</button>
+                <button class="menu-item" data-action="open-services" type="button" role="menuitem" data-i18n="menu.gisServer">GIS server</button>
+              </div>
+            </div>
+            <div class="menu-sub">
+              <button class="menu-item menu-sub-btn" type="button" role="menuitem" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.save">Save</span><span class="menu-caret" aria-hidden="true">▸</span></button>
+              <div class="dropdown menu-submenu" hidden role="menu">
+                <button class="menu-item" data-action="save-view" type="button" role="menuitem" data-i18n="menu.saveView">Save view</button>
+                <div class="menu-sep" role="separator"></div>
+                <div class="menu-label" role="presentation" data-i18n="menu.exportData">Export My Data</div>
+                <button class="menu-item" data-action="save-geojson" type="button" role="menuitem" data-i18n="menu.saveGeoJson">Save as GeoJSON</button>
+                <button class="menu-item" data-action="save-kml" type="button" role="menuitem" data-i18n="menu.saveKml">Save as KML</button>
+              </div>
+            </div>
+            <div class="menu-sep" role="separator"></div>
+            <button class="menu-item" data-action="open-experiences" type="button" role="menuitem" data-i18n="menu.experiences">Experiences</button>
+            <div class="menu-sep" role="separator"></div>
+            <button class="menu-item" data-action="open-settings" type="button" role="menuitem" data-i18n="menu.settings">Settings</button>
+          </div>
+        </div>
+        <div class="menu-wrap">
+          <button class="menu-btn" id="toolsMenuBtn" type="button" aria-haspopup="true" aria-expanded="false"><span data-i18n="menu.tools">Tools</span> ▾</button>
+          <div class="dropdown menu-dropdown" hidden role="menu">
+            <button class="menu-item" data-action="open-chat" type="button" role="menuitem" data-i18n="chat.menu">Chat</button>
+            <button class="menu-item" data-action="open-visualize" type="button" role="menuitem" data-i18n="viz.menu">Charts</button>
+            <button class="menu-item" data-action="open-proximity" type="button" role="menuitem" data-i18n="px.menu">Proximity</button>
+            <button class="menu-item" data-action="open-diagnostics" type="button" role="menuitem" data-i18n="menu.diagnostics">Diagnostics</button>
+            <div class="menu-sep" role="separator"></div>
+            <button class="menu-item" data-action="toggle-legends" type="button" role="menuitem" data-i18n="menu.hideLegends">Hide legends</button>
           </div>
           <!-- After the dropdown, not between it and the button: ui-menubar.ts
                pairs the two by nextElementSibling/previousElementSibling.
                Positioned against .menu-wrap, so placement here looks identical. -->
           <span class="menu-badge" id="fileMenuBadge" hidden role="img"
-                aria-label="Something failed to load this session — see File ▸ Diagnostics…" data-i18n-aria-label="menu.diagBadge"></span>
+                aria-label="Something failed to load this session — see Tools ▸ Diagnostics" data-i18n-aria-label="menu.diagBadge"></span>
         </div>
+        <button class="menu-btn tb-btn" id="undoBtn" data-action="undo" type="button" aria-keyshortcuts="Control+Z Meta+Z" disabled
+                aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5.5 3 2 6.5 5.5 10M2.5 6.5H10a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="menu-btn tb-btn" id="redoBtn" data-action="redo" type="button" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" disabled
+                aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10.5 3 14 6.5 10.5 10M13.5 6.5H6a3.5 3.5 0 0 0 0 7h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="mode-toggle" role="group" aria-label="Map mode" data-i18n-aria-label="menu.mapMode">
           <button class="mode-btn mode-btn--active" id="modeViewBtn" data-mode="view" type="button" data-i18n="menu.view">View</button>
           <button class="mode-btn" id="modeEditBtn" data-mode="edit" type="button" data-i18n="menu.edit">Edit</button>
         </div>
         <button class="menu-btn measure-btn" id="measureBtn" type="button"
-                aria-pressed="false" title="Measure linear distance" data-i18n-title="menu.measureTitle">📏 <span data-i18n="menu.measure">Measure</span></button>
+                aria-pressed="false" title="Measure linear distance" data-i18n-title="menu.measureTitle">📏 <span class="hdr-label" data-i18n="menu.measure">Measure</span></button>
         <!-- Edit-only controls last so toggling edit/view never reflows the buttons above -->
         <div class="menu-wrap">
           <button class="menu-btn" id="menuAddBtn" type="button" aria-haspopup="true" aria-expanded="false" hidden><span data-i18n="menu.add">Add</span> ▾</button>
@@ -74,7 +102,7 @@
         <!-- Open With dropdown -->
         <div class="open-with-wrap" id="openWithWrap">
           <button class="open-with-btn" id="openWithBtn" type="button" aria-haspopup="true" aria-expanded="false">
-            <span data-i18n="menu.openWith">Open with</span> ▾
+            <span class="open-with-glyph" aria-hidden="true">↗</span><span class="hdr-label" data-i18n="menu.openWith">Open with</span> ▾
           </button>
           <div class="dropdown open-with-menu" id="openWithMenu" hidden role="menu">
             <!-- links injected by ui.js — hrefs are set fresh each time the menu opens -->
@@ -101,6 +129,20 @@
           <div class="weather-timebar-ticks" aria-hidden="true"></div>
           <span class="weather-timebar-now" title="Current time" data-i18n-title="weather.nowTitle" hidden></span>
         </div>
+      </div>
+
+      <!-- Grid Operations (EIA-930) hour bar — bottom centre; shown by
+           assets/grid-ops/grid-ops.ts only while that layer is on -->
+      <div id="gridOpsTimebar" hidden>
+        <button type="button" data-gridops="prev" aria-label="Previous hour" title="Previous hour"
+                data-i18n-aria-label="gridOps.prev" data-i18n-title="gridOps.prev">◀</button>
+        <button type="button" data-gridops="play" aria-label="Play hour by hour" title="Play hour by hour">▶</button>
+        <button type="button" data-gridops="next" aria-label="Next hour" title="Next hour"
+                data-i18n-aria-label="gridOps.next" data-i18n-title="gridOps.next">▶|</button>
+        <span class="gridops-label"></span>
+        <input type="date" aria-label="Date" data-i18n-aria-label="gridOps.date">
+        <input type="range" min="0" max="23" step="1" value="0" aria-label="Hour ending" data-i18n-aria-label="gridOps.hour">
+        <span class="gridops-status" role="status" hidden></span>
       </div>
 
       <!-- 3D rotate/tilt hint — bottom left; shown once by assets/terrain-hint.ts
@@ -176,6 +218,48 @@
                   data-i18n-title="panel.resetLayersTitle">
             ↺ <span data-i18n="panel.resetLayers">Reset</span>
           </button>
+        </div>
+
+        <!-- Area filter: "only what is in Texas / ERCOT / Bavaria" for the whole
+             map. Chips, Clear and the summary are painted by panel-mirror.ts from
+             state.area; typing, picking and the row notes are ui-area.ts (lazy). -->
+        <div class="area-row" id="areaRow">
+          <div class="area-row-head">
+            <label class="area-row-title" for="areaInput" data-i18n="area.title">Area</label>
+            <button type="button" class="area-link" id="areaClear" data-area-action="clear" hidden data-i18n="area.clear">Clear</button>
+          </div>
+          <div class="area-box" id="areaBox">
+            <svg class="area-box-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>
+            <span class="area-chips" id="areaChips"></span>
+            <input id="areaInput" type="text" role="combobox" aria-expanded="false"
+                   aria-autocomplete="list" autocomplete="off" spellcheck="false"
+                   placeholder="Filter to an area…" data-i18n-placeholder="area.search"
+                   aria-label="Filter the map to an area" data-i18n-aria-label="area.fieldAria">
+          </div>
+          <div class="area-note" id="areaNote" role="status" hidden></div>
+          <div class="area-summary" id="areaSummary" hidden>
+            <span class="area-flag-icon" aria-hidden="true"></span>
+            <span id="areaSummaryText"></span>
+            <span aria-hidden="true">·</span>
+            <button type="button" class="area-link" data-area-action="show" data-i18n="area.show">Show</button>
+          </div>
+        </div>
+
+        <!-- Selection: the view's selected features (state.sel), shown while
+             one is set. Painted by panel-mirror.ts; the mode menu is
+             ui-selection.ts. -->
+        <div class="area-row sel-row" id="selRow" hidden>
+          <div class="area-row-head">
+            <span class="area-row-title" data-i18n="sel.title">Selection</span>
+            <button type="button" class="area-link" data-sel-action="clear" data-i18n="sel.clear">Clear</button>
+          </div>
+          <div class="sel-chip">
+            <span class="sel-chip-label truncate" id="selChipLabel"></span>
+            <button type="button" class="sel-chip-mode" id="selModeBtn" aria-haspopup="menu" aria-expanded="false">
+              <span id="selModeText"></span> <span aria-hidden="true">▾</span>
+            </button>
+            <button type="button" class="sel-chip-x" data-sel-action="clear" aria-label="Clear the selection" data-i18n-aria-label="sel.clearAria">×</button>
+          </div>
         </div>
 
         <!-- Scrollable layer groups -->
@@ -326,6 +410,8 @@
 
         <!-- Tab pane: My Data -->
         <div class="tab-pane" id="tab-my-data" hidden>
+          <button class="svc-btn my-data-link-button" data-action="open-services-button" type="button" data-i18n="services.menu">Add layer from a service…</button>
+          <div class="my-data-body" id="linkedServicesBody" hidden></div>
           <div class="my-data-body" id="myDataBody"></div>
         </div>
 
@@ -394,6 +480,17 @@
         <div class="legend collapsed" id="westtecScenarioLegend" hidden data-collapsible>
           <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">WestTEC scenario</span></div>
           <div class="legend-items collapsible-content" id="westtecScenarioLegendItems"></div>
+        </div>
+        <!-- Grid Operations (EIA-930): bubble key and fuel colours (fuel rows filled by ui-legends.ts) -->
+        <div class="legend collapsed" id="gridOpsLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label" data-i18n="layer.baInterchange">Grid Operations (EIA-930)</span></div>
+          <div class="legend-items collapsible-content">
+            <div class="legend-item"><i class="gridops-dot gridops-dot--exp"></i><span data-i18n="gridOps.keyExport">Exporting</span></div>
+            <div class="legend-item"><i class="gridops-dot gridops-dot--imp"></i><span data-i18n="gridOps.keyImport">Importing</span></div>
+            <div class="legend-item"><i class="gridops-ring"></i><span data-i18n="gridOps.keyRing">Ring: generation ÷ load (full = covers its own load)</span></div>
+            <div class="legend-item"><span aria-hidden="true">➜</span><span data-i18n="gridOps.keyArrow">Net interchange, MW</span></div>
+            <div id="gridOpsFuelItems"></div>
+          </div>
         </div>
         <div class="legend collapsed" id="westtecDatasetLegend" hidden data-collapsible>
           <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label">WestTEC project type</span></div>
@@ -498,6 +595,12 @@
             <div class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span><span data-i18n="legend.insufficientData">Insufficient data</span></div>
             <div class="legend-item" style="opacity:0.55;font-size:0.75em">Unshaded: hazard not applicable. FEMA NRI, county level — for planning, not a local risk assessment.</div>
           </div>
+        </div>
+        <!-- Routing constraints (dev server only) — the body is drawn per concern by
+             assets/route-constraints.ts from the palettes in src/colors/route-constraints.ts. -->
+        <div class="legend collapsed" id="routeConstraintsLegend" hidden data-collapsible>
+          <div class="legend-title"><button class="collapse-btn" type="button" aria-label="Toggle legend" data-i18n-aria-label="legend.toggle">▸</button><span class="legend-title-label"><span data-i18n="layer.routeConstraints">Routing constraints</span>: <span id="routeConstraintsConcern" data-i18n="route.concern.what-constrains">What constrains</span></span></div>
+          <div class="legend-items collapsible-content" id="routeConstraintsLegendItems"></div>
         </div>
         <!-- Data center moratoriums — the status chips are built from DCM_CLASSES
              in src/colors/buckets.ts (LEGEND_FILTERS key "dcm"); the blue ring
@@ -733,12 +836,14 @@
         <li data-source-credit="noaa-nws"><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NOAA National Weather Service</a> — Active weather alerts. US Government work, public domain. <strong>Display note:</strong> curated event allowlist only (~40 event types across convective/flood/fire/heat/wind/winter/tropical/marine-wind; excludes e.g. Small Craft Advisory, Special Weather Statement, air-quality, AMBER/admin).</li>
         <li data-source-credit="eccc-msc"><a href="https://api.weather.gc.ca/" target="_blank" rel="noopener">Environment and Climate Change Canada (MSC GeoMet)</a> — Active weather alerts; Canadian weather radar (rain/snow rate) WMS. <strong>Display note:</strong> curated event allowlist only (warnings/watches matched to the same groups; excludes special weather statements + air quality warnings).</li>
         <li data-source-credit="noaa-gfs"><a href="https://registry.opendata.aws/noaa-gfs-bdp-pds/" target="_blank" rel="noopener">NOAA/NCEP GFS</a> — 0.25° operational forecasts via AWS Open Data (temperature, wind, humidity, pressure, cloud cover) — public domain. <strong>Display note:</strong> forecast model field, not observations; upsampled to ~7 km for display.</li>
+        <li data-source-credit="pudl-eia930"><a href="https://catalyst.coop/pudl/" target="_blank" rel="noopener">PUDL Project</a> (Catalyst Cooperative) — EIA Form 930 hourly balancing-authority demand, net generation by fuel and interchange, read from PUDL's published tables. CC-BY-4.0; the EIA data is public domain.</li>
         <li data-source-credit="iem-nexrad"><a href="https://mesonet.agron.iastate.edu/GIS/ridge.phtml" target="_blank" rel="noopener">Iowa Environmental Mesonet</a> — NEXRAD composite reflectivity radar tiles. Underlying NWS data is US Government work, public domain.</li>
         <li data-source-credit="nasa-firms-nifc"><a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS VIIRS</a> (LANCE / ESDIS) + <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a> — active fire detections (rolling 24-hour window; hourly pull + ~1–3&nbsp;h satellite processing) + current perimeters — public domain. Not for tactical firefighting.</li>
         <li data-source-credit="noaa-hms"><a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">NOAA HMS Smoke Detection</a> (OSPO / NESDIS) — analyst-drawn satellite smoke polygons, latest available analysis (may trail real time by several hours) — public domain.</li>
         <li data-source-credit="usfs-firelab"><a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">USFS RMRS Fire Lab — Wildfire Hazard Potential</a> — 2023, 270 m, classified — public domain</li>
         <li data-source-credit="ornl-odin"><a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/" target="_blank" rel="noopener">ORNL ODIN</a> — live county-level power-outage aggregates (customers affected, incident count). Utilities self-report; coverage is partial (~34–38 states). No license declared (DOE/ORNL public program).</li>
         <li data-source-credit="fema-nri"><a href="https://www.arcgis.com/home/item.html?id=39485e8035d446a5bff03259508ae355" target="_blank" rel="noopener">FEMA National Risk Index</a> — county level, composite and 18 hazards (December 2025, v1.20.0). This product uses the Federal Emergency Management Agency’s National Risk Index dataset API or downloadable datasets but is not endorsed by FEMA. The Federal Government or FEMA cannot vouch for the data or analyses derived from these data after the data have been retrieved from the Agency's website(s).</li>
+        <li data-source-credit="route-constraints" hidden>Constraints — read from the route cube's bands: USGS <a href="https://www.sciencebase.gov/catalog/item/652d4fc5d34e44db0e2ee45e" target="_blank" rel="noopener">PAD-US 4.1</a> (protection, designations, managers, DOD land); Census <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html" target="_blank" rel="noopener">TIGER/Line AIANNH</a> and BIA <a href="https://biamaps.geoplatform.gov/server/rest/services/DivLTR/BIA_AIAN_National_LAR/FeatureServer/0" target="_blank" rel="noopener">AIAN Land Area Representations</a> (tribal land); USFWS <a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html" target="_blank" rel="noopener">critical habitat</a>; USGS <a href="https://gis1.wim.usgs.gov/server/rest/services/CBRSMapper/CoastalBarrierResourcesSystem/MapServer/3" target="_blank" rel="noopener">Coastal Barrier Resources System</a>; BLM <a href="https://catalog.data.gov/dataset/blm-natl-westernus-grsg-rod-habitatmgmtareas-feb-2026" target="_blank" rel="noopener">sage-grouse habitat management areas</a>; EPA EnviroAtlas <a href="https://doi.org/10.1016/j.scitotenv.2018.07.353" target="_blank" rel="noopener">estimated floodplain</a> (CC0) and <a href="https://catalog.data.gov/dataset/npl-superfund-site-boundaries-epa9" target="_blank" rel="noopener">Superfund NPL site boundaries</a>; NPS <a href="https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer" target="_blank" rel="noopener">National Register of Historic Places</a> and <a href="https://www.arcgis.com/home/item.html?id=c1704515e566472798e451a3e7cadde2" target="_blank" rel="noopener">National Trails System</a>; USDA Forest Service <a href="https://www.fs.usda.gov/rds/archive/catalog/RDS-2015-0047-4" target="_blank" rel="noopener">Wildfire Hazard Potential</a> and <a href="https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_WildScenicRiverSegments_01/MapServer/0" target="_blank" rel="noopener">Wild &amp; Scenic River segments</a>; FAA <a href="https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/US_Airport/FeatureServer/0" target="_blank" rel="noopener">airports</a> and <a href="https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Runways/FeatureServer/0" target="_blank" rel="noopener">runways</a>; USGS <a href="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/USGS_Seamless_DEM_1.vrt" target="_blank" rel="noopener">3DEP 1 arc-second elevation</a> (slope); USGS NLCD (land cover) and DOE/ANL Section 368 energy corridors — public domain. Schools, hospitals, child care, nursing homes, FCC tall structures, USACE dams and USACE formerly used defense sites from <a href="https://source.coop/repositories/seerai/hifld/description/" target="_blank" rel="noopener">HIFLD via SeerAI source.coop</a> — CC BY 4.0. Population from <a href="https://www.worldpop.org/" target="_blank" rel="noopener">WorldPop</a> 2020 — CC BY 4.0. TNC categories from PoPWest (Wu et al. 2023, PNAS 120(4) e2204098120; data <a href="https://doi.org/10.5281/zenodo.7460026" target="_blank" rel="noopener">Zenodo 7460026</a>) — CC BY 4.0. Homes from USA Structures (ORNL and FEMA Geospatial Response Office) — CC BY 4.0. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL), for the OpenStreetMap entries.</li>
         <li data-source-credit="usgs-nshm"><a href="https://www.sciencebase.gov/catalog/item/5d5597d0e4b01d82ce8e3ff1" target="_blank" rel="noopener">USGS National Seismic Hazard Model</a> — 2018, Peak Ground Acceleration (PGA), 2% in 50yr (≈2475-yr return), Site Class B/C — public domain</li>
         <li data-source-credit="boem"><a href="https://www.boem.gov/renewable-energy/mapping-and-data" target="_blank" rel="noopener">Bureau of Ocean Energy Management (BOEM)</a> — Offshore Wind Leases — public domain.</li>
         <li data-source-credit="wecc-paths"><a href="https://www.wecc.org/sites/default/files/documents/progress_report/2026/2026%20Path%20Rating%20Catalog%20Public_V3.pdf" target="_blank" rel="noopener">WECC Path Rating Catalog</a> — 2026 Public Version (V3, March 2026) — path definitions, ratings &amp; directionality. 🚧 Under construction — layer is a work in progress.</li>
@@ -746,7 +851,8 @@
              The map's own attribution control shows a short "USGS terrain" credit
              instead (see TERRAIN_ATTRIB_SHORT in assets/terrain.ts) to avoid
              overlapping other floating UI; this entry carries the full text. -->
-        <li data-source-credit="usgs-terrain">United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey — <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">AWS Terrain Tiles</a> (Terrarium encoding) — CC BY 4.0. 3D Terrain and Hillshade toggles.</li>
+        <li data-source-credit="usgs-terrain">United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey — <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">AWS Terrain Tiles</a> (Terrarium encoding) — CC BY 4.0. 3D Terrain and Hillshade toggles, the route profile, and the line elevation profile where 3DEP has no value.</li>
+        <li data-source-credit="usgs-3dep">Line elevation profile: <a href="https://www.usgs.gov/3d-elevation-program" target="_blank" rel="noopener">USGS 3D Elevation Program (3DEP)</a> 1/3 arc-second elevation, sampled from the <a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer" target="_blank" rel="noopener">3DEP elevation service</a> when you open a line's profile. Map services and data available from U.S. Geological Survey, National Geospatial Program — public domain.</li>
         <li>Tooling: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> / <a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener">PMTiles</a> / <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noopener">Esri World Imagery</a> / <a href="https://developers.arcgis.com/documentation/mapping-and-location-services/geocoding/" target="_blank" rel="noopener">Esri Geocoding</a> / <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Google Material Symbols</a></li>
       </ul>
       <p class="credits-support">Need help? Contact Ben Hutchins at Western Power Pool for support, or <a href="https://github.com/BenHutchinsWPP/TransmissionMap/issues" target="_blank" rel="noopener">open an issue on the GitHub project</a>.</p>

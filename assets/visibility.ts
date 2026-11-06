@@ -13,12 +13,17 @@
 // (plain, `modes` and heat/icons layers) that setLayerVisibility() and
 // applyGenMode() both apply; heatRampShown() is the pure rule panel-mirror.ts
 // shows a layer's heat ramp legend by.
+// Switching stays this per-layer sequence on purpose: subscribers rely on one
+// 'layer:visibility' per layer, rivals go off before the layer goes on, and a switch
+// fetches data and may open a disclaimer, so a set-and-diff view applier would have
+// to rebuild all of it.
 // Imported by: ui.ts, live-staleness.ts, odin-outages.ts (setLayerVisibility),
 //              view-state.ts (setLayerVisibility, settleExclusiveGroups, applyAllGenModes);
-//              ui-filters.ts (applyGenMode); ui/panel-mirror.ts (heatRampShown, modeOf).
+//              ui-filters.ts (applyGenMode); ui/panel-mirror.ts (heatRampShown, modeOf);
+//              dataset-query.ts (wantedLayout, modeOf); dev-console.ts (setLayerVisibility).
 // Deps: layers/layer-data.ts (ensureLayerData), layers/layer-plan.ts
 //       (setMapLayerVisibility — reads a held archive on first show), raster-probes.ts,
-//       tribal-disclaimer.ts, state-bus.ts.
+//       tribal-disclaimer.ts, route-constraints.ts (routeConstraintsDisclaimer), state-bus.ts.
 
 import { state } from './state.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
@@ -26,6 +31,7 @@ import { RASTER_PROBES, ensureRasterLut, updateRasterArrow } from './raster-prob
 import { ensureLayerData } from './layers/layer-data.js';
 import { setMapLayerVisibility } from './layers/layer-plan.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from './tribal-disclaimer.js';
+import { ROUTE_CONSTRAINTS_ID, routeConstraintsDisclaimer } from './route-constraints.js';
 import { emit } from './state-bus.js';
 import type { LayerDef } from '../src/types.js';
 
@@ -104,6 +110,7 @@ export function setLayerVisibility(registryId: string, visible: boolean, writeUr
   emit('layer:visibility', { id: registryId, visible });
 
   if (visible && TRIBAL_LAYER_IDS.includes(registryId)) showTribalDisclaimer();
+  if (visible && registryId === ROUTE_CONSTRAINTS_ID) routeConstraintsDisclaimer();
 }
 
 export function applyGenMode(registryId: string) {

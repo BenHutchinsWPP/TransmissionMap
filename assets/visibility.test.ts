@@ -12,6 +12,7 @@ vi.mock('./layers/layer-plan.js', () => ({
 vi.mock('./raster-probes.js', () => ({
   RASTER_PROBES: {} as Record<string, unknown>,
   ensureRasterLut: vi.fn(),
+  setWeatherLutStep: vi.fn(),
   updateRasterArrow: vi.fn(),
 }));
 

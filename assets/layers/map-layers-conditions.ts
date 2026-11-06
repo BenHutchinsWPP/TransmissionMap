@@ -418,7 +418,7 @@ export function planWeatherLive(): LayerPlan {
     } as LayerSpecification },
   ]);
 
-  // White country/state border highlights over the wash (Ventusky-style) —
+  // White country/state border highlights over the wash —
   // the dark ramp colors swallow the basemap's own borders. Natural Earth
   // lines, lazily loaded via the weather-live alias in layer-data.ts and
   // toggled by the same registry row (mapLayerIds).

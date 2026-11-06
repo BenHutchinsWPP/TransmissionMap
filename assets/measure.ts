@@ -136,6 +136,7 @@ function setMeasureActive(on: boolean) {
   const canvas = state.map.getCanvas();
   if (on) {
     if (state.editMode === 'edit') toolHooks.exitEdit();
+    if (state.routePick) toolHooks.deactivateRoutePick();
     ensureMeasureLayers();
     // Also disables tap-to-zoom, so a double tap finishes the line rather than
     // zooming the map.

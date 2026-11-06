@@ -9,7 +9,7 @@ import { gzipSync, strToU8 } from 'fflate';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
 import { DATA } from '../constants.js';
-import { ensureLayerData } from './layer-data.js';
+import { ensureLayerData, liveFeed } from './layer-data.js';
 
 const fetchMock = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }));
 vi.stubGlobal('fetch', fetchMock);
@@ -129,5 +129,24 @@ describe('ensureLayerData layer:data emission', () => {
     expect(state.sourcesLoaded['hifld-natgas-points']).toBe(true);
     expect(emitted).toEqual([]);
     delete state.sourcesData['hifld-natgas-points'];
+  });
+
+  it('keeps the FeatureCollection-level feed_last_ok on a lazy first load', async () => {
+    fakeMap(4);
+    const fc = {
+      type: 'FeatureCollection', features: [],
+      generated_utc: '2026-10-10T12:00:00Z',
+      feed_status: { canada: 'failed' },
+      feed_last_ok: { canada: '2026-10-10T09:00:00Z' },
+    };
+    fetchMock.mockResolvedValueOnce(new Response(gzipSync(strToU8(JSON.stringify(fc)))) as never);
+    await ensureLayerData('hifld-natgas-points');
+    expect(liveFeed('hifld-natgas-points')).toEqual({
+      generatedUtc: '2026-10-10T12:00:00Z',
+      feedStatus: { canada: 'failed' },
+      feedLastOk: { canada: '2026-10-10T09:00:00Z' },
+    });
+    delete state.sourcesData['hifld-natgas-points'];
+    delete state.liveFcMeta['hifld-natgas-points'];
   });
 });

@@ -1,6 +1,6 @@
 // ─── Map Experiences runtime controller ───────────────────────────────────────
 // Role: turns a MapExperience preset (src/registry/experiences.ts) into live map
-//       state — layers, filters, where/style, basemap, 3D and camera — and tracks which story
+//       state — layers, filters, where/style/sel, area, basemap, 3D and camera — and tracks which story
 //       is active. Owns no DOM: the gallery and the floating story card live in
 //       ui/ui-experiences.ts, which is the only module that imports this one.
 //
@@ -88,6 +88,8 @@ export function experienceUrlState(preset: MapExperience['state']): UrlStateData
   view.hillshade = !!preset.hillshade;
   if (preset.where) view.where = preset.where;
   if (preset.style) view.style = preset.style;
+  if (preset.area) view.area = preset.area;
+  if (preset.sel) view.sel = preset.sel;
   return view;
 }
 

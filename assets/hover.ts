@@ -44,7 +44,7 @@ export function initPolygonHover() {
   let activeVal: string | null = null;
 
   onMapTap(function onPolygonClearClick(e) {
-    if (state.editMode === 'edit' || state.measure.active) return;
+    if (state.editMode === 'edit' || state.measure.active || state.routePick) return;
     if (!activeHl) return;
     const hits = state.map!.queryRenderedFeatures(tapBox(e), { layers: hoverFillIds() });
     if (!hits.length) {
@@ -79,7 +79,7 @@ export function initPolygonHover() {
     state.map.addLayer(def);
 
     onMapTap(fill, function onPolygonFillClick(_e, features) {
-      if (state.editMode === 'edit' || state.measure.active) return;
+      if (state.editMode === 'edit' || state.measure.active || state.routePick) return;
       const own = features[0].properties[field];
       const val = own ?? featureId(layer.id, features[0]);
       const key = own != null ? ["get", field] : featureIdExpr(layer.id);

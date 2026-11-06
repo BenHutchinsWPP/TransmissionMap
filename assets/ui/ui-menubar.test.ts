@@ -4,6 +4,7 @@
 // Deps: ui-menubar.js, user-data-colors.js, state.js, state-bus.js; undo.js is mocked.
 
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 const undoMock = vi.hoisted(() => ({
   undo: vi.fn(() => true),
@@ -174,8 +175,9 @@ describe('ui-menubar undo / redo', () => {
 
   beforeEach(() => {
     document.body.innerHTML = `
-      <button class="menu-item" data-action="undo" type="button" disabled>Undo</button>
-      <button class="menu-item" data-action="redo" type="button" disabled>Redo</button>
+      <button class="menu-btn tb-btn" data-action="undo" type="button" disabled>Undo</button>
+      <button class="menu-btn tb-btn" data-action="redo" type="button" disabled>Redo</button>
+      <button class="menu-item" data-action="undo" id="mu" type="button" disabled>Undo</button>
       <input id="field" type="text">
       <input id="check" type="checkbox">
       <input id="range" type="range">
@@ -260,7 +262,7 @@ describe('ui-menubar undo / redo', () => {
     expect(e.defaultPrevented).toBe(false);
   });
 
-  it('menu items follow canUndo / canRedo on undo:changed', () => {
+  it('buttons follow canUndo / canRedo on undo:changed', () => {
     const undoItem = document.querySelector<HTMLButtonElement>('[data-action="undo"]')!;
     const redoItem = document.querySelector<HTMLButtonElement>('[data-action="redo"]')!;
     expect(undoItem.disabled).toBe(true);
@@ -269,13 +271,87 @@ describe('ui-menubar undo / redo', () => {
     emit('undo:changed');
     expect(undoItem.disabled).toBe(false);
     expect(redoItem.disabled).toBe(true);
+    expect((document.getElementById('mu') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('clicking the Undo item undoes', async () => {
+  it('clicking the Undo button undoes', async () => {
     undoMock.canUndo.mockReturnValue(true);
     emit('undo:changed');
     document.querySelector<HTMLButtonElement>('[data-action="undo"]')!.click();
     await Promise.resolve();
     expect(undoMock.undo).toHaveBeenCalled();
+  });
+});
+
+describe('ui-menubar submenus and keys', () => {
+  const key = (k: string, target: Element) => {
+    const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+    target.dispatchEvent(e);
+    return e;
+  };
+  const q = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div class="menu-wrap">
+        <button class="menu-btn" id="fb" aria-haspopup="true" aria-expanded="false">File</button>
+        <div class="menu-dropdown" hidden>
+          <div class="menu-sub" id="s1">
+            <button class="menu-item menu-sub-btn" id="sb1" aria-haspopup="true" aria-expanded="false">Open</button>
+            <div class="menu-submenu" hidden>
+              <button class="menu-item" id="i1">A</button>
+              <button class="menu-item" id="i2">B</button>
+            </div>
+          </div>
+          <button class="menu-item" id="top2">Settings</button>
+        </div>
+      </div>`;
+  });
+
+  it('opens a submenu on click and closes everything on Escape, returning focus', () => {
+    q('#fb').click();
+    q('#sb1').click();
+    expect(q('#sb1').getAttribute('aria-expanded')).toBe('true');
+    expect(q('.menu-submenu').hidden).toBe(false);
+    q('#i1').focus();
+    key('Escape', q('#i1'));
+    expect(q('.menu-dropdown').hidden).toBe(true);
+    expect(q('#sb1').getAttribute('aria-expanded')).toBe('false');
+    expect(q('.menu-submenu').hidden).toBe(true);
+    expect(document.activeElement).toBe(q('#fb'));
+  });
+
+  it('opens with ArrowRight, walks with ArrowDown and leaves with ArrowLeft', () => {
+    q('#fb').focus();
+    key('ArrowDown', q('#fb'));
+    expect(q('.menu-dropdown').hidden).toBe(false);
+    expect(document.activeElement).toBe(q('#sb1'));
+    key('ArrowRight', q('#sb1'));
+    expect(document.activeElement).toBe(q('#i1'));
+    key('ArrowDown', q('#i1'));
+    expect(document.activeElement).toBe(q('#i2'));
+    key('ArrowLeft', q('#i2'));
+    expect(q('.menu-submenu').hidden).toBe(true);
+    expect(document.activeElement).toBe(q('#sb1'));
+  });
+});
+
+describe('ui-menubar compact-view swap in style.css', () => {
+  // The rule bodies run from their @media header to the closing brace at column 0.
+  const css = readFileSync('assets/style.css', 'utf8');
+  const bodyOf = (header: string, at: number) => css.slice(at + header.length, css.indexOf('\n}\n', at));
+
+  it('hides .tb-btn and shows the phone-only menu items in the shared compact query', () => {
+    const header = '@media (max-width: 640px), (max-height: 500px) {';
+    const at = css.indexOf('.tb-btn { display: none; }');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.lastIndexOf('@media', at)).toBe(css.lastIndexOf(header, at));
+    const block = bodyOf(header, css.lastIndexOf(header, at));
+    expect(block).toMatch(/\.menu-item\.menu-phone-only[^{]*\{\s*display:\s*block/);
+  });
+
+  it('keeps .tb-btn visible under the 480 px query', () => {
+    const header = '@media (max-width: 480px) {';
+    expect(bodyOf(header, css.indexOf(header))).not.toMatch(/\.tb-btn\s*\{\s*display:\s*none/);
   });
 });

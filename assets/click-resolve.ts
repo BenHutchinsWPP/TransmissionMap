@@ -3,7 +3,9 @@
 //       queryRenderedFeatures returned (already in CLICKABLE_LAYERS priority
 //       order) and the edit mode, decide what to show: nothing, one feature's
 //       popup, a disambiguation picker, or — in edit mode — a Copy-to-My-Data
-//       popup, a copy picker, or a "tiled, can't copy" note. No map, DOM or
+//       popup (`copy-tiled` for a tiled feature whose full geometry the line
+//       GeoParquet holds — the caller's `fullGeometry` predicate), a copy
+//       picker, or a "tiled, can't copy" note. No map, DOM or
 //       clock: popup.ts queries, calls resolveHits(), and renders the result.
 // Deps: odin-outages.ts (outageFeatureLit), fema-nri.ts (nriFeatureLit),
 //       nws-zone-join.ts (zoneFeatureLit) — each owner's "feature is painted"
@@ -29,6 +31,7 @@ export type ClickResolution<F> =
   | { kind: 'single'; feature: F }
   | { kind: 'picker'; features: F[] }
   | { kind: 'copy'; feature: F }
+  | { kind: 'copy-tiled'; feature: F }
   | { kind: 'copy-picker'; features: F[] }
   | { kind: 'not-copyable' };
 
@@ -49,6 +52,7 @@ export function hitLit(f: HitFeature): boolean {
 
 export function resolveHits<F extends HitFeature>(
   features: readonly F[], mode: 'view' | 'edit',
+  fullGeometry: (f: F) => boolean = () => false,
 ): ClickResolution<F> {
   // Dedupe tile-boundary duplicates: queryRenderedFeatures repeats a feature once
   // per tile it straddles, vector tiles and GeoJSON sources alike (MapLibre tiles a
@@ -66,10 +70,14 @@ export function resolveHits<F extends HitFeature>(
 
   if (mode === 'edit') {
     // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
-    // borders, so copies would be truncated — only allow GeoJSON-backed features.
-    const copyable = uniq.filter(ft => !ft.sourceLayer);
+    // borders, so copies would be truncated — only allow GeoJSON-backed features,
+    // and tiled ones whose full geometry can be read (`fullGeometry`).
+    const copyable = uniq.filter(ft => !ft.sourceLayer || fullGeometry(ft));
     if (copyable.length > 1) return { kind: 'copy-picker', features: copyable };
-    if (copyable.length === 1) return { kind: 'copy', feature: copyable[0] };
+    if (copyable.length === 1) {
+      const feature = copyable[0];
+      return feature.sourceLayer ? { kind: 'copy-tiled', feature } : { kind: 'copy', feature };
+    }
     return uniq.length ? { kind: 'not-copyable' } : { kind: 'none' };
   }
 

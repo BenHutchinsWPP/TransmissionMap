@@ -5,6 +5,7 @@
 // applyLayerPlan() stamps each style layer's starting visibility, so the
 // helpers here only describe style layers.
 // Imported by: nws-zone-join.ts (ensureCountyBoundaries),
+//              county-overlay.ts (countyBoundariesSource),
 //              map-layers-*.ts (planTransmissionLines, planPolygon, planRaster,
 //              planSubstationPoints, countyBoundariesSource,
 //              genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
@@ -103,17 +104,16 @@ export function planPolygon({ sourceId, sourceLayer = undefined as (string | und
   fillMinzoom: number; fillOpacity: number | ExpressionSpecification;
   outlineMinzoom: number; outlineWidth: number | ExpressionSpecification; outlineOpacity: number | ExpressionSpecification;
 }): LayerPlan {
-  const common: Partial<LayerSpecification> = { source: sourceId };
-  if (sourceLayer) (common as Record<string, unknown>)["source-layer"] = sourceLayer;
+  const srcLayerProp = sourceLayer ? { "source-layer": sourceLayer } : {};
 
   return [
     layerSource(sourceId),
     { layer: {
-      ...common, id: `${prefix}-fill`, type: "fill", minzoom: fillMinzoom,
+      source: sourceId, ...srcLayerProp, id: `${prefix}-fill`, type: "fill", minzoom: fillMinzoom,
       paint: { "fill-color": color, "fill-opacity": fillOpacity },
     } as LayerSpecification },
     { layer: {
-      ...common, id: `${prefix}-outline`, type: "line", minzoom: outlineMinzoom,
+      source: sourceId, ...srcLayerProp, id: `${prefix}-outline`, type: "line", minzoom: outlineMinzoom,
       paint: { "line-color": color, "line-width": outlineWidth, "line-opacity": outlineOpacity },
     } as LayerSpecification },
   ];

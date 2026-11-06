@@ -4,6 +4,7 @@ import {
   row, websiteRow, title,
   renderEiaGen, renderOgfPlanned, renderHifldNatgasPts, renderGeoHydroPts,
   renderBa, renderRetail, buildUserFeatureHtml, buildPopupHtml, withRelativeDate,
+  buildServiceFeatureHtml, renderGridNode,
 } from './popup-format.js';
 import { setUnits, DEFAULT_UNITS } from '../src/units.js';
 import { state } from './state.js';
@@ -757,5 +758,59 @@ describe('popup edge cases', () => {
     expect(out).toContain('capacity_mw');
     expect(out).toContain('>0<');
     expect(out).toContain('popup.fuel');
+  });
+});
+
+// ─── linked-service features ─────────────────────────────────────────────────
+
+describe('buildServiceFeatureHtml', () => {
+  const svc = { title: '<b>Svc</b>', credit: 'Agency & <i>co</i>' };
+
+  it('escapes every key, value, the title and the credit', () => {
+    const html = buildServiceFeatureHtml(svc, { '<img src=x onerror=alert(1)>': '<script>x</script>', n: 5 });
+    expect(html).not.toMatch(/<(img|script|b|i)\b/);
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).toContain('&lt;script&gt;x&lt;/script&gt;');
+    expect(html).toContain('&lt;b&gt;Svc&lt;/b&gt;');
+    expect(html).toContain('Agency &amp; &lt;i&gt;co&lt;/i&gt;');
+  });
+
+  it('caps at 30 properties of 200 characters and says how many were left out', () => {
+    const p = Object.fromEntries(Array.from({ length: 35 }, (_, i) => [`f${i}`, 'v'.repeat(500)]));
+    const html = buildServiceFeatureHtml(svc, p);
+    expect(html.match(/popup-key/g)).toHaveLength(30);
+    expect(html).not.toContain('v'.repeat(200));
+    expect(html).toContain('v'.repeat(199) + '…');
+    expect(html).toContain('5 more fields not shown');
+  });
+
+  it('is what a click on a service layer renders', () => {
+    state.services = [{ id: 'my-svc', kind: 'geojson', url: 'https://a.gov/x.geojson', host: 'a.gov', title: 'Mine',
+      credit: 'A', visible: true, style: { kind: 'fill', color: '#ff0000', opacity: 1 } }];
+    expect(buildPopupHtml('svc-my-svc-fill', { a: 1 })).toContain('Mine');
+    expect(buildPopupHtml('svc-other-fill', { a: 1 })).toBeNull();
+    state.services = [];
+  });
+});
+
+describe('renderGridNode', () => {
+  it('folds the fuel and interchange tables into closed details with their row counts', () => {
+    const html = renderGridNode({
+      id: 'A40', name: 'Area 40 · Northwest', load: 100, gen: 120, net: 20, members: '["BPAT","PACW"]',
+      fuels: '[["hydro",80],["wind",40]]', ties: '[{"with":"A65","mw":30,"mine":30,"theirs":28},{"with":"A60","mw":-10,"mine":null,"theirs":-10},{"with":"A50","mw":5,"mine":5,"theirs":5}]',
+    });
+    const blocks = html.split('<details class="popup-row">').slice(1);
+    expect(blocks).toHaveLength(2);
+    expect(html).not.toContain('<details open');
+    expect(blocks[0]).toMatch(/^<summary>[^<]*\(2\)<\/summary><table/);
+    expect(blocks[0].split('</details>')[0].match(/<tr>/g)).toHaveLength(3);
+    expect(blocks[1]).toMatch(/^<summary>[^<]*\(3\)<\/summary><table/);
+    expect(blocks[1].split('</details>')[0].match(/<tr>/g)).toHaveLength(4);
+  });
+  it('adds the off-area reason, escaped, only for a gridOps.offArea key', () => {
+    const base = { id: 'GRID', name: 'Gridforce', load: 1, gen: 2, net: 1, members: '[]', fuels: '[]', ties: '[]' };
+    expect(renderGridNode({ ...base, offArea: 'gridOps.offArea.GRID' })).toContain('Not in any WECC area');
+    expect(renderGridNode({ ...base, offArea: '<b>x</b>' })).not.toContain('<b>x</b>');
+    expect(renderGridNode({ ...base, offArea: '' })).not.toContain('Not in any WECC area');
   });
 });

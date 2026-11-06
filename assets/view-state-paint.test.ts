@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // A view's `where` and `style` on a recording fake map built by the real layer
 // builders: a story carrying both leaves nothing behind for the next view or
-// Reset (F3), a cold boot from a `vx` link paints both (F10), a cold boot shows
+// Reset, a cold boot from a `vx` link paints both, a cold boot shows
 // one notice for decode and apply drops together, and a story with both
-// sections stays pristine across writes (F11), and a cold-boot seed leaves the
+// sections stays pristine across writes, and a cold-boot seed leaves the
 // same state a live apply of the same view does.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LayerSpecification } from 'maplibre-gl';
@@ -167,7 +167,7 @@ describe('a view with where and style, then a plain one', () => {
     const clean = painted(layers);
 
     applyView(experienceUrlState(LEAKY));
-    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['>=', ['to-number', ['get', 'nominal_kv']], 345]]));
+    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
     expect(layers.get('railroads')!.paint!['line-color']).toBe('#ff0000');
     expect(painted(layers)).not.toEqual(clean);
     expect(getDiagLog()).toEqual([]);
@@ -187,6 +187,27 @@ describe('a view with where and style, then a plain one', () => {
     expect(state.where).toEqual({});
     expect(state.styleOverrides).toEqual({});
     expect(painted(layers)).toEqual(clean);
+  });
+
+  it('Reset (applyView({})) clears the area and puts every filter back', () => {
+    const layers = recordingMap();
+    applyView({});
+    const clean = painted(layers);
+    applyView({ area: { kind: 'states', codes: ['TX'] } });
+    expect(state.area).toEqual({ kind: 'states', codes: ['TX'] });
+    expect(JSON.stringify(layers.get('osm-substations-points-hv')!.filter)).toContain('|USAB|');
+    expect(painted(layers)).not.toEqual(clean);
+    applyView({});
+    expect(state.area).toBeNull();
+    expect(painted(layers)).toEqual(clean);
+  });
+
+  it('a cold boot seeded with an area paints it on load', () => {
+    seedView({ area: { kind: 'ba', codes: ['ERCO'] } });
+    const layers = recordingMap();
+    applyAllFilters();
+    expect(JSON.stringify(layers.get('osm-substations-points-hv')!.filter)).toContain('|ERCO|');
+    expect(currentView().area).toEqual({ kind: 'ba', codes: ['ERCO'] });
   });
 
   it('every curated story paints without a key the map cannot take', () => {
@@ -227,7 +248,7 @@ describe('cold boot from a vx link', () => {
     expect(document.querySelector('[role=status]')).toBeNull();
     applyExperience('interconnections-dc-seams', 'jump');
     expect(activeExperienceId()).toBe('interconnections-dc-seams');
-    expect(state.styleOverrides).toEqual({});
+    expect(state.styleOverrides).not.toHaveProperty('osm-generators');
   });
 
   it('paints where and style at load', () => {
@@ -242,7 +263,7 @@ describe('cold boot from a vx link', () => {
     expect(changed).toContain('osm-substations-points-hv');
     expect(changed).toContain('railroads');
     expect(changed.some(id => id.startsWith('osm-transmission-lines'))).toBe(true);
-    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['>=', ['to-number', ['get', 'nominal_kv']], 345]]));
+    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
     expect(document.querySelector('[role=status]')).toBeNull();
   });
 

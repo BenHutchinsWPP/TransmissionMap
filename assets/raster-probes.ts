@@ -1,8 +1,12 @@
 // ─── Raster LUT hover probes (wind/solar/geo/pop-density) ────────────────────
+// Owns the hover LUT cache: one grid per probe, kept only while its URL is the
+// probe's current lut() — a step, variable or bake change makes it stale, and
+// a fetch that lands after its URL stopped being current is discarded.
 // Imported by: layers/add-all-layers.ts (ensureRasterLut in addAllLayers),
-//              visibility.ts (setLayerVisibility, updateRasterArrow)
+//              visibility.ts (setLayerVisibility, updateRasterArrow),
+//              weather-live.ts (setWeatherLutStep, ensureRasterLut, updateRasterArrow)
 // Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
-// Exports the RasterMeta type (state.rasterLut[id].meta); state.ts imports it type-only.
+// Exports the RasterMeta type (a LUT's georeferencing).
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
 import { state } from './state.js';
@@ -11,7 +15,7 @@ import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { fmtSpeed, fmtDensity } from '../src/units.js';
 import { onMapPoint, onMapPointLeave } from './map-input.js';
 
-// Georeferencing + decoding for a hover LUT grid (state.rasterLut[id].meta).
+// Georeferencing + decoding for a hover LUT grid.
 export interface RasterMeta {
   west: number;
   north: number;
@@ -51,15 +55,29 @@ interface WeatherLiveMeta {
   }>;
 }
 
+// The scrubbed step's file suffix ("" = base step) and the bake's generated_utc,
+// set by weather-live.ts on every paint. The bake stamp in the URL makes a new
+// bake at the same step a new URL (and bypasses the HTTP cache); until the
+// first bake is read (bake null) there is no URL, so switching the layer on
+// fetches once.
+let weatherStep: { suffix: string; bake: string | null } = { suffix: "", bake: null };
+export function setWeatherLutStep(suffix: string, bake: string): void {
+  weatherStep = { suffix, bake };
+}
+
+function weatherUrl(file: string): string {
+  return weatherStep.bake === null
+    ? ""
+    : `${weatherLiveUrl(file)}?_=${encodeURIComponent(weatherStep.bake)}`;
+}
+
 // lut/meta/metaTransform trio shared by the two weather probes. `varId` is
 // read per call so the main probe follows the dropdown selection. Every LUT
-// ships gzipped, base and per-step alike; weatherStepSuffix is "" for the base
-// step — weather-live.ts keeps it current and invalidates the cache on every
-// scrub/refresh.
+// ships gzipped, base and per-step alike.
 function weatherProbeFiles(varId: () => string) {
   return {
-    lut: () => weatherLiveUrl(`${varId()}${state.weatherStepSuffix}.i16.gz`),
-    meta: () => weatherLiveUrl("meta.json"),
+    lut: () => weatherUrl(`${varId()}${weatherStep.suffix}.i16.gz`),
+    meta: () => weatherUrl("meta.json"),
     metaTransform: (raw: unknown): RasterMeta => {
       const v = (raw as WeatherLiveMeta).vars[varId()];
       const [w, s, e, n] = v.bbox;
@@ -98,12 +116,10 @@ export const RASTER_PROBES: Record<string, {
     lut: () => DATA.usgs_seismic_pga_lut, meta: () => DATA.usgs_seismic_pga_lut_meta,
     label: "Seismic", readout: (v) => `${v.toFixed(3)} g PGA`,
   },
-  // label/readout follow the currently-selected weather variable. The LUT is
-  // reloaded every refresh by weather-live.ts (it invalidates state.rasterLut
-  // and re-calls ensureRasterLut) and whenever the variable dropdown changes
-  // (setWeatherVar). lut()/meta() read state.weatherVar so a var switch
-  // fetches the right files; readout() reads it too so the bubble text swaps
-  // along with the LUT.
+  // label/readout follow the currently-selected weather variable. lut() names
+  // the variable, step and bake, so weather-live.ts's paint (setWeatherLutStep,
+  // then ensureRasterLut) fetches the grid for whatever it now shows; readout()
+  // reads the variable too so the bubble text swaps along with the LUT.
   "weather-live": {
     ...weatherProbeFiles(() => probeWeatherVar().id),
     get label() { return probeWeatherVar().label; },
@@ -112,8 +128,8 @@ export const RASTER_PROBES: Record<string, {
   },
   // Companion probe for the "Temp & Wind" combined view: adds a Wind line to
   // the cursor bubble alongside the Temperature line the main probe supplies.
-  // Not a registry layer — `active` gates it to the combined view; its LUT is
-  // (in)validated by weather-live.ts refetch() together with the main one.
+  // Not a registry layer — `active` gates it to the combined view; its LUT
+  // follows the same step and bake as the main one.
   "weather-live-wind": {
     ...weatherProbeFiles(() => "wind"),
     label: WIND_VAR.label,
@@ -135,32 +151,53 @@ async function fetchOk(url: string): Promise<Response> {
   return r;
 }
 
+// probe id → its loaded grid, and the URL it came from.
+const luts: Record<string, { url: string; meta: RasterMeta; data: Int16Array }> = {};
+// probe id → the LUT URL in flight, so a second call for the same URL waits on
+// the first fetch rather than starting another.
+const loading: Record<string, string> = {};
+
+// The probe's grid, only while it is the one lut() names now.
+function currentLut(id: string) {
+  const L = luts[id];
+  return L && L.url === RASTER_PROBES[id]?.lut() ? L : undefined;
+}
+
 export async function ensureRasterLut(id: string) {
   const probe = RASTER_PROBES[id];
-  if (!probe || state.rasterLut[id] || state.rasterLutLoading[id]) return;
-  state.rasterLutLoading[id] = true;
+  const lutUrl = probe?.lut();
+  if (!lutUrl || currentLut(id) || loading[id] === lutUrl) return;
+  loading[id] = lutUrl;
+  let stored = false;
   try {
-    const lutUrl = probe.lut();
     const [rawMeta, buf] = await Promise.all([
       fetchOk(probe.meta()).then(r => r.json()),
-      fetchOk(lutUrl).then(r => lutUrl.endsWith(".gz")
+      fetchOk(lutUrl).then(r => /\.gz(\?|$)/.test(lutUrl)
         ? new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()
         : r.arrayBuffer()),
     ]);
-    const meta = probe.metaTransform ? probe.metaTransform(rawMeta) : rawMeta as RasterMeta;
-    state.rasterLut[id] = { meta, data: new Int16Array(buf) };
+    // A step, variable or bake change while this was in flight moved lut() on;
+    // a grid for a URL no longer current is dropped, whatever order fetches land in.
+    if (probe.lut() === lutUrl) {
+      const meta = probe.metaTransform ? probe.metaTransform(rawMeta) : rawMeta as RasterMeta;
+      luts[id] = { url: lutUrl, meta, data: new Int16Array(buf) };
+      stored = true;
+    }
   } catch (err) {
     console.warn("[TransmissionMap] raster LUT load failed", id, err);
-    state.rasterLutLoading[id] = false;
+  } finally {
+    if (loading[id] === lutUrl) delete loading[id];
   }
   // A bubble placed by a tap outlives the tap, so a LUT arriving late — or the
   // hourly weather swap refetching one — has to reach it. Outside the try: a
   // fault while redrawing the bubble is not a failed load.
-  if (state.rasterLut[id]) resampleBubble();
+  if (stored) resampleBubble();
 }
 
-function sampleRaster(id: string, lng: number, lat: number): number | null {
-  const L = state.rasterLut[id];
+// The probe's value at a point, or null off the grid, on nodata or before its
+// current grid has loaded.
+export function sampleRaster(id: string, lng: number, lat: number): number | null {
+  const L = currentLut(id);
   if (!L) return null;
   const { meta, data } = L;
   const col = Math.floor((lng - meta.west) / meta.dx);
@@ -170,7 +207,7 @@ function sampleRaster(id: string, lng: number, lat: number): number | null {
   return v > meta.nodata ? v / meta.scale : null;
 }
 
-// ── Cursor value bubble (Ventusky-style) ─────────────────────────────────────
+// ── Cursor value bubble ─────────────────────────────────────
 // One floating bubble sits at the cursor — or at the last tap — and lists the
 // value of every visible probed raster under it; the layer-panel rows and
 // legends carry no readout of their own. The anchor is a screen position, so
@@ -231,7 +268,7 @@ function resampleBubble(at?: { lng: number; lat: number }) {
   const { lng, lat } = at ?? state.map.unproject([bubblePoint.x, bubblePoint.y]);
   for (const [id, probe] of Object.entries(RASTER_PROBES)) {
     const on = probe.active ? probe.active() : state.layerVisibility[id];
-    setBubbleValue(id, on && state.rasterLut[id] ? sampleRaster(id, lng, lat) : null);
+    setBubbleValue(id, on ? sampleRaster(id, lng, lat) : null);
   }
   renderBubble();
 }
@@ -241,6 +278,7 @@ export function initRasterProbes() {
   // onMapPoint rather than onMapHover: reading a value off the raster is what
   // these layers are for, so a tap has to produce it as a mouse does.
   onMapPoint((e) => {
+    if (state.routePick || state.routeInspect) return;
     bubblePoint = { x: e.point.x, y: e.point.y };
     resampleBubble(e.lngLat);
   });

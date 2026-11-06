@@ -1,4 +1,4 @@
-// ─── Wind particle animation (Ventusky-style flow over the wind wash) ────────
+// ─── Wind particle animation (flow over the wind wash) ────────
 // Role: advect ~2500 particles through the GFS u/v field baked to
 //       data/layers/weather_live/wind_uv.png (u=R, v=G, offset-encoded over
 //       [uv_min,uv_max], alpha 0 = nodata) and paint their trails on a plain
@@ -37,8 +37,7 @@ const MAX_AGE = 250;
 const TRAIL_FADE = 0.985;
 // Tuning knob: screen pixels a 1 m/s wind component moves a particle per
 // 60fps frame, at ANY zoom (advection is converted to degrees using the
-// current zoom's px/degree, so flow speed reads the same zoomed in or out —
-// the Ventusky behavior). 10 m/s ≈ 54 px/s. The frame loop scales by the
+// current zoom's px/degree, so flow speed reads the same zoomed in or out. 10 m/s ≈ 54 px/s. The frame loop scales by the
 // real elapsed time, so a 120 Hz phone display flows no faster than a 60 Hz
 // desktop. Adjust this single constant to make the flow feel faster/slower.
 const SPEED_PX = 0.09;
@@ -73,7 +72,7 @@ let listenersAttached = false;
 // True while the map is panning/zooming. Trails are painted in screen space,
 // so they can't follow the map — pause drawing and wipe the canvas on
 // movestart, resume on moveend (particles keep their lon/lat, so the flow
-// picks up where it left off — the Ventusky behavior).
+// picks up where it left off).
 let mapMoving = false;
 
 function onMoveStart() {

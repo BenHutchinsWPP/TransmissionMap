@@ -2,7 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderDataCredits } from './ui-credits.js';
+import { renderDataCredits, renderServiceCredits } from './ui-credits.js';
+import { state } from '../state.js';
+import LIBRARY from '../../src/registry/service-library.json';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 
 // Mirrors the shapes index.html ships: top-level anchored entries, an
@@ -228,5 +230,35 @@ describe('renderDataCredits', () => {
     for (const sourceId of anchoredSourceIds) {
       expect(renderedIds.has(sourceId), `missing data-source-credit for "${sourceId}" after manifest render`).toBe(true);
     }
+  });
+});
+
+describe('renderServiceCredits', () => {
+  afterEach(() => { state.services = []; });
+  const lib = LIBRARY as unknown as { id: string; kind: 'arcgis-feature'; url: string; layer?: string; host: string; title: string; credit: string; source: string }[];
+  const linked = (e: typeof lib[number]) => ({
+    id: 'sv1', kind: e.kind, url: e.url, layer: e.layer, host: e.host, title: e.title, credit: e.credit,
+    style: { kind: 'line' as const, color: '#112233', opacity: 1 }, visible: true, libraryId: e.id,
+  });
+
+  it("links a library service's source page in a new tab, as text-only DOM", async () => {
+    const e = lib.find(x => x.source !== 'UNKNOWN');
+    if (!e) return;
+    state.services = [linked(e)];
+    await renderServiceCredits();
+    const li = document.querySelector('[data-linked-services] li')!;
+    expect(li.textContent).toContain(e.title);
+    const a = li.querySelector('a')!;
+    expect(a.getAttribute('href')).toBe(new URL(e.source).href);
+    expect(a.target).toBe('_blank');
+    expect(a.rel).toBe('noopener noreferrer');
+  });
+
+  it('gives no link for an UNKNOWN source or a pasted service', async () => {
+    const e = lib.find(x => x.source === 'UNKNOWN');
+    state.services = [{ ...linked(lib[0]), libraryId: undefined, id: 'sv2' }, ...(e ? [{ ...linked(e), id: 'sv3' }] : [])];
+    await renderServiceCredits();
+    expect(document.querySelectorAll('[data-linked-services] li').length).toBe(state.services.length);
+    expect(document.querySelector('[data-linked-services] a')).toBeNull();
   });
 });

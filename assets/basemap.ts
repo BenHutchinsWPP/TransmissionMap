@@ -97,7 +97,7 @@ export function initBasemaps(): void {
 // beyond its coverage and the new one has not switched on yet.
 //
 // USGS serves real imagery across the whole lower 48 through TILE z16 and 404s
-// uniformly at z17 (verified at ten points, Seattle to Miami). tileZoom <= 16
+// uniformly at z17. tileZoom <= 16
 // holds while mapZoom < 15.5 — hence the .5. This is the hard ceiling, not a
 // preference: it leaves Esri only the last ~2.5 zoom levels.
 //
@@ -229,9 +229,8 @@ const ofmLayerIds: Record<OfmGroup, string[]> = { light: [], dark: [], aerial: [
 // Symbol (text/shield) layers across both styles — the "Map Labels" toggle set.
 const ofmLabelIds = new Set<string>();
 
-// OFM's Positron ships pure-black place labels; the old CARTO raster tiles
-// rendered them as soft grays that stayed behind the app's own features. Remap
-// the harsh colors at graft time (light style only; dark is untouched so far).
+// Soften Positron's black place labels so they sit behind the app's own
+// features: remap the colors at graft time (light style only).
 const OFM_LIGHT_TEXT_REMAP: Record<string, string> = {
   "#000": "#7d8792",  // city/town/village/country labels
   "#333": "#8a929c",  // state + minor place labels
@@ -351,7 +350,8 @@ function setMapLabelLanguage(map: maplibregl.Map, locale: SupportedLocale): void
     : ['coalesce', ['get', `name:${locale}`], ['get', 'name:en'], ['get', 'name']];
 
   for (const id of ofmLabelIds) {
-    if (map.getLayer(id)) {
+    // Road shields read `ref` (the route number), not a name: they keep their own text.
+    if (map.getLayer(id) && JSON.stringify(map.getLayoutProperty(id, 'text-field') ?? '').includes('"name')) {
       map.setLayoutProperty(id, 'text-field', expr as unknown as maplibregl.DataDrivenPropertyValueSpecification<string>);
     }
   }

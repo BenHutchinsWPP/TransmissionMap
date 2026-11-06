@@ -6,16 +6,9 @@ Interactive map of global electric transmission infrastructure — lines, substa
 
 ---
 
-## Yet Another Map: Why?
+## What it shows
 
-[OpenInfraMap](https://openinframap.org/) covers global infrastructure. This project narrows the focus to North America and adds:
-
-- **Feature search** — type "Grizzly" and fly to Grizzly 500 kV directly.
-- **Per-layer filters** — show only wind generators, only ≥230 kV substations, etc.
-- **Aerial basemap toggle** — ESRI World Imagery to spot newly-built facilities not yet in OSM.
-- **HIFLD substations & lines** — a US public-domain dataset that fills in gaps OSM hasn't covered yet.
-- **EIA generators** — plant-level capacity, fuel, NERC region, balancing authority for the US.
-- **Direct downloads** — GeoJSON / CSV for every layer, ready for Google Earth or GIS software.
+The map draws transmission lines, substations, power plants, pipelines, renewable-resource rasters and land constraints, worldwide from OpenStreetMap and, for the United States, from public datasets such as HIFLD and EIA. Layers can be searched, filtered, compared on an aerial basemap and downloaded as GeoJSON or CSV.
 
 ---
 

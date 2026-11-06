@@ -139,3 +139,19 @@ describe('live age chip stale edge', () => {
     });
   }
 });
+
+describe('Grid Operations legend', () => {
+  it('shows with the layer and lists the fuel colours EIA-930 reports', () => {
+    document.body.innerHTML = `<div id="legendContainer" hidden></div><div id="gridOpsLegend" hidden><div id="gridOpsFuelItems"></div></div>`;
+    buildLegends();
+    const labels = [...document.querySelectorAll('#gridOpsFuelItems .legend-item span:last-child')].map(e => e.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['Wind', 'Solar', 'Hydro', 'Nuclear', 'Coal', 'Gas']));
+    expect(document.querySelectorAll('#gridOpsFuelItems input')).toHaveLength(0);
+    state.layerVisibility['ba-interchange'] = true;
+    emit('layer:visibility', { id: 'ba-interchange', visible: true });
+    expect(document.getElementById('gridOpsLegend')?.hidden).toBe(false);
+    state.layerVisibility['ba-interchange'] = false;
+    emit('layer:visibility', { id: 'ba-interchange', visible: false });
+    expect(document.getElementById('gridOpsLegend')?.hidden).toBe(true);
+  });
+});

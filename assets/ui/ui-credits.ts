@@ -22,11 +22,16 @@
 //       (LAYER_SOURCES — the anchor id space and group display labels),
 //       utils/utils.js (escapeHtml — every manifest-derived string is
 //       untrusted input and is escaped before it reaches the DOM; this module
-//       treats the fetched JSON as hostile).
+//       treats the fetched JSON as hostile; state.js and
+//       services/service-spec.js and services-dom.js (sourceLink, the
+//       library entry's source page) for renderServiceCredits).
 
 import { DATA } from '../constants.js';
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 import { escapeHtml } from '../utils/utils.js';
+import { state } from '../state.js';
+import { sourceLink } from './services-dom.js';
+import { t } from '../../src/i18n/index.js';
 
 const UNKNOWN = 'UNKNOWN';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -98,4 +103,36 @@ export async function renderDataCredits(): Promise<void> {
     if (note) note.insertAdjacentHTML('beforebegin', `Data as of ${escapeHtml(date)}. `);
     else host.insertAdjacentHTML('beforeend', ` — data as of ${escapeHtml(date)}`);
   }
+}
+
+// ─── Linked services ─────────────────────────────────────────────────────────
+// Rewritten on every open: the credit and licence of each service in the view.
+// A library entry's licence comes from the library; a pasted service shows the
+// credit stored with it; a library entry's source page follows as a new-tab
+// link (none for UNKNOWN). Everything is set as text.
+export async function renderServiceCredits(): Promise<void> {
+  const list = document.getElementById('creditsDialog')?.querySelector('ul');
+  if (!list) return;
+  list.querySelector('[data-linked-services]')?.remove();
+  if (!state.services.length) return;
+  let library: { id: string; url: string; kind: string; layer?: string; licence: string; source: string }[] = [];
+  if (state.services.some(s => s.libraryId !== undefined)) {
+    try { library = (await import('../../src/registry/service-library.json')).default as unknown as typeof library; } catch { /* credit only */ }
+  }
+  list.querySelector('[data-linked-services]')?.remove();
+  const items = document.createElement('ul');
+  for (const s of state.services) {
+    const entry = library.find(e => e.id === s.libraryId && e.url === s.url && e.kind === s.kind && e.layer === s.layer);
+    const li = document.createElement('li');
+    li.textContent = [s.title, s.credit, entry?.licence, s.host].filter(Boolean).join(' — ');
+    const link = entry && sourceLink(entry.source, t('services.source'));
+    if (link) li.append(' — ', link);
+    items.append(li);
+  }
+  const host = document.createElement('li');
+  host.dataset.linkedServices = '';
+  const heading = document.createElement('strong');
+  heading.textContent = t('mydata.linkedServices');
+  host.append(heading, items);
+  list.append(host);
 }

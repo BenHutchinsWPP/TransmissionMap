@@ -1,17 +1,17 @@
 // ─── addAllLayers orchestrator ────────────────────────────────────────────────
 // Collects every builder's LayerPlan in z-order and applies them in one
 // applyLayerPlan() call (layer-plan.ts); then runs the few non-layer side
-// effects (hatch images first, then the radar poll (../nexrad-radar.ts) and
+// effects (hatch and Grid Operations arrow images first, then the radar poll (../nexrad-radar.ts) and
 // the data-centre and WECC tap wiring) and starts the data fetches for layers already on.
 // Imports from layer-plan.ts (applyLayerPlan),
 // layer-data.ts (ensureLayerData), map-layers-*.ts (builders) and
-// ../nexrad-radar.ts (startNexradRadar).
+// ../nexrad-radar.ts (startNexradRadar), ../grid-ops/grid-ops.ts (addGridOpsImages).
 // Isolated here so layer-init.ts has no back-imports from map-layers-*.ts.
 // >>> ADD-LAYER: add-all-layers — see docs/adding-a-layer.md §7
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
-import { planPadus, planCritHab } from './map-layers-land.js';
+import { planPadus, planCritHab, planRouteConstraints } from './map-layers-land.js';
 import { applyLayerPlan } from './layer-plan.js';
 import { ensureLayerData } from './layer-data.js';
 import { RASTER_PROBES, ensureRasterLut } from '../raster-probes.js';
@@ -28,7 +28,7 @@ import { planWindResource, planSolarResource, planGeoResource, planGeoHydroPts, 
 import { planEiaGenerators, planEiaBalancingAuthorities } from './map-layers-eia.js';
 import {
   planPopDensity, planOsmDataCenters, planDcMoratoriumAreas, planDcMoratoriumPoints,
-  addDcmHatchImages, wireOsmDataCenters,
+  addDcmHatchImages, wireOsmDataCenters, planGridOps,
 } from './map-layers-load.js';
 import { planRailroads } from './map-layers-rail.js';
 import { planWeccPaths, wireWeccPaths } from './map-layers-wecc.js';
@@ -40,6 +40,7 @@ import {
 } from './map-layers-conditions.js';
 import { planMines } from './map-layers-mines.js';
 import { startNexradRadar } from '../nexrad-radar.js';
+import { addGridOpsImages } from '../grid-ops/grid-ops.js';
 import { planCountries, planAdmin1, planUsStates, planUsCounties, planUsZcta } from './map-layers-admin.js';
 import { addHighlightLayers } from '../highlights.js';
 
@@ -48,6 +49,7 @@ export function addAllLayers() {
   const map = state.map;
   if (!map) return;
   addDcmHatchImages(map);
+  addGridOpsImages(map);
   applyLayerPlan(map, [
     // Bottom-most: the temperature mosaic is a full-coverage wash — anywhere higher
     // in the stack it would veil every polygon layer under it.
@@ -58,6 +60,7 @@ export function addAllLayers() {
     ...planGeoResource(),
     ...planSeismicHazard(),   // raster — sits low so vector infra draws on top
     ...planWildfireHazard(),  // raster — sits low so vector infra draws on top
+    ...planRouteConstraints(), // raster, dev server only — Routing constraints
 
     ...planRetailTerritories(),
     ...planEiaBalancingAuthorities(),
@@ -125,6 +128,8 @@ export function addAllLayers() {
     ...planWildfireLivePoints(),  // hotspot heat/circles + incident POINTS — stay above infra like other markers
 
     ...planWeccPaths(),   // path-number markers sit on top of infrastructure
+
+    ...planGridOps(),     // EIA-930 BA bubbles + interchange arrows: an overview drawn over everything
   ]);
   startNexradRadar();
   wireOsmDataCenters();

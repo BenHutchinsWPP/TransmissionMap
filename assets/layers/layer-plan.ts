@@ -17,12 +17,13 @@
 //     until a layer on it is first shown. setMapLayerVisibility() is the one
 //     way to show a map layer: on a held source it sets the url, and the
 //     source's layers wait hidden until its metadata lands (the last
-//     visibility asked of each wins).
+//     visibility asked of each wins). setRasterUrl() points a raster source
+//     at another archive: a held source keeps the new url for its first show.
 // Imported by: add-all-layers.ts (applyLayerPlan), layer-init.ts
 //              (ensureCountyBoundaries), layer-source.ts (PlanStep type),
 //              map-layers-*.ts (LayerPlan type), ../visibility.ts,
 //              ../nws-zone-join.ts and ../user-data/user-data-draw.ts
-//              (setMapLayerVisibility).
+//              (setMapLayerVisibility), ../route-constraints.ts (setRasterUrl).
 // Deps: state.ts (layerVisibility), src/registry/index.ts (LAYERS),
 //       base-filters.ts (registerBaseFilter).
 
@@ -53,6 +54,8 @@ type Visibility = "visible" | "none";
 const heldUrls = new Map<string, string>();
 // Sources loading their metadata → the visibility last asked of each of their layers.
 const revealing = new Map<string, Map<string, Visibility>>();
+// Sources loading their metadata → the url being loaded (setRasterUrl may move it on).
+const revealingUrl = new Map<string, string>();
 
 const visibilityOf = (layer: LayerSpecification) =>
   (layer as { layout?: { visibility?: Visibility } }).layout?.visibility;
@@ -93,16 +96,32 @@ export function setMapLayerVisibility(map: MapLibreMap, id: string, v: Visibilit
   if (!source || !url) { map.setLayoutProperty(id, "visibility", v); return; }
   heldUrls.delete(source);
   revealing.set(source, new Map([[id, v]]));
+  revealingUrl.set(source, url);
   const done = (e: { type: string; sourceId?: string; sourceDataType?: string }) => {
     if (e.sourceId !== source || (e.type === "sourcedata" && e.sourceDataType !== "metadata")) return;
     map.off("sourcedata", done);
     map.off("error", done);
     const wanted = revealing.get(source)!;
+    const loaded = revealingUrl.get(source)!;
     revealing.delete(source);
-    if (e.type === "error") { heldUrls.set(source, url); return; }
+    revealingUrl.delete(source);
+    if (e.type === "error") { heldUrls.set(source, loaded); return; }
     for (const [layerId, vis] of wanted) if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", vis);
   };
   map.on("sourcedata", done);
   map.on("error", done);
   (map.getSource(source) as VectorTileSource | RasterTileSource).setUrl(url);
+}
+
+/** Point raster source `sourceId` at `url`. A source still held (no layer on it
+ *  shown yet) only swaps the url its first show will load, so a link or an Undo
+ *  landing before that show is not overwritten by the boot url; a live source
+ *  reloads from `url` unless it already reads it. */
+export function setRasterUrl(map: MapLibreMap, sourceId: string, url: string) {
+  if (heldUrls.has(sourceId)) { heldUrls.set(sourceId, url); return; }
+  const src = map.getSource(sourceId) as RasterTileSource | undefined;
+  if (!src) return;
+  if ((revealingUrl.get(sourceId) ?? src.url) === url) return;
+  if (revealingUrl.has(sourceId)) revealingUrl.set(sourceId, url);
+  src.setUrl(url);
 }

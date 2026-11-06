@@ -1,15 +1,24 @@
 // Shared registry and view types: LayerDef and the shapes it carries (ramps,
 // buckets, scopes, downloads), FuelEntry, LayerSourceDef, StyleOverride and
-// BucketedField (the legend facet record), LayerData (where a layer's data lives)
-// and FeatureIdDecl (which column is each feature's stable id).
+// BucketedField (the legend facet record), LayerData (where a layer's data lives),
+// FeatureIdDecl (which column is each feature's stable id) and Selection (the
+// view's selected features).
 // Types with a single owning module live beside it instead: AppState in
 // assets/state.ts, UserLayer in assets/user-data/user-data.ts, RasterMeta in
 // assets/raster-probes.ts. Imports only the DATA type from assets/constants.ts.
+// Keep this file while these types cross src/registry, src/colors and assets.
 
 import type { DATA } from '../assets/constants.js';
 
 // Per-layer look override in a view: opacity and size are multipliers on the layer's own values, color a literal.
 export interface StyleOverride { opacity?: number; size?: number; color?: string }
+
+// A view's selection (the `sel` section of the link's `vx`): registry id → the
+// stable ids (FeatureIdDecl) of its selected features. The mode applies to the
+// listed layers only: `isolate` draws a layer's filtered features that are
+// selected, `keep` draws its filtered features plus every selected one.
+export type SelectionMode = 'isolate' | 'keep';
+export interface Selection { mode: SelectionMode; ids: Record<string, (string | number)[]> }
 
 interface Downloads {
   csv?: string | null;      // point layers — CSV-only pack
@@ -52,6 +61,11 @@ export interface BucketedField {
   // its own (kv, fuel: LayerDef.filterField) or the match is an expression
   // (underground).
   field?: string;
+  // When each registry layer names its own field (kv, fuel): every field the
+  // buckets classify, so a field-role lookup can name its facet
+  // (src/registry/field-roles.ts; field-roles.test.ts holds them to each
+  // layer's filterField).
+  fields?: readonly string[];
   buckets: BucketDef[];
   // The bucket set the "all" checkbox and defaults count, when it differs from
   // the displayed `buckets` (kv: same ids, plain labels).
@@ -76,18 +90,6 @@ export interface BucketedField {
 //   'usa'    — everything, US-only datasets included (the default)
 //   'global' — only layers with worldwide coverage; US-only ones are hidden
 export type LayerScope = 'usa' | 'global';
-
-// Which continental download pack a button points at. Independent of LayerScope:
-// packs stay per continent because a pack is a file someone opens in QGIS.
-export type DownloadRegion =
-  | 'north-america'
-  | 'europe'
-  | 'asia'
-  | 'south-america'
-  | 'africa'
-  | 'oceania'
-  | 'central-america'
-  | 'antarctica';
 
 export interface FuelEntry {
   id: string;
@@ -119,6 +121,9 @@ export interface LayerData {
   // scripts/tile_manifest.yaml (assets/feature-id.test.ts holds them together);
   // assets/feature-id.ts's featureId() reads it.
   id?: FeatureIdDecl;
+  // The line GeoParquet dataset (data/analysis/index.json `datasets` key) holding
+  // this layer's full geometry and exact lengths, read by assets/lines/line-read.ts.
+  analysis?: string;
 }
 
 // `field` is the column carrying the id. Without `native`, layer-source.ts sets
@@ -126,7 +131,7 @@ export interface LayerData {
 // tippecanoe consumed the integer column into the MVT feature id
 // (--use-attribute-for-id), so the tile carries no such property and the source
 // needs no promoteId. OSM layers use `fid` = osm_id × 10 + type digit (1 node,
-// 2 way, 3 relation); assets/feature-id.ts's osmRef() decodes it.
+// 2 way, 3 relation); src/registry/osm-fid.ts's osmRef() decodes it.
 export interface FeatureIdDecl { field: string; native?: true }
 
 export interface LayerDef {
@@ -170,6 +175,10 @@ export interface LayerDef {
   westtecColorLayer?: boolean;
   weatherVarLayer?: boolean;
   nriHazardLayer?: boolean;
+  // Grid Operations (EIA-930): the row carries the grouping and glyph selects (assets/grid-ops/)
+  gridOpsLayer?: boolean;
+  // Routing constraints: one row, concern picked from CONCERNS (src/colors/route-constraints.ts)
+  routeConcernLayer?: boolean;
   // Layers sharing a group are shown one at a time: switching one on switches
   // the others off (assets/visibility.ts). Used for the county choropleths.
   exclusiveGroup?: string;   // FEMA NRI: one row, hazard picked from NRI_HAZARDS (src/registry/conditions.ts)

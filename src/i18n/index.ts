@@ -2,7 +2,9 @@
 // Zero-dependency internationalization engine for TransmissionMap.
 // Manages active locale, string translation, parameter interpolation,
 // fallback resolution, document direction, and DOM updates.
-// Deps: ./types.js, ./locales/en.js (bundled) + ./locales/*.ts (lazy chunks)
+// The route planner's strings (route.*, src/i18n/route/*.ts) load with the panel
+// (loadRouteStrings); the route.* keys the boot bundle reads stay in locales/.
+// Deps: ./types.js, ./locales/en.js (bundled) + ./locales/*.ts and ./route/*.ts (lazy chunks)
 
 import type { SupportedLocale, LocaleDef, LocaleDictionary } from './types.js';
 import en from './locales/en.js';
@@ -35,9 +37,28 @@ const loaders = import.meta.glob<LocaleDictionary>(['./locales/*.ts', '!./locale
 
 export const DICTIONARIES: Partial<Record<SupportedLocale, LocaleDictionary>> & { en: LocaleDictionary } = { en };
 
+// The route planner's strings, one chunk per locale, fetched once the panel has been asked for.
+const routeLoaders = import.meta.glob<LocaleDictionary>('./route/*.ts', { import: 'default' });
+export const ROUTE_DICTIONARIES: Partial<Record<SupportedLocale, LocaleDictionary>> = {};
+let routeWanted = false;
+
+// Best effort: a failed fetch leaves t() on the English route text.
+async function loadRoutePart(locale: SupportedLocale): Promise<void> {
+  const loader = routeLoaders[`./route/${locale}.ts`];
+  if (ROUTE_DICTIONARIES[locale] || !loader) return;
+  try { ROUTE_DICTIONARIES[locale] = await loader(); } catch { /* English route text */ }
+}
+
+/** Load the route strings for English and the current language; later language switches keep them in step. */
+export async function loadRouteStrings(): Promise<void> {
+  routeWanted = true;
+  await Promise.all([loadRoutePart('en'), loadRoutePart(currentLocale)]);
+}
+
 export async function loadDictionary(locale: SupportedLocale): Promise<void> {
   const loader = loaders[`./locales/${locale}.ts`];
   if (!DICTIONARIES[locale] && loader) DICTIONARIES[locale] = await loader();
+  if (routeWanted) await loadRoutePart(locale);
 }
 
 let currentLocale: SupportedLocale = 'en';
@@ -70,11 +91,11 @@ export function applyDocumentDirection(locale: SupportedLocale): void {
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {
-  const dict = DICTIONARIES[currentLocale];
-  let val = dict && Object.hasOwn(dict, key) ? dict[key] : undefined;
-  if (val === undefined) {
-    val = Object.hasOwn(DICTIONARIES.en, key) ? DICTIONARIES.en[key] : key;
+  let val: string | undefined;
+  for (const dict of [DICTIONARIES[currentLocale], ROUTE_DICTIONARIES[currentLocale], DICTIONARIES.en, ROUTE_DICTIONARIES.en]) {
+    if (dict && Object.hasOwn(dict, key)) { val = dict[key]; break; }
   }
+  val ??= key;
   if (params) {
     return val.replace(/\{([^{}]+)\}/g, (match, paramKey) => {
       return paramKey in params ? String(params[paramKey]) : match;

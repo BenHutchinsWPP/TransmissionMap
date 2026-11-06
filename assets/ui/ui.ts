@@ -1,6 +1,7 @@
 // ─── UI bootstrap + event wiring ──────────────────────────────────────────────
 // Top-level init() + the delegated event wiring (wireUI). The Reset button is
-// view-state.ts's applyView({}); panel-mirror.js repaints every panel control
+// view-state.ts's applyView({}), then county-overlay.ts's clearCountyOverlay() and proximity/clear.ts's clearProximityMap()
+// (a template's session-only map colours go with it); panel-mirror.js repaints every panel control
 // from state after any applied view, and renders the layer rows (renderPanel)
 // at init and on a language or region change; the 'view:applied' subscriber
 // below keeps the rest (year playback, legends). Menubar wiring lives in
@@ -10,11 +11,16 @@
 // undo.js: its bus subscriptions keep the view's undo history; resetHistory
 // re-baselines it once a ?exp= deep link's story has applied. The region
 // dropdown is painted by panel-mirror.js; its click writes the scope, re-renders
-// the panel and writes the URL.
+// the panel and writes the URL. The Area row's picker is the ui-area.js lazy
+// chunk (wireAreaRow loads it on first use). The Selection row's menu is
+// ui-selection.js. A layer row's actions sit in its ⋯ menu (layer-menu.js):
+// Show in table opens the ui-table.js lazy chunk through table-open.js,
+// Visualize the ui-templates.js lazy chunk through templates-open.js, and About
+// this data the Data Credits entry.
 
 import { state } from '../state.js';
 import { activeExperienceId, endExperienceLink, rebaselineExperience } from '../experience-link.js';
-import { LAYER_SOURCES } from '../../src/registry/index.js';
+import { LAYER_SOURCES, layerById } from '../../src/registry/index.js';
 import type { LayerScope } from '../../src/types.js';
 import { YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../../src/colors/ramps.js';
 import { setLayerVisibility } from '../visibility.js';
@@ -25,7 +31,7 @@ import { maybeShowRotateHint } from '../terrain-hint.js';
 import { buildLegends } from './ui-legends.js';
 import {
   wireLayerFilterPanels, wireLegendFilters, wireMwFilter, wireSmokeOpacity,
-  wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireNriHazardSelect, wireYearFilter,
+  wireGenModeToggle, wireOgfColorByToggle, wireWestTECColorByToggle, wireWeatherVarSelect, wireNriHazardSelect, wireGridOpsSelects, wireRouteConcernSelect, wireYearFilter,
   stopYearPlayback,
 } from './ui-filters.js';
 import { wireFeatureSearch } from './ui-search.js';
@@ -34,6 +40,8 @@ import { wireOpenWith } from './ui-openwith.js';
 import { readUrlState } from '../url-state.js';
 import { splitHash } from '../url-state-codec.js';
 import { applyView } from '../view-state.js';
+import { clearCountyOverlay } from '../county-overlay.js';
+import { clearProximityMap } from '../proximity/clear.js';
 import { resetHistory } from '../undo.js';
 import { emit, on } from '../state-bus.js';
 import { loadUnits } from '../units-store.js';
@@ -44,13 +52,19 @@ import { clearFeatureInfo } from '../user-data/user-data-geom.js';
 import { onMapTap } from '../map-input.js';
 import { updateMeasureReadout } from '../measure.js';
 import { renderPanel } from './panel-mirror.js';
+import { wireSelectionRow } from './ui-selection.js';
+import { wireLayerMenus } from './layer-menu.js';
+import { openTable } from './table-open.js';
+import { openVisualize } from './templates-open.js';
 import { wireMenubar } from './ui-menubar.js';
+import { initRoutePanelEntry } from './route-panel-open.js';
 import { wireMyData } from './ui-mydata.js';
 import { initWildfireStaleness } from '../wildfire-staleness.js';
 import { initNwsStaleness } from '../nws-staleness.js';
 import { initOdinOutages } from '../odin-outages.js';
 import { initFemaNri } from '../fema-nri.js';
 import { initWeatherLive } from '../weather-live.js';
+import { initGridOps } from '../grid-ops/grid-ops.js';
 import { initNwsZoneJoin } from '../nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
 // Static import is deliberate: diag-log.js is a zero-import leaf module (just
@@ -64,6 +78,8 @@ export async function init() {
   await loadLanguage(splitHash(location.hash).params.get('lang'));
   updateDomTranslations();
   loadUnits();
+  // The Routing constraints credit ships hidden: it names a layer only the dev server has.
+  if (layerById('route-constraints')) document.querySelector<HTMLElement>('[data-source-credit="route-constraints"]')?.removeAttribute('hidden');
   state.yearFilter.min  = YEAR_FILTER_MIN;
   state.yearFilter.max  = YEAR_FILTER_MAX;
 
@@ -80,6 +96,7 @@ export async function init() {
   initFemaNri();
   initWeatherLive();
   initNwsZoneJoin();
+  initGridOps();
 }
 
 // The panel mirror (panel-mirror.js) repaints the controls on 'view:applied';
@@ -122,7 +139,7 @@ async function openSourceCredit(sourceId: string) {
   clearCreditHighlight();
   if (!creditsDialog.open) creditsDialog.showModal();
   // The render may add this source's entry, so look it up afterwards.
-  await renderCredits();
+  await Promise.all([renderCredits(), import("./ui-credits.js").then(m => m.renderServiceCredits())]);
   const target = document.querySelector(`[data-source-credit="${sourceId}"]`);
   if (!target) return;
 
@@ -143,7 +160,7 @@ function wireUI() {
   wireLegendFilters();
   wireBasemap();
   wireSourceButtons();
-  wireDownloadMenus();
+  wireLayerMenus();
   wirePanelToggle();
   wireDialogs();
   wireFileMenuBadge();
@@ -156,9 +173,20 @@ function wireUI() {
   wireWestTECColorByToggle();
   wireWeatherVarSelect();
   wireNriHazardSelect();
+  wireGridOpsSelects();
+  wireRouteConcernSelect();
   wireYearFilter();
   wireResetLayers();
   wireRegionSelect();
+  wireAreaRow();
+  wireSelectionRow();
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as Element | null)?.closest<HTMLElement>("[data-table-layer]");
+    if (btn) { void openTable({ layerId: btn.dataset.tableLayer! }); return; }
+    const viz = (e.target as Element | null)?.closest<HTMLElement>("[data-viz-layer]");
+    // Focus returns to the row's ⋯ button: the menu item is hidden by then.
+    if (viz) void openVisualize(viz.dataset.vizLayer!, viz.closest('.layer-menu-wrap')?.querySelector<HTMLElement>('.layer-menu-btn') ?? viz);
+  });
   wireUnitsChanged();
   wireLangChanged();
 
@@ -168,6 +196,7 @@ function wireUI() {
   wireGeocoder();
   wireOpenWith();
   wireMenubar();
+  initRoutePanelEntry();
   wirePanelTabs();
   wireMyData();
 }
@@ -249,6 +278,30 @@ export function wireRegionSelect() {
   });
 }
 
+// The Area row (index.html) renders on boot, painted by panel-mirror.js; its
+// typeahead, chip and Clear handling and the row-flag notes are the ui-area.js
+// lazy chunk, loaded on the field's first focus or the first click on one of
+// its controls. A chunk that fails to load is recorded and retried next time.
+let areaUi: Promise<typeof import('./ui-area.js') | null> | null = null;
+function loadAreaUi() {
+  return areaUi ??= import('./ui-area.js')
+    .then(m => { m.wireAreaPicker(); return m; })
+    .catch(err => { areaUi = null; recordDiagEvent('layer', `area chunk: ${err}`); return null; });
+}
+
+function wireAreaRow() {
+  const input = document.getElementById("areaInput");
+  if (!input) return;
+  input.addEventListener("focus", () => void loadAreaUi());
+  document.getElementById("areaBox")?.addEventListener("click", (e) => {
+    if (!(e.target as Element).closest("button")) input.focus();
+  });
+  document.addEventListener("click", (e) => {
+    const el = (e.target as Element | null)?.closest<HTMLElement>("[data-area-action], .layer-area-flag");
+    if (el) void loadAreaUi().then(m => m?.areaAction(el));
+  });
+}
+
 // A hash carrying `exp=<id>` restores a curated story. readUrlState() has
 // already named the story (experience-link.ts); applying it needs a finished
 // map, and the catalogue plus the story controller live in the ui-experiences lazy chunk —
@@ -300,6 +353,8 @@ function wireResetLayers() {
   btn.addEventListener("click", () => {
     if (window.confirm("Reset all layers, filters and basemap to their defaults?\n(Your imported and drawn data is kept.)")) {
       applyView({});
+      clearCountyOverlay();
+      clearProximityMap();
     }
   });
 }
@@ -324,34 +379,11 @@ function wireBasemap() {
 
 function wireSourceButtons() {
   document.addEventListener("click", (e) => {
-    const btn = (e.target as Element)?.closest<HTMLElement>(".source-btn[data-source-id]");
+    const btn = (e.target as Element)?.closest<HTMLElement>(".layer-menu [data-source-id]");
     if (!btn) return;
     e.preventDefault();
     void openSourceCredit(btn.dataset.sourceId!);
   });
-}
-
-function wireDownloadMenus() {
-  document.addEventListener("click", (e) => {
-    const t = e.target as Element;
-    const btn = t?.closest<HTMLElement>(".dl-btn");
-    if (btn) {
-      e.stopPropagation();
-      const menu = btn.nextElementSibling as HTMLElement | null;
-      if (!menu) return;
-      document.querySelectorAll<HTMLElement>(".dl-menu:not([hidden])").forEach(m => {
-        if (m !== menu) m.hidden = true;
-      });
-      menu.hidden = !menu.hidden;
-      return;
-    }
-    if (!t?.closest(".dl-menu") && !t?.closest(".dl-btn")) closeDownloadMenus();
-  });
-  onMapTap(closeDownloadMenus);
-}
-
-function closeDownloadMenus() {
-  document.querySelectorAll<HTMLElement>(".dl-menu:not([hidden])").forEach(m => { m.hidden = true; });
 }
 
 function wirePanelToggle() {
@@ -397,6 +429,7 @@ function wireDialogs() {
     clearCreditHighlight();
     credits.showModal();
     void renderCredits();
+    void import("./ui-credits.js").then(m => m.renderServiceCredits());
   });
   credits.addEventListener("close", clearCreditHighlight);
 }

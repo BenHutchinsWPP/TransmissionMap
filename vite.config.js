@@ -1,6 +1,38 @@
-import { defineConfig } from 'vite';
+import { defineConfig, runnerImport } from 'vite';
 import { copyFileSync, statSync, createReadStream } from 'fs';
 import path from 'path';
+
+// The production page's Content Security Policy, as a <meta http-equiv> right
+// after <meta charset> (which must stay in the first 1024 bytes), so it comes
+// before every script and modulepreload link. Build only: the dev server's HMR
+// websocket and inline client stay unrestricted. The policy is
+// assets/constants.ts's CSP_POLICY, imported through Vite with the build's own
+// env (PROD, the Esri key), so its hosts are the origins this bundle fetches from.
+const CHARSET = '<meta charset="utf-8">';
+function cspMeta() {
+  let env = {};
+  return {
+    name: 'csp-meta',
+    apply: 'build',
+    configResolved(config) { env = config.env; },
+    async transformIndexHtml(html) {
+      if (!html.includes(CHARSET)) throw new Error(`csp-meta: index.html has no ${CHARSET}`);
+      const define = Object.fromEntries(
+        Object.entries(env).map(([k, v]) => [`import.meta.env.${k}`, JSON.stringify(v)]));
+      const { module } = await runnerImport('/assets/constants.ts', { configFile: false, logLevel: 'silent', define });
+      return html.replace(CHARSET, `${CHARSET}\n  <meta http-equiv="Content-Security-Policy" content="${module.CSP_POLICY}">`);
+    },
+  };
+}
+
+function copySw() {
+  let outDir = 'dist';
+  return {
+    name: 'copy-sw',
+    configResolved(config) { outDir = config.build.outDir; },
+    closeBundle() { copyFileSync('sw.js', path.join(outDir, 'sw.js')); },
+  };
+}
 
 export default defineConfig({
   root: '.',
@@ -12,8 +44,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // data/ and tmp/ hold build outputs with tens of thousands of files; the app
+    // fetches them, it never imports them, so they need no file watch.
+    watch: { ignored: ['**/data/**', '**/tmp/**', '**/venv/**', '**/coverage/**'] },
   },
   plugins: [
+    cspMeta(),
     {
       name: 'dev-static-fixes',
       configureServer(server) {
@@ -57,11 +93,6 @@ export default defineConfig({
         });
       },
     },
-    {
-      name: 'copy-sw',
-      closeBundle() {
-        copyFileSync('sw.js', 'dist/sw.js');
-      },
-    },
+    copySw(),
   ],
 });

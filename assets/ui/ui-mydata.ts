@@ -1,12 +1,15 @@
 // ─── "My Data" tab interaction handlers ───────────────────────────────────────
 // Click / keydown / dblclick wiring for the My Data panel: select & highlight
 // user features, inline-rename, toggle/expand/delete layers and features, and
-// Delete-key trashing of the selected drawn feature.
+// Delete-key trashing of the selected drawn feature. Also opens the Add layer
+// from a service dialog (lazy ui-services.js) and loads the linked-services rows
+// (lazy ui-linked-services.js) once the view holds a linked service.
 // Deps: state.js, user-data.js (render + selection + mutation helpers; every
 // mutation ends in commitUserData, which saves and re-renders).
 // Consumed by ui.ts (wireUI).
 
 import { state } from '../state.js';
+import { on } from '../state-bus.js';
 import {
   renderMyDataTab, clearUserHighlight, removeUserLayer,
   removeUserFeature, toggleUserLayerVisibility, selectUserFeature,
@@ -23,6 +26,16 @@ export function wireMyData() {
   });
 
   document.addEventListener('click', onMyDataClick);
+
+  // The rows live in a lazy chunk: fetched only when a service is in the view
+  // (a link, a view file, an add) — never for a visit without one.
+  const syncServices = () => {
+    if (state.services.length) void import('./ui-linked-services.js').then(m => m.renderLinkedServices());
+  };
+  on('map:ready', syncServices);
+  on('view:applied', syncServices);
+  on('url:write', syncServices);
+  syncServices();
 }
 
 function onMyDataKeydown(e: KeyboardEvent) {
@@ -57,6 +70,9 @@ function onMyDataClick(e: MouseEvent) {
   const btn = t?.closest<HTMLElement>('[data-action]');
   if (!btn) return;
   switch (btn.dataset.action) {
+    case 'open-services-button':
+      void import('./ui-services.js').then(m => m.openServices());
+      break;
     case 'toggle-layer': {
       const layer = state.userLayers.find(l => l.id === btn.dataset.layerId);
       if (layer) toggleUserLayerVisibility(layer.id, !layer.visible);

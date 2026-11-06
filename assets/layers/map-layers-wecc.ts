@@ -124,6 +124,7 @@ export function planWeccPaths(): LayerPlan {
 export function wireWeccPaths() {
   // Clicking a path marker highlights that path's matched lines (lazy-loads them once).
   onMapTap("wecc-paths-circles", (_e, features) => {
+    if (state.measure.active || state.routePick || state.routeInspect) return;
     const num = features[0]?.properties?.number;
     if (num == null) return;
     ensureLayerData("wecc-path-lines").then(() => {

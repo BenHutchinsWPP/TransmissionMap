@@ -7,22 +7,32 @@
 // paint comes from map-layers-conditions.js. The controls' values (active
 // buttons, the year, MW and smoke sliders, the play button) are painted from
 // state by panel-mirror.js — syncPanel and its one-control helpers — which
-// also sets them all at init, before this wiring runs.
+// also sets them all at init, before this wiring runs. The layer and year
+// sub-panels open from items in a row's ⋯ menu (layer-menu.ts), which show
+// whether their panel is open as aria-checked. A row's `where` chip × clears
+// the layer's conditions through panel-mirror.js commitWhere (one url:write).
 import { state } from '../state.js';
 import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster, updateLegends } from './ui-legends.js';
 import { emit } from '../state-bus.js';
 import { MW_SLIDER_MAX, mwPosToMw, mwToPos, applyGeneratorFilters, applyLayerFilter } from '../filters.js';
 import { setWeatherVar } from '../weather-live.js';
 import { setNriHazard } from '../fema-nri.js';
+import { setGridGroup, setGridGlyph, setGridNumbers } from '../grid-ops/grid-ops.js';
+import { setRouteConcern } from '../route-constraints.js';
 import { refreshWeatherRampBlock } from './ui-legends.js';
 import { applySmokeOpacity } from '../layers/map-layers-conditions.js';
 import { setColorBy } from '../style-overrides.js';
 import { applyGenMode } from '../visibility.js';
 import {
-  syncPanel, updateYearSliderUI, updateYearPlayBtn, updateMwSliderUI, updateSmokeOpacityUI, MW_POS_GAP,
+  syncPanel, updateYearSliderUI, updateYearPlayBtn, updateMwSliderUI, updateSmokeOpacityUI, MW_POS_GAP, commitWhere,
 } from './panel-mirror.js';
 
 export function wireLayerFilterPanels() {
+  document.addEventListener("click", (e) => {
+    const x = (e.target as Element)?.closest<HTMLElement>("[data-where-clear]");
+    if (x) commitWhere(x.dataset.whereClear!, []);
+  });
+
   document.addEventListener("change", (e) => {
     const cb = (e.target as Element)?.closest<HTMLInputElement>("input[type=checkbox][data-filter-layer]");
     if (!cb) return;
@@ -34,12 +44,12 @@ export function wireLayerFilterPanels() {
   });
 
   document.addEventListener("click", (e) => {
-    const btn = (e.target as Element)?.closest<HTMLElement>(".filter-btn");
+    const btn = (e.target as Element)?.closest<HTMLElement>("[data-filter-toggle]");
     if (!btn) return;
-    const panel = document.getElementById(`filter-panel-${btn.dataset.filterLayer}`);
+    const panel = document.getElementById(`filter-panel-${btn.dataset.filterToggle}`);
     if (!panel) return;
     panel.hidden = !panel.hidden;
-    btn.classList.toggle("filter-btn--open", !panel.hidden);
+    btn.setAttribute("aria-checked", String(!panel.hidden));
   });
 }
 
@@ -220,6 +230,24 @@ export function wireNriHazardSelect() {
   });
 }
 
+export function wireGridOpsSelects() {
+  document.addEventListener("change", (e) => {
+    const sel = e.target as Element | null;
+    if (sel?.matches?.("select[data-grid-group-select]")) { setGridGroup((sel as HTMLSelectElement).value); syncPanel('ba-interchange'); }
+    else if (sel?.matches?.("input[data-grid-numbers-toggle]")) setGridNumbers((sel as HTMLInputElement).checked);
+    else if (sel?.matches?.("select[data-grid-glyph-select]")) setGridGlyph((sel as HTMLSelectElement).value);
+  });
+}
+
+export function wireRouteConcernSelect() {
+  document.addEventListener("change", (e) => {
+    const sel = (e.target as Element)?.closest<HTMLSelectElement>("select[data-route-concern-select]");
+    if (!sel) return;
+    setRouteConcern(sel.value);
+    emit('url:write');
+  });
+}
+
 export function wireYearFilter() {
   // Delegated on document: panel-mirror.ts's renderPanel() re-renders the rows
   // (a language or region change), which would orphan any listener bound
@@ -230,7 +258,7 @@ export function wireYearFilter() {
       const panel = document.getElementById("genYearFilterPanel");
       if (!panel) return;
       panel.hidden = !panel.hidden;
-      document.getElementById("genYearFilterBtn")?.classList.toggle("filter-btn--open", !panel.hidden);
+      document.getElementById("genYearFilterBtn")?.setAttribute("aria-checked", String(!panel.hidden));
     } else if (t?.closest("#yearPlayBtn")) {
       toggleYearPlayback();
     } else if (t?.closest("#yearAllBtn")) {

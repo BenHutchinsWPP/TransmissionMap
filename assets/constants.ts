@@ -1,8 +1,10 @@
 // assets/constants.ts — Static constants shared across modules; imports nothing.
-// Holds: where data lives (DATA, releaseUrl, weatherLiveUrl, RELEASES_ORIGIN),
-// the external hosts more than one module
-// reads (basemap/terrain/radar/glyph URLs that diagnostics.ts also probes),
-// EMPTY_FC and the county join keys (COUNTY_SRC*).
+// Holds: where data lives (DATA, weatherLiveUrl and the origins behind them,
+// RELEASES_ORIGIN included), the external hosts more than one module reads
+// (basemap/terrain/radar/glyph/geocoder URLs, OPENROUTER_ORIGIN and PUDL_BASE_URL, which
+// diagnostics.ts also probes), CSP_HOSTS + CSP_POLICY (the production
+// page's Content Security Policy, rendered by vite.config.js), EMPTY_FC, the
+// county join keys (COUNTY_SRC*) and WEATHER_WASH_OPACITY.
 // A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
 // filters.ts, the default viewport in map.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
 // in basemap.ts, terrain exaggeration and credit in terrain.ts.
@@ -47,12 +49,6 @@ const MORATORIUM_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-moratoriums/" 
 export const RELEASES_ORIGIN = import.meta.env.PROD
   ? "https://github.com/BenHutchinsWPP/TransmissionMap/releases/download/data-latest/"
   : "";
-
-// Registry entries name packs by repo-relative path. In prod that maps to a flat
-// Release asset name; in dev it stays a path the Vite server serves from disk.
-export function releaseUrl(path: string): string {
-  return import.meta.env.PROD ? RELEASES_ORIGIN + path.replace(/^data\/releases\//, "") : path;
-}
 export const DATA = {
   // Transmission ships as six planet-wide archives split by voltage class: one
   // world file is 266 MiB against the host's 100 MiB per-file ceiling. The order
@@ -136,9 +132,22 @@ export const DATA = {
   dc_moratoriums: MORATORIUM_ORIGIN + "dc_moratoriums.geojson",
   // Per-layer provenance (licence, row counts, artifact size, per-field
   // coverage, retrieval date) the Data Credits page renders from, grouped
-  // under each source's own LAYER_SOURCES label — the manifest's own
+  // under each source's own LAYER_SOURCES label (src/registry/sources.ts) — the manifest's own
   // `source` field isn't rendered. Built by scripts/build_data_manifest.py.
   data_manifest: DATA_ORIGIN + "data/layers/manifest.json",
+  // Routing constraints (dev server only): one raster archive per concern in
+  // src/colors/route-constraints.ts, built by scripts/build_route_constraints.py
+  // beside the route cube. Relative and outside data/layers/, so publish_data.sh
+  // never ships it (constants.test.ts NOT_SCRAPED). Names the default concern;
+  // route-constraints.ts routeConcernUrl() swaps in the chosen concern's file.
+  route_constraints: "data/route/constraints/what-constrains.pmtiles",
+  // Transmission line GeoParquet: the manifests of the OSM and HIFLD line
+  // geometry files, built by scripts/build_line_parquet.py into data/analysis/
+  // and read by range from the data host (the files sit beside index.json).
+  // Outside data/layers/, so publish_data.sh does not ship it
+  // (constants.test.ts NOT_SCRAPED); where the host has no index.json every
+  // line tool stays hidden. docs/pipeline.md § Line geometry.
+  line_index: DATA_ORIGIN + "data/analysis/index.json",
 };
 
 // Live GFS weather mosaic (temperature, wind, humidity, dew point, cloud,
@@ -185,6 +194,11 @@ export const OFM_STYLE_URLS = {
 // terrain.ts and probed by diagnostics.ts.
 export const TERRAIN_TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png";
 
+// USGS 3DEP elevation ImageServer (public domain): the line profile's
+// getSamples (elevation/usgs-3dep.ts), called only when a visitor opens a
+// line's profile; Terrarium fills what it cannot answer. Probed by diagnostics.ts.
+export const ELEVATION_3DEP_URL = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer";
+
 // ─── Live layer tile sources ──────────────────────────────────────────────────
 // IEM NEXRAD composite reflectivity (USCOMP N0Q) — nexrad-radar layer.
 // {layer} is an IEM layer name: "ridge::USCOMP-N0Q-0" is the latest-frame alias,
@@ -207,6 +221,60 @@ export const GEOMET_RADAR_TILE_TEMPLATE =
 // other families 404, so every text-font in the app must be a one-element
 // Noto Sans array. Named by basemap.ts's BLANK_STYLE; probed by diagnostics.ts.
 export const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+
+// ArcGIS World Geocoding Service (place search). Read by ui/ui-geocoder.ts and
+// probed by diagnostics.ts; needs ESRI_TOKEN.
+export const GEOCODER_URL = "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates";
+
+// OpenRouter chat completions (the opt-in map chat, visitor's own key).
+export const OPENROUTER_ORIGIN = "https://openrouter.ai";
+
+// PUDL (Catalyst Cooperative, CC-BY-4.0): the EIA-930 hourly tables the Grid
+// Operations layer reads by HTTP range request (grid-ops/eia930-read.ts), only
+// while that layer is on. Path-style S3 URLs: the bucket name has dots, which
+// the virtual-hosted form breaks under TLS. Pinned to a release, since
+// /stable/ and /nightly/ move; scripts/build_eia930_bas.py holds the same pin.
+export const PUDL_VERSION = "v2026.8.0";
+export const PUDL_BASE_URL = `https://s3.us-west-2.amazonaws.com/pudl.catalyst.coop/${PUDL_VERSION}/`;
+
+// ─── Content Security Policy ──────────────────────────────────────────────────
+// Every origin a production build fetches from: the data host (RAW_REPO carries
+// DATA_ORIGIN, LIVE_ORIGIN and MORATORIUM_ORIGIN), basemaps, glyphs, the
+// geocoder, terrain, USGS 3DEP elevation, radar, OpenRouter and PUDL. Each is the origin of the constant the
+// code fetches with, so a host changes in one place. vite.config.js renders
+// CSP_POLICY into the built page's <meta http-equiv> (build only: the dev
+// server's HMR websocket stays unrestricted). assets/csp.test.ts holds CSP_HOSTS
+// level with docs/network-allowlist.md's host tables. A meta policy cannot carry
+// frame-ancestors, report-uri or sandbox; styles keep 'unsafe-inline' for the
+// page's inline style attributes; blob: workers and images are MapLibre's,
+// fflate's and the icon builder's; connect-src data: is MapLibre fetching the
+// weather image source's 1×1 placeholder.
+// connect-src and img-src also admit any https: host, for the services a visitor
+// adds to the map; the named hosts stay listed as the record of what the app
+// itself reads. http: is refused (mixed content). Scripts and workers stay
+// 'self' (+ blob: workers), which is what keeps external data from running as
+// code (docs/internal/chat-trust-model.md). frame-src
+// 'self' admits only the page's own documents in an iframe.
+export const CSP_HOSTS: readonly string[] = [...new Set([
+  RAW_REPO, OFM_STYLE_URLS.light, GLYPHS_URL, GEOCODER_URL, OSM_TILE_URL,
+  AERIAL_TILE_URL, USGS_AERIAL_TILE_URL, TERRAIN_TILE_URL, ELEVATION_3DEP_URL,
+  RADAR_TILE_TEMPLATE, GEOMET_RADAR_TILE_TEMPLATE, OPENROUTER_ORIGIN, PUDL_BASE_URL,
+].map(u => new URL(u).origin))];
+
+const IMG_HOSTS = CSP_HOSTS.filter(h => h !== OPENROUTER_ORIGIN);
+export const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: https: ${IMG_HOSTS.join(" ")}`,
+  `connect-src 'self' data: https: ${CSP_HOSTS.join(" ")}`,
+  "frame-src 'self'",
+  "font-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join("; ");
 
 // Shared empty GeoJSON placeholder — used by lazy GeoJSON sources (layers/*.ts)
 // and the search-highlight sources (highlights.ts).

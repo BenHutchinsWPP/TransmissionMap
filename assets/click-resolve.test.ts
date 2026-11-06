@@ -87,6 +87,15 @@ describe('resolveHits — edit mode', () => {
       .toEqual({ kind: 'not-copyable' });
   });
 
+  it('offers copy-tiled for a tiled line whose full geometry can be read', () => {
+    const line = f('osm-transmission-lines-kv300-hv', { sourceLayer: 'lines', id: 12 });
+    const full = (ft: HitFeature) => ft.layer.id.startsWith('osm-transmission-lines');
+    expect(resolveHits([line], 'edit', full)).toEqual({ kind: 'copy-tiled', feature: line });
+    const tiled = f('padus-fill', { sourceLayer: 'padus', id: 2 });
+    expect(resolveHits([tiled, line], 'edit', full)).toEqual({ kind: 'copy-tiled', feature: line });
+    expect(resolveHits([line], 'edit')).toEqual({ kind: 'not-copyable' });
+  });
+
   it('returns none when only unpainted choropleth features were hit', () => {
     expect(resolveHits([f('odin-outages-fill', { sourceLayer: 'counties', state: {} })], 'edit'))
       .toEqual({ kind: 'none' });

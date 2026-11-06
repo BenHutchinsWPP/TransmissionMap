@@ -1,11 +1,18 @@
 // MapLibre builders — protected and designated land (PMTiles vector polygons).
 // Role: planPadus() (PAD-US, coloured by designation) and planCritHab() (USFWS
-//       Critical Habitat, coloured by listing status), each a fill + outline pair.
-// Deps: ./layer-init (planPolygon), ./layer-plan (LayerPlan type),
-//       src/colors/buckets.ts (PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS).
+//       Critical Habitat, coloured by listing status), each a fill + outline pair;
+//       planRouteConstraints() (dev server only: the Routing constraints raster,
+//       nearest resampling, opening on the concern in state).
+// Deps: ./layer-init (planPolygon, planRaster), ./layer-plan (LayerPlan type),
+//       src/colors/buckets.ts (PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS),
+//       src/registry (layerById), ../state.ts (routeConcern),
+//       ../route-constraints.ts (routeConcernUrl, ROUTE_CONSTRAINTS_ID).
 // Called from ./add-all-layers.
-import { planPolygon } from './layer-init.js';
+import { planPolygon, planRaster } from './layer-init.js';
 import type { LayerPlan } from './layer-plan.js';
+import { layerById } from '../../src/registry/index.js';
+import { state } from '../state.js';
+import { routeConcernUrl, ROUTE_CONSTRAINTS_ID } from '../route-constraints.js';
 import { bucketColorExpr, PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS } from '../../src/colors/buckets.js';
 
 export function planPadus(): LayerPlan {
@@ -28,3 +35,10 @@ export function planCritHab(): LayerPlan {
   });
 }
 
+// The raster source opens on the concern in state (a link or a seeded view);
+// a later pick swaps its url (route-constraints.ts setRouteConcern).
+export function planRouteConstraints(): LayerPlan {
+  if (!layerById(ROUTE_CONSTRAINTS_ID)) return [];
+  return planRaster(ROUTE_CONSTRAINTS_ID, { opacity: 0.75, resampling: "nearest" }).map(step =>
+    "source" in step ? { ...step, spec: { ...step.spec, url: routeConcernUrl(state.routeConcern) } as typeof step.spec } : step);
+}

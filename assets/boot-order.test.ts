@@ -31,7 +31,7 @@ interface Mod {
 function resolveSpec(file: string, spec: string): string | null {
   if (!spec.startsWith('.')) return null;
   const p = resolve(dirname(file), spec).replace(/\.js$/, '.ts');
-  return existsSync(p) ? p : null;
+  return p.endsWith('.ts') && existsSync(p) ? p : null;
 }
 
 const hasMod = (n: ts.Node, k: ts.SyntaxKind) =>

@@ -8,6 +8,12 @@
 // Each plan* returns a LayerPlan (layer-plan.ts). wireOsmDataCenters() holds the
 // data-centre side effects: the plain twin source refills on the 'layer:data'
 // bus event for osm-datacenters, and a cluster tap zooms in.
+// planGridOps() holds the Grid Operations (EIA-930) bubbles and arrows, whose
+// sources grid-ops/grid-ops.ts fills: edges (width linear in MW, clamped at
+// 4,000 MW; arrowheads and MW labels from z3), node bubbles, fuel-mix discs,
+// coverage rings (`bai-rings`: per-node `bai-ring-<id>` images, between the
+// discs and the labels, not clickable) and labels whose detail lines are empty
+// when numbers are off.
 
 import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap } from "maplibre-gl";
 import { state } from '../state.js';
@@ -137,6 +143,7 @@ export function wireOsmDataCenters() {
 
   // Click a cluster → zoom into it.
   onMapTap("osm-dc-clusters", async (_e, features) => {
+    if (state.measure.active || state.routePick || state.routeInspect) return;
     const f = features[0];
     if (!state.map) return;
     const src = state.map.getSource("osm-datacenters") as import("maplibre-gl").GeoJSONSource;
@@ -257,4 +264,97 @@ export function planDcMoratoriumPoints(): LayerPlan {
       "circle-opacity": 0.9,
     },
   } as LayerSpecification }];
+}
+
+// ─── Grid Operations (EIA-930) ───────────────────────────────────────────────
+// Two GeoJSON sources grid-ops/grid-ops.ts fills for the hour shown: a point
+// per BA (or group) and a curved line per pair of neighbours, drawn from the
+// exporter, plus a point at each curve's middle (grid-ops.ts) carrying the
+// arrowhead's own rotation, so the head always lies along its line. A node's
+// `r` is its radius in px at zoom 5 (grid-ops.ts sizes each interconnection
+// against its own largest node), halved at 3 and doubled at 7, so the bubbles
+// and discs keep their place among the BAs as the map zooms; its label sits
+// just outside that radius. The bubble circle stays the click target in the
+// disc glyph, transparent.
+export const PUDL_EIA930_CREDIT = '<a href="https://catalyst.coop/pudl/">PUDL</a> (EIA-930, CC-BY-4.0)';
+const GRID_ZOOM_SCALE = (r: ExpressionSpecification | number): ExpressionSpecification =>
+  ["interpolate", ["linear"], ["zoom"], 3, ["*", 0.5, r], 5, r, 7, ["*", 2, r], 10, ["*", 4, r]];
+
+export function planGridOps(): LayerPlan {
+  const empty = { type: "FeatureCollection" as const, features: [] };
+  const external = ["==", ["get", "kind"], "external"] as ExpressionSpecification;
+  const labelFull = ["case", ["==", ["get", "detail"], ""], ["get", "tag"],
+    ["format", ["get", "tag"], { "text-font": ["literal", ["Noto Sans Bold"]] }, "\n", {}, ["get", "detail"], { "font-scale": 0.88 }]] as ExpressionSpecification;
+  const mwWidth = (lo: number, hi: number): ExpressionSpecification =>
+    ["interpolate", ["linear"], ["get", "mw"], 0, lo, 4000, hi];
+  return [
+    { source: "ba-interchange-edges", spec: { type: "geojson", data: empty } },
+    { source: "ba-interchange-nodes", spec: { type: "geojson", data: empty, attribution: PUDL_EIA930_CREDIT } },
+    { layer: {
+      id: "bai-edges", type: "line", source: "ba-interchange-edges",
+      filter: ["==", ["geometry-type"], "LineString"],
+      layout: { "line-cap": "round" },
+      paint: { "line-color": "#475569", "line-opacity": 0.75, "line-width": mwWidth(0.8, 9) },
+    } as LayerSpecification },
+    { layer: {
+      id: "bai-arrows", type: "symbol", source: "ba-interchange-edges",
+      filter: ["==", ["geometry-type"], "Point"],
+      layout: {
+        "icon-image": "bai-arrow", "icon-size": mwWidth(0.55, 1.5),
+        "icon-rotate": ["get", "rotate"], "icon-rotation-alignment": "map",
+        "icon-allow-overlap": true, "icon-ignore-placement": true,
+        "text-field": ["step", ["zoom"], "", 3, ["get", "label"]],
+        "text-font": ["Noto Sans Bold"], "text-size": 12,
+        "text-offset": [0, 1.1], "text-optional": true,
+        "symbol-sort-key": ["-", 0, ["get", "mw"]],
+      },
+      paint: {
+        "icon-color": "#1e293b",
+        "text-color": "#1e293b", "text-halo-color": "#ffffff", "text-halo-width": 2,
+      },
+    } as LayerSpecification },
+    { layer: {
+      id: "bai-bubbles", type: "circle", source: "ba-interchange-nodes",
+      layout: { "circle-sort-key": ["-", 0, ["get", "size"]] },
+      paint: {
+        "circle-radius": GRID_ZOOM_SCALE(["get", "r"]),
+        "circle-color": ["case", external, "#f1f5f9", ["get", "exp"], "#1e293b", "#ffffff"],
+        "circle-stroke-color": ["case", external, "#94a3b8", "#1e293b"],
+        "circle-stroke-width": 1.5,
+      },
+    } as LayerSpecification },
+    { layer: {
+      id: "bai-discs", type: "symbol", source: "ba-interchange-nodes",
+      filter: ["!=", ["get", "pie"], ""],
+      layout: {
+        "icon-image": ["get", "pie"], "icon-size": GRID_ZOOM_SCALE(1),
+        "icon-allow-overlap": true, "icon-ignore-placement": true,
+        "symbol-sort-key": ["-", 0, ["get", "size"]],
+      },
+    } as LayerSpecification },
+    { layer: {
+      id: "bai-rings", type: "symbol", source: "ba-interchange-nodes",
+      filter: ["!=", ["get", "ring"], ""],
+      layout: {
+        "icon-image": ["get", "ring"], "icon-size": GRID_ZOOM_SCALE(1),
+        "icon-allow-overlap": true, "icon-ignore-placement": true,
+        "symbol-sort-key": ["-", 0, ["get", "size"]],
+      },
+    } as LayerSpecification },
+    { layer: {
+      id: "bai-labels", type: "symbol", source: "ba-interchange-nodes",
+      layout: {
+        // Detail lines from z4.5, or at every zoom once the visitor turned numbers on (`early`).
+        "text-field": ["step", ["zoom"], ["case", ["get", "early"], labelFull, ["get", "tag"]], 4.5, labelFull],
+        "text-font": ["Noto Sans Regular"], "text-size": 11, "text-line-height": 1.15,
+        // Beside the circle, not inside it: below, else above when that collides.
+        "text-variable-anchor": ["top", "bottom"],
+        "text-radial-offset": GRID_ZOOM_SCALE(["/", ["+", ["get", "r"], 6], 11]),
+        "symbol-sort-key": ["-", 0, ["get", "size"]], "text-padding": 1,
+      },
+      paint: {
+        "text-color": "#0f172a", "text-halo-color": "#ffffff", "text-halo-width": 1.6,
+      },
+    } as LayerSpecification },
+  ];
 }

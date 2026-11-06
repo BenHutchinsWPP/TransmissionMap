@@ -6,17 +6,19 @@
 //       forbidden fetch header). Search fires on Enter only — every request
 //       costs a metered geocode, and the 20k/month free tier is plenty for
 //       explicit searches but not for per-keystroke autocomplete.
+//       findPlaces(query) is the one request, shared with map-api.ts's fitTo
+//       (placeSearchOn() says whether this build has the key).
 // Deps: state (map, draw), map-input (close results on a map tap),
-//       constants (ESRI_TOKEN), utils (escapeHtml),
+//       constants (ESRI_TOKEN, GEOCODER_URL), utils (escapeHtml),
 //       user-data (commitUserData: save + My Data refresh after the pin). DOM: #geocoderInput/#geocoderResults.
 
 import { state } from '../state.js';
 import { onMapTap } from '../map-input.js';
-import { ESRI_TOKEN } from '../constants.js';
+import { ESRI_TOKEN, GEOCODER_URL } from '../constants.js';
 import { escapeHtml } from '../utils/utils.js';
 import { commitUserData } from '../user-data/user-data.js';
 
-interface EsriCandidate {
+export interface EsriCandidate {
   address: string;                                              // "Yosemite National Park, CA, USA"
   location: { x: number; y: number };                           // lon, lat (WGS84)
   extent?: { xmin: number; ymin: number; xmax: number; ymax: number };
@@ -44,6 +46,21 @@ async function placeGeocoderPin(label: string, lon: number, lat: number) {
   commitUserData();
 }
 
+/** Candidates for `query` from the geocoder, best first. Throws on an HTTP
+ *  error, a service error or an abort; [] when this build has no key. */
+/** Whether this build has a geocoder key (findPlaces answers [] without one). */
+export const placeSearchOn = () => !!ESRI_TOKEN;
+
+export async function findPlaces(query: string, max = 5, signal?: AbortSignal): Promise<EsriCandidate[]> {
+  if (!ESRI_TOKEN) return [];
+  const params = new URLSearchParams({ f: "json", singleLine: query, maxLocations: String(max), token: ESRI_TOKEN });
+  const res = await fetch(`${GEOCODER_URL}?${params}`, { signal });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "geocode error");
+  return (data.candidates ?? []) as EsriCandidate[];
+}
+
 export function wireGeocoder() {
   const geocoderInput   = document.getElementById("geocoderInput") as HTMLInputElement | null;
   const geocoderResults = document.getElementById("geocoderResults");
@@ -58,20 +75,7 @@ export function wireGeocoder() {
     try {
       if (geocoderAbort) geocoderAbort.abort();
       geocoderAbort = new AbortController();
-      const params = new URLSearchParams({
-        f: "json",
-        singleLine: query,
-        maxLocations: "5",
-        token: ESRI_TOKEN,
-      });
-      const res = await fetch(
-        `https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params}`,
-        { signal: geocoderAbort!.signal }
-      );
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message || "geocode error");
-      showGeocoderResults((data.candidates ?? []) as EsriCandidate[]);
+      showGeocoderResults(await findPlaces(query, 5, geocoderAbort.signal));
     } catch (err: unknown) {
       if ((err as Error).name !== "AbortError") console.warn("Geocoder error:", err);
     }

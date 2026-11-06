@@ -1,8 +1,12 @@
 // src/main.ts — Vite entry point
-// Imports CSS, registers service worker, and kicks off the app.
+// Imports CSS, records the page-lifecycle line, registers service worker, and kicks off the app.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { initPageLifecycle } from '../assets/session-snapshot.js';
 import { init } from '../assets/ui/ui.js';
+
+// First, before any app code: what the previous page in this tab did, for File ▸ Diagnostics….
+initPageLifecycle();
 
 // Register the SW in production only. In dev it caches CSS/JS Cache-First and
 // serves stale assets across reloads (edits appear to do nothing) — so in dev

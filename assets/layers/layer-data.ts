@@ -1,7 +1,10 @@
 // ─── Layer data: lazy GeoJSON loading for GeoJSON-backed layers ──────────────
 // Imported by: add-all-layers.ts (ensureLayerData — defaultOn bootstrap),
 //              visibility.ts (ensureLayerData), map-layers-wecc.ts (ensureLayerData),
-//              live-staleness.ts (fetchGeojson, liveGeneratedUtc).
+//              live-staleness.ts (fetchGeojson, liveGeneratedUtc),
+//              ../dataset-query.ts (loadSource, liveGeneratedUtc),
+//              ui/ui-legends.ts + ../diagnostics.ts (liveFeed — pull time and
+//              subfeed status, one precedence for every display).
 // Deps: state.ts, state-bus.ts (emits 'layer:data' after a source's features
 //       land), diag-log.ts (recordDiagEvent — records ensureLayerData failures
 //       for the diagnostics panel); registry/index.ts (layerById — reads a
@@ -15,6 +18,9 @@
 // 'zoomend' (one listener, attached on the first hold), so a layer switched on
 // while zoomed out still loads once the map reaches its threshold. A gated
 // layer whose fetch fails is held again, so the next zoom settle retries it.
+// loadSource is the same fetch without the gate, for a query the user asked
+// for: it fills state.sourcesData and the (hidden) map source, and never
+// touches visibility or the URL, so a later switch-on reuses the load.
 
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from '../state.js';
@@ -61,13 +67,32 @@ export function ensureLayerData(registryId: string): Promise<void> {
   });
 }
 
-// Pull timestamp of a live source: the first feature's `generated_utc`, falling
-// back to the FeatureCollection-level value stashed in state.liveFcMeta (needed
-// when `features` is empty).
+/** Fetch registry layer `registryId`'s GeoJSON source now, whatever the zoom. */
+export function loadSource(registryId: string): Promise<void> {
+  return fetchSource(layerSourceId(registryId));
+}
+
+// A live source's pull time and per-subfeed status: the first feature's
+// properties, falling back to the FeatureCollection-level values stashed in
+// state.liveFcMeta (needed when `features` is empty). `feedLastOk` is written
+// at FeatureCollection level only.
+export interface LiveFeed {
+  generatedUtc?: string;
+  feedStatus?: Record<string, string>;
+  feedLastOk?: Record<string, string | null>;
+}
+export function liveFeed(sourceKey: string): LiveFeed {
+  const first = (state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined)?.properties;
+  const meta = state.liveFcMeta[sourceKey];
+  return {
+    generatedUtc: (first?.generated_utc as string | undefined) ?? meta?.generated_utc,
+    feedStatus: (first?.feed_status as Record<string, string> | undefined) ?? meta?.feed_status,
+    feedLastOk: meta?.feed_last_ok,
+  };
+}
+
 export function liveGeneratedUtc(sourceKey: string): string | undefined {
-  const f = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
-  return (f?.properties?.generated_utc as string | undefined)
-    ?? state.liveFcMeta[sourceKey]?.generated_utc;
+  return liveFeed(sourceKey).generatedUtc;
 }
 
 function fetchSource(registryId: string): Promise<void> {
@@ -84,13 +109,14 @@ function fetchSource(registryId: string): Promise<void> {
       state.sourcesLoaded[registryId] = true;
       if (current && incoming && incoming < current) return;
       state.sourcesData[registryId] = geojson.features || [];
-      // Stash FeatureCollection-level metadata (generated_utc/feed_status) as a
+      // Stash FeatureCollection-level metadata (generated_utc/feed_status/feed_last_ok) as a
       // fallback for live layers when `features` is empty — harmless no-op for
       // non-live layers since these keys simply come out undefined.
       if (geojson.generated_utc !== undefined || geojson.feed_status !== undefined) {
         state.liveFcMeta[registryId] = {
           generated_utc: geojson.generated_utc,
           feed_status: geojson.feed_status,
+          feed_last_ok: geojson.feed_last_ok,
         };
       }
       const src = state.map?.getSource(registryId) as GeoJSONSource | undefined;

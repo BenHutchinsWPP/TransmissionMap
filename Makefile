@@ -34,7 +34,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
+.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids route-cube route-structures route-buildings route-buildings-national route-wetland route-cube-assemble route-constraints line-parquet region-domains eia930-bas test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -50,6 +50,8 @@ help:
 	@echo "  make solar       build Global Solar Atlas PVOUT raster → data/layers/gsa_solar_pvout.pmtiles + COG in data/build/"
 	@echo "  make geo         build IHFC heat flow raster → data/layers/ihfc_geo_heatflow.pmtiles + COG in data/build/"
 	@echo "  make region-tags tag the US intermediates in $(BUILD)/ with the regions they fall in (needs the boundary files)"
+	@echo "  make region-domains rebuild the region code/label tables in src/registry/ from the boundary files (commit both)"
+	@echo "  make eia930-bas  rebuild src/registry/eia930-bas.json (Grid Operations BA names + bubble positions; needs eia_ba.gpkg + network; commit it)"
 	@echo "  make hydro-pts   build NREL/DOE hydrothermal points → data/layers/nrel_hydrothermal_pts.geojson.gz"
 	@echo "  make popden      build WorldPop 2020 population density → data/layers/worldpop_pop_density.pmtiles + COG in data/build/"
 	@echo "  make boundaries  build shared county-boundary PMTiles (Census TIGER) → data/layers/county_boundaries.pmtiles"
@@ -60,7 +62,16 @@ help:
 	@echo "  make census-boundaries build US states + ZCTA boundaries (Census) → $(BUILD)/{us_states,us_zcta}.gpkg"
 	@echo "  make world-boundaries  build countries + admin-1 boundaries (geoBoundaries CGAZ) → $(BUILD)/{countries,admin1_boundaries}.gpkg"
 	@echo "  make validate    sanity-check build inputs (rows/CRS) + data/layers outputs vs constants.ts + tile/release manifest agreement"
-	@echo "  make stable-ids  check every served layer's stable feature ids: 0 missing, 0 duplicate (ARGS=\"--only <id> --max-tiles N\")"
+	@echo "  make stable-ids  check every served layer's stable feature ids: 0 missing, 0 duplicate (ARGS=\"--only <id> --max-tiles N\"; ARGS=--lines checks data/analysis/; ARGS=--attrs holds tile attributes to the build input)"
+	@echo "  make route-cube  routing cube: bands, restrict, slope, flags, costbands, structures, wetland, observed buildings, then 17 pd / 3 osm bands (staged before activation; heavy; log in tmp/logs/route-cube.log)"
+	@echo "  make route-buildings  observed footprint bands from a completed regional cache; first run ARGS='--fetch --bbox WEST SOUTH EAST NORTH' (log in tmp/logs/route-buildings.log)"
+	@echo "  make route-buildings-national ARGS='--source-dir PATH --work-dir PATH'  observed footprint shares from all 49 CONUS state archives (log in tmp/logs/route-buildings-national.log)"
+	@echo "  make route-screening  national building + aviation observations for route reports: one GeoParquet per state from the national-structures work cache + NTAD JSON into an immutable generation in the route cache (ARGS=\"--states RI,DC --output-dir PATH\" for a dry run, --link to point data/route/report/screening at it; log in tmp/logs/route-screening.log)"
+	@echo "  make route-wetland  pd b14 wetland (NWI wetland share per cell) from the state zips in data/raw/route/nwi/ (NWI_DIR=..., NWI_WORK=...; log in tmp/logs/route-wetland.log)"
+	@echo "  make route-structures  pd b13 bldg (homes per cell) from the USA Structures zips (fetch_route_inputs.py structures; STRUCTURES_DIR=...; log in tmp/logs/route-structures.log)"
+	@echo "  make route-cube-assemble  assemble the cube only, from the built bands in data/build/route/250m/ (log in tmp/logs/route-cube-assemble.log)"
+	@echo "  make line-parquet  transmission line GeoParquet (OSM world + HIFLD) → data/analysis/, dev-only (ARGS=\"--only <ds>\"; log in tmp/logs/line-parquet.log)"
+	@echo "  make route-constraints  route constraints layer: data/route/constraints/<concern>.pmtiles from the cube's pd_ files (ARGS=\"--only id1,id2 --force\"; log in tmp/logs/route-constraints.log)"
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib-only pass then with PyYAML; no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
@@ -102,13 +113,14 @@ $(VENV)/.installed: requirements.txt
 	@echo "Done. Next: place a .osm.pbf in $(RAW_OSM)/ and run 'make pipeline'."
 
 check:
-	@for t in osmium ogr2ogr tippecanoe pandoc pmtiles zip; do \
+	@for t in osmium ogr2ogr tippecanoe-decode tile-join pandoc pmtiles zip; do \
 	    if command -v $$t >/dev/null 2>&1; then \
 	        echo "  ✓ $$t"; \
 	    else \
 	        echo "  ✗ $$t  MISSING"; \
 	    fi; \
 	done
+	@$(PYTHON) -S $(SCRIPTS)/toolchain.py
 
 # ── Pipeline: PBF → SHP/CSV in data/build/ ─────────────────────────────────
 # Each step writes its primary output to $(BUILD).  The final SHP renames
@@ -316,6 +328,29 @@ region-tags:
 	@gzip -9 -c $(BUILD)/hydrothermal/nrel_hydrothermal_points.geojson > data/layers/nrel_hydrothermal_points.geojson.gz
 	@echo "[done] region tags; data/layers/nrel_hydrothermal_points.geojson.gz"
 
+# ── Region domains: the frontend's region code + label tables ──────────────
+# Reads the same boundary files as region-tags and writes the committed
+# src/registry/region-codes.ts and src/registry/region-labels.json. Re-run
+# after a boundary refresh and commit both.
+region-domains:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@missing=0; for pair in countries.gpkg:world-boundaries us_states.gpkg:census-boundaries \
+	    county_boundaries.geojson:boundaries eia_ba.gpkg:pipeline generator_eia.csv:pipeline \
+	    nerc_regions.gpkg:regions retail_territories.gpkg:regions; do \
+	    f=$${pair%%:*}; t=$${pair##*:}; \
+	    if [ ! -f "$(BUILD)/$$f" ]; then echo "ERROR: missing $(BUILD)/$$f (make $$t)"; missing=1; fi; \
+	done; [ $$missing -eq 0 ] || exit 1
+	@$(PY) $(SCRIPTS)/build_region_domains.py
+
+# ── Grid Operations BA table (EIA-930 bubble positions) ─────────────────────
+# Reads data/build/eia_ba.gpkg and PUDL's BA code table (network); writes the
+# committed src/registry/eia930-bas.json. Re-run after a BA boundary refresh or
+# a PUDL_VERSION bump.
+eia930-bas:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@if [ ! -f "$(BUILD)/eia_ba.gpkg" ]; then echo "ERROR: missing $(BUILD)/eia_ba.gpkg (make pipeline)"; exit 1; fi
+	@$(PY) $(SCRIPTS)/build_eia930_bas.py
+
 # ── Large active/retired mines (MSHA, filtered) ─────────────────────────────
 # Extract → filtered GeoJSON (peak employment >= 50), then gzip for serving.
 # Inputs: unzip Mines.zip + MinesProdQuarterly.zip into data/raw/mines/ from
@@ -449,9 +484,59 @@ validate: data-manifest
 # Reads each layer's `id_field` from tile_manifest.yaml; exits non-zero on any
 # missing or duplicate id. A full pass decodes every world archive at its max
 # zoom; ARGS="--max-tiles 500" samples instead.
+# ARGS="--attrs" instead compares every sampled tile feature's attributes with
+# its build input row by id, at every zoom (500 tiles a zoom; --all-tiles,
+# --zooms 9,10,11); run it after any tile rebuild.
 stable-ids:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/stable_ids.py $(ARGS)
+
+route-cube:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 sh -c '$(PY) $(SCRIPTS)/build_route_bands.py && $(PY) $(SCRIPTS)/build_route_flood.py && $(PY) $(SCRIPTS)/build_route_restrict.py && $(PY) $(SCRIPTS)/build_route_slope.py all && $(PY) $(SCRIPTS)/build_route_flags.py && $(PY) $(SCRIPTS)/build_route_costbands.py && $(PY) $(SCRIPTS)/build_route_structures.py && $(PY) $(SCRIPTS)/build_route_wetland.py && $(PY) $(SCRIPTS)/build_route_buildings_national.py --work-dir "$${STRUCTURES_DIR:-$(CURDIR)/data/raw/route/usa_structures}/_footprints" && $(PY) $(SCRIPTS)/build_route_cube.py' > tmp/logs/route-cube.log 2>&1; rc=$$?; head -20 tmp/logs/route-cube.log; echo ...; tail -20 tmp/logs/route-cube.log; exit $$rc
+
+route-buildings:
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 /usr/bin/python3 $(SCRIPTS)/build_route_buildings.py $(ARGS) > tmp/logs/route-buildings.log 2>&1; rc=$$?; head -20 tmp/logs/route-buildings.log; echo ...; tail -40 tmp/logs/route-buildings.log; exit $$rc
+
+route-buildings-national:
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_route_buildings_national.py $(ARGS) > tmp/logs/route-buildings-national.log 2>&1; rc=$$?; head -20 tmp/logs/route-buildings-national.log; echo ...; tail -40 tmp/logs/route-buildings-national.log; exit $$rc
+
+ROUTE_TMP ?= tmp/route
+.PHONY: route-screening
+route-screening:
+	@mkdir -p tmp/logs $(ROUTE_TMP)
+	@systemd-run --user --scope -q -E TMPDIR=$(ROUTE_TMP) -E CPL_TMPDIR=$(ROUTE_TMP) -p MemoryMax=12G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_route_screening.py $(ARGS) > tmp/logs/route-screening.log 2>&1; rc=$$?; head -20 tmp/logs/route-screening.log; echo ...; tail -40 tmp/logs/route-screening.log; exit $$rc
+
+route-structures:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 sh -c '$(PY) $(SCRIPTS)/build_route_structures.py' > tmp/logs/route-structures.log 2>&1; rc=$$?; head -20 tmp/logs/route-structures.log; echo ...; tail -40 tmp/logs/route-structures.log; exit $$rc
+
+route-wetland:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 sh -c '$(PY) $(SCRIPTS)/build_route_wetland.py' > tmp/logs/route-wetland.log 2>&1; rc=$$?; head -20 tmp/logs/route-wetland.log; echo ...; tail -70 tmp/logs/route-wetland.log; exit $$rc
+
+route-cube-assemble:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_route_cube.py $(ARGS) > tmp/logs/route-cube-assemble.log 2>&1; rc=$$?; head -20 tmp/logs/route-cube-assemble.log; echo ...; tail -20 tmp/logs/route-cube-assemble.log; exit $$rc
+
+route-constraints:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=16G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_route_constraints.py $(ARGS) > tmp/logs/route-constraints.log 2>&1; rc=$$?; head -20 tmp/logs/route-constraints.log; echo ...; tail -40 tmp/logs/route-constraints.log; exit $$rc
+
+# ── Line geometry: transmission lines as GeoParquet → data/analysis/ ──────
+# OSM reads the merged world input `make global-tiles` keeps, so run that first.
+# Dev-only: publish_data.sh never ships data/analysis/. docs/pipeline.md § Line geometry.
+line-parquet:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=14G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_line_parquet.py $(ARGS) > tmp/logs/line-parquet.log 2>&1; rc=$$?; head -20 tmp/logs/line-parquet.log; echo ...; tail -40 tmp/logs/line-parquet.log; exit $$rc
 
 test-pipeline:
 	@echo "stdlib only (what CI's runners see):"

@@ -15,10 +15,14 @@
 // updateLegends() also dims the OGF/WestTEC legend that is not the active
 // colour key (state.ogfColorBy / state.westtecColorBy), via LEGEND_VISIBILITY's
 // `colorKey`.
-// The live-feed age chips refresh on the 'layer:data' bus event (state-bus.ts);
+// The live-feed age chips refresh on the 'layer:data' bus event (state-bus.ts)
+// and read the feed's pull time and subfeed status from ../layers/layer-data.js
+// (liveFeed);
 // their stale edge is each feed's kill-switch maxAgeMs, read from the configs
 // ../wildfire-staleness.js (WILDFIRE_LIVE) and ../nws-staleness.js (NWS_LIVE)
 // export, so the chip turns red exactly when the kill switch fires.
+// The Grid Operations card (#gridOpsLegend) lists its fuel colours from
+// src/colors/fuel.ts, cut to the fuels ../grid-ops/ba-graph.js's SOURCE_FUEL names.
 
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
@@ -33,6 +37,9 @@ import { ICON_SVG } from '../icons.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
+import { liveFeed } from '../layers/layer-data.js';
+import { FUEL_LEGEND } from '../../src/colors/fuel.js';
+import { SOURCE_FUEL } from '../grid-ops/ba-graph.js';
 
 export interface LegendFilter
   extends Omit<BucketedField, 'masterId' | 'legendId' | 'field' | 'mapLayerIds' | 'layerRef'> {
@@ -253,25 +260,27 @@ function renderLiveAge() {
 // when buildLegends() is called multiple times (init + reset).
 on('layer:data', ({ id }) => {
   if (id === "wildfire-live") {
-    const first = (state.sourcesData?.["wildfire-live"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-    const fcMeta = state.liveFcMeta["wildfire-live"];
-    liveGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
-    liveFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
-    liveFeedLastOk = fcMeta?.feed_last_ok;
+    ({ generatedUtc: liveGeneratedUtc, feedStatus: liveFeedStatus, feedLastOk: liveFeedLastOk } = liveFeed(id));
     renderLiveAge();
   } else if (id === "nws-alerts") {
-    const first = (state.sourcesData?.["nws-alerts"]?.[0] as GeoJSON.Feature | undefined)?.properties;
-    const fcMeta = state.liveFcMeta["nws-alerts"];
-    nwsGeneratedUtc = (first?.generated_utc as string | undefined) ?? fcMeta?.generated_utc;
-    nwsFeedStatus = (first?.feed_status as Record<string, string> | undefined) ?? fcMeta?.feed_status;
-    nwsFeedLastOk = fcMeta?.feed_last_ok;
+    ({ generatedUtc: nwsGeneratedUtc, feedStatus: nwsFeedStatus, feedLastOk: nwsFeedLastOk } = liveFeed(id));
     renderNwsAge();
   }
 });
 setInterval(() => { renderLiveAge(); renderNwsAge(); }, 60_000);
 
+// Grid Operations' fuel colours: the legend rows EIA-930's sources fold into
+// (ba-graph.ts SOURCE_FUEL), in legend order; a key, not a filter.
+const GRID_FUELS = new Set(Object.values(SOURCE_FUEL));
+function buildGridOpsFuelItems() {
+  const host = document.getElementById("gridOpsFuelItems");
+  if (host) host.innerHTML = FUEL_LEGEND.filter(f => GRID_FUELS.has(f.id)).map(f =>
+    `<div class="legend-item"><span class="legend-swatch" style="background:${f.color}"></span><span>${escapeHtml(f.label)}</span></div>`).join("");
+}
+
 export function buildLegends() {
   for (const cfg of LEGEND_FILTERS) buildLegendSection(cfg);
+  buildGridOpsFuelItems();
   updateLegends();
 }
 
@@ -306,11 +315,13 @@ const LEGEND_VISIBILITY: { el: string; show: () => boolean; colorKey?: () => boo
   { el: "incidentLegend",        show: () => !!state.layerVisibility["wildfire-incidents"] },
   { el: "odinLegend",            show: () => !!state.layerVisibility["odin-outages"] },
   { el: "femaNriLegend",         show: () => !!state.layerVisibility["fema-nri"] },
+  { el: "routeConstraintsLegend", show: () => !!state.layerVisibility["route-constraints"] },
   { el: "dcMoratoriumLegend",    show: () => !!state.layerVisibility["dc-moratoriums"] },
   { el: "radarLegend",           show: () => !!state.layerVisibility["nexrad-radar"] },
   { el: "westtecScenarioLegend", show: () => !!state.layerVisibility["westtec-10yr"], colorKey: () => state.westtecColorBy === "scenario" },
   { el: "westtecDatasetLegend",  show: () => !!state.layerVisibility["westtec-10yr"], colorKey: () => state.westtecColorBy === "dataset" },
   { el: "weatherLegend",         show: () => !!state.layerVisibility["weather-live"] },
+  { el: "gridOpsLegend",         show: () => LAYERS.some(l => l.gridOpsLayer && state.layerVisibility[l.id]) },
 ];
 
 export function updateLegends() {
@@ -325,5 +336,7 @@ export function updateLegends() {
   }
 
   const container = document.getElementById("legendContainer");
-  if (container) container.hidden = !anyShown;
+  // The route planner's card (ui-route.ts) and a template's county overlay card
+  // (../county-overlay.ts) live here too and keep the container shown.
+  if (container) container.hidden = !anyShown && !container.querySelector(":scope > .rp-legend:not([hidden]), :scope > .tpl-overlay-legend");
 }

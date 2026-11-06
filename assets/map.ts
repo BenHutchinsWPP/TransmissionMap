@@ -8,6 +8,9 @@
 // starts with initBasemaps().
 // The starting camera, and any camera-only hashchange, is read from the hash's
 // camera segment via url-state-codec.ts (splitHash, parseCameraSegment).
+// A hash carrying state params reloads the page; session-snapshot.ts's
+// endSnapshots() first drops the tab's drawer and chat snapshots, which belong
+// to the view being left.
 // The load handler runs view-state.ts's repaintView() (filters, modes,
 // colour-bys, styles) via url-state.ts's paintLinkedView(), once every layer
 // is on the map.
@@ -30,6 +33,7 @@ import { loadUserData } from './user-data/user-data.js';
 import { hideLoading } from './utils/utils-dom.js';
 import { apply3dFromState } from './terrain.js';
 import { recordDiagEvent } from './diag-log.js';
+import { endSnapshots } from './session-snapshot.js';
 import { BLANK_STYLE, initBasemaps, switchBasemap, switchProjection } from './basemap.js';
 
 // Default viewport, used when the hash names no camera: a contiguous-US overview.
@@ -152,7 +156,8 @@ export function initMap() {
       // reload to restore them instead of jumping the camera and writing the
       // current session's state back over the link. Our own writeUrlState()
       // uses history.replaceState, which does not fire hashchange.
-      if (location.hash.includes('?')) { location.reload(); return; }
+      // The tab's drawer and chat snapshots belong to the view being left.
+      if (location.hash.includes('?')) { endSnapshots(); location.reload(); return; }
       const loc = parseCameraSegment(splitHash(location.hash).camera);
       if (loc) state.map!.jumpTo({ center: loc.center, zoom: loc.zoom, bearing: loc.bearing, pitch: loc.pitch });
     });
