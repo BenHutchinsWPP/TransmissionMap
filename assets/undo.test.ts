@@ -7,7 +7,8 @@
 // ends at its start value — a change undone within the replace window leaves no step,
 // resetHistory re-baselines, a commit after an undo clears redo, an undone `where` change
 // fetches nothing, opens no dialog and writes the URL once, the stack caps at
-// 50, and a write that changes no view param (a language change) is no entry.
+// 50, a write that changes no view param (a language change) is no entry, and
+// commits made through asOwnStep stay apart however quickly they come.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { LayerSpecification } from 'maplibre-gl';
 
@@ -30,14 +31,14 @@ vi.mock('./terrain.js', async () => {
 
 import { state } from './state.js';
 import { addAllLayers } from './layers/add-all-layers.js';
-import { setWhere } from './filters.js';
+import { setWhere, setArea, setSelection, effectiveFilter } from './filters.js';
 import { setLayerVisibility } from './visibility.js';
-import { seedView, currentView } from './view-state.js';
+import { seedView, currentView, applyView } from './view-state.js';
 import { emit } from './state-bus.js';
 import { formatUrlState } from './url-state-codec.js';
 import './url-state.js';
-import { undo, redo, canUndo, canRedo, resetHistory } from './undo.js';
-import { wireMwFilter, wireSmokeOpacity, wireYearFilter } from './ui/ui-filters.js';
+import { undo, redo, canUndo, canRedo, resetHistory, asOwnStep } from './undo.js';
+import { wireMwFilter, wireSmokeOpacity, wireYearFilter, wireRouteConcernSelect } from './ui/ui-filters.js';
 
 type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Record<string, unknown>; filter?: unknown };
 
@@ -87,7 +88,7 @@ function recordingMap() {
 }
 
 const snap = () => formatUrlState(currentView()).join('&');
-// A finished control: state written, then its own url:write (ADR-0002).
+// A finished control: state written, then its own url:write.
 function commit(opacity: number) {
   state.smokeOpacity = opacity;
   emit('url:write');
@@ -110,6 +111,7 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); });
 
 wireYearFilter();   // delegated on document: wire once
+wireRouteConcernSelect();
 
 // A real drag: `input` events slower than REPLACE_MS apart, then one `change`.
 function drag(el: HTMLInputElement, values: number[]) {
@@ -238,6 +240,50 @@ describe('undo / redo', () => {
     expect(canRedo()).toBe(false);
   });
 
+  it('a committed area pick is one step, and undo puts the previous area back', () => {
+    expect(setArea({ kind: 'states', codes: ['TX'] })).toBeNull();
+    emit('url:write');
+    vi.advanceTimersByTime(500);
+    expect(setArea({ kind: 'states', codes: ['NM', 'TX'] })).toBeNull();
+    emit('url:write');
+    vi.advanceTimersByTime(500);
+    expect(snap()).toContain('af=s.NM.TX');
+
+    expect(undo()).toBe(true);
+    expect(state.area).toEqual({ kind: 'states', codes: ['TX'] });
+    expect(snap()).toContain('af=s.TX');
+    expect(undo()).toBe(true);
+    expect(state.area).toBeNull();
+    expect(snap()).not.toContain('af=');
+    expect(redo()).toBe(true);
+    expect(state.area).toEqual({ kind: 'states', codes: ['TX'] });
+  });
+
+  it('a committed selection is one step: undo restores the previous one and the map filter, Reset clears it', () => {
+    const one = { mode: 'isolate' as const, ids: { 'eia-generators': ['1:1'] } };
+    expect(setSelection(one)).toBeNull();
+    emit('url:write');
+    vi.advanceTimersByTime(500);
+    expect(setSelection({ mode: 'keep', ids: { 'eia-generators': ['1:1', '27:3'] } })).toBeNull();
+    emit('url:write');
+    vi.advanceTimersByTime(500);
+
+    expect(undo()).toBe(true);
+    expect(state.sel).toEqual(one);
+    expect(JSON.stringify(effectiveFilter('eia-gen-circles'))).toContain('["literal",["1:1"]]');
+    expect(undo()).toBe(true);
+    expect(state.sel).toBeNull();
+    expect(snap()).not.toContain('vx=');
+    expect(JSON.stringify(effectiveFilter('eia-gen-circles') ?? null)).not.toContain('1:1');
+    expect(redo()).toBe(true);
+    expect(state.sel).toEqual(one);
+
+    applyView({});
+    expect(state.sel).toBeNull();
+    expect(undo()).toBe(true);
+    expect(state.sel).toEqual(one);
+  });
+
   it('undoing a where change fetches nothing, opens no dialog and writes the URL once', () => {
     expect(setWhere('osm-substations-points', [{ field: 'nominal_kv', op: '>=', value: 345 }])).toBeNull();
     emit('url:write');
@@ -269,6 +315,21 @@ describe('undo / redo', () => {
     while (undo()) n++;
     expect(n).toBe(49);
     expect(state.smokeOpacity).toBe(0.11);
+  });
+
+  it('a route concern picked from its select is one step, and undo puts the previous one back', () => {
+    document.body.innerHTML = `<select data-route-concern-select>
+      <option value="what-constrains"></option><option value="floodplain"></option></select>`;
+    const sel = document.querySelector<HTMLSelectElement>('select')!;
+    sel.value = 'floodplain';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(snap()).toContain('rc=floodplain');
+    expect(undo()).toBe(true);
+    expect(state.routeConcern).toBe('what-constrains');
+    expect(snap()).not.toContain('rc=');
+    expect(redo()).toBe(true);
+    expect(state.routeConcern).toBe('floodplain');
   });
 
   it('a layer switched from its checkbox is one undoable entry', () => {
@@ -309,5 +370,24 @@ describe('undo / redo', () => {
   it('a write that changes no view param is no entry', () => {
     emit('lang:changed', { locale: 'fr' });
     expect(canUndo()).toBe(false);
+  });
+});
+
+describe('asOwnStep', () => {
+  // A burst within REPLACE_MS is one entry; the map API's calls are not merged.
+  const quick = (opacity: number) => { state.smokeOpacity = opacity; emit('url:write'); };
+
+  it('a burst of plain commits is one step', () => {
+    const baseline = snap();
+    quick(0.3); quick(0.4); quick(0.5);
+    expect(undoSteps()).toBe(1);
+    expect(snap()).toBe(baseline);
+  });
+
+  it('three quick commits through it are three steps', () => {
+    const baseline = snap();
+    for (const o of [0.3, 0.4, 0.5]) asOwnStep(() => quick(o));
+    expect(undoSteps()).toBe(3);
+    expect(snap()).toBe(baseline);
   });
 });

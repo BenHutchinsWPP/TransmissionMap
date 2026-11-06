@@ -2,7 +2,7 @@
 // The `vx` param (view `where` + `style`): encoding, determinism, its place
 // before `exp`, and the trust boundary on decode.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Inflate, deflateSync, strToU8 } from 'fflate';
+import { Inflate, deflateSync, inflateSync, strToU8, strFromU8 } from 'fflate';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { formatUrlState, parseUrlState, defaultView, type UrlStateData } from './url-state-codec.js';
 import { state } from './state.js';
@@ -10,10 +10,10 @@ import { beginExperience, endExperienceLink, experienceIsDirty } from './experie
 import { readUrlState, writeUrlState, paintLinkedView } from './url-state.js';
 import { setLocale, loadDictionary } from '../src/i18n/index.js';
 import type { Condition } from '../src/registry/condition-compile.js';
-import type { StyleOverride } from '../src/types.js';
+import type { Selection, StyleOverride } from '../src/types.js';
 import { setWhere } from './filters.js';
 import { EXPERIENCES } from '../src/registry/experiences.js';
-import { validateWhere, validateStyleOverride } from '../src/registry/view-validate.js';
+import { validateWhere, validateStyleOverride, validateSelection } from '../src/registry/view-validate.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
 
 // readUrlState() runs once, before initMap() builds the map: hide the fixture's
@@ -128,6 +128,72 @@ describe('vx – encoding', () => {
     clearDiagLog();
     format({ 'osm-substations-points': [KV345] }, {});
     expect(getDiagLog()).toEqual([]);
+  });
+});
+
+describe('vx – sel', () => {
+  const SEL: Selection = { mode: 'isolate', ids: { 'eia-generators': ['27:3', '1:1'], 'nerc-regions': ['CA-MX US'] } };
+  const payload = (vx: string) => {
+    const bytes = Uint8Array.from(atob(vx.slice(1).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    return JSON.parse(strFromU8(vx[0] === 'z' ? inflateSync(bytes) : bytes));
+  };
+
+  it('is omitted with no selection, so links without one are unchanged', () => {
+    expect(format({}, {}, { sel: null })).toEqual([]);
+    expect(format({ 'osm-substations-points': [KV345] }, {}, { sel: null }))
+      .toEqual(format({ 'osm-substations-points': [KV345] }, {}));
+  });
+
+  it('round-trips with ids sorted, keeps v 1, and sits beside w as its own section', () => {
+    const vx = vxOf(format({ 'eia-generators': [WIND] }, {}, { sel: SEL }))!;
+    expect(payload(vx)).toEqual({
+      v: 1, w: { 'eia-generators': [WIND] },
+      sel: { m: 'i', ids: { 'eia-generators': ['1:1', '27:3'], 'nerc-regions': ['CA-MX US'] } },
+    });
+    const back = parse('vx=' + vx);
+    expect(back.dropped).toBeUndefined();
+    expect(back.sel).toEqual({ mode: 'isolate', ids: { 'eia-generators': ['1:1', '27:3'], 'nerc-regions': ['CA-MX US'] } });
+    expect(back.where).toEqual({ 'eia-generators': [WIND] });
+  });
+
+  // A build from before `sel` treats it as an unknown section: dropped with a
+  // note, while `w` and `s` apply — the same path any unknown key takes.
+  it('opens in a decoder that predates sel minus the selection', () => {
+    const { sel, ...older } = payload(vxOf(format({ 'eia-generators': [WIND] }, {}, { sel: SEL }))!);
+    expect(sel).toBeDefined();
+    const back = parse('vx=' + rawVx(JSON.stringify({ ...older, zz: { m: 'k' } })));
+    expect(back.where).toEqual({ 'eia-generators': [WIND] });
+    expect(back.dropped).toEqual(['vx.zz: unknown section']);
+  });
+
+  it('drops a bad layer entry alone: a bad OSM fid goes, NERC CA-MX US stays', () => {
+    const json = JSON.stringify({ v: 1, sel: { m: 'k', ids: { 'osm-plants-points': [1261615730], 'nerc-regions': ['CA-MX US'] } } });
+    const back = parse('vx=' + rawVx(json));
+    expect(back.sel).toEqual({ mode: 'keep', ids: { 'nerc-regions': ['CA-MX US'] } });
+    expect(back.dropped).toHaveLength(1);
+    expect(back.dropped![0]).toMatch(/^vx\.sel\.osm-plants-points: /);
+  });
+
+  it('drops the whole selection past 500 ids, with a reason', () => {
+    const ids = Array.from({ length: 501 }, (_, i) => `${i}:1`);
+    const back = parse('vx=' + vxOf(format({}, {}, { sel: { mode: 'keep', ids: { 'eia-generators': ids } } }))!);
+    expect(back.sel).toBeUndefined();
+    expect(back.dropped).toEqual(['vx.sel: takes at most 500 ids (this one has 501)']);
+  });
+
+  it('drops an unknown mode or key as the whole selection', () => {
+    for (const sel of [{ m: 'x', ids: { 'nerc-regions': ['TRE'] } }, { m: 'i', ids: { 'nerc-regions': ['TRE'] }, extra: 1 }]) {
+      const back = parse('vx=' + rawVx(JSON.stringify({ v: 1, sel })));
+      expect(back.sel).toBeUndefined();
+      expect(back.dropped![0]).toMatch(/^vx\.sel: /);
+    }
+  });
+
+  it('500 OSM ids stay under the link cap', () => {
+    const ids = Array.from({ length: 500 }, (_, i) => 12_000_000_001 + i * 7_919 * 10);
+    const vx = vxOf(format({}, {}, { sel: { mode: 'keep', ids: { 'osm-transmission-lines': ids } } }))!;
+    expect(vx.length).toBeLessThan(8192);
+    expect(parse('vx=' + vx).sel!.ids['osm-transmission-lines']).toHaveLength(500);
   });
 });
 
@@ -246,6 +312,36 @@ describe('vx – trust boundary', () => {
   });
 });
 
+describe('vx – region contains', () => {
+  const TX: Condition = { field: 'states', op: 'contains', value: 'TX' };
+  const USAB: Condition = { field: 'admin1', op: 'contains', value: 'USAB' };
+
+  it('validateWhere accepts exact-code contains on region fields and refuses a bad code', () => {
+    expect(validateWhere('hifld-transmission-lines', [TX])).toBeNull();
+    expect(validateWhere('osm-transmission-lines', [USAB])).toBeNull();
+    expect(validateWhere('osm-datacenters', [{ field: 'countries', op: 'contains_any', value: ['FRA', 'DEU'] }])).toBeNull();
+    expect(validateWhere('hifld-transmission-lines', [{ field: 'states', op: 'contains', value: 'T X' }])).toMatch(/outside the declared domain/);
+    expect(validateWhere('hifld-transmission-lines', [{ field: 'states', op: '=', value: 'TX' }])).toMatch(/is not available on/);
+  });
+
+  it('round-trips states contains TX and admin1 contains USAB through a link', () => {
+    const where = { 'hifld-transmission-lines': [TX], 'osm-transmission-lines': [USAB] };
+    const r = parse(format(where, {}).join('&'));
+    expect(r.where).toEqual(where);
+    expect(r.dropped).toBeUndefined();
+  });
+
+  it('a bad contains code drops only that entry, with a reason', () => {
+    const json = JSON.stringify({ v: 1, w: {
+      'hifld-transmission-lines': [TX],
+      'hifld-substations': [{ field: 'states', op: 'contains', value: 'T X' }],
+    } });
+    const r = parse('vx=' + rawVx(json));
+    expect(r.where).toEqual({ 'hifld-transmission-lines': [TX] });
+    expect(r.dropped).toEqual([expect.stringMatching(/hifld-substations.*T X/)]);
+  });
+});
+
 describe('vx – url-state glue', () => {
   beforeEach(() => {
     state.where = {};
@@ -330,6 +426,7 @@ describe('curated experiences', () => {
       checked++;
       for (const [id, c] of Object.entries(e.state.where ?? {})) expect(validateWhere(id, c), `${e.id} where ${id}`).toBeNull();
       for (const [id, o] of Object.entries(e.state.style ?? {})) expect(validateStyleOverride(id, o), `${e.id} style ${id}`).toBeNull();
+      if (e.state.sel) expect(validateSelection(e.state.sel), `${e.id} sel`).toBeNull();
     }
     expect(checked).toBe(EXPERIENCES.length);
     expect(checked).toBeGreaterThan(0);

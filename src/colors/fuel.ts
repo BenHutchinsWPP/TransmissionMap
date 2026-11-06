@@ -4,7 +4,8 @@
 // value with an icon is always a value the fuel filter classes.
 // Deps: src/types.ts (FuelEntry). Consumers: src/colors/buckets.ts (fuel
 // buckets), src/colors/facets.ts (the fuel facet), src/registry/field-schema.ts
-// (value domains), assets/filters.ts, assets/layers/map-layers-{osm,eia}.ts.
+// (value domains), assets/filters.ts, assets/layers/map-layers-{osm,eia}.ts,
+// and fuelFold's: assets/ui/ui-table.ts (summary bars), assets/templates/show-template.ts.
 import type { ExpressionSpecification } from 'maplibre-gl';
 import type { FuelEntry } from '../types.js';
 
@@ -44,6 +45,20 @@ export const FUEL_LEGEND: FuelEntry[] = [
 
 const fuel = (id: string) => FUEL_LEGEND.find(f => f.id === id)!;
 const OTHER = fuel("other");
+
+/** For a fuel field (EIA `energy_source`, OSM `source`), the fold of a raw
+ *  value into its FUEL_LEGEND row (unclaimed values → Other); null for any
+ *  other field. The table's summary bars and the templates group by it. */
+export function fuelFold(field: string): ((key: string | number | null) => { id: string; label: string; color: string }) | null {
+  const by = field === "energy_source" ? "eiaCodes" : field === "source" ? "osmValues" : null;
+  if (!by) return null;
+  const map = new Map<string, FuelEntry>();
+  for (const f of FUEL_LEGEND) for (const v of f[by]) map.set(v, f);
+  return key => {
+    const f = map.get(String(key)) ?? OTHER;
+    return { id: f.id, label: f.label, color: f.color };
+  };
+}
 
 // ─── Filter value maps (bucket id → feature values) ─────────────────────────
 export const OSM_FUEL_MAP: Record<string, string[]> = Object.fromEntries(

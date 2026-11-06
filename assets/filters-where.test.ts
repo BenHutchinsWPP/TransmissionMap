@@ -1,14 +1,15 @@
-// effectiveFilter / setWhere / applyAllWhere on a recording fake map, plus the
+// effectiveFilter / setWhere / setArea / setSelection / applyAllWhere on a recording fake map, plus the
 // guard that every setFilter call site in assets/ is a known one.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 import type { FilterSpecification } from 'maplibre-gl';
+import { featureFilter } from '@maplibre/maplibre-gl-style-spec';
 import { state } from './state.js';
 import { layerById } from '../src/registry/index.js';
 import {
-  effectiveFilter, setWhere, applyAllWhere,
+  effectiveFilter, setWhere, setArea, setSelection, applyAllWhere,
   applyVoltageFilter, applyGeneratorFilters, whereOwnership,
 } from './filters.js';
 import { getDiagLog, clearDiagLog } from './diag-log.js';
@@ -23,6 +24,7 @@ const SETFILTER_SITES: Record<string, number> = {
   'filters.ts': 1,                  // refilter() — the effectiveFilter writer
   'hover.ts': 2,                    // polygon-hover + line click-highlight twins
   'layers/map-layers-wecc.ts': 2,   // wecc-path-lines-highlight (click selection)
+  'ui/proximity-map.ts': 2,         // px-focus, px-focus-pt (the Proximity tool's own layers; no registry filter)
 };
 
 describe('setFilter call sites', () => {
@@ -44,7 +46,8 @@ const SUB_ML = layerById(SUBS)!.mapLayerIds;               // hv, lv, label
 const HV = 'osm-substations-points-hv';
 const HV_BASE = ['>=', ['to-number', ['get', 'nominal_kv'], -1], 200] as FilterSpecification;
 const KV345 = { field: 'nominal_kv', op: '>=' as const, value: 345 };
-const KV345_EXPR = ['>=', ['to-number', ['get', 'nominal_kv']], 345];
+const valued = (f: string, e: unknown[]) => ['all', ['!=', ['to-string', ['get', f]], ''], e];
+const KV345_EXPR = valued('nominal_kv', ['>=', ['to-number', ['get', 'nominal_kv']], 345]);
 
 function fakeMap(ids: string[]) {
   const filters: Record<string, unknown> = {};
@@ -59,6 +62,8 @@ function fakeMap(ids: string[]) {
 beforeEach(() => {
   state.mapReady = true;
   state.where = {};
+  state.area = null;
+  state.sel = null;
   state.legendFilters = {};
   registerBaseFilter(HV, HV_BASE);
 });
@@ -109,7 +114,7 @@ describe('setWhere', () => {
       ['nws-alerts', [KV345], 'drawn partly by feature-state'],
       ['osm-dc-clusters', [KV345], '"osm-dc-clusters" is not a layer id'],       // map layer, not a registry id
       ['osm-dc-cluster-count', [KV345], '"osm-dc-cluster-count" is not a layer id'],
-      ['osm-datacenters', [KV345], 'has no field schema'],
+      ['railroads', [KV345], 'has no field schema'],
       ['no-such-layer', [KV345], '"no-such-layer" is not a layer id'],
       [SUBS, [{ field: 'states', op: '=', value: 'TX' }], 'is not a declared field'],
       [SUBS, [{ field: 'nominal_kv', op: 'in', value: [1] }], 'is not available on'],
@@ -194,6 +199,55 @@ describe('applyAllWhere', () => {
   });
 });
 
+describe('setArea', () => {
+  const TX_ADMIN1 = ['in', '|USAB|', ['to-string', ['get', 'admin1']]];
+
+  it('adds the area as the last part, beside a layer\'s own where, and clearing it keeps the where', () => {
+    const { filters } = fakeMap(SUB_ML);
+    applyVoltageFilter();
+    expect(setWhere(SUBS, [KV345])).toBeNull();
+
+    expect(setArea({ kind: 'states', codes: ['TX'] })).toBeNull();
+    expect(state.area).toEqual({ kind: 'states', codes: ['TX'] });
+    expect(filters[HV]).toEqual(['all', HV_BASE, KV345_EXPR, ['any', TX_ADMIN1]]);
+    expect(state.where[SUBS]).toEqual([KV345]);
+
+    expect(setArea(null)).toBeNull();
+    expect(state.area).toBeNull();
+    expect(filters[HV]).toEqual(['all', HV_BASE, KV345_EXPR]);
+  });
+
+  it('reaches layers no applier writes and leaves the cluster aggregates alone', () => {
+    const ids = [...layerById('osm-datacenters')!.mapLayerIds];
+    const { filters } = fakeMap(ids);
+    expect(setArea({ kind: 'countries', codes: ['FRA'] })).toBeNull();
+    expect(JSON.stringify(filters['osm-dc-points'])).toContain('|FRA|');
+    expect('osm-dc-clusters' in filters).toBe(false);
+  });
+
+  it('leaves a layer the area cannot reach at its filter', () => {
+    const { filters } = fakeMap(SUB_ML);
+    applyVoltageFilter();
+    expect(setArea({ kind: 'retail', codes: ['NA2'] })).toBeNull();
+    // osm_substations_points carries retail, so it filters; HIFLD lines do not.
+    expect(JSON.stringify(filters[HV])).toContain('|NA2|');
+    for (const ml of layerById('hifld-transmission-lines')!.mapLayerIds) {
+      expect(JSON.stringify(effectiveFilter(ml) ?? null), ml).not.toContain('retail');
+    }
+  });
+
+  it('sorts the codes, and refuses a bad area without touching state or map', () => {
+    const { map } = fakeMap(SUB_ML);
+    expect(setArea({ kind: 'states', codes: ['TX', 'NM'] })).toBeNull();
+    expect(state.area!.codes).toEqual(['NM', 'TX']);
+    map.setFilter.mockClear();
+    expect(setArea({ kind: 'states', codes: ['ZZ'] })).toEqual(expect.any(String));
+    expect(setArea({ kind: 'zcta' as never, codes: ['77002'] })).toEqual(expect.any(String));
+    expect(state.area!.codes).toEqual(['NM', 'TX']);
+    expect(map.setFilter).not.toHaveBeenCalled();
+  });
+});
+
 describe('generator filters keep their flat shape', () => {
   it('is base ∧ fuel ∧ mw ∧ … with where appended last', () => {
     const { filters } = fakeMap(['eia-gen-circles']);
@@ -203,8 +257,97 @@ describe('generator filters keep their flat shape', () => {
     expect(filters['eia-gen-circles']).toEqual(mw);
 
     setWhere('eia-generators', [{ field: 'op_year', op: '>=', value: 2000 }]);
-    expect(filters['eia-gen-circles']).toEqual(['all', mw, ['>=', ['to-number', ['get', 'op_year']], 2000]]);
+    expect(filters['eia-gen-circles']).toEqual(['all', mw, valued('op_year', ['>=', ['to-number', ['get', 'op_year']], 2000])]);
     setWhere('eia-generators', []);
     state.mwFilter = { min: 0, max: 10000 };
+  });
+});
+
+// ─── sel: isolate / keep on the stable id ─────────────────────────────────────
+describe('setSelection', () => {
+  const EIA = 'eia-generators';
+  const EIA_CIRCLES = 'eia-gen-circles';
+  const POINT_ONLY = ['==', ['geometry-type'], 'Point'] as FilterSpecification;
+  const WIND = { field: 'energy_source', op: 'in' as const, value: ['WND'] };
+  const GEOM = { Point: 1, LineString: 2, Polygon: 3 } as const;
+  // Evaluates the map layer's filter the way MapLibre does, on a tile-like feature.
+  const draws = (mlId: string, f: { id?: number; type?: keyof typeof GEOM; props: Record<string, unknown> }) => {
+    const filter = effectiveFilter(mlId);
+    if (!filter) return true;
+    const test = featureFilter(filter as never, 'layers[0].filter');
+    // nameplate_mw clears any MW range an earlier applier test left on the layer.
+    const properties = { nameplate_mw: 500, ...f.props };
+    return test.filter({ zoom: 8 }, { type: GEOM[f.type ?? 'Point'], id: f.id, properties } as never);
+  };
+
+  it('isolate on a native-id layer: base ∧ … ∧ id ∈ sel', () => {
+    fakeMap(SUB_ML);
+    expect(setSelection({ mode: 'isolate', ids: { [SUBS]: [12345678901] } })).toBeNull();
+    expect(effectiveFilter(HV)).toEqual(['all', HV_BASE, ['in', ['id'], ['literal', [12345678901]]]]);
+    expect(draws(HV, { id: 12345678901, props: { nominal_kv: 345 } })).toBe(true);
+    expect(draws(HV, { id: 22222222221, props: { nominal_kv: 345 } })).toBe(false);
+    // The band test still holds: a selected 100 kV substation is not an HV one.
+    expect(draws(HV, { id: 12345678901, props: { nominal_kv: 100 } })).toBe(false);
+  });
+
+  it('keep on a promoted-id layer: base ∧ ((where) ∨ id ∈ sel)', () => {
+    fakeMap([EIA_CIRCLES]);
+    registerBaseFilter(EIA_CIRCLES, POINT_ONLY);
+    setWhere(EIA, [WIND]);
+    expect(setSelection({ mode: 'keep', ids: { [EIA]: ['27:3'] } })).toBeNull();
+    const wind = { energy_source: 'WND', fid: '1:1' };
+    const keptGas = { energy_source: 'NG', fid: '27:3' };
+    const otherGas = { energy_source: 'NG', fid: '9:1' };
+    expect(draws(EIA_CIRCLES, { props: wind })).toBe(true);
+    expect(draws(EIA_CIRCLES, { props: keptGas })).toBe(true);
+    expect(draws(EIA_CIRCLES, { props: otherGas })).toBe(false);
+    // The base stays outside the OR: a kept polygon is no point layer's feature.
+    expect(draws(EIA_CIRCLES, { type: 'Polygon', props: keptGas })).toBe(false);
+    registerBaseFilter(EIA_CIRCLES, null);
+  });
+
+  it('isolate on a promoted-id layer keeps its where: selected ∧ filtered', () => {
+    fakeMap([EIA_CIRCLES]);
+    setWhere(EIA, [WIND]);
+    setSelection({ mode: 'isolate', ids: { [EIA]: ['1:1', '27:3'] } });
+    expect(draws(EIA_CIRCLES, { props: { energy_source: 'WND', fid: '1:1' } })).toBe(true);
+    expect(draws(EIA_CIRCLES, { props: { energy_source: 'NG', fid: '27:3' } })).toBe(false);
+    expect(draws(EIA_CIRCLES, { props: { energy_source: 'WND', fid: '5:1' } })).toBe(false);
+  });
+
+  it('keep with nothing filtering the layer adds nothing', () => {
+    fakeMap(SUB_ML);
+    setSelection({ mode: 'keep', ids: { [SUBS]: [12345678901] } });
+    expect(effectiveFilter(HV)).toEqual(HV_BASE);
+  });
+
+  it('leaves a layer absent from sel.ids at its filter, and clears with null', () => {
+    const { filters } = fakeMap([...SUB_ML, EIA_CIRCLES]);
+    setWhere(EIA, [WIND]);
+    const before = effectiveFilter(HV);
+    setSelection({ mode: 'isolate', ids: { [EIA]: ['1:1'] } });
+    expect(effectiveFilter(HV)).toEqual(before);
+    expect(JSON.stringify(filters[EIA_CIRCLES])).toContain('"1:1"');
+    expect(setSelection(null)).toBeNull();
+    expect(state.sel).toBeNull();
+    expect(JSON.stringify(filters[EIA_CIRCLES])).not.toContain('"1:1"');
+  });
+
+  it('refuses a bad selection without touching state or map, and says why', () => {
+    const { map } = fakeMap(SUB_ML);
+    setSelection({ mode: 'keep', ids: { [EIA]: ['1:1'] } });
+    map.setFilter.mockClear();
+    const ids = Array.from({ length: 501 }, (_, i) => `${i}:1`);
+    expect(setSelection({ mode: 'keep', ids: { [EIA]: ids } })).toMatch(/at most 500/);
+    expect(setSelection({ mode: 'keep', ids: { [SUBS]: [12345678900] } })).toMatch(/feature id/);
+    expect(state.sel).toEqual({ mode: 'keep', ids: { [EIA]: ['1:1'] } });
+    expect(map.setFilter).not.toHaveBeenCalled();
+  });
+
+  it('never reaches the cluster aggregates or highlight twins', () => {
+    fakeMap(['osm-dc-clusters', 'osm-dc-points']);
+    setSelection({ mode: 'isolate', ids: { 'osm-datacenters': [1261615731] } });
+    expect(JSON.stringify(effectiveFilter('osm-dc-clusters') ?? null)).not.toContain('1261615731');
+    expect(JSON.stringify(effectiveFilter('osm-dc-points'))).toContain('1261615731');
   });
 });

@@ -1,6 +1,6 @@
 // ─── Feature filters: legend/range appliers + view `where` conditions ────────
 // Every MapLibre filter this module writes is effectiveFilter(mlId) =
-// base ∧ applier part ∧ where, written by writeFilter()/refilter() — the one
+// base ∧ applier part ∧ where ∧ area (∧/∨ sel), written by writeFilter()/refilter() — the one
 // setFilter call site here (filters.test.ts enforces it):
 //   base    — the layer's own inline filter, registered from its plan spec by
 //             applyLayerPlan() through registerBaseFilter() (layers/base-filters.ts,
@@ -10,11 +10,22 @@
 //             remembered per map layer so a `where` change re-filters one
 //             registry layer without re-running the appliers;
 //   where   — state.where[registryId] for the registry layer (LayerDef.dataset
-//             set) owning the map layer, compiled by toMapLibreFilter().
+//             set) owning the map layer, compiled by toMapLibreFilter();
+//   area    — state.area (the map-wide Area filter) as that owner's dataset
+//             reads it (src/registry/area-filter.ts areaCondition()), compiled
+//             the same way; nothing when the area does not reach the dataset;
+//   sel     — state.sel, for an owner listed in it: its stable id (featureIdExpr)
+//             in the selected ids. `isolate` ANDs it on; `keep` ORs it with the
+//             applier ∧ where ∧ area part. The base stays outside the OR — it is
+//             the style layer's geometry/band test, so a kept polygon never
+//             draws in a point layer, nor a kept line in every voltage tier.
 // setWhere() validates (view-validate.ts's validateWhere(), the pure check
-// share links reuse) and applies one layer's conditions; applyAllWhere() re-filters every
-// where-capable map layer from state. Whole-view applies and Reset need neither:
-// their applyAllFilters() re-filters every where-owned layer (view-state-paint.test.ts).
+// share links reuse) and applies one layer's conditions; setArea() validates
+// (validateArea()) and applies the Area filter to every where-owned map layer;
+// setSelection() validates (validateSelection()) and applies the selection the same way;
+// applyAllWhere() re-filters every where-capable map layer from state. Whole-view applies and Reset need neither:
+// their applyAllFilters() ends with applyAllWhere(), so every where-owned layer is
+// re-filtered, including those no applier writes (view-state-paint.test.ts).
 // FACET_APPLIERS maps each legend facet (src/colors/facets.ts FACETS) to its
 // applier: applyFacet() derived from the record for a facet that is one field
 // on its own map layers, a hand applier (voltage, generators, OGF, WestTEC,
@@ -22,27 +33,32 @@
 // from the facet record (facet(), facetValueMap()). ui/ui-legends.ts hands them to the legend rows; other
 // UI controls call the appliers directly (ui/ui-filters.ts); applyAllFilters()
 // (bottom of file) runs every one.
+// drawnFilterLabels() says in words which of these narrow a layer (the table's
+// pills and CSV).
 // Owns MW_SLIDER_MAX, the MW range's no-upper-bound sentinel (also read by
 // url-state-codec.ts and ui/ui-filters.ts).
 // Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts), condition-compile.ts,
-// view-validate.ts,
-// nws-zone-join.ts (NWS feature-state half), diag-log.ts,
+// view-validate.ts, area-filter.ts, feature-id.ts (featureIdExpr),
+// nws-zone-join.ts (NWS feature-state half), diag-log.ts, src/i18n (t, getLocale),
 // layers/base-filters.ts (BASE_LAYER_FILTERS).
 
 import { state } from './state.js';
 import type { FilterSpecification } from 'maplibre-gl';
-import type { BucketDef, BucketedField } from '../src/types.js';
+import type { BucketDef, BucketedField, Selection } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { FUEL_LEGEND, OSM_FUEL_MAP, EIA_FUEL_MAP } from '../src/colors/fuel.js';
 import { FACETS, facet, facetValueMap } from '../src/colors/facets.js';
 import {
-  OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS, OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR,
+  OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS, OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, KV_BUCKET_RANGES,
 } from '../src/colors/buckets.js';
 import { setZoneGroupFilter } from './nws-zone-join.js';
 import { toMapLibreFilter, ConditionError, type Condition } from '../src/registry/condition-compile.js';
 import { recordDiagEvent } from './diag-log.js';
-import { validateWhere } from '../src/registry/view-validate.js';
+import { validateWhere, validateArea, validateSelection, normalizeSelection } from '../src/registry/view-validate.js';
+import { featureIdExpr } from './feature-id.js';
+import { areaCondition, normalizeArea, type AreaFilter } from '../src/registry/area-filter.js';
 import { BASE_LAYER_FILTERS } from './layers/base-filters.js';
+import { t, getLocale } from '../src/i18n/index.js';
 
 const GEN_MW_FIELDS: Record<string, string> = {
   "osm-plant-icons":      "output_mw",
@@ -140,11 +156,13 @@ export function applyNwsGroupFilter() {
 
 // osm/hifld transmission lines carry an overhead/underground placement flag;
 // other "kv" entries (substations) have no such field and get no filter.
+const UNDERGROUND_EXPRS: Record<string, unknown> = {
+  "osm-transmission-lines":   OSM_UNDERGROUND_EXPR,
+  "hifld-transmission-lines": HIFLD_UNDERGROUND_EXPR,
+};
+
 function buildUndergroundExpr(entryId: string): FilterSpecification | null {
-  const undergroundExpr =
-    entryId === "osm-transmission-lines"   ? OSM_UNDERGROUND_EXPR
-    : entryId === "hifld-transmission-lines" ? HIFLD_UNDERGROUND_EXPR
-    : null;
+  const undergroundExpr = UNDERGROUND_EXPRS[entryId];
   if (!undergroundExpr) return null;
 
   const active = state.legendFilters.underground;
@@ -242,7 +260,7 @@ export function applyGeneratorFilters() {
   }
 }
 
-// ─── Effective filter: base ∧ applier part ∧ where ────────────────────────────
+// ─── Effective filter: base ∧ applier part ∧ where ∧ area ─────────────────────
 // Last applier part per map layer, kept as the applier's list of parts so the
 // combined expression stays flat (["all", base, fuel, mw, …]) exactly as the
 // appliers built it before `where` existed.
@@ -300,9 +318,47 @@ function whereExpr(mlId: string): FilterSpecification | null {
   }
 }
 
-/** The filter a map layer should carry now: base ∧ last applier part ∧ where. */
+function areaExpr(mlId: string): FilterSpecification | null {
+  const owner = WHERE_OWNER[mlId];
+  if (!owner || !state.area) return null;
+  const dataset = layerById(owner)!.dataset!;
+  const cond = areaCondition(dataset, state.area);
+  if (cond === 'all' || 'unfiltered' in cond) return null;
+  // setArea validates first; as with whereExpr, a state.area seeded by another
+  // path is recorded once and left off rather than thrown.
+  try {
+    return toMapLibreFilter(dataset, [cond]) as unknown as FilterSpecification;
+  } catch (err) {
+    if (!(err instanceof ConditionError)) throw err;
+    const key = `area|${dataset}|${JSON.stringify(state.area)}`;
+    if (!REPORTED_BAD_WHERE.has(key)) {
+      REPORTED_BAD_WHERE.add(key);
+      recordDiagEvent('layer', `area on ${owner}: ${err.message}`);
+    }
+    return null;
+  }
+}
+
+// The owner's selected ids as a test, with the mode, or null when the
+// selection does not list the owner.
+function selPart(mlId: string): { mode: Selection['mode']; expr: FilterSpecification } | null {
+  const owner = WHERE_OWNER[mlId];
+  const ids = owner ? state.sel?.ids[owner] : undefined;
+  const idExpr = owner ? featureIdExpr(owner) : undefined;
+  if (!ids?.length || !idExpr) return null;
+  return { mode: state.sel!.mode, expr: ['in', idExpr, ['literal', ids]] as unknown as FilterSpecification };
+}
+
+/** The filter a map layer should carry now: base ∧ last applier part ∧ where ∧
+ *  area, and for a layer the selection lists, ∧ sel (isolate) or base ∧ (… ∨ sel) (keep). */
 export function effectiveFilter(mlId: string): FilterSpecification | null {
-  return combineFilters(BASE_LAYER_FILTERS[mlId] ?? null, ...(APPLIER_PARTS[mlId] ?? []), whereExpr(mlId));
+  const base = BASE_LAYER_FILTERS[mlId] ?? null;
+  const parts = [...(APPLIER_PARTS[mlId] ?? []), whereExpr(mlId), areaExpr(mlId)];
+  const sel = selPart(mlId);
+  if (!sel) return combineFilters(base, ...parts);
+  if (sel.mode === 'isolate') return combineFilters(base, ...parts, sel.expr);
+  const filtered = combineFilters(...parts);
+  return combineFilters(base, filtered && ['any', filtered, sel.expr] as FilterSpecification);
 }
 
 function refilter(mlId: string) {
@@ -334,8 +390,36 @@ export function setWhere(registryId: string, conditions: Condition[]): string | 
   return null;
 }
 
-/** Re-filter every where-capable map layer from state, for a state.where
- *  write that no applyAllFilters() follows. A layer whose conditions vanished from
+/** Set (or, with null, clear) the map-wide Area filter and re-filter every
+ *  where-owned map layer. Codes are sorted and deduplicated. Returns why the
+ *  area was refused — and changes nothing — or null on success. Emits nothing:
+ *  the caller commits with one 'url:write' per finished pick. */
+export function setArea(area: AreaFilter | null): string | null {
+  if (area !== null) {
+    const err = validateArea(area);
+    if (err) return err;
+  }
+  state.area = area && normalizeArea(area);
+  applyAllWhere();
+  return null;
+}
+
+/** Set (or, with null, clear) the view's selection and re-filter every
+ *  where-owned map layer. Ids are deduplicated and sorted. Returns why the
+ *  selection was refused — and changes nothing — or null on success. Emits
+ *  nothing: the caller commits with one 'url:write'. */
+export function setSelection(sel: Selection | null): string | null {
+  if (sel !== null) {
+    const err = validateSelection(sel);
+    if (err) return err;
+  }
+  state.sel = sel && normalizeSelection(sel);
+  applyAllWhere();
+  return null;
+}
+
+/** Re-filter every where-capable map layer from state, for a state.where,
+ *  state.area or state.sel write that no applyAllFilters() follows. A layer whose conditions vanished from
  *  state.where returns to base ∧ applier part. */
 export function applyAllWhere() {
   if (!state.mapReady) return;
@@ -348,16 +432,6 @@ function anyOfConds(conds: FilterSpecification[]) {
   return conds.length === 1 ? conds[0] : ["any", ...conds] as FilterSpecification;
 }
 
-const KV_BUCKET_RANGES: Record<string, [(string | number)[] | null, (string | number)[] | null]> = {
-  "550+":    [[">=", 550], null],
-  "500-549": [[">=", 500], ["<", 550]],
-  "300-499": [[">=", 300], ["<", 500]],
-  "200-299": [[">=", 200], ["<", 300]],
-  "100-199": [[">=", 100], ["<", 200]],
-  "<100":    [[">",    0], ["<", 100]],
-  "unknown": [null,        ["<=",  0]],
-};
-
 export function buildKvFilterExpr(field: string, activeSet: Set<string> | null | undefined, allBuckets: { id: string }[]) {
   if (!activeSet) return null;
   if (activeSet.size === allBuckets.length) return null;
@@ -366,8 +440,8 @@ export function buildKvFilterExpr(field: string, activeSet: Set<string> | null |
   for (const [id, [lo, hi]] of Object.entries(KV_BUCKET_RANGES)) {
     if (!activeSet.has(id)) continue;
     const parts: FilterSpecification[] = [];
-    if (lo) parts.push([lo[0], kv, lo[1]] as FilterSpecification);
-    if (hi) parts.push([hi[0], kv, hi[1]] as FilterSpecification);
+    if (lo) parts.push([lo[0], kv, lo[1]] as unknown as FilterSpecification);
+    if (hi) parts.push([hi[0], kv, hi[1]] as unknown as FilterSpecification);
     conds.push(parts.length === 1 ? parts[0] : ["all", ...parts] as FilterSpecification);
   }
   return anyOfConds(conds);
@@ -470,11 +544,57 @@ const HAND_APPLIERS: Record<string, () => void> = {
 export const FACET_APPLIERS: Record<string, () => void> = Object.fromEntries(
   FACETS.map(f => [f.key, HAND_APPLIERS[f.key] ?? (() => applyFacet(f))]));
 
+// ─── What the appliers draw, in words ─────────────────────────────────────────
+export interface FilterLabel { title: string; values: string[] }
+
+const bucketName = (b: BucketDef & { labelKey?: string }) => b.labelKey ? t(b.labelKey) : b.label;
+
+/** The legend and range filters narrowing what `layerId` draws, one entry per
+ *  filter that is not all-on: its status chips (state.layerFilters), each
+ *  facet the appliers above write to its map layers, the MW range and the
+ *  year. Mirrors the appliers' reach; the table's "As on the map" pills and
+ *  CSV read it. Pure over state. */
+export function drawnFilterLabels(layerId: string): FilterLabel[] {
+  const entry = layerById(layerId);
+  if (!entry) return [];
+  const out: FilterLabel[] = [];
+  const add = (title: string, buckets: BucketDef[], active: Set<string> | undefined, all = buckets) => {
+    if (!active || all.every(b => active.has(b.id))) return;
+    out.push({ title, values: buckets.filter(b => active.has(b.id)).map(bucketName) });
+  };
+  if (entry.filterBuckets && entry.bucketField) {
+    add(t('table.status'), entry.filterBuckets, state.layerFilters[entry.id]);
+  }
+  const own = new Set(entry.mapLayerIds);
+  const reaches = (f: BucketedField) =>
+    f.layerRef === entry.id || !!f.mapLayerIds?.some(id => own.has(id))
+    || (f.key === 'fuel' && (entry.filterType === 'fuel_eia' || entry.filterType === 'fuel_osm'))
+    || (f.key === 'sector' && entry.filterType === 'fuel_eia')
+    || (f.key === 'kv' && entry.filterType === 'kv')
+    || (f.key === 'underground' && !!UNDERGROUND_EXPRS[entry.id]);
+  for (const f of FACETS) {
+    if (reaches(f)) add(t(f.titleKey), f.buckets, state.legendFilters[f.key], f.syncBuckets ?? f.buckets);
+  }
+  const { min, max } = state.mwFilter;
+  if (entry.group === 'generators' && entry.mapLayerIds.some(id => GEN_MW_FIELDS[id]) && (min > 0 || max < MW_SLIDER_MAX)) {
+    const n = (v: number) => v.toLocaleString(getLocale());
+    out.push({ title: t('table.capacity'), values: [
+      min > 0 && max < MW_SLIDER_MAX ? `${n(min)}–${n(max)} MW` : min > 0 ? `≥ ${n(min)} MW` : `≤ ${n(max)} MW`] });
+  }
+  if (entry.group === 'generators' && entry.yearFilterLayer && state.yearFilter?.enabled) {
+    out.push({ title: t('popup.year'), values: [String(state.yearFilter.year)] });
+  }
+  return out;
+}
+
 // ─── Apply all ────────────────────────────────────────────────────────────────
 /** Re-apply every filter: each facet applier once, in FACETS order, then every
- *  per-layer legend-chip filter. Run by view-state.ts's repaintView() (map
- *  load, Reset, a view apply). */
+ *  per-layer legend-chip filter, then applyAllWhere() so a where-owned map
+ *  layer no applier writes (the datacenter points/heat, hydrothermal points)
+ *  gets its `where` too. Run by view-state.ts's repaintView() (map load,
+ *  Reset, a view apply). */
 export function applyAllFilters() {
   for (const apply of new Set(Object.values(FACET_APPLIERS))) apply();
   for (const entry of LAYERS) if (entry.filterBuckets) applyLayerFilter(entry.id);
+  applyAllWhere();
 }

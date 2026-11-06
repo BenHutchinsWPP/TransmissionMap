@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Style overrides on a recording fake map built by the real layer builders:
-// every scaled size/opacity validates against the MapLibre style spec (F4),
-// overrides survive the colour-by appliers and the weather crossfade (F1),
+// every scaled size/opacity validates against the MapLibre style spec,
+// overrides survive the colour-by appliers and the weather crossfade,
 // clearing restores exact baselines, and rejections carry their reason.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LayerSpecification } from 'maplibre-gl';
@@ -58,7 +58,7 @@ beforeEach(() => {
   state.westtecColorBy = 'scenario';
 });
 
-// ─── F4: every scaled baseline is a valid MapLibre value ──────────────────────
+// ─── every scaled baseline is a valid MapLibre value ──────────────────────
 const SCALED: Record<string, string[]> = {
   circle: ['circle-opacity', 'circle-stroke-opacity', 'circle-radius'],
   line: ['line-opacity', 'line-width'],
@@ -79,7 +79,7 @@ function validate(type: string, prop: string, value: unknown): string | null {
   return r.result === 'success' ? null : r.value.map(e => e.message).join('; ');
 }
 
-describe('scaled sizes and opacities validate (F4)', () => {
+describe('scaled sizes and opacities validate', () => {
   const { layers } = recordingMap();
 
   it('the validator rejects zoom nested inside "*"', () => {
@@ -296,7 +296,7 @@ describe('hover twins follow the size override', () => {
   });
 });
 
-// ─── F1 writers ───────────────────────────────────────────────────────────────
+// ─── writers ───────────────────────────────────────────────────────────────
 describe('colour-by writers fold the override in', () => {
   it('OGF: override survives setColorBy; clearing returns the current colour-by', () => {
     const { layers } = recordingMap();
@@ -371,7 +371,7 @@ describe('setColorBy', () => {
   });
 });
 
-describe('weather crossfade folds the opacity multiplier in (R5)', () => {
+describe('weather crossfade folds the opacity multiplier in', () => {
   const coverage = ([a, b]: [number, number]) => 1 - (1 - a) * (1 - b);
   let wired = false;
   beforeEach(() => { if (!wired) { recordingMap(); initWeatherLive(); wired = true; } });

@@ -35,6 +35,9 @@ let linkDropped: string[] = [];
 
 // Cold boot, from map.ts's load handler once layers and filters are on the map.
 // An `exp` link is repainted by its story moments later, so it shows no notice.
+// The link's services draw through repaintView()'s renderServices(), which
+// fetches only a vetted or approved one; the rest stay pending in state, so the
+// boot writeUrlState() keeps them in the hash.
 export function paintLinkedView() {
   const styles = repaintView();
   for (const d of styles) recordDiagEvent('link', `link style ${d.id}.${d.key}: ${d.reason}`);

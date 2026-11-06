@@ -1,5 +1,6 @@
 // Legend facets: one BucketedField record per legend filter, in legend order.
-// Each record carries the facet's URL group code, field, buckets (with their
+// Each record carries the facet's URL group code, field (or, for kv and fuel,
+// the per-layer `fields` its buckets classify), buckets (with their
 // URL codes and `values`), default active set, title key, swatch and target map
 // layers. facet(key) looks one up; facetValueMap() is its bucket id → feature
 // values map, the one every filter and value domain reads.
@@ -30,12 +31,13 @@ const MINES         = ["mines-icons"];
 // >>> ADD-LAYER: legend-filters — see docs/adding-a-layer.md §opt
 export const FACETS: BucketedField[] = [
   { key: "kv", groupCode: "v", buckets: VOLTAGE_LEGEND, syncBuckets: KV_BUCKETS,
+    fields: ["nominal_kv", "max_kv", "VOLTAGE"],
     legendId: "voltageLegend",
     title: "Voltage (kV)", titleKey: "legend.voltage", swatch: "color" },
   { key: "underground", groupCode: "o", buckets: LINE_PLACEMENT_BUCKETS,
     masterId: "linePlacementAllCb", legendId: "linePlacementLegend",
     title: "Line placement", titleKey: "legend.linePlacement", swatch: "line" },
-  { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND,
+  { key: "fuel", groupCode: "f", buckets: FUEL_LEGEND, fields: ["source", "energy_source"],
     title: "Fuel Type", titleKey: "legend.fuel", swatch: "icon" },
   { key: "sector", groupCode: "i", buckets: SECTOR_BUCKETS, field: "sector_name",
     title: "EIA Plants — sector", titleKey: "legend.sector", swatch: "none" },

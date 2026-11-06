@@ -9,7 +9,7 @@ import { MW_SLIDER_MAX } from './filters.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 
-const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'so', '3d', 'hs', 'lb', 'lang', 'region', 'vx', 'exp']);
+const RESERVED_PARAMS = new Set(['l', 'mw', 'y', 'gm', 'bm', 'oc', 'wc', 'wv', 'nr', 'rc', 'so', '3d', 'hs', 'lb', 'lang', 'region', 'af', 'vx', 'exp']);
 
 // readUrlState() runs once, before initMap() builds the map: hide the fixture's
 // map for the read, as a cold boot would, then hand it back for the writes.
@@ -42,6 +42,7 @@ beforeEach(() => {
   state.westtecColorBy  = 'scenario';
   state.weatherVar      = 'tempwind';
   state.nriHazard       = 'RISK';
+  state.routeConcern    = 'what-constrains';
   state.smokeOpacity    = 1;
   state.mwFilter        = { min: 0, max: MW_SLIDER_MAX };
   state.basemap         = 'light';
@@ -169,6 +170,29 @@ describe('readUrlState – gen mode', () => {
   });
 });
 
+describe('Grid Operations grouping link', () => {
+  it('gg=w round-trips as wecc and an unknown value is ignored', () => {
+    const dv = defaultView();
+    expect(parseUrlState(new URLSearchParams('gg=w')).gridGroup).toBe('wecc');
+    expect(formatUrlState({ ...dv, gridGroup: 'wecc' })).toContain('gg=w');
+    expect(parseUrlState(new URLSearchParams('gg=zz')).gridGroup).toBeUndefined();
+  });
+});
+
+describe('Grid Operations numbers link', () => {
+  it('gn is absent for auto, 1 and 0 round-trip, junk is ignored', () => {
+    const dv = defaultView();
+    expect(dv.gridNumbers).toBeNull();
+    expect(formatUrlState(dv)).not.toContain('gn=');
+    expect(parseUrlState(new URLSearchParams('')).gridNumbers).toBeUndefined();
+    expect(formatUrlState({ ...dv, gridNumbers: true })).toContain('gn=1');
+    expect(formatUrlState({ ...dv, gridNumbers: false })).toContain('gn=0');
+    expect(parseUrlState(new URLSearchParams('gn=1')).gridNumbers).toBe(true);
+    expect(parseUrlState(new URLSearchParams('gn=0')).gridNumbers).toBe(false);
+    expect(parseUrlState(new URLSearchParams('gn=x')).gridNumbers).toBeUndefined();
+  });
+});
+
 describe('round-trip serialization', () => {
   beforeEach(() => {
     state.mapReady = true;
@@ -261,6 +285,28 @@ describe('round-trip serialization', () => {
     setHash('nr=zzzz');
     coldBoot();
     expect(state.nriHazard).toBe('RISK');
+  });
+
+  it('omits rc when the route concern is the default overview', () => {
+    writeUrlState();
+    expect(location.hash).not.toContain('rc=');
+  });
+
+  it('round-trips a route concern through rc=<concern id>', () => {
+    state.routeConcern = 'floodplain';
+    writeUrlState();
+    expect(location.hash).toContain('rc=floodplain');
+    state.routeConcern = 'what-constrains';
+    coldBoot();
+    expect(state.routeConcern).toBe('floodplain');
+  });
+
+  it('drops an unknown rc with a reason, leaving the default concern', () => {
+    setHash('rc=bogus');
+    coldBoot();
+    expect(state.routeConcern).toBe('what-constrains');
+    expect(parseUrlState(new URLSearchParams('rc=bogus')).dropped).toEqual(['rc: unknown concern "bogus"']);
+    expect(parseUrlState(new URLSearchParams('rc=gap-1-2'))).toEqual({ routeConcern: 'gap-1-2' });
   });
 
   it('omits wv when weatherVar is the default "tempwind"', () => {
@@ -685,6 +731,49 @@ describe('map experiences – exp param', () => {
     writeUrlState();
     expect(experienceIsDirty()).toBe(true);
     expect(location.hash).not.toContain('exp=');
+  });
+});
+
+describe('area filter – af param', () => {
+  const view = (area: unknown) => ({ ...defaultView(), area } as ReturnType<typeof defaultView>);
+  const afOf = (parts: string[]) => parts.find(p => p.startsWith('af='));
+
+  it('is omitted when there is no area', () => {
+    expect(afOf(formatUrlState(defaultView()))).toBeUndefined();
+  });
+
+  it('round-trips, codes sorted and deduplicated', () => {
+    const parts = formatUrlState(view({ kind: 'states', codes: ['TX', 'NM', 'TX'] }));
+    expect(afOf(parts)).toBe('af=s.NM.TX');
+    const back = parseUrlState(new URLSearchParams(parts.join('&')));
+    expect(back.area).toEqual({ kind: 'states', codes: ['NM', 'TX'] });
+    expect(back.dropped).toBeUndefined();
+  });
+
+  it('reads every kind char, and an unsorted link as its sorted view', () => {
+    expect(parseUrlState(new URLSearchParams('af=a.USAB')).area).toEqual({ kind: 'admin1', codes: ['USAB'] });
+    expect(parseUrlState(new URLSearchParams('af=b.SWPP.ERCO')).area).toEqual({ kind: 'ba', codes: ['ERCO', 'SWPP'] });
+    expect(parseUrlState(new URLSearchParams('af=u.NA2')).area).toEqual({ kind: 'retail', codes: ['NA2'] });
+  });
+
+  it('comes before vx and exp', () => {
+    const parts = formatUrlState({
+      ...view({ kind: 'nerc', codes: ['TRE'] }),
+      where: { 'osm-substations-points': [{ field: 'nominal_kv', op: '>=', value: 345 }] },
+      experienceId: 'some-story',
+    });
+    const keys = parts.map(p => p.split('=')[0]);
+    expect(keys.slice(-3)).toEqual(['af', 'vx', 'exp']);
+  });
+
+  it('drops a bad af whole, with a reason, and keeps the rest of the link', () => {
+    const many = Array.from({ length: 101 }, (_, i) => String(10000 + i)).join('.');
+    for (const af of ['x.TX', 's', 's.ZZ', 's.TX.ZZ', 's.T|X', 'c.6037', 'c.' + many, '', 's..TX']) {
+      const out = parseUrlState(new URLSearchParams({ af, bm: 'd' }));
+      expect(out.area, af).toBeUndefined();
+      expect(out.basemap, af).toBe('dark');
+      expect(out.dropped, af).toEqual([expect.stringMatching(/^af: /)]);
+    }
   });
 });
 

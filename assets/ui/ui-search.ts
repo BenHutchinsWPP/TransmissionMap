@@ -1,7 +1,18 @@
 // ─── Feature search (inside layers panel) ───────────────────────────────────
 // An open query re-runs on the 'layer:data' bus event, as lazy sources land.
+// Search finds what the map draws: a feature counts only when the filter of at
+// least one of its layer's map layers on that source passes it — so a legend
+// filter, a view's `where` and the Area filter (filters.ts effectiveFilter())
+// hide it from search too, as they do from click and hover. The filters are
+// evaluated with the style-spec featureFilter, a lazy chunk shared with
+// popup.ts; until it loads, or if it cannot, search runs unfiltered.
+// Deps: state.ts, map-input.ts (onMapTap), registry (layerById, OSM_TL_BANDS),
+//       highlights.ts, state-bus.ts, diag-log.ts, utils.ts (escapeHtml).
 
 import { state } from '../state.js';
+import type { FilterSpecification } from 'maplibre-gl';
+import { layerById } from '../../src/registry/index.js';
+import { recordDiagEvent } from '../diag-log.js';
 import { onMapTap } from '../map-input.js';
 import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 import { escapeHtml } from '../utils/utils.js';
@@ -89,6 +100,42 @@ function _sourceFeatures(src: (typeof SEARCH_SOURCES)[number]): GeoJSON.Feature[
   catch { return []; }
 }
 
+// ─── What the map draws ──────────────────────────────────────────────────────
+type FeatureFilterFn = typeof import('@maplibre/maplibre-gl-style-spec').featureFilter;
+let featureFilter: FeatureFilterFn | null = null;
+let featureFilterLoad: Promise<void> | null = null;
+function loadFeatureFilter(): Promise<void> {
+  return featureFilterLoad ??= import('@maplibre/maplibre-gl-style-spec')
+    .then(m => { featureFilter = m.featureFilter; })
+    .catch(err => { featureFilterLoad = null; recordDiagEvent('layer', `search filter chunk: ${err}`); });
+}
+
+const GEOMETRY_TYPE: Record<string, number> = {
+  Point: 1, MultiPoint: 1, LineString: 2, MultiLineString: 2, Polygon: 3, MultiPolygon: 3,
+};
+
+/** A test that passes a feature some map layer draws: the layer filters given
+ *  (one per map layer on the source; null = no filter, draws every feature),
+ *  any of which may pass it. No filters at all: every feature passes. */
+export function drawnBy(
+  filters: (FilterSpecification | null | undefined)[], compile: FeatureFilterFn, zoom: number,
+): (f: GeoJSON.Feature) => boolean {
+  if (!filters.length || filters.some(f => !f)) return () => true;
+  const tests = filters.map(f => compile(f!, 'layers[0].filter'));
+  return (f) => {
+    const feature = { type: GEOMETRY_TYPE[f.geometry?.type] ?? 0, properties: f.properties ?? {}, id: f.id };
+    return tests.some(t => t.filter({ zoom }, feature as never));
+  };
+}
+
+function _drawnTest(src: (typeof SEARCH_SOURCES)[number]): (f: GeoJSON.Feature) => boolean {
+  const map = state.map;
+  const entry = layerById(src.layerId ?? src.sourceId);
+  if (!map || !entry || !featureFilter) return () => true;
+  const mlIds = entry.mapLayerIds.filter(id => map.getLayer(id)?.source === src.sourceId);
+  return drawnBy(mlIds.map(id => map.getFilter(id) as FilterSpecification | null), featureFilter, map.getZoom());
+}
+
 function _matchResult(f: GeoJSON.Feature, src: (typeof SEARCH_SOURCES)[number], query: string) {
   const p = f.properties || {};
   if ("featureType" in src && p._type !== src.featureType) return null;
@@ -108,10 +155,11 @@ function _matchResult(f: GeoJSON.Feature, src: (typeof SEARCH_SOURCES)[number], 
 function _searchInSource(src: (typeof SEARCH_SOURCES)[number], query: string, seen: Set<string>, limit: number) {
   const features = _sourceFeatures(src);
   if (!features) return [];
+  const drawn = _drawnTest(src);
   const out: SearchResult[] = [];
   for (const f of features) {
     const result = _matchResult(f, src, query);
-    if (!result) continue;
+    if (!result || !drawn(f)) continue;
     const key = `${src.sourceId}:${result.name}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -151,13 +199,13 @@ export function wireFeatureSearch() {
 
   function showResults(results: SearchResult[]) {
     if (!results.length) {
-      clearHighlights();
+      clearHighlights('search');
       searchResults!.innerHTML = `<div class="search-no-results">No results in loaded tiles</div>`;
       searchResults!.hidden = false;
       return;
     }
 
-    setHighlightFeatures(results.map(_resultToFeature));
+    setHighlightFeatures(results.map(_resultToFeature), 'search');
 
     searchResults!.innerHTML = results.map((r, i) =>
       `<button class="search-result-item" data-index="${i}">
@@ -169,11 +217,11 @@ export function wireFeatureSearch() {
 
     searchResults!.querySelectorAll<HTMLElement>(".search-result-item").forEach(btn => {
       const r = results[parseInt(btn.dataset.index!)];
-      btn.addEventListener("mouseenter", () => setHighlightFeatures([_resultToFeature(r)]));
-      btn.addEventListener("mouseleave", () => setHighlightFeatures(results.map(_resultToFeature)));
+      btn.addEventListener("mouseenter", () => setHighlightFeatures([_resultToFeature(r)], 'search'));
+      btn.addEventListener("mouseleave", () => setHighlightFeatures(results.map(_resultToFeature), 'search'));
       btn.addEventListener("click", () => {
         state.map!.flyTo({ center: r.center as [number, number], zoom: Math.max(state.map!.getZoom(), 10) });
-        setHighlightFeatures([_resultToFeature(r)]);
+        setHighlightFeatures([_resultToFeature(r)], 'search');
         searchResults!.hidden = true;
         searchInput!.value = r.name;
       });
@@ -182,35 +230,37 @@ export function wireFeatureSearch() {
 
   function hideResults() {
     searchResults!.hidden = true;
-    clearHighlights();
+    clearHighlights('search');
   }
 
   let searchDebounce: ReturnType<typeof setTimeout> | undefined;
-  function doSearch() {
+  async function doSearch() {
     const q = searchInput!.value ?? "";
-    if (!q.trim() || !state.map) { hideResults(); clearHighlights(); return; }
+    if (!q.trim() || !state.map) { hideResults(); return; }
+    await loadFeatureFilter();
+    if (searchInput!.value !== q) return;   // typed on while the filter chunk loaded
     showResults(_searchFeatures(q));
   }
 
   searchInput.addEventListener("input", () => {
     clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(doSearch, 200);
+    searchDebounce = setTimeout(() => void doSearch(), 200);
   });
   searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { clearTimeout(searchDebounce); doSearch(); }
+    if (e.key === "Enter") { clearTimeout(searchDebounce); void doSearch(); }
     if (e.key === "Escape") hideResults();
   });
 
   on('layer:data', () => {
     if (searchInput.value.trim()) {
       clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(doSearch, 0);
+      searchDebounce = setTimeout(() => void doSearch(), 0);
     }
   });
 
   document.addEventListener("click", (e) => {
     const t = e.target as Element;
-    if (!t?.closest("#searchInput") && !t?.closest("#searchResults")) hideResults();
+    if (!searchResults!.hidden && !t?.closest("#searchInput") && !t?.closest("#searchResults")) hideResults();
   });
   // Going back to the map is a map tap, which is not a document click on touch.
   onMapTap(hideResults);

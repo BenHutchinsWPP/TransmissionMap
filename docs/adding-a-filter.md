@@ -203,6 +203,19 @@ master checkbox, calls `cfg.apply()`, and emits `url:write`. The row builder in
 
 ---
 
+## Area filter
+
+The map-wide Area filter is not a legend filter, so it needs no facet,
+bucket or `groupCode`. It is the fourth part of `effectiveFilter()`
+(`assets/filters.ts`): base filter, legend/range part, the view's `where`,
+then the area. `setArea()` sets it, `src/registry/area-filter.ts` maps the area
+to each layer's region field, and the picker commits through `commitArea()`
+(`assets/ui/panel-mirror.ts`). A layer needs only its `dataset` and region
+fields in `FIELD_SCHEMA` — see
+[adding-a-layer.md § Reaching the Area filter](adding-a-layer.md#reaching-the-area-filter).
+
+---
+
 ## Range / custom filter (MW, year — the rare case)
 
 No legend config. You hand-write the control wiring in `ui-filters.ts` (see
@@ -220,7 +233,7 @@ existing two:
 - Still call `applyGeneratorFilters()` (or your apply) **and** emit `url:write`
   on every change, and persist it in the codec — see [url-state.md](url-state.md).
 - Your `url:write` emit is what puts the control on the undo stack
-  ([ADR-0004](adr/0004-undo-replays-url-write-snapshots.md)). On a range
+  (see [url-state.md](url-state.md) § Undo). On a range
   slider, apply on `input` but emit `url:write` on `change`, as the MW, year
   and smoke sliders do, so one drag is one undo step however slow it is.
 - Paint the control's value from `state` in `syncPanel()` in

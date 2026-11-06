@@ -10,10 +10,20 @@
 //                          and 'url:write' — the apply's one URL write.
 //         currentView()    the live view in the codec's shape, for the link.
 //         repaintView()    the one repaint sequence after state is written:
-//                          smoke opacity, applyAllFilters() (which carries `where`),
-//                          gen modes, then the styles and colour-bys; run by
-//                          applyView() and by the cold-boot paint
-//                          (url-state.ts's paintLinkedView(), from map.ts).
+//                          smoke opacity, applyAllFilters() (which carries `where`,
+//                          the area and the selection),
+//                          gen modes, then the styles and colour-bys, then the
+//                          linked services (renderServices(), which fetches
+//                          only an allowed one); run by applyView() and by the
+//                          cold-boot paint (url-state.ts's paintLinkedView(), from map.ts).
+//         setServices(list) / addService(svc) / skipService(id)
+//                          the linked-services commits: checked with the link's
+//                          caps (view-validate.ts validateServices), drawn, one
+//                          'url:write' each — so each is an undo step.
+//         pendingServices() / approveAndLoad(url)
+//                          the services in the view that may not fetch yet
+//                          (neither vetted nor approved this session), and the
+//                          visitor's Load: approve the URL, then draw.
 //       Both entry points resolve `data` over the codec's defaultView() first,
 //       so a field the data leaves out (the codec omits defaults) lands at its
 //       default instead of keeping the last view's value — a story, a link or
@@ -32,12 +42,14 @@
 //   view (in the link): basemap, basemapLabels, projection, terrain3d, buildings3d,
 //     hillshade, smokeOpacity, layerVisibility, layerFilters, legendFilters, mwFilter,
 //     yearFilter (enabled/year), genMode, ogfColorBy, westtecColorBy, weatherVar,
-//     nriHazard, regionScope, where and styleOverrides (both in the `vx` param).
+//     nriHazard, routeConcern, gridHour, gridGroup, gridGlyph, gridNumbers, regionScope, where, styleOverrides, sel and services (all in the `vx` param),
+//     area (the `af` param).
 //   device preference (localStorage): display units live in units.ts, not AppState.
 //   personal data: userLayers, userLayerCounter, drawDefaultColor, selectedDrawId,
 //     userHighlightKey, draw.
-//   session: map, mapReady, popup, editMode, measure, weatherStepSuffix, yearPlayback,
-//     sourcesLoaded, sourcesData, liveFcMeta, rasterLut, rasterLutLoading.
+//   session: map, mapReady, popup, editMode, measure, yearPlayback,
+//     sourcesLoaded, sourcesData, liveFcMeta. The hover LUTs and the weather step
+//     they follow live in raster-probes.ts, not AppState.
 //   Map Experience link (story id, snapshot, dirty flag): experience-link.ts,
 //     not AppState.
 //
@@ -49,9 +61,12 @@
 //       basemap.js (switchBasemap, switchProjection),
 //       terrain.js (setTerrain3d, setBuildings3d, setHillshade),
 //       weather-live.js (setWeatherVar), fema-nri.js (setNriHazard),
+//       route-constraints.js (setRouteConcern), grid-ops/grid-ops.js (setGridView),
 //       layers/map-layers-conditions.js (applySmokeOpacity), state-bus.js,
 //       style-overrides.js (applyAllStyles — the styles and colour-bys), diag-log.js,
-//       filters.js (applyAllFilters).
+//       filters.js (applyAllFilters), src/registry/area-filter.js (normalizeArea),
+//       services/service-render.js (renderServices), services/service-trust.js
+//       (approve, isAllowed), src/registry/view-validate.js (validateServices).
 
 import { state } from './state.js';
 import { defaultView, type UrlStateData, type CameraView } from './url-state-codec.js';
@@ -62,13 +77,20 @@ import { switchBasemap, switchProjection } from './basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from './terrain.js';
 import { setWeatherVar } from './weather-live.js';
 import { setNriHazard } from './fema-nri.js';
+import { setRouteConcern } from './route-constraints.js';
+import { setGridView } from './grid-ops/grid-ops.js';
 import { applySmokeOpacity } from './layers/map-layers-conditions.js';
-import type { StyleOverride } from '../src/types.js';
+import type { Selection, StyleOverride } from '../src/types.js';
 import type { Condition } from '../src/registry/condition-compile.js';
+import { normalizeArea } from '../src/registry/area-filter.js';
 import { emit } from './state-bus.js';
 import { applyAllStyles, type DroppedStyle } from './style-overrides.js';
 import { recordDiagEvent } from './diag-log.js';
 import { applyAllFilters } from './filters.js';
+import { renderServices } from './services/service-render.js';
+import { approve, isAllowed } from './services/service-trust.js';
+import { validateServices } from '../src/registry/view-validate.js';
+import type { LinkedService } from './services/service-spec.js';
 
 // The fields a view carries; the link adds `lang` and `exp` on top.
 export type View = Omit<UrlStateData, 'lang' | 'experienceId'>;
@@ -82,6 +104,12 @@ function copyStyle(s: UrlStateData['style']): Record<string, StyleOverride> {
   return Object.fromEntries(Object.entries(s ?? {}).map(([id, o]) => [id, { ...o }]));
 }
 
+function copySel(s: UrlStateData['sel']): Selection | null {
+  return s ? { mode: s.mode, ids: Object.fromEntries(Object.entries(s.ids).map(([id, l]) => [id, [...l]])) } : null;
+}
+
+const copyServices = (list: UrlStateData['services']): LinkedService[] => structuredClone(list ?? []);
+
 function resolve(data: Partial<UrlStateData>): View {
   const v = defaultView();
   // Keyed fields merge per key: a link lists only the layers and filters that
@@ -94,9 +122,12 @@ function resolve(data: Partial<UrlStateData>): View {
   // Replaced wholesale: a key from the previous view must not survive a Reset.
   v.where = copyWhere(data.where);
   v.style = copyStyle(data.style);
+  v.area = data.area ? { kind: data.area.kind, codes: [...data.area.codes] } : null;
+  v.sel = copySel(data.sel);
+  v.services = copyServices(data.services);
   for (const k of [
-    'mwFilter', 'yearFilter', 'ogfColorBy', 'westtecColorBy', 'weatherVar', 'nriHazard',
-    'smokeOpacity', 'basemap', 'projection', 'terrain3d', 'buildings3d', 'hillshade', 'basemapLabels', 'region',
+    'mwFilter', 'yearFilter', 'ogfColorBy', 'westtecColorBy', 'weatherVar', 'nriHazard', 'routeConcern',
+    'gridHour', 'gridGroup', 'gridGlyph', 'gridNumbers', 'smokeOpacity', 'basemap', 'projection', 'terrain3d', 'buildings3d', 'hillshade', 'basemapLabels', 'region',
   ] as const) {
     if (data[k] !== undefined) (v as unknown as Record<string, unknown>)[k] = data[k];
   }
@@ -105,7 +136,7 @@ function resolve(data: Partial<UrlStateData>): View {
 
 // The state-only half, shared by both entry points. Fields with a live-map
 // side (layer visibility, basemap, projection, 3D, weather variable, NRI
-// hazard) go through their setters in seedView() and applyView() instead;
+// hazard, route concern) go through their setters in seedView() and applyView() instead;
 // switchBasemap() reads the labels flag set here.
 function writeState(v: View) {
   Object.assign(state.legendFilters, v.legendFilters);
@@ -113,6 +144,9 @@ function writeState(v: View) {
   Object.assign(state.genMode, v.genMode);
   state.where = copyWhere(v.where);
   state.styleOverrides = copyStyle(v.style);
+  state.area = v.area ? normalizeArea(v.area) : null;
+  state.sel = copySel(v.sel);
+  state.services = copyServices(v.services);
   state.mwFilter = { ...v.mwFilter };
   // min/max are the slider's bounds, set once in ui.ts's init(); not part of a view.
   state.yearFilter.enabled = v.yearFilter.enabled;
@@ -135,6 +169,8 @@ export function seedView(data: Partial<UrlStateData>) {
   switchProjection(v.projection);
   setWeatherVar(v.weatherVar);
   setNriHazard(v.nriHazard);
+  setRouteConcern(v.routeConcern);
+  setGridView(v.gridHour, v.gridGroup, v.gridGlyph, v.gridNumbers);
   Object.assign(state.layerVisibility, v.layerVisibility);
   setTerrain3d(v.terrain3d);
   setBuildings3d(v.buildings3d);
@@ -142,13 +178,16 @@ export function seedView(data: Partial<UrlStateData>) {
 }
 
 /** Repaint the whole view from state: re-applies smoke opacity, re-filters
- *  every layer (`where` rides on applyAllFilters()), re-applies gen modes, then
- *  paints the style overrides and colour-bys. Returns the style keys the map could not take. */
+ *  every layer (`where` rides on applyAllFilters()), re-applies gen modes,
+ *  paints the style overrides and colour-bys, then draws the linked services.
+ *  Returns the style keys the map could not take. */
 export function repaintView(): DroppedStyle[] {
   applySmokeOpacity();
   applyAllFilters();
   applyAllGenModes();
-  return applyAllStyles();
+  const dropped = applyAllStyles();
+  renderServices();
+  return dropped;
 }
 
 export function applyView(data: Partial<UrlStateData>, camera?: CameraView & { mode?: CameraMode }): DroppedStyle[] {
@@ -163,6 +202,8 @@ export function applyView(data: Partial<UrlStateData>, camera?: CameraView & { m
   // showing the variable and hazard this view asked for.
   setWeatherVar(v.weatherVar);
   setNriHazard(v.nriHazard);
+  setRouteConcern(v.routeConcern);
+  setGridView(v.gridHour, v.gridGroup, v.gridGlyph, v.gridNumbers);
 
   // Only layers whose visibility changes are touched. Off before on: a layer
   // the view turns off gives up its map layers before the ones it turns on
@@ -206,6 +247,11 @@ export function currentView(): View {
     westtecColorBy: state.westtecColorBy,
     weatherVar: state.weatherVar,
     nriHazard: state.nriHazard,
+    routeConcern: state.routeConcern,
+    gridHour: state.gridHour,
+    gridGroup: state.gridGroup,
+    gridGlyph: state.gridGlyph,
+    gridNumbers: state.gridNumbers,
     smokeOpacity: state.smokeOpacity,
     basemap: state.basemap,
     projection: state.projection,
@@ -216,5 +262,52 @@ export function currentView(): View {
     region: state.regionScope,
     where: copyWhere(state.where),
     style: copyStyle(state.styleOverrides),
+    area: state.area && { kind: state.area.kind, codes: [...state.area.codes] },
+    sel: copySel(state.sel),
+    services: copyServices(state.services),
   };
+}
+
+// ─── Linked services ─────────────────────────────────────────────────────────
+
+/** Replace the view's linked services. Refused (with the reason, state
+ *  untouched) past the link's caps or on any invalid entry; else drawn and
+ *  committed with one 'url:write'. Approves nothing: a URL not yet allowed stays pending. */
+export function setServices(list: LinkedService[]): string | null {
+  const v = validateServices(list);
+  if (!v.ok) return v.reason;
+  state.services = v.result;
+  renderServices();
+  emit('url:write');
+  return null;
+}
+
+/** The visitor's own add (the dialog after its warning, a confirmed chat call):
+ *  appended through setServices(), and its URL approved for this session once accepted. */
+export function addService(svc: LinkedService): string | null {
+  const v = validateServices([...state.services, svc]);
+  if (!v.ok) return v.reason;
+  approve(v.result[v.result.length - 1].url);
+  return setServices(v.result);
+}
+
+/** Skip on a pending card: the entry leaves the view (one 'url:write'); an undo
+ *  brings it back still pending. False when no service has that id. */
+export function skipService(id: string): boolean {
+  if (!state.services.some(s => s.id === id)) return false;
+  state.services = state.services.filter(s => s.id !== id);
+  renderServices();
+  emit('url:write');
+  return true;
+}
+
+/** The view's services that may not fetch: neither vetted nor approved this session. */
+export function pendingServices(): LinkedService[] {
+  return state.services.filter(s => !isAllowed(s));
+}
+
+/** Load on a pending card: approve the URL for this session, then draw. No view change. */
+export function approveAndLoad(url: string): void {
+  approve(url);
+  renderServices();
 }

@@ -14,3 +14,15 @@ export function isHttpUrl(url: unknown) {
   // eslint-disable-next-line no-control-regex -- control chars are the point: strip what browsers strip
   return /^https?:\/\//i.test(url.replace(/[\u0000- ]/g, ''));
 }
+
+// A CSV cell (RFC 4180): null/undefined → empty, objects as JSON. A string that a spreadsheet would
+// read as a formula gets a leading ' (OSM names are user-edited); a cell with a quote, comma or line
+// break is quoted with its quotes doubled.
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+export function csvCell(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  let s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  if (typeof v === 'string' && FORMULA_START.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}

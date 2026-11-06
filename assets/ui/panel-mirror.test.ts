@@ -38,10 +38,13 @@ import { beginExperience, endExperienceLink, experienceIsDirty } from '../experi
 import { heatRampShown, setLayerVisibility } from '../visibility.js';
 import { hasPanelRow, PANEL_GROUPS } from './ui-layer-rows.js';
 import { wireLangChanged, wireRegionSelect } from './ui.js';
-import { renderPanel, syncPanel } from './panel-mirror.js';
+import { renderPanel, syncPanel, commitArea, commitSelection, commitWhere, conditionLabel, whereLabel } from './panel-mirror.js';
 import { mwToPos } from '../filters.js';
 import { loadDictionary, setLocale } from '../../src/i18n/index.js';
-import { wireGenModeToggle } from './ui-filters.js';
+import { wireGenModeToggle, wireRouteConcernSelect, wireGridOpsSelects, wireLayerFilterPanels } from './ui-filters.js';
+import { parseUrlState } from '../url-state-codec.js';
+import { CONCERNS, CONCERN_GROUPS } from '../../src/colors/route-constraints.js';
+import { areaFlag } from '../../src/registry/area-filter.js';
 
 type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Record<string, unknown>; filter?: unknown };
 
@@ -87,6 +90,8 @@ const GEN = 'eia-generators';
 
 wireLangChanged();
 wireGenModeToggle();
+wireRouteConcernSelect();
+wireGridOpsSelects();
 
 let urlWrites = 0;
 on('url:write', () => { urlWrites++; });
@@ -114,6 +119,12 @@ beforeEach(() => {
     <div class="layers-body">
       ${PANEL_GROUPS.map(g => `<div class="layer-section" data-collapsible><div id="layer-rows-${g}"></div></div>`).join('')}
     </div>
+    <div id="areaRow">
+      <button id="areaClear" hidden></button>
+      <div id="areaBox"><span id="areaChips"></span><input id="areaInput"></div>
+      <div id="areaSummary" hidden><span id="areaSummaryText"></span></div>
+    </div>
+    <div id="selRow" hidden><span id="selChipLabel"></span><button id="selModeBtn"><span id="selModeText"></span></button></div>
     <div id="regionDropdown">
       <button id="regionDropdownBtn"></button>
       <span id="regionActiveIcon"></span><span id="regionActiveText"></span>
@@ -128,21 +139,26 @@ beforeEach(() => {
 });
 
 const q = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel);
+const panelView = () => ({ scope: state.regionScope, visible: state.layerVisibility });
 const modeOf = (id: string) => state.genMode[id] || LAYERS.find(l => l.id === id)!.defaultMode || 'icons';
 
 /** Every mirrored control in the panel against `state`. */
 function expectPanelMatchesState(where = '') {
   for (const entry of LAYERS) {
-    if (!hasPanelRow(entry)) continue;
+    if (!hasPanelRow(entry, panelView())) continue;
     const on = !!state.layerVisibility[entry.id];
     const cb = q<HTMLInputElement>(`input[type=checkbox][data-layer-id="${entry.id}"]`);
     expect(cb?.checked, `${where} ${entry.id} checkbox`).toBe(on);
+    const flag = on ? areaFlag(entry, state.area, modeOf(entry.id)) : null;
+    expect(q(`[data-area-flag="${entry.id}"]`)!.hidden, `${where} ${entry.id} area flag`).toBe(!flag);
     if (entry.heatLayerId || entry.modes) {
       const mode = modeOf(entry.id);
       expect(q(`#${entry.id}-heat-ramp`)!.hidden, `${where} ${entry.id} ramp`).toBe(!heatRampShown(entry, on, mode));
       const active = [...document.querySelectorAll<HTMLElement>(`[data-gen-mode-layer="${entry.id}"].gen-mode-btn--active`)];
       expect(active.map(b => b.dataset.genMode), `${where} ${entry.id} mode`).toEqual([mode]);
     }
+    const whereChip = q(`[data-where-chip="${entry.id}"]`);
+    if (whereChip) expect(whereChip.hidden, `${where} ${entry.id} where chip`).toBe(!state.where[entry.id]?.length);
     for (const b of entry.filterBuckets ?? []) {
       const chip = q<HTMLInputElement>(`input[data-filter-layer="${entry.id}"][data-bucket-id="${b.id}"]`)!;
       expect(chip.checked, `${where} ${entry.id}/${b.id} chip`).toBe(!!state.layerFilters[entry.id]?.has(b.id));
@@ -162,12 +178,18 @@ function expectPanelMatchesState(where = '') {
   };
   select('select[data-weather-var-select]', state.weatherVar);
   select('select[data-nri-hazard-select]', state.nriHazard);
-  if (hasPanelRow(LAYERS.find(l => l.id === GEN)!)) {
+  select('select[data-route-concern-select]', state.routeConcern);
+  if (hasPanelRow(LAYERS.find(l => l.id === GEN)!, panelView())) {
     const slider = q<HTMLInputElement>('#yearSlider')!;
     expect(slider.value, `${where} year`).toBe(String(state.yearFilter.year));
     expect(slider.classList.contains('year-slider--off'), `${where} year off`).toBe(!state.yearFilter.enabled);
     if (state.yearFilter.enabled) expect(q('#yearReadout')!.textContent).toBe(String(state.yearFilter.year));
   }
+  const chipCodes = [...document.querySelectorAll<HTMLElement>('#areaChips [data-area-code]')].map(b => b.dataset.areaCode);
+  expect(chipCodes, `${where} area chips`).toEqual(state.area?.codes ?? []);
+  expect(q('#areaClear')!.hidden, `${where} area clear`).toBe(!state.area);
+  const flagged = [...document.querySelectorAll('[data-area-flag]')].filter(f => !(f as HTMLElement).hidden).length;
+  expect(q('#areaSummary')!.hidden, `${where} area summary`).toBe(!flagged);
   expect(q<HTMLInputElement>('#mwSliderMin')!.value, `${where} MW min`).toBe(String(mwToPos(state.mwFilter.min)));
   expect(q<HTMLInputElement>('#mwSliderMax')!.value, `${where} MW max`).toBe(String(mwToPos(state.mwFilter.max)));
   expect(q<HTMLInputElement>('#smokeOpacitySlider')!.value, `${where} smoke`).toBe(String(Math.round(state.smokeOpacity * 100)));
@@ -183,6 +205,44 @@ function expectPanelMatchesState(where = '') {
 }
 
 describe('panel mirror', () => {
+  it('the route-concern select follows a pick, Reset and an Undo replay', () => {
+    const sel = q<HTMLSelectElement>('select[data-route-concern-select]')!;
+    expect([...sel.querySelectorAll('optgroup')]).toHaveLength(CONCERN_GROUPS.length);
+    expect([...sel.options].map(o => o.value)).toEqual(CONCERNS.map(c => c.id));
+    expect(sel.value).toBe('what-constrains');
+    sel.value = 'floodplain';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(state.routeConcern).toBe('floodplain');
+    expect(urlWrites).toBe(1);
+    applyView({});                                            // Reset
+    expect(state.routeConcern).toBe('what-constrains');
+    expect(sel.value).toBe('what-constrains');
+    applyView(parseUrlState(new URLSearchParams('rc=floodplain')));   // what Undo replays
+    expect(q<HTMLSelectElement>('select[data-route-concern-select]')!.value).toBe('floodplain');
+    expectPanelMatchesState();
+  });
+
+  it('the Grid Operations numbers checkbox shows auto, follows the grouping, an explicit value and Reset', () => {
+    const box = () => q<HTMLInputElement>('input[data-grid-numbers-toggle]')!;
+    const group = q<HTMLSelectElement>('select[data-grid-group-select]')!;
+    expect(box().checked).toBe(true);                         // auto, by BA
+    group.value = 'wecc';
+    group.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(state.gridNumbers).toBeNull();
+    expect(box().checked).toBe(false);                        // auto follows the grouping
+    box().checked = true;
+    box().dispatchEvent(new Event('change', { bubbles: true }));
+    expect(state.gridNumbers).toBe(true);
+    applyView(parseUrlState(new URLSearchParams('gg=w&gn=0')));
+    expect(state.gridNumbers).toBe(false);
+    expect(box().checked).toBe(false);
+    applyView(parseUrlState(new URLSearchParams('gn=1')));
+    expect(box().checked).toBe(true);
+    applyView({});                                            // Reset
+    expect(state.gridNumbers).toBeNull();
+    expect(box().checked).toBe(true);
+  });
+
   it('shows the heat ramp of a visible heat-mode layer after a view applies', () => {
     applyView({ layerVisibility: { [GEN]: true }, genMode: { [GEN]: 'heat' } });
     expect(q(`#${GEN}-heat-ramp`)!.hidden).toBe(false);
@@ -280,6 +340,165 @@ describe('panel mirror', () => {
     setLayerVisibility(GEN, true);
     setLayerVisibility(GEN, false);
     expect(q(`[data-layer-id="${GEN}"]`)).toBe(row);
+  });
+
+  it('an out-of-scope layer switched off keeps its row until the next applied view drops it', () => {
+    applyView({ region: 'global' });
+    setLayerVisibility(GEN, true);
+    const row = q(`[data-layer-id="${GEN}"]`);
+    expect(row).not.toBeNull();
+    setLayerVisibility(GEN, false);
+    expect(q(`[data-layer-id="${GEN}"]`)).toBe(row);
+    emit('view:applied');
+    expect(q(`[data-layer-id="${GEN}"]`)).toBeNull();
+  });
+
+  it('rebuilds the rows on an applied view after a language change that skipped them', async () => {
+    const row = q(`[data-layer-id="${GEN}"]`);
+    await loadDictionary('fr');
+    setLocale('fr');
+    try {
+      emit('view:applied');
+      expect(q(`[data-layer-id="${GEN}"]`)).not.toBe(row);
+      expect(q(`[data-filter-toggle="${GEN}"]`)!.textContent).toBe('Filtrer');
+    } finally {
+      setLocale('en');
+    }
+  });
+
+  it('flags the visible rows an area does not reach, and Reset clears every flag', () => {
+    const flagOf = (id: string) => q(`[data-area-flag="${id}"]`)!;
+    applyView({
+      area: { kind: 'states', codes: ['TX'] },
+      layerVisibility: { padus: true, 'osm-datacenters': true, 'hifld-transmission-lines': true, crithab: true },
+      genMode: { 'osm-datacenters': 'clusters' },
+    });
+    expect(flagOf('padus').hidden).toBe(false);
+    expect(flagOf('padus').dataset.flag).toBe('area.reason.noField');
+    expect(flagOf('padus').getAttribute('aria-label')).toMatch(/Not filtered by area: .+/);
+    expect(q('#areaSummaryText')!.textContent).toBe('Layers not filtered: 3');   // padus, crithab, datacenter clusters
+    expect(flagOf('osm-datacenters').hidden).toBe(false);
+    expect(flagOf('osm-datacenters').dataset.flag).toBe('area.clustersUnfiltered');
+    expect(flagOf('hifld-transmission-lines').hidden).toBe(true);
+    expect(flagOf('nlr-wind-100m').hidden).toBe(true);   // switched off
+    expectPanelMatchesState('area');
+
+    state.area = null;
+    syncPanel();
+    expect([...document.querySelectorAll<HTMLElement>('[data-area-flag]')].filter(f => !f.hidden)).toEqual([]);
+
+    state.area = { kind: 'states', codes: ['TX'] };
+    syncPanel();
+    expect(flagOf('padus').hidden).toBe(false);
+    applyView({});
+    expect([...document.querySelectorAll<HTMLElement>('[data-area-flag]')].filter(f => !f.hidden)).toEqual([]);
+  });
+
+  it('paints the Area chips from state, and Reset and Undo-style applies repaint them', () => {
+    applyView({ area: { kind: 'states', codes: ['TX', 'NM'] } });
+    const chips = () => [...document.querySelectorAll<HTMLElement>('#areaChips [data-area-code]')].map(b => b.dataset.areaCode);
+    expect(chips()).toEqual(['NM', 'TX']);
+    expect(q<HTMLInputElement>('#areaInput')!.placeholder).toBe('Add more…');
+    applyView({ area: { kind: 'counties', codes: ['48201'] } });
+    expect(chips()).toEqual(['48201']);
+    applyView({});
+    expect(chips()).toEqual([]);
+    expect(q('#areaClear')!.hidden).toBe(true);
+    expect(q<HTMLInputElement>('#areaInput')!.placeholder).toBe('Filter to an area…');
+    expectPanelMatchesState('area reset');
+  });
+
+  it('commitArea is one url:write and repaints the row notes and chips', () => {
+    setLayerVisibility('padus', true);
+    urlWrites = 0;
+    expect(commitArea({ kind: 'states', codes: ['TX'] })).toBeNull();
+    expect(urlWrites).toBe(1);
+    expect(q('[data-area-flag="padus"]')!.hidden).toBe(false);
+    expect(q('#areaSummary')!.hidden).toBe(false);
+    expect(commitArea({ kind: 'states', codes: ['ZZ'] })).not.toBeNull();
+    expect(urlWrites).toBe(1);
+    expect(commitArea(null)).toBeNull();
+    expect(q('[data-area-flag="padus"]')!.hidden).toBe(true);
+    expectPanelMatchesState('commitArea');
+  });
+
+  it('paints the Selection row from state: a link or Undo shows it, Reset hides it', () => {
+    expect(q('#selRow')!.hidden).toBe(true);
+    applyView({ sel: { mode: 'keep', ids: { [GEN]: ['1:1', '2:1'], 'hifld-substations': ['107655'] } } });
+    expect(q('#selRow')!.hidden).toBe(false);
+    expect(q('#selChipLabel')!.textContent).toBe('3 selected');
+    expect(q('#selChipLabel')!.title).toContain('2 · ');
+    expect(q('#selModeText')!.textContent).toBe('Keep');
+    applyView({});
+    expect(q('#selRow')!.hidden).toBe(true);
+  });
+
+  it('commitSelection is one url:write and repaints the chip; a refused one writes nothing', () => {
+    expect(commitSelection({ mode: 'isolate', ids: { [GEN]: ['1:1'] } })).toBeNull();
+    expect(urlWrites).toBe(1);
+    expect(q('#selRow')!.hidden).toBe(false);
+    expect(q('#selModeText')!.textContent).toBe('Isolate');
+    expect(commitSelection({ mode: 'isolate', ids: { [GEN]: Array.from({ length: 501 }, (_, i) => `${i}:1`) } })).not.toBeNull();
+    expect(urlWrites).toBe(1);
+    expect(state.sel?.ids[GEN]).toEqual(['1:1']);
+    expect(commitSelection(null)).toBeNull();
+    expect(urlWrites).toBe(2);
+    expect(q('#selRow')!.hidden).toBe(true);
+  });
+
+  it('a layer with conditions shows its `where` chip: a link or Undo shows it, Reset hides it', () => {
+    const chip = () => q(`[data-where-chip="${GEN}"]`)!;
+    expect(chip().hidden).toBe(true);
+    applyView({ where: { [GEN]: [{ field: 'nameplate_mw', op: '>=', value: 100 }] } });
+    expect(chip().hidden).toBe(false);
+    expect(chip().querySelector('.layer-where-text')!.textContent).toBe('Nameplate (MW) ≥ 100');
+    expect(chip().title).toBe('Filtered: Nameplate (MW) ≥ 100');
+    expect(chip().querySelector('.layer-where-clear')!.getAttribute('aria-label')).toMatch(/^Clear the filter on /);
+    expectPanelMatchesState('where link');
+    applyView({});
+    expect(chip().hidden).toBe(true);
+    expect(q('[data-where-chip="railroads"]')).toBeNull();   // no field schema: no chip
+  });
+
+  it('commitWhere is one url:write and repaints the chip; its × clears the layer\'s conditions in one write', () => {
+    wireLayerFilterPanels();
+    urlWrites = 0;
+    expect(commitWhere(GEN, [{ field: 'nameplate_mw', op: '>=', value: 100 }, { field: 'nameplate_mw', op: '<=', value: 500 }])).toBeNull();
+    expect(urlWrites).toBe(1);
+    expect(q(`[data-where-chip="${GEN}"] .layer-where-text`)!.textContent).toBe('Nameplate (MW) 100–500');
+    expect(commitWhere(GEN, [{ field: 'no_such_field', op: '=', value: 1 }])).not.toBeNull();
+    expect(urlWrites).toBe(1);
+    q<HTMLButtonElement>(`[data-where-clear="${GEN}"]`)!.click();
+    expect(urlWrites).toBe(2);
+    expect(state.where[GEN]).toBeUndefined();
+    expect(q(`[data-where-chip="${GEN}"]`)!.hidden).toBe(true);
+  });
+
+  it('names conditions in a few words', () => {
+    expect(conditionLabel({ field: 'nominal_kv', op: '>=', value: 230 })).toBe('Nominal (kV) ≥ 230');
+    expect(conditionLabel({ field: 'fuel', op: 'in', value: ['SUN', 'WND'] })).toBe('Fuel: SUN, WND');
+    expect(conditionLabel({ field: 'fuel', op: 'not_in', value: ['SUN'] })).toBe('Fuel ≠ SUN');
+    expect(conditionLabel({ field: 'states', op: 'contains_any', value: ['TX', 'NM', 'OK', 'LA', 'AR'] })).toBe('States: TX, NM, OK +2 more');
+    expect(whereLabel([{ field: 'a', op: '=', value: 1 }, { field: 'b', op: '=', value: 2 }])).toBe('2 filters');
+    expect(whereLabel([{ field: 'a', op: '>', value: 1 }, { field: 'a', op: '<', value: 9 }])).toBe('A > 1 · A < 9');
+  });
+
+  it('collapses a long Area into one chip that clears it', () => {
+    applyView({ area: { kind: 'counties', codes: ['48201', '48113', '48029', '48439', '48453', '48085', '48121'] } });
+    const xs = document.querySelectorAll<HTMLElement>('#areaChips .area-chip-x');
+    expect(xs.length).toBe(1);
+    expect(xs[0].dataset.areaAction).toBe('clear');
+    expect(q('#areaChips')!.textContent).toContain('7 selected');
+  });
+
+  it('switching a row on under an area shows its flag; off hides it', () => {
+    state.area = { kind: 'states', codes: ['TX'] };
+    setLayerVisibility('padus', true);
+    expect(q('[data-area-flag="padus"]')!.hidden).toBe(false);
+    expect(q('#areaSummary')!.hidden).toBe(false);
+    setLayerVisibility('padus', false);
+    expect(q('#areaSummary')!.hidden).toBe(true);
+    expect(q('[data-area-flag="padus"]')!.hidden).toBe(true);
   });
 
   it.each(EXPERIENCES.map(e => [e.id, e] as const))('matches state after story %s', (_id, exp) => {

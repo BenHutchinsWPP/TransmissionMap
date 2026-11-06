@@ -53,6 +53,36 @@ export const KV_BUCKETS: BucketDef[] = [
   { id: "unknown", urlCode: "U", label: "Unknown", color: "#a39dbe" },
 ];
 
+// Each kV bucket's numeric range: a lower and an upper bound, either open.
+// The voltage legend filter (assets/filters.ts buildKvFilterExpr) and the
+// templates' class binning (kvBucketOf) read the same table. A missing,
+// unreadable or ≤ 0 value is "unknown".
+export type KvBound = ['>=' | '>' | '<' | '<=', number];
+export const KV_BUCKET_RANGES: Record<string, [KvBound | null, KvBound | null]> = {
+  "550+":    [[">=", 550], null],
+  "500-549": [[">=", 500], ["<", 550]],
+  "300-499": [[">=", 300], ["<", 500]],
+  "200-299": [[">=", 200], ["<", 300]],
+  "100-199": [[">=", 100], ["<", 200]],
+  "<100":    [[">",    0], ["<", 100]],
+  "unknown": [null,        ["<=",  0]],
+};
+
+const KV_TEST = { ">=": (a: number, b: number) => a >= b, ">": (a: number, b: number) => a > b,
+  "<": (a: number, b: number) => a < b, "<=": (a: number, b: number) => a <= b };
+
+/** The KV_BUCKETS id a kV value falls in, as the legend filter's
+ *  ["to-number", value, -1] reads it. */
+export function kvBucketOf(value: unknown): string {
+  const n = typeof value === "number" ? value
+    : typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)) ? Number(value)
+    : typeof value === "boolean" ? Number(value) : -1;
+  for (const [id, [lo, hi]] of Object.entries(KV_BUCKET_RANGES)) {
+    if ((!lo || KV_TEST[lo[0]](n, lo[1])) && (!hi || KV_TEST[hi[0]](n, hi[1]))) return id;
+  }
+  return "unknown";
+}
+
 // Same buckets with display labels ("500–549 kV") for the legend.
 export const VOLTAGE_LEGEND = KV_BUCKETS.map(b =>
   b.id === "unknown" ? b : { ...b, label: `${b.label} kV` });

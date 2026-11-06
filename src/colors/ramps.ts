@@ -76,7 +76,7 @@ export const TEMP_RAMP_MAX = 45;   // °C — values at/above clamp to the top c
 
 // ─── Live weather: wind & gust (shared ramp) ──────────────────────────────────
 // MUST stay identical to WIND_RAMP in scripts/fetch_weather_live.py.
-// Ventusky's wind scale: dark gray (calm) → deep purple → dark blue → blue →
+// Wind scale: dark gray (calm) → deep purple → dark blue → blue →
 // blue-green → green → yellow → orange → red. Stops anchored at 5-mph steps
 // converted to m/s (5 mph ≈ 2.2 m/s, 10 ≈ 4.5, 15 ≈ 6.7, …).
 export const WEATHER_WIND_RAMP_STOPS = [
