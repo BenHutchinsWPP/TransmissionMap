@@ -49,7 +49,7 @@ jurisdiction whose newest dated event falls in the last 30 days
 | **Version** | Upstream commit `dbaab04` (2026-09-23); seeded 2026-10-04; research merged and rebuilt 2026-10-08 |
 | **Coverage** | 1,396 measures (414 county, 952 sub-county, 25 utility, 5 statewide) in 1,352 map features across 47 states: 400 counties, 927 points, 22 utility or grid-operator areas, and 3 states (AZ, NY, TX) |
 | **License** | CC BY 4.0 (data); credit in the Data Credits dialog and the popup footer |
-| **Served** | `dc_moratoriums.geojson` (~1.9 MB, ~420 KB gzipped) at the root of the `data-moratoriums` branch → `DATA.dc_moratoriums` (`MORATORIUM_ORIGIN` in `assets/constants.ts`) |
+| **Served** | `dc_moratoriums.geojson` at the root of the `data-moratoriums` branch → `DATA.dc_moratoriums` (`MORATORIUM_ORIGIN` in `assets/constants.ts`) |
 | **Utility geometry** | HIFLD Retail Service Territories, joined on `ID` = EIA-861 utility number (never on name); the ERCOT polygon from the EIA balancing authorities used by [`eia-ba`](eia-ba.md). Both are extracted once by `build_territories.py` |
 | **Built by** | `scripts/moratoriums/rebuild.sh` (`build.py`, `build_research.py`, `build_state.py`, `sync.py`, `build_layer.py`); inputs and layout in [`scripts/moratoriums/README.md`](../../scripts/moratoriums/README.md) |
 

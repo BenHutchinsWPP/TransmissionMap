@@ -3147,6 +3147,7 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
 @media (pointer: coarse) {
   .table-drawer { --td-row-h: 40px; }
   .td-check input { width: 22px; height: 22px; }
+  .td-zoom-btn { width: 40px; height: 40px; vertical-align: middle; }
   .td-grip { height: 20px; }
   .td-sort { min-height: 40px; }
   .td-filter-btn { min-width: 40px; min-height: 40px; font-size: 13px; }

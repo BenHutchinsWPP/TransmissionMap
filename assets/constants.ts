@@ -17,50 +17,36 @@
 // own compression and range-loading.
 // >>> ADD-LAYER: data-urls — see docs/adding-a-layer.md §4
 //
-// Prod data host: built layers + release ZIPs live on the orphan `data-static`
-// branch, served through raw.githubusercontent.com, NOT on Pages (dist ships no
-// data/). Raw answers ranged GETs with HTTP 206 and `access-control-allow-origin:
-// *`, which is what PMTiles needs, and caps responses at `max-age=300`. Its one
-// hard constraint is git's: no file over 100 MiB. Dev serves them from the local
-// working tree at the Vite root. Publish with `make publish-data` (see
-// scripts/publish_data.sh and docs/hosting-plan.md).
-// The live feeds (wildfire, NWS alerts, ODIN outages, weather) sit on the
-// churning `data` branch (force-pushed hourly) behind LIVE_ORIGIN instead, so
-// they must NOT use DATA_ORIGIN. In dev both are "" — every file, live or
-// static, is read from the local data/layers/ (run the fetch script first).
+// Prod data hosts: three Cloudflare R2 buckets on their own subdomains, NOT
+// Pages (dist ships no data/). Object keys are repo paths, so a layer is
+// DATA_ORIGIN + data/layers/…. data.wpptx.org holds the built layers, the
+// data/analysis/ Parquet and the download packs (scripts/publish_r2.sh);
+// live.wpptx.org the live feeds (wildfire, NWS alerts, ODIN outages, weather),
+// which CI rewrites, so they must NOT use DATA_ORIGIN; moratoriums.wpptx.org
+// the data center moratorium layer. Each answers ranged GETs with HTTP 206 and
+// `access-control-allow-origin: *`, which PMTiles needs. In dev every origin is
+// "" — every file, live or static, is read from the local data/layers/ (run
+// the fetch script first).
 // Paths stay double-quoted data/layers/… string literals after the origin:
 // scripts/validate_build.py scrapes them to decide what to check and publish,
 // and assets/constants.test.ts fails when a DATA path is not one.
-const RAW_REPO = "https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/";
-const DATA_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-static/" : "";
-const LIVE_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data/" : "";
-// Data center moratoriums keep their own orphan branch, appended to and never
-// force-pushed, so its commit history is the record of how they changed. Dev
-// reads the local working copy of that branch. Not a data/layers/ path, so
-// validate_build.py and publish_data.sh leave it alone.
-const MORATORIUM_ORIGIN = import.meta.env.PROD ? RAW_REPO + "data-moratoriums/" : "_private/moratoriums/dataset/";
+const DATA_HOST = "https://data.wpptx.org/";
+const LIVE_HOST = "https://live.wpptx.org/";
+const MORATORIUM_HOST = "https://moratoriums.wpptx.org/";
+/** The project's own data hosts (the CSP names them; the chat canvas frame does not). */
+export const DATA_HOSTS: readonly string[] = [DATA_HOST, LIVE_HOST, MORATORIUM_HOST];
+const DATA_ORIGIN = import.meta.env.PROD ? DATA_HOST : "";
+const LIVE_ORIGIN = import.meta.env.PROD ? LIVE_HOST : "";
+// Dev reads the local working copy of the data-moratoriums branch. Not a
+// data/layers/ path, so validate_build.py and publish_r2.sh leave it alone.
+const MORATORIUM_ORIGIN = import.meta.env.PROD ? MORATORIUM_HOST : "_private/moratoriums/dataset/";
 
-// Download packs are plain navigations, never fetch() or PMTiles range reads, so
-// they need no CORS header — which frees them from the branch and its 100 MiB
-// per-file ceiling. Release assets allow 2 GB per file and live outside the git
-// object store, so publishing one never grows the repo. The tag rolls in place
-// (`gh release upload --clobber`) to keep these URLs stable, because they are
-// baked into the deployed bundle. See docs/hosting-plan.md.
-export const RELEASES_ORIGIN = import.meta.env.PROD
-  ? "https://github.com/BenHutchinsWPP/TransmissionMap/releases/download/data-latest/"
-  : "";
+// Download packs are plain navigations, never fetch() or range reads, so they
+// need no CORS header. They sit beside the layers on the data host, under
+// data/releases/ (the keys publish_r2.sh uploads them to).
+export const RELEASES_ORIGIN = import.meta.env.PROD ? DATA_HOST + "data/releases/" : "";
 export const DATA = {
-  // Transmission ships as six planet-wide archives split by voltage class: one
-  // world file is 266 MiB against the host's 100 MiB per-file ceiling. The order
-  // is load-bearing — MapLibre paints sources in the order their style layers are
-  // added, so ascending kV puts EHV on top. `nominal_kv = -1` encodes unknown, so
-  // it sorts into `kv0` for free. See docs/hosting-plan.md.
-  osm_transmission_lines_kv0:   DATA_ORIGIN + "data/layers/osm_transmission_lines_kv0.pmtiles",
-  osm_transmission_lines_kv50:  DATA_ORIGIN + "data/layers/osm_transmission_lines_kv50.pmtiles",
-  osm_transmission_lines_kv100: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv100.pmtiles",
-  osm_transmission_lines_kv125: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv125.pmtiles",
-  osm_transmission_lines_kv200: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv200.pmtiles",
-  osm_transmission_lines_kv300: DATA_ORIGIN + "data/layers/osm_transmission_lines_kv300.pmtiles",
+  osm_transmission_lines: DATA_ORIGIN + "data/layers/osm_transmission_lines.pmtiles",
   hifld_transmission_lines: DATA_ORIGIN + "data/layers/hifld_transmission_lines.pmtiles",
   ogf_planned_transmission: DATA_ORIGIN + "data/layers/ogf_planned_transmission.geojson.gz",
   osm_substations_points:   DATA_ORIGIN + "data/layers/osm_substations_points.pmtiles",
@@ -112,10 +98,10 @@ export const DATA = {
   usgs_seismic_pga_lut_meta: DATA_ORIGIN + "data/layers/usgs_seismic_pga_lut.json", // grid dims + bbox + scale
   boem_wind_leases:          DATA_ORIGIN + "data/layers/boem_wind_leases.geojson.gz",
   westtec_10yr:              DATA_ORIGIN + "data/layers/westtec_10yr.geojson.gz",
-  // Dev: run `make wildfire-dev` first. Prod: `data` branch (~5 min CDN lag).
+  // Dev: run `make wildfire-dev` first. Prod: the live host.
   // Contains: hotspots (_type=hotspot), perimeters, named incidents, and smoke polygons.
   wildfire_live: LIVE_ORIGIN + "data/layers/wildfire_live.geojson.gz",
-  // Dev: run `make nws-alerts-dev` first. Prod: `data` branch.
+  // Dev: run `make nws-alerts-dev` first. Prod: the live host.
   nws_alerts: LIVE_ORIGIN + "data/layers/nws_alerts.geojson",
   county_boundaries: DATA_ORIGIN + "data/layers/county_boundaries.pmtiles", // Census TIGER county polygons — shared join infra, no standalone layer/legend
   admin_lines: DATA_ORIGIN + "data/layers/admin_lines.geojson.gz", // Natural Earth country/state border lines — white highlights over the weather wash, no standalone layer/legend
@@ -123,7 +109,7 @@ export const DATA = {
   // FEMA National Risk Index — geometry-less FIPS → [score, rating]×hazard table
   // (scripts/extract_fema_nri.py), joined onto county_boundaries via feature-state (see fema-nri.ts).
   fema_nri: DATA_ORIGIN + "data/layers/fema_nri.json",
-  // Dev: run scripts/fetch_odin_outages.py first. Prod: `data` branch.
+  // Dev: run scripts/fetch_odin_outages.py first. Prod: the live host.
   // FIPS→[customers_out,incident_count] snapshot joined onto county_boundaries
   // via MapLibre feature-state (see odin-outages.ts).
   odin_outages: LIVE_ORIGIN + "data/layers/odin_outages.json",
@@ -137,14 +123,14 @@ export const DATA = {
   data_manifest: DATA_ORIGIN + "data/layers/manifest.json",
   // Routing constraints (dev server only): one raster archive per concern in
   // src/colors/route-constraints.ts, built by scripts/build_route_constraints.py
-  // beside the route cube. Relative and outside data/layers/, so publish_data.sh
-  // never ships it (constants.test.ts NOT_SCRAPED). Names the default concern;
+  // beside the route cube. Relative and outside data/layers/, so the publish scripts
+  // never ship it (constants.test.ts NOT_SCRAPED). Names the default concern;
   // route-constraints.ts routeConcernUrl() swaps in the chosen concern's file.
   route_constraints: "data/route/constraints/what-constrains.pmtiles",
   // Transmission line GeoParquet: the manifests of the OSM and HIFLD line
   // geometry files, built by scripts/build_line_parquet.py into data/analysis/
   // and read by range from the data host (the files sit beside index.json).
-  // Outside data/layers/, so publish_data.sh does not ship it
+  // Outside data/layers/, so the publish scripts do not ship it
   // (constants.test.ts NOT_SCRAPED); where the host has no index.json every
   // line tool stays hidden. docs/pipeline.md § Line geometry.
   line_index: DATA_ORIGIN + "data/analysis/index.json",
@@ -152,7 +138,7 @@ export const DATA = {
 
 // Live GFS weather mosaic (temperature, wind, humidity, dew point, cloud,
 // pressure), rebuilt every ~3h by scripts/fetch_weather_live.py. Dev: run that
-// script first. Prod: `data` branch. Per variable: a baked-color WEBP
+// script first. Prod: the live host. Per variable: a baked-color WEBP
 // (EPSG:3857 image source) and an Int16 hover LUT (EPSG:4326 grid); one
 // shared meta.json carries run_utc/valid_utc/generated_utc/feed_status plus
 // per-variable {width, height, bbox, scale, nodata, units}.
@@ -238,8 +224,8 @@ export const PUDL_VERSION = "v2026.8.0";
 export const PUDL_BASE_URL = `https://s3.us-west-2.amazonaws.com/pudl.catalyst.coop/${PUDL_VERSION}/`;
 
 // ─── Content Security Policy ──────────────────────────────────────────────────
-// Every origin a production build fetches from: the data host (RAW_REPO carries
-// DATA_ORIGIN, LIVE_ORIGIN and MORATORIUM_ORIGIN), basemaps, glyphs, the
+// Every origin a production build fetches from: the three data hosts
+// (DATA_HOSTS), basemaps, glyphs, the
 // geocoder, terrain, USGS 3DEP elevation, radar, OpenRouter and PUDL. Each is the origin of the constant the
 // code fetches with, so a host changes in one place. vite.config.js renders
 // CSP_POLICY into the built page's <meta http-equiv> (build only: the dev
@@ -256,7 +242,7 @@ export const PUDL_BASE_URL = `https://s3.us-west-2.amazonaws.com/pudl.catalyst.c
 // code (docs/internal/chat-trust-model.md). frame-src
 // 'self' admits only the page's own documents in an iframe.
 export const CSP_HOSTS: readonly string[] = [...new Set([
-  RAW_REPO, OFM_STYLE_URLS.light, GLYPHS_URL, GEOCODER_URL, OSM_TILE_URL,
+  ...DATA_HOSTS, OFM_STYLE_URLS.light, GLYPHS_URL, GEOCODER_URL, OSM_TILE_URL,
   AERIAL_TILE_URL, USGS_AERIAL_TILE_URL, TERRAIN_TILE_URL, ELEVATION_3DEP_URL,
   RADAR_TILE_TEMPLATE, GEOMET_RADAR_TILE_TEMPLATE, OPENROUTER_ORIGIN, PUDL_BASE_URL,
 ].map(u => new URL(u).origin))];

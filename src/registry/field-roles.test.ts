@@ -8,6 +8,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { LAYERS, layerById } from './index.js';
 import { FIELD_SCHEMA, YEAR_IN_TEXT } from './field-schema.js';
 import { FIELD_ROLES, rolesOf, type Roles } from './field-roles.js';
+import { COLUMNS_DATASETS } from './columns.js';
+import { templateById } from '../../assets/templates/catalogue.js';
 import { TEMPLATE_SIGNATURES, fit } from './template-signatures.js';
 import { FACETS, facet } from '../colors/facets.js';
 import { allowedFields, DISPLAY_FIELDS } from '../../assets/dataset-query.js';
@@ -26,14 +28,15 @@ describe('field roles', () => {
   it('cover exactly the queryable layers', () => {
     expect(QUERYABLE.length).toBeGreaterThanOrEqual(20);
     expect(Object.keys(FIELD_ROLES).sort()).toEqual([...QUERYABLE].sort());
-    expect(rolesOf('us-states')).toBeNull();
+    expect(rolesOf('nexrad-radar')).toBeNull();
   });
 
   it('give every queryable layer a geometry, a readable label and a category or region', () => {
     for (const r of ROLES) {
       expect(['point', 'line', 'polygon'], r.layerId).toContain(r.geometry);
       expect(allowedFields(r.layerId), `${r.layerId} label`).toContain(r.label);
-      expect(r.fields.some(f => f.role === 'category' || f.role === 'region'), r.layerId).toBe(true);
+      // eia-ba: one feature per balancing authority, so its only text fields are unique (name, id).
+      if (r.layerId !== 'eia-ba') expect(r.fields.some(f => f.role === 'category' || f.role === 'region'), r.layerId).toBe(true);
       expect(r.derived[0]).toBe('count');
       expect(r.derived.includes('length_km')).toBe(r.geometry === 'line');
       expect(r.derived.includes('area_km2')).toBe(r.geometry === 'polygon');
@@ -118,7 +121,9 @@ function coverage(): string {
     const f = fit(TEMPLATE_SIGNATURES[i], roles, ROLES);
     if (f === 'no') return '—';
     if (f === 'pending') return 'R';
-    return layerById(roles.layerId)!.data!.kind === 'geojson' ? 'Y' : 'P';
+    const e = layerById(roles.layerId)!;
+    if (e.data!.kind === 'geojson') return 'Y';
+    return (COLUMNS_DATASETS as readonly string[]).includes(e.dataset!) && templateById(TEMPLATE_SIGNATURES[i].id)?.geometry !== 'full' ? 'D' : 'P';
   };
   const grid = ROLES.map(r => TEMPLATE_SIGNATURES.map((_, i) => code(r, i)));
   const family = (id: string) => layerById(id)!.group;
@@ -131,6 +136,7 @@ function coverage(): string {
     `Which of the ${TEMPLATE_SIGNATURES.length} template archetypes (\`src/registry/template-signatures.ts\`) each queryable layer can fill, from its field roles.`,
     '',
     '- **Y** fits: a GeoJSON layer, the whole dataset.',
+    '- **D** fits: a vector-tile layer with a columns file, the whole dataset when the file is present, else the view.',
     '- **P** fits, partial: a vector-tile layer, the features in the current view only.',
     '- **R** needs fields: fits once a field the served data already carries becomes readable (`pending` in `field-roles.ts`).',
     '- **—** does not apply: the geometry, or a role no field of the layer has.',
@@ -141,14 +147,14 @@ function coverage(): string {
     '',
     '## By archetype',
     '',
-    '| archetype | signature | Y | P | R | families that fit |',
-    '|---|---|---|---|---|---|',
+    '| archetype | signature | Y | D | P | R | families that fit |',
+    '|---|---|---|---|---|---|---|',
     ...TEMPLATE_SIGNATURES.map((s, i) => {
       const n = (c: string) => grid.filter(g => g[i] === c).length;
-      const fams = [...new Set(ROLES.filter((_, j) => grid[j][i] === 'Y' || grid[j][i] === 'P').map(r => family(r.layerId)))];
+      const fams = [...new Set(ROLES.filter((_, j) => 'YDP'.includes(grid[j][i])).map(r => family(r.layerId)))];
       const sig = [s.slots.join(' + ') || '—', s.derived && 'length / area too', s.geometry && `on ${s.geometry.join('/')}`, s.second && `+ ${s.second} layer`]
         .filter(Boolean).join(', ');
-      return `| ${s.id} | ${sig} | ${n('Y')} | ${n('P')} | ${n('R')} | ${fams.join(', ') || '—'}${fams.length === 1 ? ' (one family)' : ''} |`;
+      return `| ${s.id} | ${sig} | ${n('Y')} | ${n('D')} | ${n('P')} | ${n('R')} | ${fams.join(', ') || '—'}${fams.length === 1 ? ' (one family)' : ''} |`;
     }),
     '',
   ];

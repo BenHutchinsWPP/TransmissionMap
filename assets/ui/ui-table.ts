@@ -44,8 +44,14 @@
 // Column filters filter the map too: a header's ▾ applies conditions to the
 // layer's `where` through map-api.ts setWhere (validated as a link is; one
 // 'url:write', its own undo step), so the map, the table, the CSV, templates
-// and the link agree. On a vector-tile layer the table covers the current view
-// only. A table that follows the view reloads when the layer's `where` changes
+// and the link agree. A vector-tile layer with a columns file (dataset-query.ts
+// scope 'dataset') lists the whole dataset: the partial note follows each
+// result's `complete`, the size prompt uses the file's planned bytes
+// (columnsBytes), and a row (`pointOnly`) carries only a point on its feature,
+// so a row's highlight and fit use the loaded tile feature with its id (else
+// the camera goes to the point and the highlight is retried at the next
+// `idle`; the point itself is never drawn). Any other vector-tile layer covers
+// the current view only. A table that follows the view reloads when the layer's `where` changes
 // elsewhere; one asked for with its own conditions keeps them until a column
 // filter makes them the view's.
 // Fixed strings carry data-i18n* keys (ui.ts's lang:changed handler
@@ -55,7 +61,7 @@
 // drawer, one in view at a time; each is filled by its own module. drawerPadding()
 // is the map padding that keeps a fit above the drawer and clear of the layer panel.
 // Deps: tabulator-tables (+ its simple theme CSS), state.ts, state-bus.ts (on),
-//       dataset-query.ts, highlights.ts, filters.ts (drawnFilterLabels),
+//       dataset-query.ts, feature-id.ts, columns/columns-read.ts (dynamic import), highlights.ts, filters.ts (drawnFilterLabels),
 //       panel-mirror.ts (commitSelection, conditionLabel), map-api.ts (setWhere),
 //       view-validate.ts (validateWhere), user-data-export.ts (toCsv, downloadFile),
 //       grid-copy.ts (range-grid options, copy key, clipValue, tsvOf, copyText),
@@ -65,8 +71,9 @@
 //       session-snapshot.ts (saveSnapshot, readSnapshot, clearSnapshot, onHidden),
 //       drawer-snapshot.ts (parseDrawerSnapshot); user-data/copy-fit.ts (caps,
 //       showCopyResult, downloadCopy); user-data/copy-rows.ts (dynamic import:
-//       "Copy N checked to My Data" on a GeoJSON layer or a line layer with
-//       line GeoParquet, shown once copyAvailable answers true).
+//       "Copy N checked to My Data" on a GeoJSON layer, a tiled point layer or a
+//       layer with GeoParquet geometry, shown once copyAvailable answers true; its wording
+//       follows copyNoun: lines, else features).
 // Loaded by: table-open.ts (dynamic import).
 
 import {
@@ -80,10 +87,10 @@ import { layerById } from '../../src/registry/index.js';
 import { fuelFold } from '../../src/colors/fuel.js';
 import { MAX_SELECTION_IDS, validateWhere } from '../../src/registry/view-validate.js';
 import type { Condition } from '../../src/registry/condition-compile.js';
-import type { AreaFilter } from '../../src/registry/area-filter.js';
-import type { FeatureId } from '../feature-id.js';
+import { areaCondition, type AreaFilter } from '../../src/registry/area-filter.js';
+import { featureId, type FeatureId } from '../feature-id.js';
 import {
-  query, aggregate, count, describe, QUERY_MAX_ROWS,
+  query, aggregate, count, describe, hasColumns, QUERY_MAX_ROWS,
   type QueryOpts, type QueryRow, type FieldInfo, type Group,
   type Outcome, type AggregateResult, type CountResult,
 } from '../dataset-query.js';
@@ -250,8 +257,34 @@ async function openTable(req: TableRequest, init?: TableSnapshot): Promise<void>
     const bytes = await contentLength(layerDataUrl(src));
     if (mine !== seq) return;
     if (bytes > SIZE_WARN_BYTES && !await confirmSize(bytes, !init)) { if (mine === seq) closeTable(); return; }
+  } else if (hasColumns(req.layerId)) {
+    const bytes = await columnsBytes(req);
+    if (mine !== seq) return;
+    if (bytes > SIZE_WARN_BYTES && !await confirmSize(bytes, !init)) { if (mine === seq) closeTable(); return; }
   }
   await load(mine, true);
+}
+
+/** Compressed bytes a dataset-scope table open plans to read from the layer's columns file (the test and id
+ *  columns of the row groups its conditions leave); 0 when the file cannot be used, where the view answers. */
+async function columnsBytes(req: TableRequest): Promise<number> {
+  const opts = resolveOpts(req);
+  const dataset = layerById(req.layerId)?.dataset;
+  if (opts.ids || !dataset) return 0;
+  try {
+    const cols = await import('../columns/columns-read.js');
+    const e = await cols.columnsEntry(dataset);
+    if (!e.ok) return 0;
+    const conds: Condition[] = [...(opts.where ?? [])];
+    const add = (a: AreaFilter | null | undefined) => {
+      const c = a && areaCondition(dataset, a);
+      if (c && c !== 'all' && !('unfiltered' in c)) conds.push(c);
+    };
+    add(opts.area);
+    if (opts.asDrawn) { conds.push(...(state.where[req.layerId] ?? [])); add(state.area); }
+    const groups = cols.pruneGroups(await cols.columnsMeta(e.result), conds);
+    return await cols.plannedBytes(e.result, groups, cols.columnsFor(e.result, conds, [], [], { rows: true }));
+  } catch { return 0; }
 }
 
 export async function zoomToSelection(): Promise<void> {
@@ -633,6 +666,7 @@ async function load(mine: number, fresh: boolean) {
   tb.rows = r.result.rows;
   tb.total = r.result.total;
   tb.truncated = r.result.truncated;
+  tb.partial = !r.result.complete;
   if (!bar) tb.rowCount = r.result.total;
   // A popup's feature beyond the row limit still gets its row, first.
   const focus = tb.req.focusId;
@@ -653,7 +687,7 @@ async function load(mine: number, fresh: boolean) {
   await fill(tb, init ? init.scrollTop : 0);
   if (mine !== seq || tb.active < 0) return;
   if (!init) grid!.scrollToRow(tb.active, 'center', false).catch(() => {});
-  setHighlightFeatures([tb.rows[tb.active].feature], 'table');
+  showRow(tb.active, false);
 }
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -1118,7 +1152,7 @@ function syncChecks() {
   const copy = $<HTMLButtonElement>('.td-copy');
   copyOffer = null;
   const mode = copyHere(tb.req.layerId);
-  const lines = mode === 'lines';
+  const lines = !!mode && mode.noun === 'line';
   copy.hidden = !mode;
   copy.textContent = t(lines ? 'line.copyChecked' : 'table.copyChecked', { n: fmt(n, 0) });
   copy.disabled = !n || n > MAX_COPY_ITEMS;
@@ -1127,15 +1161,15 @@ function syncChecks() {
 }
 
 // "Copy N checked to My Data": the checked rows into one new My Data layer
-// (user-data/copy-rows.ts: exact GeoJSON geometry, or a line layer's full
-// geometry from its line files); the button then says how it went, or offers
+// (user-data/copy-rows.ts: exact GeoJSON geometry, a point layer's exact point, or a
+// layer's full geometry from its GeoParquet files); the button then says how it went, or offers
 // the GeoJSON download when the copy is too big (the next click downloads,
 // until the checks change). Shown only once copyAvailable answers true for the
 // layer, so a layer or host that cannot copy never shows it.
 let copyOffer: (() => void) | null = null;
-const copyModes = new Map<string, 'lines' | 'exact' | false>();
+const copyModes = new Map<string, { noun: 'line' | 'feature' } | false>();
 
-function copyHere(layerId: string): 'lines' | 'exact' | false {
+function copyHere(layerId: string): { noun: 'line' | 'feature' } | false {
   const known = copyModes.get(layerId);
   if (known !== undefined) return known;
   copyModes.set(layerId, false);
@@ -1143,7 +1177,7 @@ function copyHere(layerId: string): 'lines' | 'exact' | false {
     const mode = m.copyMode(layerId);
     const ok = await m.copyAvailable(layerId);
     if (ok === null) { copyModes.delete(layerId); return; }
-    copyModes.set(layerId, ok && mode !== 'none' ? mode : false);
+    copyModes.set(layerId, ok && mode !== 'none' ? { noun: m.copyNoun(layerId) } : false);
     if (ok && tbl?.req.layerId === layerId) syncChecks();
   }, () => copyModes.delete(layerId));
   return false;
@@ -1164,15 +1198,17 @@ async function copyChecked() {
   const btn = $<HTMLButtonElement>('.td-copy');
   btn.disabled = true;
   btn.textContent = t('line.copying');
+  const known = copyModes.get(owner.id);
+  const lines = !!known && known.noun === 'line';
   try {
-    const lines = copyModes.get(owner.id) === 'lines';
     const m = await import('../user-data/copy-rows.js');
     const r = await m.copyRows(owner.id, rows,
-      t(lines ? 'line.copyLayer' : 'table.copyLayer', { layer: t(owner.titleKey), n: fmt(rows.length, 0) }));
-    showCopyResult(btn, r, false, lines ? 'line' : 'feature');
+      t(lines ? 'line.copyLayer' : 'table.copyLayer', { layer: t(owner.titleKey), n: fmt(rows.length, 0) }),
+      state.map?.getZoom());
+    showCopyResult(btn, r, false, lines ? 'line' : 'feature', owner.id);
     if (r.kind === 'download') copyOffer = () => downloadCopy(r);
   } catch {
-    btn.textContent = t('line.copyFailed', { reason: t(copyModes.get(owner.id) === 'lines' ? 'line.reason.offline' : 'copy.reason.failed') });
+    btn.textContent = t('line.copyFailed', { reason: t(lines ? 'line.reason.offline' : 'copy.reason.failed') });
   }
 }
 
@@ -1584,13 +1620,45 @@ function fitTo(b: BBox, point: boolean) {
   });
 }
 
-function flyTo(i: number) {
-  const row = tbl?.rows[i];
-  if (!row) return;
-  setHighlightFeatures([row.feature], 'table');
-  const b = bbox(row.feature.geometry);
-  const g = row.feature.geometry?.type;
-  if (b) fitTo(b, g === 'Point' || g === 'MultiPoint');
+/** The loaded tile pieces of feature `id` (all tiles it is cut across). */
+function tilePieces(layerId: string, id: FeatureId | null): GeoJSON.Feature[] {
+  const map = state.map;
+  const entry = layerById(layerId);
+  if (!map || !entry || id === null) return [];
+  const sources = new Map<string, string | undefined>();
+  for (const m of entry.mapLayerIds) {
+    const l = map.getLayer(m) as { source?: string; sourceLayer?: string } | undefined;
+    if (l?.source) sources.set(l.source, l.sourceLayer);
+  }
+  const out: GeoJSON.Feature[] = [];
+  for (const [source, sourceLayer] of sources) {
+    try {
+      for (const f of map.querySourceFeatures(source, sourceLayer ? { sourceLayer } : {})) {
+        if (featureId(layerId, f) === id) out.push({ type: 'Feature', geometry: f.geometry, properties: { ...f.properties } });
+      }
+    } catch { /* source still loading */ }
+  }
+  return out;
+}
+
+/** Highlight row `i`'s feature, and with `fly` fit the camera to it. A columns-file row carries only a point
+ *  on its feature: its loaded tile feature is used when there is one; else the highlight is cleared (the
+ *  point is never drawn as the feature), the camera goes to the point and the highlight is retried once at
+ *  the map's next `idle`. */
+function showRow(i: number, fly: boolean, retry = true) {
+  const tb = tbl;
+  const row = tb?.rows[i];
+  if (!tb || !row) return;
+  const pieces = row.pointOnly ? tilePieces(tb.req.layerId, row.id) : [row.feature];
+  if (pieces.length) setHighlightFeatures(pieces, 'table'); else clearHighlights('table');
+  if (fly) {
+    const boxes = (pieces.length ? pieces : [row.feature]).map(f => bbox(f.geometry)).filter((b): b is BBox => !!b);
+    const g = (pieces[0] ?? row.feature).geometry?.type;
+    if (boxes.length) fitTo(boxes.reduce(union), !pieces.length || g === 'Point' || g === 'MultiPoint');
+  }
+  if (fly && retry && row.pointOnly && !pieces.length) {
+    state.map?.once('idle', () => { if (tbl === tb && tb.rows[tb.active] === row) showRow(tb.active, false, false); });
+  }
 }
 
 // ─── Interaction ─────────────────────────────────────────────────────────────
@@ -1603,7 +1671,7 @@ function activate(i: number, fly: boolean) {
   tb.active = i;
   // The rows on screen now; one drawn later reads tb.active in paintRow.
   for (const k of [was, i]) { const row = k >= 0 && grid.getRow(k); if (row) row.getElement().classList.toggle('td-row--active', k === i); }
-  if (fly) flyTo(i); else setHighlightFeatures([tb.rows[i].feature], 'table');
+  showRow(i, fly);
   touched();
 }
 
@@ -1825,6 +1893,8 @@ function ensureDrawer() {
   let keyFrame = 0;
   // Capture: these keys are taken before Tabulator's own listeners.
   $('.td-grid').addEventListener('keydown', (ev) => {
+    // A row's own control (check box, zoom button) keeps its Enter; SelectRange never sees it.
+    if (ev.key === 'Enter' && (ev.target as HTMLElement).closest('.tabulator-tableholder')) ev.stopPropagation();
     if (!tbl || (ev.target as HTMLElement).closest('input, select, button')) return;
     if (isCopyKey(ev)) {
       if (copyRange()) { ev.preventDefault(); ev.stopPropagation(); }

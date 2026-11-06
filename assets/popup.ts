@@ -5,6 +5,8 @@
 //       Which of those a click gets is decided by click-resolve.ts's pure
 //       resolveHits(); the HTML body comes from popup-format.ts.
 // Deps: state, src/registry (LAYERS — clickPriority), click-resolve.ts,
+//       user-data/copy-mode.ts (copyMode), lines/line-read.ts, lines/line-copy.ts,
+//       user-data/copy-rows.ts and user-data/copy-fit.ts (all four dynamic),
 //       popup-format.ts, map-input.ts (onMapTap/onMapHover), hover.ts,
 //       user-data, layers/map-layers-wecc.ts (clearWeccHighlight), icons.ts,
 //       feature-id.ts + ui/table-open.ts (the popup's "Show in table" for a
@@ -14,16 +16,26 @@
 //       services/service-spec.ts (SERVICE_LAYER_PREFIX — linked services' layers are clickable);
 //       @maplibre/maplibre-gl-style-spec (picker swatches) is a lazy chunk,
 //       fetched on the first multi-feature click; src/units.ts (fmtDistance).
-//       A transmission line (LayerDef.data.analysis) gets its exact length and a
-//       Copy to My Data and Line tools buttons from the lazy lines/ chunk (line-read.ts lookup,
-//       line-copy.ts; Line tools opens the drawer's Line tab through ui/line-open.ts) once one IDX read lands: the popup renders first, a later
+//       A feature of a layer with GeoParquet (LayerDef.data.analysis) gets a
+//       Copy to My Data button from the lazy lines/ chunk (line-read.ts lookup,
+//       line-copy.ts) once one IDX read lands, plus its exact length when it is a line
+//       and Line tools (the drawer's Line tab, ui/line-open.ts) when the layer is in the
+//       transmission group: the popup renders first, a later
 //       click (popupToken) drops a stale answer, and nothing is added when the
-//       line files are not there. Edit mode copies such a line through the same
-//       chunk (resolveHits' `copy-tiled`); on a host without the line files it
-//       turns into the "can't copy" note.
+//       files are not there. A feature of a tiled point layer with a columns file gets
+//       Copy at once (user-data/copy-rows.ts: its max-zoom point; user-data/copy-mode.ts
+//       says which layers those are). Edit mode copies both
+//       through the same chunks (resolveHits' `copy-tiled`); an analysis owner counts as
+//       copyable there only once a one-time probe of the files answered yes (the first
+//       edit-mode click awaits it), otherwise it turns into the "can't copy" note. A
+//       GeoJSON layer with `data.analysis` (the region layers) copies from the files too
+//       once they answered. Every other edit-mode copy of a GeoJSON layer with a stable id
+//       takes the feature from the loaded source data (state.sourcesData) by its id, never
+//       the hit-test's tile piece; with no source data or id it shows the "can't copy" note.
 
 import * as maplibregl from 'maplibre-gl';
 import { LAYERS } from '../src/registry/index.js';
+import { copyMode } from './user-data/copy-mode.js';
 import { type MapGeoJSONFeature } from 'maplibre-gl';
 import { state } from './state.js';
 import { highlightLine, clearLineHighlight, hoverFillIds } from './hover.js';
@@ -38,13 +50,15 @@ import { escapeHtml } from './utils/utils.js';
 import { t } from '../src/i18n/index.js';
 import { onMapTap, onMapHover, onMapPointLeave, tapBox, type MapPointerEvent } from './map-input.js';
 import { featureId } from './feature-id.js';
+import { layerSourceId } from './layers/layer-source.js';
 import { openTable } from './ui/table-open.js';
 import { openLineTools } from './ui/line-open.js';
 import { SERVICE_LAYER_PREFIX } from './services/service-spec.js';
 
 function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   const name = featureLabel(f);
-  const owner = f.sourceLayer ? analysisOwner(f) : undefined;
+  // A tiled feature, or a GeoJSON feature of a layer whose geometry files have answered, copies from the files.
+  const owner = f.sourceLayer || copyableTiled(f) ? tiledOwner(f) : undefined;
   state.popup!.setLngLat(lngLat)
     .setHTML(`<div class="copy-popup">
         <div class="copy-popup-name">${escapeHtml(name)}</div>
@@ -53,7 +67,9 @@ function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
     .addTo(state.map!);
   const btn = state.popup!.getElement()?.querySelector<HTMLButtonElement>('.copy-popup-btn');
   btn?.addEventListener('click', () => {
-    if (owner) { void copyLine(owner.id, f, btn); return; }
+    if (owner) { void copyTiled(owner.id, f, btn); return; }
+    const own = ownerOf(f);
+    if (own?.data?.kind === 'geojson' && copyMode(own.id) !== 'none') { void copyFromSource(own, f, btn); return; }
     const r = copyFeatureToMyData(f);
     if (r.saved) { state.popup!.remove(); return; }
     // The save failed: nothing was kept, so the button offers the file instead.
@@ -65,68 +81,161 @@ function showCopyPopup(lngLat: maplibregl.LngLat, f: MapGeoJSONFeature) {
   }, { once: true });
 }
 
-// ─── Transmission lines: exact length and full-geometry copy (lines/ chunk) ──
+// ─── Tiled features with exact geometry: length, copy, Line tools (lines/ chunk) ──
 // Bumped by every click and every rendered popup, so a lookup that lands after
 // the visitor moved on is dropped.
 let popupToken = 0;
 
+type Owner = (typeof LAYERS)[number];
+const ownerOf = (f: { layer: { id: string } }): Owner | undefined => LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
+
+/** The layer of `f` when it has GeoParquet geometry files (LayerDef.data.analysis). */
 function analysisOwner(f: { layer: { id: string } }) {
-  const owner = LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
+  const owner = ownerOf(f);
   return owner?.data?.analysis ? owner : undefined;
+}
+
+/** The layer of `f` when it is a tiled point layer with a columns file: its copy needs no unpublished file. */
+function pointOwner(f: { layer: { id: string } }) {
+  const owner = ownerOf(f);
+  return owner && copyMode(owner.id) === 'point' ? owner : undefined;
+}
+
+const tiledOwner = (f: MapGeoJSONFeature) => analysisOwner(f) ?? pointOwner(f);
+
+// Whether each analysis layer's files answered, learned by one probe before the first edit-mode
+// click resolves: until a layer answers yes its tiled features count as not copyable there, so a
+// host without the files keeps the direct GeoJSON copy and shows no new picker.
+const analysisReady = new Map<string, boolean>();
+let analysisProbed = false;
+let probing: Promise<void> | null = null;
+
+/** One probe at a time: clicks while it runs share it. */
+function probeAnalysis(): Promise<void> {
+  probing ??= runProbe().finally(() => { probing = null; });
+  return probing;
+}
+
+async function runProbe() {
+  try {
+    const m = await import('./lines/line-read.js');
+    const settled = await Promise.all(LAYERS.filter(l => l.data?.analysis).map(async l => {
+      const r = await m.lineDataset(l.id);
+      if (r.ok) analysisReady.set(l.id, true);
+      else if (r.reason === 'unavailable') analysisReady.set(l.id, false);
+      return r.ok || r.reason === 'unavailable';
+    }));
+    analysisProbed = settled.every(Boolean);   // offline or timed out: asked again on the next edit-mode click
+  } catch { /* the lines chunk did not load: nothing analysis-backed is copyable this click */ }
+}
+
+/** Test support: forget what the edit-mode probe learned. */
+export function resetAnalysisProbe() { analysisReady.clear(); analysisProbed = false; probing = null; }
+
+const copyableTiled = (f: MapGeoJSONFeature) => {
+  const a = analysisOwner(f);
+  return a ? analysisReady.get(a.id) === true : !!pointOwner(f);
+};
+
+function popupContent() {
+  return state.popup?.getElement()?.querySelector('.maplibregl-popup-content') ?? null;
+}
+
+function copyButton(owner: Owner, f: MapGeoJSONFeature) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'popup-table-btn popup-copy-btn';
+  btn.textContent = t('popup.copyToMyData');
+  btn.addEventListener('click', () => void copyTiled(owner.id, f, btn), { once: true });
+  return btn;
 }
 
 function addLineExtras(f: MapGeoJSONFeature, token: number) {
   const owner = analysisOwner(f);
-  const id = owner && featureId(owner.id, f);
-  if (!owner || id === undefined) return;
+  const id = owner ? featureId(owner.id, f) : undefined;
+  if (!owner) {
+    const point = pointOwner(f);
+    const content = popupContent();
+    if (point && content && featureId(point.id, f) !== undefined) content.append(copyButton(point, f));
+    return;
+  }
+  if (id === undefined) return;
   void import('./lines/line-read.js')
     .then(m => m.lookup(owner.id, id))
     .then(got => {
-      const content = state.popup?.getElement()?.querySelector('.maplibregl-popup-content');
+      const content = popupContent();
       if (!got.ok || token !== popupToken || !state.popup?.isOpen() || !content) return;
+      const isLine = got.result.geometry !== 'polygon';
       const slot = content.querySelector<HTMLElement>('.' + LINE_LENGTH_SLOT);
-      if (slot) {
+      if (slot && isLine) {
         const key = Object.assign(document.createElement('span'), { className: 'popup-key', textContent: t('popup.length') });
         const val = Object.assign(document.createElement('span'), { className: 'popup-val', textContent: fmtDistance(got.result.length_km * 1000) });
         slot.replaceChildren(key, ' ', val);
         slot.hidden = false;
       }
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'popup-table-btn popup-copy-btn';
-      btn.textContent = t('popup.copyToMyData');
-      btn.addEventListener('click', () => void copyLine(owner.id, f, btn), { once: true });
-      const tools = document.createElement('button');
-      tools.type = 'button';
-      tools.className = 'popup-table-btn popup-line-tools-btn';
-      tools.textContent = t('line.tools');
-      tools.addEventListener('click', () => {
-        const properties = JSON.parse(JSON.stringify(f.properties ?? {})) as Record<string, unknown>;
-        state.popup?.remove();
-        void openLineTools({ layerId: owner.id, fid: id, properties }, state.map?.getCanvas());
-      });
-      content.append(btn, tools);
+      content.append(copyButton(owner, f));
+      if (isLine && owner.group === 'transmission') {
+        const tools = document.createElement('button');
+        tools.type = 'button';
+        tools.className = 'popup-table-btn popup-line-tools-btn';
+        tools.textContent = t('line.tools');
+        tools.addEventListener('click', () => {
+          const properties = JSON.parse(JSON.stringify(f.properties ?? {})) as Record<string, unknown>;
+          state.popup?.remove();
+          void openLineTools({ layerId: owner.id, fid: id, properties }, state.map?.getCanvas());
+        });
+        content.append(tools);
+      }
     })
     .catch(() => { /* the lines chunk did not load (offline): the popup stays as it is */ });
 }
 
-async function copyLine(layerId: string, f: MapGeoJSONFeature, btn: HTMLButtonElement) {
+/** A GeoJSON layer's feature from the loaded source data, by its id: the exact geometry, as the
+ *  table copies it. The hit-test's piece of `f` is a tile of it and is never copied. */
+async function copyFromSource(owner: Owner, f: MapGeoJSONFeature, btn: HTMLButtonElement) {
+  const id = featureId(owner.id, f);
+  const data = state.sourcesData[layerSourceId(owner.id)] as GeoJSON.Feature[] | undefined;
+  const source = id === undefined ? undefined : data?.find(x => featureId(owner.id, x) === id);
+  if (!source) { showNotCopyablePopup(state.popup!.getLngLat()); return; }
+  btn.disabled = true;
+  btn.textContent = t('line.copying');
+  try {
+    const r = await (await import('./user-data/copy-rows.js')).copyRows(owner.id,
+      [{ id: id!, props: { ...source.properties }, feature: source }], undefined, undefined, true);
+    (await import('./user-data/copy-fit.js')).showCopyResult(btn, r, true, 'feature', owner.id);
+  } catch {
+    btn.textContent = t('line.copyFailed', { reason: t('copy.reason.offline') });
+  }
+}
+
+async function copyTiled(layerId: string, f: MapGeoJSONFeature, btn: HTMLButtonElement) {
   const id = featureId(layerId, f);
   if (id === undefined) return;
   btn.disabled = true;
   btn.textContent = t('line.copying');
+  const properties = JSON.parse(JSON.stringify(f.properties ?? {})) as Record<string, unknown>;
+  const geometry = JSON.parse(JSON.stringify(f.geometry)) as GeoJSON.Geometry;
+  const noun = geometry.type.includes('Line') ? 'line' : 'feature';
   try {
-    const m = await import('./lines/line-copy.js');
-    const r = await m.copyLines(layerId, [{
-      fid: id, mapLayerId: f.layer.id,
-      properties: JSON.parse(JSON.stringify(f.properties ?? {})),
-      tileGeometry: JSON.parse(JSON.stringify(f.geometry)),
-    }]);
-    // No line files on this host: the edit-mode copy is the tiled "can't copy" note after all.
-    if (r.kind === 'refused' && r.reason === 'unavailable' && btn.isConnected && state.popup) showNotCopyablePopup(state.popup.getLngLat());
-    else m.showCopyResult(btn, r);
+    const fit = await import('./user-data/copy-fit.js');
+    let r;
+    if (LAYERS.find(l => l.id === layerId)?.data?.analysis) {
+      r = await (await import('./lines/line-copy.js')).copyLines(layerId, [{
+        fid: id, mapLayerId: f.layer.id, properties, tileGeometry: geometry,
+      }]);
+      // No files on this host: the edit-mode copy is the tiled "can't copy" note after all.
+      if (r.kind === 'refused' && r.reason === 'unavailable' && btn.isConnected && state.popup) {
+        analysisReady.set(layerId, false);
+        showNotCopyablePopup(state.popup.getLngLat());
+        return;
+      }
+    } else {
+      r = await (await import('./user-data/copy-rows.js')).copyRows(layerId,
+        [{ id, props: properties, feature: { type: 'Feature', geometry, properties } }], undefined, state.map?.getZoom());
+    }
+    fit.showCopyResult(btn, r, true, noun, layerId);
   } catch {
-    btn.textContent = t('line.copyFailed', { reason: t('line.reason.offline') });
+    btn.textContent = t('line.copyFailed', { reason: t(noun === 'line' ? 'line.reason.offline' : 'copy.reason.offline') });
   }
 }
 
@@ -230,6 +339,12 @@ export function toolOwnsTap(e: MapPointerEvent): boolean {
   return toolHoldsTap(e) || state.editMode === 'edit';
 }
 
+/** MapboxDraw is sketching or editing a shape: a click places a vertex, it does not pick a feature. */
+const drawing = () => {
+  const mode = state.draw?.getMode();
+  return !!mode && mode !== 'simple_select' && mode !== 'static';
+};
+
 function onMapClick(e: MapPointerEvent) {
   if (toolHoldsTap(e)) return;
   if (!state.map || !state.popup) return;
@@ -249,13 +364,28 @@ function onMapClick(e: MapPointerEvent) {
     // While MapboxDraw is sketching a new shape or editing an existing one's
     // vertices, a click is placing/dragging a vertex, not picking a feature to
     // copy — the copy popup would otherwise pop up on top of the in-progress shape.
-    const drawMode = state.draw?.getMode();
-    if (drawMode && drawMode !== 'simple_select' && drawMode !== 'static') return;
+    if (drawing()) return;
+    // The first click on an analysis-backed feature waits for the one-time probe of the geometry files
+    // (copyableTiled reads its answer); any other click resolves at once.
+    const features = state.map.queryRenderedFeatures(box, { layers: activeLayers });
+    if (!analysisProbed && features.some(f => analysisOwner(f))) {
+      // The features under the tap are taken now. The answer is dropped when another click came first, edit mode
+      // was left, a tool took over, or a shape is being drawn.
+      const token = popupToken;
+      void probeAnalysis().then(() => {
+        if (token === popupToken && state.editMode === 'edit' && !toolHoldsTap(e) && !drawing()) resolveClick(e, features);
+      });
+      return;
+    }
+    resolveClick(e, features);
+    return;
   }
+  resolveClick(e, state.map.queryRenderedFeatures(box, { layers: activeLayers }));
+}
 
-  const hit = resolveHits(
-    state.map.queryRenderedFeatures(box, { layers: activeLayers }),
-    state.editMode === 'edit' ? 'edit' : 'view', ft => !!analysisOwner(ft));
+function resolveClick(e: MapPointerEvent, features: MapGeoJSONFeature[]) {
+  if (!state.map || !state.popup) return;
+  const hit = resolveHits(features, state.editMode === 'edit' ? 'edit' : 'view', copyableTiled);
   switch (hit.kind) {
     case 'copy-picker':  void showEditPicker(e.lngLat, hit.features); return;
     case 'copy':

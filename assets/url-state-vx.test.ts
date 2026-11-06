@@ -241,7 +241,7 @@ describe('vx – trust boundary', () => {
         'osm-transmission-lines': [{ field: 'nominal_kv', op: '>=', value: ['get', 'x'] }],
         'hifld-substations': [{ field: 'constructor', op: '=', value: 1 }],
         'nws-alerts': [],
-        railroads: [],
+        'nexrad-radar': [],
       },
       s: {
         railroads: { opacity: 0.5 },

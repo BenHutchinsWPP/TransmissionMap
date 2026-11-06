@@ -6,12 +6,10 @@ including its `built_elsewhere` list, and checks what is served from
 data/layers/:
 
   <id>.geojson[.gz] every feature; an id seen twice is a duplicate.
-  <id>.pmtiles      (plus <id>_*.pmtiles for a `split_voltage_bands` layer)
-                    decoded at the archive's max zoom with tippecanoe-decode,
+  <id>.pmtiles                          decoded at the archive's max zoom with tippecanoe-decode,
                     streamed. An id repeated **within one tile** is a duplicate.
                     The same id in several tiles is one feature cut by tile
-                    edges, which is expected. The archives of a split layer
-                    must not share an id either.
+                    edges, which is expected.
 
 An id is missing when a native_id archive's feature has no vector-tile id, or
 when the `id_field` property is absent, null or empty.
@@ -21,11 +19,18 @@ tiled from (.csv, .geojson[.gz], .geojsonl, or any OGR file such as .gpkg) for
 missing and duplicate ids, and counts its ids absent from the archive (full
 passes only).
 
-`--lines` checks the line geometry files instead (data/analysis/, built by
-build_line_parquet.py): every id the archives serve at max zoom is in IDX (0
-missing; IDX ids no tile carries are counted, not failed), IDX has no
-duplicate, IDX `row` and CHAINS `row` point at the GEO row of their fid on a
-sample, and sampled tile pieces lie on their GEO geometry within the tile grid.
+`--lines` checks the geometry files instead (data/analysis/, built by
+build_line_parquet.py; `--only` picks one dataset): every id the archives serve
+at max zoom is in IDX (0 missing; IDX ids no tile carries are counted, not
+failed), IDX has no duplicate, IDX `row` and CHAINS `row` point at the GEO row
+of their fid on a sample, and sampled tile pieces lie on their GEO geometry:
+line and point vertices within the tile grid, polygon pieces (manifest
+`geometry: polygon`) each side opened by one grid unit, its vertices within
+2.5 grid units of the other side's area, both clipped to the piece's tile
+(`POLYGON_TOLERANCE_BY_DATASET` replaces that per dataset; None reports the
+measure and checks ids only). A layer served as GeoJSON (no PMTiles archive;
+simplified at build) is checked for ids as well, and each served feature against its
+GEO geometry: the symmetric-difference area at most 5 % of the GEO area.
 
 `--attrs` holds attributes instead: each pmtiles layer's archives are decoded
 at every zoom (or `--zooms`), a uniform sample of tiles per zoom is kept
@@ -33,8 +38,9 @@ at every zoom (or `--zooms`), a uniform sample of tiles per zoom is kept
 feature's attributes must equal its build input row's, found by stable id. The
 input is read as the build reads it: the manifest `src` through ogr2ogr with
 its `select`/`where`, or for a world layer the continental intermediates in
-build_global_tiles.py's dedupe order (transmission: the kept merged input). The
-region fields a world build adds after the merge are not compared. Memory grows
+build_global_tiles.py's kept merged, tagged input when it exists (tile_inputs.py), and
+else the continental intermediates in its dedupe order; only on that fallback are
+the region fields a world build adds after the merge left out of the comparison. Memory grows
 with the sample, never with the input.
 
 Exit status: 0 clean, 1 on any missing or duplicate id (or, with --attrs, any
@@ -57,6 +63,8 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from tile_inputs import _open_text, input_rows, stream_rows, world_spec  # noqa: F401
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "scripts" / "tile_manifest.yaml"
@@ -108,7 +116,7 @@ def scan_features(features, id_field, native=False):
 def scan_decode(lines, id_field, native, max_tiles=0, on_feature=None):
     """tippecanoe-decode output, one tile at a time: duplicates are counted per
     tile and layer, so a feature split across tiles is not one. `on_feature`,
-    when given, is called with (id, feature line) for every feature."""
+    when given, is called with (id, feature line, tile "z/x/y") for every feature."""
     st, seen, where = Stats(), set(), None
     for line in lines:
         if line.startswith(FEATURE_PREFIX):
@@ -119,7 +127,7 @@ def scan_decode(lines, id_field, native, max_tiles=0, on_feature=None):
             else:
                 fid = norm(json.loads(line)["properties"].get(id_field))
             if on_feature is not None and fid is not None:
-                on_feature(fid, line)
+                on_feature(fid, line, where)
             if fid is None:
                 st.missing += 1
             elif fid in seen:
@@ -170,11 +178,6 @@ def scan_pmtiles(path, id_field, native, zoom=None, max_tiles=0, on_feature=None
     return zoom, st
 
 
-def _open_text(path):
-    return gzip.open(path, "rt", encoding="utf-8") if str(path).endswith(".gz") \
-        else open(path, encoding="utf-8", newline="")
-
-
 def read_input_ids(path, id_field):
     """Every row's id from a build intermediate, None where it has none."""
     name = str(path).removesuffix(".gz")
@@ -198,14 +201,11 @@ def artifacts(layer, layers_dir):
     # The .gz is the served GeoJSON; a plain sibling is the same features, read once.
     gz, plain = layers_dir / f"{lid}.geojson.gz", layers_dir / f"{lid}.geojson"
     paths = [gz if gz.exists() else plain, layers_dir / f"{lid}.pmtiles"]
-    if layer.get("split_voltage_bands"):
-        paths += sorted(layers_dir.glob(f"{lid}_*.pmtiles"))
     return [p for p in paths if p.exists()]
 
 
 def check_layer(layer, layers_dir, zoom=None, max_tiles=0):
-    """[(archive name, zoom or '-', Stats)] for every served artifact of a layer;
-    a split layer gets one more row for ids its archives share."""
+    """[(archive name, zoom or '-', Stats)] for every served artifact of a layer."""
     rows, id_field, native = [], layer["id_field"], bool(layer.get("native_id"))
     for path in artifacts(layer, layers_dir):
         if path.suffix == ".pmtiles":
@@ -214,126 +214,326 @@ def check_layer(layer, layers_dir, zoom=None, max_tiles=0):
             with _open_text(path) as f:
                 z, st = "-", scan_features(json.load(f)["features"], id_field)
         rows.append((path.name, z, st))
-    if len(rows) > 1:
-        union = set().union(*(st.ids for _, _, st in rows))
-        shared = Stats(dups=sum(len(st.ids) for _, _, st in rows) - len(union), ids=union,
-                       complete=all(st.complete for _, _, st in rows))
-        rows.append(("(across archives)", "-", shared))
     return rows
 
 
-# ── --lines: the line geometry files against the served archives ───────────
+# ── --lines: the geometry files against the served archives ────────────────
 
 ANALYSIS_DIR = ROOT / "data" / "analysis"
-# A tile vertex is the line's vertex snapped to the tile grid at max zoom
-# (within √2/2 grid unit of the GEO geometry), or a clip point on the tile
-# buffer, computed on the snapped segment and snapped again (within √2). More
-# means the two disagree.
-GEOM_TOLERANCE_UNITS = 1.5
+# A line or point tile vertex more than one grid unit inside its tile box is a
+# data vertex snapped to the grid: within INTERIOR_TOLERANCE_UNITS of the GEO
+# geometry (√2/2 plus decode rounding). Any other vertex (on the tile edge or in
+# its buffer) may be a clip point on a long segment: within EDGE_TOLERANCE_UNITS.
+# A point's vertices are all interior.
+INTERIOR_TOLERANCE_UNITS = 0.8
+EDGE_TOLERANCE_UNITS = 2.5
+# A polygon piece against its GEO polygon, both clipped to the piece's tile box
+# and opened by one grid unit: each side's vertices lie within this distance of
+# the other side's area.
+POLYGON_TOLERANCE_UNITS = 2.5
+# Per polygon dataset, where the default does not apply. retail_territories: a
+# placement check, not an accuracy one (tiles simplified at max zoom: simplification 6,
+# shared borders, z10; measured max 194.2 units). crithab (z13) and padus (z10) the same:
+# tiny-polygon reduction and coalescing move a piece's parts (measured max 4050.7 and
+# 2543.5 units on 20,000 pieces). us_zcta (z11, simplification 6, shared borders, coalescing) and
+# county_boundaries (z8, simplification 8, shared borders) the same (measured max 1206.1 and
+# 1550.5 units on 20,000 pieces). None would report the measure and check ids only.
+POLYGON_TOLERANCE_BY_DATASET = {"retail_territories": 400.0, "crithab": 8000.0, "padus": 5000.0,
+                                "us_zcta": 2500.0, "county_boundaries": 3100.0}
+# A GeoJSON-served polygon may differ from its GEO polygon by this share of the GEO area (symmetric difference; measured max 0.0150).
+GEOJSON_AREA_DIFF = 0.05
+# Per dataset where 0.05 does not hold (control_areas: measured 0.0789, simplify 0.005).
+# None: ids only, the area difference is reported but not judged (us_states, countries,
+# admin1_boundaries: simplification 0.005 / 0.01 drops or reshapes small islands; measured max 0.113 / 0.967 / 1.547).
+GEOJSON_AREA_DIFF_BY_DATASET = {"control_areas": 0.10, "us_states": None, "countries": None,
+                                "admin1_boundaries": None}
+EXTENT = 4096
+# shapely geometry type id → the manifest `geometry` kind it belongs to
+KIND_OF_TYPE = {0: "point", 4: "point", 1: "line", 5: "line", 3: "polygon", 6: "polygon"}
 
 
 def mercator_units(xy, zoom):
     """lon/lat (n, 2) → Web Mercator tile-grid units at `zoom` (4096 a tile)."""
     import numpy as np
-    w = 4096 * 2 ** zoom
+    w = EXTENT * 2 ** zoom
     lat = np.radians(np.clip(xy[:, 1], -85.0511, 85.0511))
     return np.c_[(xy[:, 0] + 180) / 360 * w,
                  (1 - np.log(np.tan(lat) + 1 / np.cos(lat)) / np.pi) / 2 * w]
 
 
-def tile_vs_geo_units(tile_geom, geo_geom, zoom):
-    """Largest distance from a tile piece's vertices to the GEO line, in grid units."""
+def lonlat(units, zoom):
+    """The inverse of mercator_units."""
+    import numpy as np
+    w = EXTENT * 2 ** zoom
+    return np.c_[units[:, 0] / w * 360 - 180,
+                 np.degrees(np.arctan(np.sinh(np.pi * (1 - 2 * units[:, 1] / w))))]
+
+
+def to_units(geom, zoom):
     import shapely
-    t = shapely.get_coordinates(tile_geom)
-    parts = shapely.get_parts(geo_geom)
-    line = shapely.multilinestrings([shapely.linestrings(mercator_units(shapely.get_coordinates(g), zoom))
-                                     for g in parts])
-    return float(shapely.distance(shapely.points(mercator_units(t, zoom)), line).max())
+    return shapely.transform(geom, lambda xy: mercator_units(xy, zoom))
 
 
-def check_lines(analysis_dir, layers_dir, manifest, sample=1000, max_tiles=0, seed=1):
-    """Every served tile id in IDX (0 missing), no duplicate in IDX, IDX and
-    CHAINS rows pointing at the GEO row of their fid, and a sample of tile
-    pieces lying on their GEO geometry. Prints a table; returns True if clean."""
+def tile_vs_geo_units(tile_geom, geo_geom, zoom, where=None):
+    """(interior, edge): the largest distance, in grid units, from a tile piece's
+    vertices to the GEO line or point; None for a class the piece has no vertex in.
+    A vertex more than one unit inside the piece's tile box (`where`, "z/x/y") is
+    interior, any other is edge; with no `where` every vertex is interior."""
+    import shapely
+    xy = mercator_units(shapely.get_coordinates(tile_geom), zoom)
+    d = shapely.distance(shapely.points(xy), to_units(geo_geom, zoom))
+    if where is None:
+        return (float(d.max()) if len(d) else None), None
+    x0, y0, x1, y1 = tile_box(where)
+    inner = ((xy[:, 0] > x0 + 1) & (xy[:, 0] < x1 - 1) & (xy[:, 1] > y0 + 1) & (xy[:, 1] < y1 - 1))
+    return (float(d[inner].max()) if inner.any() else None,
+            float(d[~inner].max()) if (~inner).any() else None)
+
+
+def _opened(x):
+    import shapely
+    return shapely.get_coordinates(x.buffer(-1).buffer(1))
+
+
+def _directed_xy(xy, b):
+    import shapely
+    return float(shapely.distance(shapely.points(xy), b).max()) if len(xy) else 0.0
+
+
+def tile_box(where):
+    """The tile "z/x/y" as its box in grid units at z: (xmin, ymin, xmax, ymax)."""
+    _, x, y = (int(v) for v in where.split("/"))
+    return x * EXTENT, y * EXTENT, (x + 1) * EXTENT, (y + 1) * EXTENT
+
+
+def polygon_compare(tile_geom, geo_geom, zoom, where):
+    """(distance, why) in grid units between a decoded polygon piece and its GEO
+    polygon, both clipped to the piece's tile box and opened by one grid unit:
+    the larger of the vertices of each opened side to the other clipped side's
+    area. When only one side clips to nothing (a sliver the tile keeps in its
+    buffer), the other side's opened vertices are measured to the unclipped
+    geometry instead. (None, "empty") when both clip to nothing, (None, "thin")
+    when both opened sides are empty (thinner than 2 units inside the tile)."""
+    import shapely
+    box = tile_box(where)
+    t, g = to_units(tile_geom, zoom), to_units(geo_geom, zoom)
+    tc = shapely.make_valid(shapely.clip_by_rect(t, *box))
+    gc = shapely.make_valid(shapely.clip_by_rect(g, *box))
+    if tc.is_empty and gc.is_empty:
+        return None, "empty"
+    txy, gxy = _opened(tc), _opened(gc)
+    if not len(txy) and not len(gxy):
+        return None, "thin"
+    if tc.is_empty:
+        return _directed_xy(gxy, shapely.make_valid(t)), None
+    if gc.is_empty:
+        return _directed_xy(txy, shapely.make_valid(g)), None
+    return max(_directed_xy(gxy, tc), _directed_xy(txy, gc)), None
+
+
+def polygon_vs_geo_units(tile_geom, geo_geom, zoom, where):
+    """The distance of polygon_compare; None when there is nothing to compare."""
+    return polygon_compare(tile_geom, geo_geom, zoom, where)[0]
+
+
+def served_paths(layer, layers_dir):
+    """(kind, files) of what a layer serves: its PMTiles archive, else its GeoJSON
+    (simplified at build), else ("none", [])."""
+    found = artifacts(layer, Path(layers_dir))
+    tiles = [p for p in found if p.suffix == ".pmtiles"]
+    if tiles:
+        return "pmtiles", tiles
+    return ("geojson", found) if found else ("none", [])
+
+
+def area_difference(a, b):
+    """|a △ b| / area(b) after make_valid: the share of b's area the two disagree on."""
+    import shapely
+    a, b = shapely.make_valid(a), shapely.make_valid(b)
+    return float(shapely.symmetric_difference(a, b).area / b.area) if b.area else float(a.area > 0)
+
+
+def geometry_tolerance(ds, m, served, layer=None):
+    """The tolerance a dataset's served geometry is held to, or None when it is not judged.
+    Tile pieces: grid units (POLYGON_TOLERANCE_BY_DATASET may set None). A layer served as
+    GeoJSON: GEOJSON_AREA_DIFF_BY_DATASET, else GEOJSON_AREA_DIFF."""
+    if served == "geojson":
+        return GEOJSON_AREA_DIFF_BY_DATASET.get(ds, GEOJSON_AREA_DIFF)
+    if m.get("geometry", "line") == "polygon":
+        return POLYGON_TOLERANCE_BY_DATASET.get(ds, POLYGON_TOLERANCE_UNITS)
+    return INTERIOR_TOLERANCE_UNITS
+
+
+def check_dataset(ds, m, analysis_dir, layer, layers_dir, sample=1000, max_tiles=0, seed=1):
+    """One index.json dataset against its served archive at max zoom. Returns a
+    dict: `ok`, `text` (the report line), `pieces` (the sampled tile pieces as
+    (fid, GeoJSON geometry, tile "z/x/y")), `zoom`, `missing`, `geo_max`, `tolerance`.
+    A layer served as GeoJSON (no PMTiles archive) is checked for ids, and each served feature
+    against its GEO geometry (area_difference) within geometry_tolerance (GEOJSON_AREA_DIFF, per dataset GEOJSON_AREA_DIFF_BY_DATASET).
+    The sample depends only on the archive and `seed`."""
     import random
 
     import numpy as np
     import pyarrow.parquet as pq
     import shapely
 
+    d = Path(analysis_dir) / m["path"]
+    kind = m.get("geometry", "line")
+    rng = random.Random(seed)
+    pieces, seen = [], [0]
+
+    def keep(fid, line, where):
+        seen[0] += 1
+        if len(pieces) < sample:
+            pieces.append((fid, line, where))
+        elif (j := rng.randrange(seen[0])) < sample:
+            pieces[j] = (fid, line, where)
+
+    out = {"ok": False, "pieces": [], "zoom": None, "missing": 0, "geo_max": 0.0, "tolerance": None}
+    if kind not in ("line", "polygon", "point"):
+        out["text"] = f"{ds}: [FAIL] unknown geometry {kind!r} in index.json"
+        return out
+    if layer is None:
+        out["text"] = f"{ds}: [FAIL] no layer with an id_field in the tile manifest"
+        return out
+    tile_ids, tile_dups, complete, zoom, no_id, served_geom = set(), 0, True, None, 0, {}
+    served, archives = served_paths(layer, layers_dir)
+    geojson = served == "geojson"
+    if not archives:
+        out["text"] = f"{ds}: [FAIL] no served {'GeoJSON' if geojson else 'archive'} in {layers_dir} to check against"
+        return out
+    for path in archives:
+        if geojson:
+            with _open_text(path) as f:
+                feats = json.load(f)["features"]
+            zoom, st = "-", scan_features(feats, layer["id_field"])
+            no_id += st.missing
+            for ft in feats:
+                fid = norm((ft.get("properties") or {}).get(layer["id_field"]))
+                if fid is not None and ft.get("geometry"):
+                    served_geom.setdefault(fid, ft["geometry"])
+        else:
+            zoom, st = scan_pmtiles(path, layer["id_field"], bool(layer.get("native_id")),
+                                    None, max_tiles, keep)
+        tile_dups += st.dups + len(tile_ids & st.ids)
+        tile_ids |= st.ids
+        complete &= st.complete
+    idx = pq.read_table(d / m["idx"]["name"], columns=["fid", "row"]).to_pydict()
+    idx_ids = [norm(v) for v in idx["fid"]]
+    idx_set = set(idx_ids)
+    idx_dups = len(idx_ids) - len(idx_set)
+    missing = len(tile_ids - idx_set)
+    extras = len(idx_set - tile_ids) if complete else "n/a"
+    geo_fid = [norm(v) for e in m["geo"]
+               for v in pq.read_table(d / e["name"], columns=["fid"]).column("fid").to_pylist()]
+    pick = rng.sample(range(len(idx_ids)), min(sample, len(idx_ids)))
+    bad_ptr = sum(not 0 <= idx["row"][i] < len(geo_fid) or geo_fid[idx["row"][i]] != idx_ids[i]
+                  for i in pick)
+    bad_chain = 0
+    if m.get("chains"):
+        ch = pq.read_table(d / m["chains"]["name"]).to_pydict()
+        chain_of = dict(zip(idx_ids, pq.read_table(d / m["idx"]["name"], columns=["chain"])
+                            .column("chain").to_pylist()))
+        for i in rng.sample(range(len(ch["fid"])), min(sample, len(ch["fid"]))):
+            f = norm(ch["fid"][i])
+            bad_chain += geo_fid[ch["row"][i]] != f or chain_of.get(f) != ch["chain"][i]
+    # tile pieces against their GEO geometry
+    row_of = dict(zip(idx_ids, idx["row"]))
+    want = {}
+    for fid, line, where in pieces:
+        if fid in row_of:
+            want.setdefault(row_of[fid], []).append((json.loads(line)["geometry"], where))
+    for fid, geom in served_geom.items():
+        if fid in row_of:
+            want.setdefault(row_of[fid], []).append((geom, None))
+    tol = geometry_tolerance(ds, m, served, layer)
+    worst, edge_worst, both_empty, thin, kinds = [], [], 0, 0, set()
+    for e in m["geo"]:
+        pf = pq.ParquetFile(d / e["name"])
+        meta = json.loads((pf.schema_arrow.metadata or {}).get(b"geo", b"{}"))
+        for gt in (meta.get("columns", {}).get("geometry", {}).get("geometry_types") or []):
+            kinds.add({"Point": "point", "MultiPoint": "point", "LineString": "line",
+                       "MultiLineString": "line", "Polygon": "polygon",
+                       "MultiPolygon": "polygon"}.get(gt.removesuffix(" Z"), gt))
+        lo, hi = e["row_offset"], e["row_offset"] + e["rows"]
+        rows = [r for r in want if lo <= r < hi]
+        if not rows:
+            continue
+        wkb = pq.read_table(d / e["name"], columns=["geometry"]).column("geometry").take(
+            np.array(rows) - lo).to_pylist()
+        geoms = shapely.from_wkb(wkb)
+        kinds |= {KIND_OF_TYPE.get(int(t), f"type {t}") for t in shapely.get_type_id(geoms)}
+        for r, g in zip(rows, geoms):
+            for piece, where in want[r]:
+                t = shapely.from_geojson(json.dumps(piece))
+                if geojson:
+                    worst.append(area_difference(t, g))
+                elif kind == "polygon":
+                    dist, why = polygon_compare(t, g, zoom, where)
+                    if dist is None:
+                        both_empty += why == "empty"
+                        thin += why == "thin"
+                        continue
+                    worst.append(dist)
+                else:
+                    inner, edge = tile_vs_geo_units(t, g, zoom, where if kind == "line" else None)
+                    if inner is not None:
+                        worst.append(inner)
+                    if edge is not None:
+                        edge_worst.append(edge)
+    wrong_kind = sorted(kinds - {kind})
+    worst.sort()
+    geo_max = worst[-1] if worst else 0.0
+    geo_p99 = worst[int(0.99 * (len(worst) - 1))] if worst else 0.0
+    edge_max = max(edge_worst, default=0.0)
+    ok = (not (missing or no_id or idx_dups or tile_dups or bad_ptr or bad_chain or wrong_kind)
+          and (tol is None or geo_max <= tol) and edge_max <= EDGE_TOLERANCE_UNITS)
+    measure = "opened" if kind == "polygon" else "interior max"
+    if geojson and tol is None:
+        tail = f", area difference max {geo_max:.4f} (geometry not judged: simplified at build)"
+    elif geojson:
+        tail = f", area difference max {geo_max:.4f} (≤ {tol})"
+    elif tol is None:
+        tail = (f", {measure} {geo_max:.3f} p99 {geo_p99:.3f} grid units "
+                "(geometry not judged: tiles simplified at max zoom)")
+    elif kind != "polygon":
+        tail = (f", {measure} {geo_max:.3f} p99 {geo_p99:.3f} (≤ {tol}), edge max {edge_max:.3f} "
+                f"(≤ {EDGE_TOLERANCE_UNITS}) grid units")
+    else:
+        tail = f", {measure} {geo_max:.3f} p99 {geo_p99:.3f} grid units (≤ {tol})"
+    out.update(ok=ok, pieces=[(f, json.loads(ln)["geometry"], w) for f, ln, w in pieces],
+               zoom=zoom, missing=missing, geo_max=geo_max, edge_max=edge_max, tolerance=tol,
+               text=f"{ds} ({kind}): {'GeoJSON' if geojson else f'tiles z{zoom}'} {len(tile_ids)} ids "
+                    f"({'complete' if complete else 'sampled'}), "
+                    f"IDX {len(idx_ids)} rows · missing {missing} · IDX extras {extras} · "
+                    f"IDX dups {idx_dups} · tile dups {tile_dups} · pointer errors {bad_ptr}/{len(pick)} · "
+                    f"chain errors {bad_chain} · "
+                    + (f"[FAIL] GEO holds {', '.join(wrong_kind)}, index.json says {kind} · " if wrong_kind else "")
+                    + (f"served features without an id {no_id} · " if no_id else "")
+                    + (f"served GeoJSON vs GEO {len(worst)} features" if geojson else f"tile vs GEO {len(worst)} pieces")
+                    + (f" ({', '.join(x for x in (f'{both_empty} empty inside the tile' if both_empty else '', f'{thin} thinner than 2 units' if thin else '') if x)} — not compared)"
+                       if both_empty or thin else "")
+                    + f"{tail} · {'OK' if ok else 'FAIL'}")
+    return out
+
+
+def check_lines(analysis_dir, layers_dir, manifest, sample=1000, max_tiles=0, seed=1, only=None):
+    """Every index.json dataset (or those in `only`) against its served archive:
+    every served tile id in IDX (0 missing), no duplicate in IDX, IDX and CHAINS
+    rows pointing at the GEO row of their fid, and a sample of tile pieces on
+    their GEO geometry — lines and points within INTERIOR_TOLERANCE_UNITS of it (edge
+    vertices within EDGE_TOLERANCE_UNITS),
+    polygons (manifest `geometry`) within POLYGON_TOLERANCE_UNITS once both are
+    clipped to the piece's tile. Prints a line per dataset; returns True if clean."""
     index = json.loads((Path(analysis_dir) / "index.json").read_text())
     layers = {L["id"]: L for L in load_layers(manifest)}
     clean = True
     for ds, m in sorted(index["datasets"].items()):
-        d = Path(analysis_dir) / m["path"]
-        layer = layers[ds]
-        rng = random.Random(seed)
-        pieces, seen = [], [0]
-
-        def keep(fid, line):
-            seen[0] += 1
-            if len(pieces) < sample:
-                pieces.append((fid, line))
-            elif (j := rng.randrange(seen[0])) < sample:
-                pieces[j] = (fid, line)
-
-        tile_ids, tile_dups, complete, zoom = set(), 0, True, None
-        archives = [p for p in artifacts(layer, Path(layers_dir)) if p.suffix == ".pmtiles"]
-        if not archives:
-            print(f"{ds}: [FAIL] no served archive in {layers_dir} to check against")
-            clean = False
+        if only and ds not in only:
             continue
-        for path in archives:
-            zoom, st = scan_pmtiles(path, layer["id_field"], bool(layer.get("native_id")),
-                                    None, max_tiles, keep)
-            tile_dups += st.dups + len(tile_ids & st.ids)
-            tile_ids |= st.ids
-            complete &= st.complete
-        idx = pq.read_table(d / m["idx"]["name"]).to_pydict()
-        idx_ids = [norm(v) for v in idx["fid"]]
-        idx_set = set(idx_ids)
-        idx_dups = len(idx_ids) - len(idx_set)
-        missing = len(tile_ids - idx_set)
-        extras = len(idx_set - tile_ids) if complete else "n/a"
-        geo_fid = [norm(v) for e in m["geo"]
-                   for v in pq.read_table(d / e["name"], columns=["fid"]).column("fid").to_pylist()]
-        pick = rng.sample(range(len(idx_ids)), min(sample, len(idx_ids)))
-        bad_ptr = sum(geo_fid[idx["row"][i]] != idx_ids[i] for i in pick)
-        bad_chain = 0
-        if m.get("chains"):
-            ch = pq.read_table(d / m["chains"]["name"]).to_pydict()
-            chain_of = dict(zip(idx_ids, idx["chain"]))
-            for i in rng.sample(range(len(ch["fid"])), min(sample, len(ch["fid"]))):
-                f = norm(ch["fid"][i])
-                bad_chain += geo_fid[ch["row"][i]] != f or chain_of.get(f) != ch["chain"][i]
-        # tile pieces against their GEO geometry
-        row_of = dict(zip(idx_ids, idx["row"]))
-        want = {}
-        for fid, line in pieces:
-            if fid in row_of:
-                want.setdefault(row_of[fid], []).append(json.loads(line)["geometry"])
-        worst = []
-        for e in m["geo"]:
-            lo, hi = e["row_offset"], e["row_offset"] + e["rows"]
-            rows = [r for r in want if lo <= r < hi]
-            if not rows:
-                continue
-            wkb = pq.read_table(d / e["name"], columns=["geometry"]).column("geometry").take(
-                np.array(rows) - lo).to_pylist()
-            for r, g in zip(rows, shapely.from_wkb(wkb)):
-                for piece in want[r]:
-                    worst.append(tile_vs_geo_units(shapely.from_geojson(json.dumps(piece)), g, zoom))
-        worst.sort()
-        geo_max = worst[-1] if worst else 0.0
-        geo_p99 = worst[int(0.99 * (len(worst) - 1))] if worst else 0.0
-        ok = not (missing or idx_dups or tile_dups or bad_ptr or bad_chain) \
-            and geo_max <= GEOM_TOLERANCE_UNITS
-        clean &= ok
-        print(f"{ds}: tiles z{zoom} {len(tile_ids)} ids ({'complete' if complete else 'sampled'}), "
-              f"IDX {len(idx_ids)} rows · missing {missing} · IDX extras {extras} · "
-              f"IDX dups {idx_dups} · tile dups {tile_dups} · pointer errors {bad_ptr}/{len(pick)} · "
-              f"chain errors {bad_chain} · tile vs GEO {len(worst)} pieces, max {geo_max:.3f} "
-              f"p99 {geo_p99:.3f} grid units (≤ {GEOM_TOLERANCE_UNITS}) · {'OK' if ok else 'FAIL'}")
+        r = check_dataset(ds, m, analysis_dir, layers.get(ds), layers_dir, sample, max_tiles, seed)
+        clean &= r["ok"]
+        print(r["text"])
     return clean
 
 
@@ -352,67 +552,6 @@ def attr_value(v):
     if isinstance(v, (int, float)):
         return repr(float(v))
     return str(v)
-
-
-def world_spec(layer_id):
-    """How build_global_tiles.py builds a world layer: (continental inputs in
-    dedupe order, select, region fields it adds) — or None for a layer
-    build_tiles.py builds from its manifest `src`."""
-    import build_global_tiles as g
-    if layer_id == g.TRANSMISSION_BASE:
-        if g.TRANSMISSION_KEPT.exists():   # the merged, deduped input, kept as tiled
-            return [g.TRANSMISSION_KEPT], g.TRANSMISSION_SELECT, g.LINE_FIELDS
-        return ([g.BUILD_DIR / f"{g.TRANSMISSION_SRC_STEM}_{c}.gpkg" for c in g.REGION_CODES],
-                g.TRANSMISSION_SELECT, g.LINE_FIELDS)
-    for spec in g.RETILE:
-        if spec["base"] == layer_id:
-            return g._retile_inputs(spec), spec["select"], spec["fields"]
-    for spec in g.TILE_POLYGONS:
-        if spec["base"] == layer_id:
-            return ([g.BUILD_DIR / f"{spec['src']}_{c}.gpkg" for c in g.REGION_CODES],
-                    spec["select"], spec["fields"])
-    return None
-
-
-def input_rows(layer):
-    """(inputs, ogr2ogr options, fields the tiles may carry beyond the input):
-    the rows tippecanoe read for this layer, as the build reads them."""
-    world = world_spec(layer["id"])
-    if world:
-        srcs, select, region_fields = world
-        return ([p for p in srcs if p.exists()],
-                lambda p: ([] if p.suffix in (".geojsonl", ".gz") else
-                           [*(["-oo", "X_POSSIBLE_NAMES=lon", "-oo", "Y_POSSIBLE_NAMES=lat",
-                               "-oo", "KEEP_GEOM_COLUMNS=NO"] if p.suffix == ".csv" else []),
-                            "-select", ",".join(select)]),
-                set(region_fields))
-    import build_tiles as b
-    src = ROOT / layer["src"]
-    return ([src] if src.exists() else [],
-            lambda p: [*b._src_opts(p), *b._common_opts(layer)], set())
-
-
-def stream_rows(path, opts):
-    """Each input row's properties (plus a feature `id`, as `__id`), streamed."""
-    if str(path).endswith((".geojsonl", ".geojsonl.gz")):
-        with _open_text(path) as f:
-            for ln in f:
-                if ln.strip():
-                    ft = json.loads(ln)
-                    yield {**(ft.get("properties") or {}), "__id": ft.get("id")}
-        return
-    proc = subprocess.Popen(["ogr2ogr", "-f", "GeoJSONSeq", "/vsistdout/", str(path), *opts],
-                            stdout=subprocess.PIPE, text=True, bufsize=1 << 20)
-    try:
-        for ln in proc.stdout:
-            ln = ln.strip().lstrip("\x1e")
-            if ln:
-                ft = json.loads(ln)
-                yield {**(ft.get("properties") or {}), "__id": ft.get("id")}
-    finally:
-        proc.stdout.close()
-        if proc.wait() != 0:
-            raise RuntimeError(f"ogr2ogr {path} exited {proc.returncode}")
 
 
 def sample_tiles(lines, id_field, native, max_tiles, rng):
@@ -599,7 +738,8 @@ def main(argv=None):
               else "\nFAIL: tile attributes differ from the build input")
         return 0 if ok else 1
     if args.lines:
-        ok = check_lines(args.analysis_dir, args.layers_dir, args.manifest, args.sample, args.max_tiles)
+        ok = check_lines(args.analysis_dir, args.layers_dir, args.manifest, args.sample, args.max_tiles,
+                         only={args.only} if args.only else None)
         print("\nOK: line geometry files agree with the tiles" if ok else "\nFAIL: line geometry files")
         return 0 if ok else 1
 

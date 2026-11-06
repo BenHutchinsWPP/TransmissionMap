@@ -29,7 +29,7 @@ Canada (ECCC), which carry real polygon geometry and need no join — see
 | **License** | Public domain — US Government work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) (NWS); ECCC data is under Canada's Open Government Licence — attribution required, see [data-sources.md](../data-sources.md) |
 | **Coverage** | US (all NWS forecast offices, including territories where alerts are issued) + Canada (ECCC, phase 2) |
 | **Vintage** | Rolling — whatever is `active` (NWS) / not `status_en: ended` (ECCC) at pull time |
-| **Served (prod)** | `nws_alerts.geojson` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (same hosting pattern as [live wildfire](wildfire-live.md) — GitHub Release assets have no CORS, which breaks live-map fetches). Zone-join tileset `nws_zones.pmtiles` is separately published to `data-static` (see "Zone/county join" below). |
+| **Served (prod)** | `nws_alerts.geojson` at `live.wpptx.org` (bucket `live-wpptx-org`, uploaded by the feed job; same hosting as [live wildfire](wildfire-live.md)). Zone-join tileset `nws_zones.pmtiles` is published to `data.wpptx.org` (see "Zone/county join" below). |
 | **Served (dev)** | Local `data/layers/nws_alerts.geojson` — **not in git** (`data/layers/` is gitignored). `make nws-alerts-dev` builds it, fetching live from api.weather.gov + api.weather.gc.ca (no manual downloads). Offline: pass pre-downloaded responses to `fetch_nws_alerts.py --input` (NWS) and `--input-eccc` (ECCC). |
 | **Built by** | `scripts/fetch_nws_alerts.py` |
 | **Refresh** | `.github/workflows/alerts-outages.yml` (shared with the ODIN outage feed; the two fetch scripts run in parallel, failure-isolated) — primary trigger `workflow_dispatch`, fired every 10 min by one cron-job.org job, plus an insurance `schedule:` cron every **2 h** (`2 */2`) so the feed can't sit stale past the 3 h kill-switch if cron-job.org dies. Joins the shared `data-branch` concurrency group (also used by `wildfire-data.yml` and `weather-data.yml`) so force-pushes to the orphan `data` branch don't collide. Failed runs surface only as a stale/aging snapshot on the map (no automatic issue). |
@@ -188,8 +188,7 @@ duplicate rows by `(ugc, type)` and writes `data/build/nws_zones.geojson` with f
 `type=forecast`, `"f"+ugc` for `type=fire`, `"m"+ugc` for `type=marine` — the single string
 used as the pmtiles `promoteId`, since MapLibre `promoteId` needs one scalar per feature
 and bare `ugc` collides). `tile_manifest.yaml`
-builds this into **`nws_zones.pmtiles`** (source layer `nws_zones`, 8382 features, 7.2
-MB). Like `county_boundaries` (see [boundaries.md](boundaries.md)), this is shared
+builds this into **`nws_zones.pmtiles`** (source layer `nws_zones`). Like `county_boundaries` (see [boundaries.md](boundaries.md)), this is shared
 join infra with no `release_manifest.yaml` download-pack entry and no legend of its own.
 `/zones/county/`-issued alerts need no new tileset — they fall back to the existing
 `county_boundaries.pmtiles` join via FIPS (see [boundaries.md](boundaries.md); NWS
@@ -197,7 +196,7 @@ county-coded alerts join the same shared tileset ODIN outages uses).
 
 Zone shapefiles change only a few times a year (NWS reissues zones periodically for
 CWA/zone boundary changes), so rebuilding `nws_zones.pmtiles` is a **manual** pipeline
-step (`make nws-zones` then `make publish-data`) — it is not part of the 10-minute feed
+step (`make nws-zones` then `make publish-r2`) — it is not part of the 10-minute feed
 cadence and not triggered automatically.
 
 **Vintage drift detection:** `extract_nws_zones.py` also writes the sorted tile-key list
@@ -206,8 +205,7 @@ script). `fetch_nws_alerts.py` checks every alert's zone key against it — unkn
 (an alert naming a UGC created after the tileset build, which would silently no-paint)
 are counted into `stats.unknown_zone_keys`, logged, and surfaced as a CI `::warning::`
 annotation. That warning is the rebuild reminder: run `make nws-zones`, `make
-publish-data`, and commit the refreshed key list. Current vintage is valid to Apr 2026;
-expect the next NWS revision ~spring 2027. If the key file is missing the check is
+publish-r2`, and commit the refreshed key list.  If the key file is missing the check is
 skipped (fail-open), never a feed failure.
 
 **Frontend join module:** `assets/nws-zone-join.ts` (model: `assets/odin-outages.ts`).
@@ -239,8 +237,8 @@ ECCC-sourced entries are suffixed "(ECCC)".
 Canada via MSC GeoMet's OGC API Features (`collections/weather-alerts`, **not**
 `collections/alerts`) — all features there already carry real `Polygon` geometry (one
 feature per zone-polygon per alert; `status_en: "ended"` rows are filtered out), so they
-merge straight into `features` with `country: "CA"` and need no zone join. Payload is
-reduced from an ~11 MB raw pull to ~220 KB via `shapely.simplify(0.01,
+merge straight into `features` with `country: "CA"` and need no zone join. The payload is
+kept small by `shapely.simplify(0.01,
 preserve_topology=True)` + 4-decimal-place coordinate rounding, applied only to the
 active, allowlisted subset.
 

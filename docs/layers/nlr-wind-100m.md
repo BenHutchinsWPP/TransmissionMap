@@ -11,7 +11,7 @@
 | **Acquired** | 2026-06-04 (recovered from Internet Archive — see note below) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution requested** | "Source: NREL Wind Integration National Dataset (WIND) Toolkit" (Draxl et al. 2015, *Applied Energy* 151:355–366) |
-| **Served** | `data/layers/nlr_wind_100m.pmtiles` — raster PMTiles (WEBP, baked color, z1–6, 3.5 MB) + `nlr_wind_100m_lut.i16.gz`/`.json` for hover readout (0.4 MB gzipped, lazy-loaded) |
+| **Served** | `data/layers/nlr_wind_100m.pmtiles` — raster PMTiles (WEBP, baked color, z1–6) + `nlr_wind_100m_lut.i16.gz`/`.json` for hover readout (gzipped, lazy-loaded) |
 | **Built by** | `scripts/build_wind_resource.sh` (+ `scripts/wind_color_ramp.txt`) → `data/build/wind/` → PMTiles + COG |
 | **Raw input** | Three regional GeoTIFFs extracted from `data/raw/wind/{us,canada,mexico}-wind-data.zip` (**not committed**) |
 
@@ -100,7 +100,7 @@ row-major, NoData = 0) + `nlr_wind_100m_lut.json` (dims + bbox + scale). It is
 (`RASTER_PROBES` / `ensureRasterLut` in `assets/raster-probes.ts`, shared with the solar
 layer). On `mousemove`, `sampleRaster()` does a nearest-cell lookup and `updateRasterArrow()`
 moves a ▼ arrow along the legend gradient to the cursor's wind speed and prints
-`"N.N mph at cursor"` beneath it, in the speed unit chosen in File ▸ Settings… (see [settings.md](../settings.md)). For exact, full-resolution values use the GeoTIFF download.
+`"N.N mph at cursor"` beneath it, in the speed unit chosen in File ▸ Settings (see [settings.md](../settings.md)). For exact, full-resolution values use the GeoTIFF download.
 
 Ramp (single source of truth: `scripts/wind_color_ramp.txt`, mirrored by `WIND_RAMP_STOPS`
 in `src/colors/ramps.ts`): transparent → light teal → teal → blue → dark navy over **0–12 m/s**;

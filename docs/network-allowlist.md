@@ -31,7 +31,8 @@ The app fails to load or shows no data without these.
 | Host | Why | If blocked |
 |---|---|---|
 | `www.wpptx.org` | The app itself (GitHub Pages) | Page doesn't load at all |
-| `raw.githubusercontent.com` | Everything the map fetches from this project: the built layers and download packs on the `data-static` branch, and the live feeds (wildfire, NWS alerts, outages, weather) on the `data` branch | Basemap renders but every data layer is empty, and stale-data warnings appear |
+| `data.wpptx.org` | The project's built map layers, analysis files and download packs | Basemap renders but every data layer is empty |
+| `live.wpptx.org` | The project's live feeds (wildfire, NWS alerts, outages, weather) | Live layers stay empty and stale-data warnings appear |
 | `tiles.openfreemap.org` | Default basemap: Light/Dark/Hydro vector tiles, map label fonts, icons; also the road/place/boundary overlay drawn over Aerial | Gray/blank background on Light, Dark and Hydro; all map text missing; Aerial shows imagery with no roads or place names |
 | `geocode-api.arcgis.com` | Search box (place/address lookup) | Place search silently returns nothing |
 
@@ -49,6 +50,7 @@ links — the app runs without these, those features just won't load.
 | `geo.weather.gc.ca` | Canadian radar overlay |
 | `elevation-tiles-prod.s3.amazonaws.com` | 3D Terrain and Hillshade toggles (elevation tiles) |
 | `elevation.nationalmap.gov` | Line elevation profile (USGS 3DEP elevation samples), only after a visitor opens a line's profile; if blocked, the profile uses the elevation tiles above |
+| `moratoriums.wpptx.org` | Data center moratoriums layer |
 | `s3.us-west-2.amazonaws.com` | Grid Operations layer (EIA-930 hourly data read from the PUDL Project's published tables, path `/pudl.catalyst.coop/`), only while that layer is on |
 | `openrouter.ai` | Map chat, only after a visitor enters their own OpenRouter key; nothing is sent otherwise |
 | `benhutchinswpp.github.io` | Opening a link shared before the move to `www.wpptx.org` — GitHub Pages redirects it, keeping the path and map state |
@@ -57,7 +59,7 @@ links — the app runs without these, those features just won't load.
 
 Some links open external sites in a new tab: the "Open with" menu
 (`google.com`, `openstreetmap.org`, `openinframap.org`), the per-layer download
-packs (`github.com`, which redirects to `release-assets.githubusercontent.com`) and
+packs (from `data.wpptx.org`, above) and
 per-layer source
 citations (various `.gov`/`.org` sites, listed in
 [data-sources.md](data-sources.md)). If blocked, only that click fails —
@@ -95,7 +97,7 @@ the app, the chat included, is unaffected.
 
 ## Checking it from a browser
 
-The app can test these hosts itself: **File ▸ Diagnostics…** probes every
+The app can test these hosts itself: **Tools ▸ Diagnostics** probes every
 host in the Required and Optional tables, and the chart and canvas hosts
 except `fonts.gstatic.com`, and reports what the browser observed. Note that a
 browser cannot distinguish a blocked request from a host being down from a

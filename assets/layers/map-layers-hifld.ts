@@ -17,7 +17,6 @@ import type { LayerPlan } from './layer-plan.js';
 
 export function planHifldTransmission(): LayerPlan {
   return planTransmissionLines({
-    sources: [{ id: "hifld-transmission-lines" }],
     sourceLayer: "hifld_transmission_lines",
     registryId: "hifld-transmission-lines", prefix: "hifld-transmission-lines",
     kvExpr: ["to-number", ["get", "VOLTAGE"], -1],

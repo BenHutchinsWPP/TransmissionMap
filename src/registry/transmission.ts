@@ -1,27 +1,10 @@
 // Layer registry entries — substations and transmission lines.
-import type { DataKey, LayerDef } from '../types.js';
+import type { LayerDef } from '../types.js';
 import { OSM_CREDIT, HIFLD_CREDIT } from './sources.js';
 import { OSM_NATIVE_FID } from './osm-fid.js';
 
-// OSM transmission ships as six planet-wide archives split by voltage class —
-// one world file is past the host's 100 MiB per-file ceiling. This table is the
-// single definition of that split: assets/layers/map-layers-osm.ts builds the
-// MapLibre sources from it, and OSM_TL_LAYER_IDS below derives the style-layer
-// ids, so the two cannot drift. `kv` is the half-open [min, max) class the
-// archive holds; `-1` encodes unknown voltage, so it falls into the first band.
-// Ascending order is paint order. See docs/hosting-plan.md.
-export const OSM_TL_BANDS: { suffix: string; dataKey: DataKey; kv: [number, number] }[] = [
-  { suffix: "",       dataKey: "osm_transmission_lines_kv0",   kv: [-Infinity, 50] },
-  { suffix: "-kv50",  dataKey: "osm_transmission_lines_kv50",  kv: [50, 100] },
-  { suffix: "-kv100", dataKey: "osm_transmission_lines_kv100", kv: [100, 125] },
-  { suffix: "-kv125", dataKey: "osm_transmission_lines_kv125", kv: [125, 200] },
-  { suffix: "-kv200", dataKey: "osm_transmission_lines_kv200", kv: [200, 300] },
-  { suffix: "-kv300", dataKey: "osm_transmission_lines_kv300", kv: [300, Infinity] },
-];
-
 // The voltage tiers planTransmissionLines() paints, lowest first, with the
-// half-open range each one's filter selects. A tier only gets a style layer on
-// an archive whose class it overlaps, so most bands carry a single tier.
+// half-open kV range each one's filter selects (`-1` encodes unknown voltage).
 export const OSM_TL_TIERS: { id: string; kv: [number, number] }[] = [
   { id: "lv",      kv: [1, 50] },
   { id: "unknown", kv: [-Infinity, 1] },
@@ -29,38 +12,23 @@ export const OSM_TL_TIERS: { id: string; kv: [number, number] }[] = [
   { id: "hv",      kv: [100, Infinity] },
 ];
 
-// Overlays that apply to every archive: HVDC runs at every voltage class, and a
-// line can carry a name in any of them.
+// Overlays drawn over every tier: HVDC stripes and "DC" labels, and the name label.
 const OSM_TL_OVERLAYS = ["dc", "dc-label", "label"];
 
-const overlaps = (a: [number, number], b: [number, number]) => a[0] < b[1] && b[0] < a[1];
+const tlId = (part: string) => `osm-transmission-lines-${part}`;
 
-/** Style-layer ids for the named tiers, across every archive that can hold them.
- *
- * Anything that names a transmission style layer must go through this: the layer
- * is spread over six archives, and an id built as `osm-transmission-lines-hv`
- * only ever matches the first one. That is a silent failure — clicks and popups
- * just stop working above 50 kV. Tiers are returned in the order given, which is
- * priority order for `queryRenderedFeatures`.
- */
-export const osmTlLayerIds = (...tiers: string[]) =>
-  tiers.flatMap(tier => {
-    const t = OSM_TL_TIERS.find(x => x.id === tier);
-    const bands = t ? OSM_TL_BANDS.filter(b => overlaps(b.kv, t.kv)) : OSM_TL_BANDS;
-    return bands.map(b => `osm-transmission-lines${b.suffix}-${tier}`);
-  });
+// Every style layer planTransmissionLines() builds on the one source, in paint order.
+const OSM_TL_LAYER_IDS = [...OSM_TL_TIERS.map(t => t.id), ...OSM_TL_OVERLAYS].map(tlId);
 
-// Every style layer planTransmissionLines() builds, in paint order.
-const OSM_TL_LAYER_IDS = [
-  ...osmTlLayerIds(...OSM_TL_TIERS.map(t => t.id)),
-  ...osmTlLayerIds(...OSM_TL_OVERLAYS),
-];
+/** Style-layer ids of the line tiers a click can hit (and the popup renders for),
+ *  highest voltage first, then the DC stripe. Priority order for queryRenderedFeatures. */
+export const OSM_TL_POPUP_IDS = ["hv", "mv", "lv", "unknown", "dc"].map(tlId);
 
 // Click hit-test priority for the tiered (non-overlay) style layers, highest
 // voltage tier tested first — matches OSM_TL_TIERS order (hv, mv, lv, unknown
 // is the priority order used by the popup's queryRenderedFeatures list, so the
 // tiers are named explicitly rather than via OSM_TL_TIERS' own order).
-const OSM_TL_CLICK_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown");
+const OSM_TL_CLICK_IDS = OSM_TL_POPUP_IDS.slice(0, 4);
 const OSM_TL_CLICK_PRIORITY: Record<string, number> = Object.fromEntries(
   OSM_TL_CLICK_IDS.map((id, i) => [id, 800 - i * 10])
 );
@@ -95,7 +63,8 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:      "layer.osmSubPolygons",
     group:         "substations",
     sourceId:      "osm",
-    data:          { kind: "pmtiles", key: "osm_substations_polygons", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
+    data:          { kind: "pmtiles", key: "osm_substations_polygons", credit: OSM_CREDIT, id: OSM_NATIVE_FID,
+                     analysis: "osm_substations_polygons" },
     dataset:       "osm_substations_polygons",
     swatch:        "#f97316",
     defaultOn:     false,
@@ -141,7 +110,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.osmLines",
     group:               "transmission",
     sourceId:            "osm",
-    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT, id: OSM_NATIVE_FID,
+    data:                { kind: "pmtiles", key: "osm_transmission_lines", credit: OSM_CREDIT, id: OSM_NATIVE_FID,
                            analysis: "osm_transmission_lines" },
     dataset:             "osm_transmission_lines",
     swatch:              "#3b82f6",
@@ -227,12 +196,14 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:    "layer.weccPaths",
     group:       "transmission",
     sourceId:    "wecc-paths",
-    data:        { kind: "geojson", key: "wecc_paths", credit: '<a href="https://www.wecc.org/">WECC</a>' },
+    data:        { kind: "geojson", key: "wecc_paths", credit: '<a href="https://www.wecc.org/">WECC</a>', id: { field: "id" } },
+    dataset:     "wecc_paths",
     swatch:      "#eab308",
     defaultOn:   false,
     mapLayerIds: ["wecc-path-corridors", "wecc-path-corridors-outline",
                   "wecc-path-lines-highlight", "wecc-paths-circles", "wecc-paths-label"],
     clickPriority: { "wecc-paths-circles": 910 },
+    drawnOnly:   ["wecc-path-corridors", "wecc-path-corridors-outline"],
     regions:     ["usa"],
     downloads: {
       geojson: "data/releases/wecc-paths.zip",

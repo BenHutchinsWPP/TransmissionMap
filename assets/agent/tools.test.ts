@@ -121,7 +121,6 @@ describe('dispatch', () => {
     ['unknown argument', 'setBasemap', { basemap: 'dark', token: 'x' }, /args\.token is not a known argument/],
     ['wrong type', 'setLayerVisible', { layerId: 'railroads', on: 'yes' }, /args\.on must be boolean/],
     ['layer outside the enum', 'setLayerVisible', { layerId: 'my-house', on: true }, /args\.layerId must be one of/],
-    ['a non-dataset layer to describe', 'describe', { layerId: 'railroads' }, /args\.layerId must be one of/],
     ['a prototype key: constructor', 'query', { layerId: GEN, constructor: 5 }, /args\.constructor is not a known argument/],
     ['a prototype key: toString', 'setBasemap', { basemap: 'dark', toString: 'x' }, /args\.toString is not a known argument/],
     ['a prototype key: __proto__', 'setBasemap', '{"basemap": "dark", "__proto__": {"x": 1}}', /args\.__proto__ is not a known argument/],
@@ -538,15 +537,21 @@ describe('toolSchemas', () => {
 
   it('fills the enums from the registry', () => {
     expect(params('setLayerVisible').properties!.layerId.enum).toEqual(LAYERS.map(l => l.id));
-    const datasets = LAYERS.filter(l => l.dataset).map(l => l.id);
-    expect(datasets).toHaveLength(23);
-    expect(params('describe').properties!.layerId.enum).toEqual(datasets);
-    // The other data tools take the id as a string (describe/query refuse any other layer at run
-    // time), so each new dataset layer adds to one enum, not six.
-    for (const name of ['setWhere', 'query', 'count', 'aggregate', 'showTable']) {
+    // The data tools take the id as a string (describe answers queryable:false and the others refuse
+    // any non-dataset layer at run time), so a new dataset layer costs no schema bytes.
+    for (const name of ['describe', 'setWhere', 'query', 'count', 'aggregate', 'showTable']) {
       expect(params(name).properties!.layerId, name).toMatchObject({ type: 'string' });
+      expect(params(name).properties!.layerId.enum, name).toBeUndefined();
     }
     expect(params('setBasemap').properties!.basemap.enum).toEqual(api.BASEMAPS);
+  });
+
+  it('passes checkArgs, and the real describe refuses an unknown id and says a non-dataset layer is not queryable', async () => {
+    const real = await vi.importActual<typeof import('../dataset-query.js')>('../dataset-query.js');
+    const nonDataset = LAYERS.find(l => !l.dataset)!.id;
+    for (const id of ['no-such-layer', nonDataset]) expect(checkArgs({ layerId: id }, params('describe')), id).toBeNull();
+    expect(real.describe('no-such-layer')).toMatchObject({ ok: false });
+    expect(real.describe(nonDataset)).toMatchObject({ ok: true, result: { queryable: false } });
   });
 
   it('runAnalysis takes the same condition items as query', () => {

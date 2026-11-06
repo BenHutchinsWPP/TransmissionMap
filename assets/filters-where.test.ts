@@ -114,7 +114,7 @@ describe('setWhere', () => {
       ['nws-alerts', [KV345], 'drawn partly by feature-state'],
       ['osm-dc-clusters', [KV345], '"osm-dc-clusters" is not a layer id'],       // map layer, not a registry id
       ['osm-dc-cluster-count', [KV345], '"osm-dc-cluster-count" is not a layer id'],
-      ['railroads', [KV345], 'has no field schema'],
+      ['nexrad-radar', [KV345], 'has no field schema'],
       ['no-such-layer', [KV345], '"no-such-layer" is not a layer id'],
       [SUBS, [{ field: 'states', op: '=', value: 'TX' }], 'is not a declared field'],
       [SUBS, [{ field: 'nominal_kv', op: 'in', value: [1] }], 'is not available on'],

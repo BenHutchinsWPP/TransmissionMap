@@ -16,7 +16,7 @@ const LAYER_IDS = new Set(LAYERS.map(l => l.id));
 
 describe('EXPERIENCES catalogue shape', () => {
   it('holds the full curated set', () => {
-    expect(EXPERIENCES.length).toBe(17);
+    expect(EXPERIENCES.length).toBe(16);
   });
 
   it('ids are unique and URL-safe slugs', () => {

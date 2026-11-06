@@ -21,7 +21,9 @@ single maxzoom by construction. Every feature carries `fid`, the stable id the
 extracts build (osm_common.osm_fid): the seam dedupe keys on it, and the vector
 archives store it as the native MVT feature id (`--use-attribute-for-id`). The merged input is then tagged with the global
 region fields (countries and admin1 everywhere, plus counties, ba, nerc and
-retail inside the US) by region_join.py, before tippecanoe or the dump.
+retail inside the US) by region_join.py, before tippecanoe or the dump. The
+tagged input of every RETILE, TILE_POLYGONS and transmission layer is kept
+gzipped at data/build/world/<base>.geojsonl.gz.
 
 Usage:
   python scripts/build_global_tiles.py                 # everything
@@ -58,8 +60,6 @@ LAYERS_DIR = ROOT / "data" / "layers"
 # `asia-latest` both cover the Caucasus and western Russia, and nothing clips the
 # extracts to continent polygons — see docs/hosting-plan.md.
 REGION_CODES = ["na", "eu", "as", "sa", "af", "oc", "ca", "an"]
-
-CEILING_BYTES = 100 * 2**20  # GitHub hard-rejects any file past this.
 
 # tippecanoe stderr lines that mean features were thinned or a zoom was extended.
 # run_cmd logs them even when the command succeeds, so a build that quietly
@@ -131,7 +131,7 @@ RETILE = [
         "select": ["fid", "name", "substance", "operator"],
         "fields": LINE_FIELDS,
         # A unique id on every line limits --coalesce-densest-as-needed, which
-        # would take z12 past the 100 MiB ceiling. z11 with simplification
+        # would take z12 past what the tiles carry. z11 with simplification
         # kept off maxzoom is grid-limited (~4.8 m), finer than the z12 it
         # replaces (~9.6 m at simplification 4).
         # The 1 MB tile ceiling keeps every line at every zoom: the densest
@@ -163,24 +163,23 @@ RETILE = [
 #     own ceiling instead of overzooming. One pass makes that structurally
 #     impossible.
 #  3. **Full detail at maxzoom.** `--simplify-only-low-zooms` keeps the
-#     Douglas-Peucker pass on z2-z10 and lets z11 carry every vertex the tile
+#     Douglas-Peucker pass on z2-z11 and lets z12 carry every vertex the tile
 #     grid can hold. See TRANSMISSION_TIPPECANOE_FLAGS.
 #
-# The output is six planet-wide archives, one per voltage class, because one world
-# archive would exceed the host's 100 MiB per-file ceiling (docs/hosting-plan.md).
+# The output is one planet-wide archive.
 TRANSMISSION_BASE = "osm_transmission_lines"
 TRANSMISSION_SRC_STEM = "transmission_lines"
-# The merged world input, kept for build_line_parquet.py (docs/pipeline.md
-# § Line geometry). Untagged: the line geometry files carry no region fields.
+# The merged, deduped, region-tagged world input, kept for build_line_parquet.py
+# (docs/pipeline.md § Line geometry); it carries the fields the tiles carry.
 TRANSMISSION_KEPT = BUILD_DIR / "world" / "transmission_world.geojsonl.gz"
 TRANSMISSION_MIN_ZOOM = 2
-TRANSMISSION_MAX_ZOOM = 11
+TRANSMISSION_MAX_ZOOM = 12
 
 # Columns carried into the tiles. `minz` is needed at tile time (the -j ladder
 # selects on it) but nothing in assets/ or src/ reads it, so it is dropped again
-# when the voltage bands are cut — worth 2.5% of the archive. `fid` becomes the
-# feature id in the one world pass, before the cut, so each way keeps its id in
-# the one band it lands in (tile-join carries feature ids through unchanged).
+# when the finished archive is written — worth 2.5% of the archive. `fid` becomes
+# the feature id in the one world pass (tile-join carries feature ids through
+# unchanged).
 TRANSMISSION_SELECT = ["fid", "nominal_kv", "operator", "name",
                        "is_undergrnd", "is_dc", "minz"]
 TRANSMISSION_DROP_AFTER_TILING = ["minz"]
@@ -202,11 +201,11 @@ TRANSMISSION_ZOOM_LADDER = json.dumps(
 )
 
 # `--simplify-only-low-zooms` is the precision lever. Without it the
-# `--simplification=5` pass also runs at maxzoom, so a z11 line carries ~5 tile
+# `--simplification=5` pass also runs at maxzoom, so a z12 line carries ~5 tile
 # units of Douglas-Peucker error on top of the grid. Because the 4096-unit tile
-# grid at zoom z equals screen pixels at z+4, that is ~5 px of error at z15 —
+# grid at zoom z equals screen pixels at z+4, that is ~5 px of error at z16 —
 # visible where a line meets a substation bus. Restricting it to the low zooms
-# leaves z11 grid-limited: one screen pixel at z15, the floor for this maxzoom.
+# leaves z12 grid-limited (2.4 m): one screen pixel at z16, the floor for this maxzoom.
 #
 # `--maximum-tile-bytes` is raised to 1 MB for headroom, so that the zoom ladder
 # rather than a byte budget decides what a tile holds: tippecanoe still thins a
@@ -217,24 +216,6 @@ TRANSMISSION_TIPPECANOE_FLAGS = [
     "--simplification=5",
     "--simplify-only-low-zooms",
     "--maximum-tile-bytes=1000000",
-]
-
-# Voltage classes, in ascending order. `suffix` names the artifact and the
-# frontend source; `filter` is the tippecanoe/tile-join expression that selects
-# the class. Ascending order matters twice over: assets/constants.ts lists the
-# archives in this order so MapLibre paints higher voltages last, and
-# `nominal_kv = -1` encodes unknown (not NULL, not 0), which sorts below
-# everything and so falls into the bottom band for free.
-#
-# Every cut lands in an empty stretch of the voltage distribution, so no dense
-# class is split across two files (docs/hosting-plan.md).
-TRANSMISSION_BANDS = [
-    {"suffix": "kv0",   "filter": ["<", "nominal_kv", 50]},
-    {"suffix": "kv50",  "filter": ["all", [">=", "nominal_kv", 50],  ["<", "nominal_kv", 100]]},
-    {"suffix": "kv100", "filter": ["all", [">=", "nominal_kv", 100], ["<", "nominal_kv", 125]]},
-    {"suffix": "kv125", "filter": ["all", [">=", "nominal_kv", 125], ["<", "nominal_kv", 200]]},
-    {"suffix": "kv200", "filter": ["all", [">=", "nominal_kv", 200], ["<", "nominal_kv", 300]]},
-    {"suffix": "kv300", "filter": [">=", "nominal_kv", 300]},
 ]
 
 # Polygon layers the continental build ships as GeoJSON. A planet-wide GeoJSON
@@ -280,7 +261,7 @@ def _build_plan() -> List[tuple]:
             for spec in RETILE]
     plan.append((
         TRANSMISSION_BASE,
-        [LAYERS_DIR / f"{TRANSMISSION_BASE}_{b['suffix']}.pmtiles" for b in TRANSMISSION_BANDS],
+        [LAYERS_DIR / f"{TRANSMISSION_BASE}.pmtiles"],
         [BUILD_DIR / f"{TRANSMISSION_SRC_STEM}_{c}.gpkg" for c in REGION_CODES],
     ))
     plan += [(spec["base"], [LAYERS_DIR / f"{spec['base']}.pmtiles"],
@@ -425,12 +406,18 @@ def _log_merge(read: int, kept: int):
              read, kept, read - kept, (read - kept) / read * 100 if read else 0, SEAM_KEY)
 
 
-def keep_merged(seq: Path, dest: Path):
-    """Keep a gzipped copy of the merged, deduped, untagged input.
+def kept_path(base: str) -> Path:
+    """Where a RETILE or TILE_POLYGONS layer's tagged world input is kept."""
+    return BUILD_DIR / "world" / f"{base}.geojsonl.gz"
 
-    build_line_parquet.py reads it, so the line geometry files carry exactly the
-    ids and the 1e-6° coordinates the tiles were built from. Written beside the
-    destination and renamed, so a reader never sees half a file.
+
+def keep_merged(seq: Path, dest: Path):
+    """Keep a gzipped copy of the merged, deduped, region-tagged input.
+
+    Call it after _tag_regions. build_line_parquet.py reads the transmission copy,
+    so the line geometry files carry exactly the ids and the 1e-6° coordinates the
+    tiles were built from. Written beside the destination and renamed, so a
+    reader never sees half a file.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     part = dest.with_name(dest.name + ".part")
@@ -441,55 +428,49 @@ def keep_merged(seq: Path, dest: Path):
              dest.stat().st_size / 2**20)
 
 
-def split_transmission_bands(world: Path, out_dir: Path, base: str = TRANSMISSION_BASE):
-    """Cut one finished world archive into the per-voltage-class archives.
+def finish_transmission(world: Path, out_dir: Path, base: str = TRANSMISSION_BASE):
+    """Write the finished world archive as `<base>.pmtiles`, without `minz`.
 
-    Cutting bands out of a single tiled archive rather than running tippecanoe
-    once per class guarantees every band carries the same maxzoom and the same
-    geometry it would have had unsplit. Shared with build_tiles.py so the
-    US-only pipeline emits the same six filenames the frontend names.
+    One `tile-join` pass; `-pk` keeps tiles past tile-join's 500 KB default
+    (merged tiles approach the 1 MB tile cap). Shared with build_tiles.py so the
+    US-only pipeline emits the same filename the frontend names.
     """
-    for band in TRANSMISSION_BANDS:
-        out = out_dir / f"{base}_{band['suffix']}.pmtiles"
-        cmd = ["tile-join", "-f", "-pk",
-               "-j", json.dumps({"*": band["filter"]}, separators=(",", ":"))]
-        for attr in TRANSMISSION_DROP_AFTER_TILING:
-            cmd += ["-x", attr]
-        cmd += ["-o", str(out), str(world)]
-        run_cmd(cmd, f"tile-join {out.name}")
-        size = out.stat().st_size
-        log.info("  ✓ %s (%.1f MiB)%s", out.name, size / 2**20,
-                 "" if size <= CEILING_BYTES else "  ⚠ over the 100 MiB ceiling")
+    out = out_dir / f"{base}.pmtiles"
+    cmd = ["tile-join", "-f", "-pk"]
+    for attr in TRANSMISSION_DROP_AFTER_TILING:
+        cmd += ["-x", attr]
+    cmd += ["-o", str(out), str(world)]
+    run_cmd(cmd, f"tile-join {out.name}")
+    log.info("  ✓ %s (%.1f MiB)", out.name, out.stat().st_size / 2**20)
 
 
 def retile_transmission(dry_run: bool = False):
-    """Re-tile transmission planet-wide, then cut it into voltage-class archives.
+    """Re-tile transmission planet-wide into one archive.
 
-    See the TRANSMISSION_BANDS block above for the zoom ladder and the split.
+    See the TRANSMISSION_ZOOM_LADDER block above for the zoom ladder.
     """
     srcs = [BUILD_DIR / f"{TRANSMISSION_SRC_STEM}_{c}.gpkg" for c in REGION_CODES]
     srcs = [p for p in srcs if p.exists()]
     if not srcs:
         log.warning("[skip] %s — no continental GeoPackages built", TRANSMISSION_BASE)
         return
-    log.info("=== %s ← %d continental GeoPackages, re-tiled and split %d ways ===",
-             TRANSMISSION_BASE, len(srcs), len(TRANSMISSION_BANDS))
+    log.info("=== %s ← %d continental GeoPackages, re-tiled ===",
+             TRANSMISSION_BASE, len(srcs))
 
     if dry_run:
         log.info("  $ merge + dedupe %d GeoPackages", len(srcs))
-        log.info("  $ keep the merged input -> %s", TRANSMISSION_KEPT.relative_to(ROOT))
+        log.info("  $ keep the tagged input -> %s", TRANSMISSION_KEPT.relative_to(ROOT))
         log.info("  $ tippecanoe z%d-%d %s", TRANSMISSION_MIN_ZOOM, TRANSMISSION_MAX_ZOOM,
                  " ".join(TRANSMISSION_TIPPECANOE_FLAGS + NATIVE_ID_FLAGS))
-        for band in TRANSMISSION_BANDS:
-            log.info("  $ tile-join -> %s_%s.pmtiles", TRANSMISSION_BASE, band["suffix"])
+        log.info("  $ tile-join -> %s.pmtiles", TRANSMISSION_BASE)
         return
 
     with tempfile.TemporaryDirectory(prefix="global-tx-", dir=BUILD_DIR) as tmp:
         merged = Path(tmp) / "transmission_world.geojsonl"
         read, kept = _merge_deduped(srcs, merged, TRANSMISSION_SELECT)
         _log_merge(read, kept)
-        keep_merged(merged, TRANSMISSION_KEPT)
         _tag_regions(merged, LINE_FIELDS)
+        keep_merged(merged, TRANSMISSION_KEPT)
 
         world = Path(tmp) / "transmission_world.pmtiles"
         run_cmd(
@@ -502,10 +483,9 @@ def retile_transmission(dry_run: bool = False):
             f"tippecanoe {world.name}",
         )
         merged.unlink()
-        log.info("  world archive %.1f MiB — split into voltage classes now",
-                 world.stat().st_size / 2**20)
+        log.info("  world archive %.1f MiB", world.stat().st_size / 2**20)
 
-        split_transmission_bands(world, LAYERS_DIR)
+        finish_transmission(world, LAYERS_DIR)
 
 
 def retile(spec: dict, dry_run: bool = False):
@@ -527,6 +507,7 @@ def retile(spec: dict, dry_run: bool = False):
 
     if dry_run:
         log.info("  $ merge + dedupe %d files on %s", len(srcs), SEAM_KEY)
+        log.info("  $ keep the tagged input -> %s", kept_path(base).relative_to(ROOT))
         log.info("  $ tippecanoe %s %s", out.name, " ".join(tip_args))
         return
 
@@ -540,6 +521,7 @@ def retile(spec: dict, dry_run: bool = False):
             log.warning("[skip] %s — the merged input has no features", base)
             return
         _tag_regions(merged, spec["fields"])
+        keep_merged(merged, kept_path(base))
         run_cmd(
             ["tippecanoe", "-o", str(out), "-l", base, "-t", tmp, *tip_args,
              "--read-parallel", "--force", str(merged)],
@@ -563,6 +545,7 @@ def tile_polygons(spec: dict, dry_run: bool = False):
 
     if dry_run:
         log.info("  $ merge + dedupe %d GeoPackages on %s", len(srcs), SEAM_KEY)
+        log.info("  $ keep the tagged input -> %s", kept_path(base).relative_to(ROOT))
         log.info("  $ tippecanoe %s %s", out.name, " ".join(tip_args))
         return
 
@@ -571,6 +554,7 @@ def tile_polygons(spec: dict, dry_run: bool = False):
         read, kept = _merge_deduped(srcs, merged, spec["select"])
         _log_merge(read, kept)
         _tag_regions(merged, spec["fields"])
+        keep_merged(merged, kept_path(base))
         run_cmd(
             ["tippecanoe", "-o", str(out), "-l", base, "-t", tmp, *tip_args,
              "--read-parallel", "--force", str(merged)],

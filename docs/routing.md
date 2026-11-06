@@ -211,7 +211,7 @@ an existing right-of-way; WPP's 0.5 draws it alongside.
 **Why WPP differs where it does**
 
 - **Wetland 2.5:** EPRI-KY scores wetland near its top score, and a crossing needs a Clean Water Act
-  §404 permit and matting, so wetland is weighted above forest. Its cost multiplier stays B&V's.
+  §404 permit and matting, so wetland is weighted above forest.
 - **GAP 2 and 3, designations:** a step below GAP 1 per class; designations take the GAP weight of
   their Wu risk class.
 - **Excluded areas:** Wilderness, National Parks and Wilderness Study Areas. The weight is 1000,
@@ -223,10 +223,9 @@ an existing right-of-way; WPP's 0.5 draws it alongside.
 - **Homes:** 2.0 is EPRI-KY's 9 ÷ 4.4; 1.3 and 1.6 are our steps below it. Homes multiply with
   land cover, so a farmstead in woods counts both.
 - **Floodplain 1.5:** a line can span a floodplain, and the layer covers about a tenth of the land,
-  so it stays below GAP 3. FEMA's map replaces the EPA estimate where an effective map exists, so a floodplain counts once.
-- **Aviation 100:** a cell where an FAA Part 77 surface lies below the assumed structure height is weighted as Wu weights airports within 5 km. This is screening; FAA Form 7460-1 / OE/AAA decides.
-- **Tribal land 100:** avoided because a crossing needs the tribal nation's consent; no
-  right-of-way dollars are assigned.
+  so it stays below GAP 3. A floodplain counts once (the § Data rule: FEMA where it has an effective map, else EPA).
+- **Aviation 100:** a cell where an FAA Part 77 surface lies below the assumed structure height is weighted as Wu weights airports within 5 km. This is screening; the FAA decides through its obstruction evaluation (Form 7460-1).
+- **Tribal land 100:** a crossing needs the tribal nation's consent.
 - **The rest** (critical habitat, parks, lakes, coastal barriers, munitions sites, tall structures,
   general sage-grouse habitat, very high wildfire hazard, Section 368) are our judgment; no study
   gives a value.

@@ -14,6 +14,7 @@ background context for the US-focused infrastructure layers.
 | **Attribution** | "geoBoundaries — William & Mary geoLab" |
 | **Coverage** | 3,224 units across 218 countries |
 | **Served** | `data/layers/admin1_boundaries.geojson.gz` — gzipped GeoJSON, Douglas-Peucker 0.01° |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/admin1_boundaries/` |
 | **Built by** | `scripts/extract_cgaz_boundaries.py` (`make world-boundaries`) → `data/build/admin1_boundaries.gpkg` |
 | **Stable id** | `code`, the admin-1 short code (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM1.zip` |

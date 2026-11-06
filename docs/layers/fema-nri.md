@@ -25,7 +25,7 @@ the same county shapes, so switching one on switches the other off.
 | **License** | FEMA National Risk Index Terms & Conditions (on the dataset item). Planning use only; users must cite the dataset and state that the product is not endorsed by FEMA (wording below). |
 | **Attribution** | "This product uses the Federal Emergency Management Agency’s National Risk Index dataset API or downloadable datasets but is not endorsed by FEMA. The Federal Government or FEMA cannot vouch for the data or analyses derived from these data after the data have been retrieved from the Agency's website(s)." — carried in the Data Credits dialog; the popup footer says "not endorsed by FEMA". |
 | **Raw input** | `data/raw/fema_nri/nri_counties.json` — attribute rows only, auto-downloaded (delete to refetch). Stamps `retrieved_utc`. |
-| **Served** | `data/layers/fema_nri.json` (~447 KB, ~125 KB gzipped) → `DATA.fema_nri` in `assets/constants.ts` |
+| **Served** | `data/layers/fema_nri.json` → `DATA.fema_nri` in `assets/constants.ts` |
 | **Built by** | `scripts/extract_fema_nri.py` (`make fema-nri`) |
 | **Boundaries** | Joined onto `data/layers/county_boundaries.pmtiles` (Census TIGER 2024, `GEOID`). The build reports join coverage: all 3,232 NRI rows match a boundary. Three boundaries have no NRI row — American Samoa `60030`, `60040` and Northern Mariana `69085` — and stay unpainted. Connecticut uses the planning-region FIPS (`09110`–`09190`) in both. |
 

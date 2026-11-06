@@ -17,6 +17,7 @@ Only the standard library is imported at module level, so `make
 test-pipeline` can import this under `python3 -S`; numpy and pyarrow load
 inside the functions that need them.
 """
+import gzip
 import hashlib
 import json
 import math
@@ -26,6 +27,7 @@ from pathlib import Path
 R_KM = 6371.0088          # mean Earth radius; the same sphere as assets/sandbox/geo-kit.ts
 HILBERT_ORDER = 16        # 65,536 cells a side: ~600 m at the equator
 PART_TARGET_BYTES = 64 * 2**20
+GEO_GROUP_BYTES = 16 * 2**20   # a GEO row group closes before WKB bytes pass this (one larger row is its own group)
 PART_HARD_BYTES = 95 * 2**20   # below the host's 100 MiB per-file limit
 GEOPARQUET_VERSION = "1.1.0"
 BBOX_FIELDS = ("xmin", "ymin", "xmax", "ymax")
@@ -37,8 +39,11 @@ BBOX_FIELDS = ("xmin", "ymin", "xmax", "ymax")
 # every cold lookup downloads.
 IDX_PRESET = {"row_group_size": 4096, "write_page_index": False, "write_statistics": ["fid"]}
 GEO_PRESET = {"row_group_size": 65536, "write_page_index": True,
-              "max_rows_per_page": 256, "write_batch_size": 256}
+              "max_rows_per_page": 256, "data_page_size": 2**20, "write_batch_size": 16}
 CHAINS_PRESET = {"row_group_size": 4096, "write_page_index": False, "write_statistics": ["chain"]}
+# COLUMNS: the attribute-only files of tiled datasets (columns/<ds>.<sha8>.parquet);
+# statistics on every numeric column (and an integer `fid`), no page index.
+COLUMNS_PRESET = {"row_group_size": 65536, "write_page_index": False}
 COMPRESSION = {"compression": "zstd", "compression_level": 9}
 
 # Columns that are unique (or near enough) per row: never dictionary-encoded.
@@ -114,30 +119,107 @@ def geo_metadata(geometry_types, bbox=None):
             "columns": {"geometry": col}}
 
 
+def _rings(geom):
+    """Polygon rings of a shapely (Multi)Polygon as (is_hole, [(x, y)]) lists."""
+    gj = geom.__geo_interface__
+    polys = gj["coordinates"] if gj["type"] == "MultiPolygon" else \
+        [gj["coordinates"]] if gj["type"] == "Polygon" else []
+    return [(i > 0, ring) for poly in polys for i, ring in enumerate(poly)]
+
+
+def sphere_area_km2(geom):
+    """Area of a shapely (Multi)Polygon on the sphere, km², holes subtracted.
+
+    The formula of `ringAreaKm2` in assets/sandbox/geo-kit.ts; 0 for any other type.
+    """
+    rad = math.pi / 180
+    total = 0.0
+    for hole, ring in _rings(geom):
+        s = 0.0
+        for i, p in enumerate(ring):
+            q = ring[(i + 1) % len(ring)]
+            s += (q[0] - p[0]) * rad * (2 + math.sin(p[1] * rad) + math.sin(q[1] * rad))
+        a = abs(s * R_KM * R_KM / 2)
+        total += -a if hole else a
+    return total
+
+
+def _haversine_km(p, q):
+    la1, la2 = math.radians(p[1]), math.radians(q[1])
+    a = math.sin((la2 - la1) / 2) ** 2 + \
+        math.cos(la1) * math.cos(la2) * math.sin(math.radians(q[0] - p[0]) / 2) ** 2
+    return 2 * R_KM * math.asin(math.sqrt(min(1.0, a)))
+
+
+def point_on_feature(geom):
+    """(x, y) on a shapely geometry: a point itself, a line's midpoint along
+    its total length (parts in order), a polygon's `point_on_surface`."""
+    gj = geom.__geo_interface__
+    t = gj["type"]
+    if t == "Point":
+        return tuple(gj["coordinates"][:2])
+    if t in ("LineString", "MultiLineString"):
+        parts = [gj["coordinates"]] if t == "LineString" else gj["coordinates"]
+        segs = [(p, q) for part in parts for p, q in zip(part, part[1:])]
+        lens = [_haversine_km(p, q) for p, q in segs]
+        half = sum(lens) / 2
+        for (p, q), n in zip(segs, lens):
+            if half <= n and n > 0:
+                f = half / n
+                return (p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f)
+            half -= n
+        return tuple(segs[-1][1][:2]) if segs else tuple(parts[0][0][:2])
+    pt = geom.point_on_surface()
+    return (pt.x, pt.y)
+
+
 # ── Writing ───────────────────────────────────────────────────────────────────
 
-def dictionary_columns(schema):
-    """String columns that may take a dictionary: strings outside NO_DICTIONARY."""
+def dictionary_columns(schema, no_dictionary=()):
+    """String columns that may take a dictionary: strings outside NO_DICTIONARY and `no_dictionary`."""
     import pyarrow as pa
+    skip = NO_DICTIONARY | set(no_dictionary)
     return [f.name for f in schema
-            if f.name not in NO_DICTIONARY and (pa.types.is_string(f.type) or pa.types.is_large_string(f.type))]
+            if f.name not in skip and (pa.types.is_string(f.type) or pa.types.is_large_string(f.type))]
 
 
 def statistics_columns(schema):
-    """`fid`, numeric and bbox leaf columns: the ones a reader prunes on."""
+    """Numeric (an integer `fid` included; a string id gets none) and bbox leaf columns."""
     import pyarrow as pa
     out = []
     for f in schema:
         if f.name == "bbox":
             out += [f"bbox.{k}" for k in BBOX_FIELDS]
-        elif f.name == "fid" or pa.types.is_integer(f.type) or pa.types.is_floating(f.type) \
+        elif pa.types.is_integer(f.type) or pa.types.is_floating(f.type) \
                 or pa.types.is_boolean(f.type):
             out.append(f.name)
     return out
 
 
-def write_parquet(table, path, preset, metadata=None, sort_columns=()):
+def geo_group_rows(table, max_rows=None, max_bytes=None):
+    """Row counts of the GEO row groups: at most `max_rows` (the preset's) rows, and
+    a group closes before a row would take its WKB bytes past `max_bytes`; a row
+    larger than that is a group of its own."""
+    import pyarrow.compute as pc
+    max_rows = max_rows or GEO_PRESET["row_group_size"]
+    max_bytes = max_bytes or GEO_GROUP_BYTES
+    sizes = pc.fill_null(pc.binary_length(table.column("geometry")), 0).to_numpy()
+    out, n, acc = [], 0, 0
+    for sz in sizes.tolist():
+        if n and (n >= max_rows or acc + sz > max_bytes):
+            out.append(n)
+            n = acc = 0
+        n += 1
+        acc += sz
+    if n:
+        out.append(n)
+    return out
+
+
+def write_parquet(table, path, preset, metadata=None, sort_columns=(), no_dictionary=(), group_rows=None):
     """Write one file with a preset; `metadata` (str → str) joins the schema's.
+
+    `no_dictionary` names further columns that never take a dictionary.
 
     Asserts the dictionary rule on the written file (footgun 1).
     """
@@ -147,24 +229,33 @@ def write_parquet(table, path, preset, metadata=None, sort_columns=()):
         merged.update({k.encode(): v.encode() for k, v in metadata.items()})
         table = table.replace_schema_metadata(merged)
     kw = dict(COMPRESSION, **preset)
-    kw["use_dictionary"] = dictionary_columns(table.schema) or False
+    kw["use_dictionary"] = dictionary_columns(table.schema, no_dictionary) or False
     kw.setdefault("write_statistics", statistics_columns(table.schema) or False)
     if sort_columns:
         kw["sorting_columns"] = [pq.SortingColumn(table.schema.get_field_index(c))
                                  for c in sort_columns]
-    pq.write_table(table, str(path), **kw)
-    bad = dictionary_encoded(path) & _no_dictionary_leaves(table.schema)
+    if group_rows is None:
+        pq.write_table(table, str(path), **kw)
+    else:
+        kw.pop("row_group_size", None)
+        with pq.ParquetWriter(str(path), table.schema, **kw) as w:
+            at = 0
+            for n in group_rows:
+                w.write_table(table.slice(at, n), row_group_size=n)
+                at += n
+    bad = dictionary_encoded(path) & _no_dictionary_leaves(table.schema, no_dictionary)
     if bad:
         raise AssertionError(f"{path}: dictionary page on unique column(s) {sorted(bad)}")
 
 
-def _no_dictionary_leaves(schema):
-    """Leaf column paths of the NO_DICTIONARY columns present in a schema."""
+def _no_dictionary_leaves(schema, extra=()):
+    """Leaf column paths of the NO_DICTIONARY (and `extra`) columns present in a schema."""
+    skip = NO_DICTIONARY | set(extra)
     out = set()
     for f in schema:
         if f.name == "bbox":
             out |= {f"bbox.{k}" for k in BBOX_FIELDS}
-        elif f.name in NO_DICTIONARY:
+        elif f.name in skip:
             out.add(f.name)
     return out
 
@@ -274,14 +365,40 @@ def write_json(path, obj):
     part.replace(path)
 
 
+def pmtiles_fields(path, layer):
+    """`vector_layers[layer].fields` of a PMTiles v3 archive's metadata (stdlib).
+
+    Reads the 127-byte header, then the metadata block it points at.
+    """
+    with open(path, "rb") as f:
+        head = f.read(127)
+        if head[:7] != b"PMTiles" or head[7] != 3 or len(head) < 127:
+            raise ValueError(f"{path}: not a PMTiles v3 archive")
+        off, length = int.from_bytes(head[24:32], "little"), int.from_bytes(head[32:40], "little")
+        compression = head[97]
+        f.seek(off)
+        raw = f.read(length)
+    if compression == 2:
+        raw = gzip.decompress(raw)
+    elif compression != 1:
+        raise ValueError(f"{path}: internal compression {compression} is not supported")
+    for vl in json.loads(raw.decode("utf-8")).get("vector_layers", []):
+        if vl.get("id") == layer:
+            return dict(vl.get("fields", {}))
+    raise KeyError(f"{path}: no vector layer {layer!r}")
+
+
 # ── Consistency of a built data/analysis/ tree (validate_build.py) ────────────
 
-def check_analysis(root):
+def check_analysis(root, layers_dir=None):
     """Problems with a built data/analysis/ tree, as messages; [] when clean or absent.
 
     Every file a manifest names exists with its bytes, sha256 and footer length,
     stays under the 95 MiB stop and carries the manifest's build_id; GEO parts
     tile the rows without a gap; nothing else sits in a dataset directory.
+    The `columns` section is held to the same rules: each file, its footer and
+    build_id, no orphan in columns/, and (given `layers_dir`) `archive_sha256`
+    equal to the sha256 of `<layers_dir>/<ds>.pmtiles`.
     """
     root = Path(root)
     index_path = root / "index.json"
@@ -336,4 +453,42 @@ def check_analysis(root):
             for f in sorted(d.iterdir()):
                 if f.name not in names:
                     problems.append(f"{ds}: {f.name} is not in the manifest (orphan)")
+    cols = index.get("columns", {})
+    for ds, m in sorted(cols.items()):
+        d = root / m.get("path", "columns/")
+        e = m["file"]
+        p = d / e["name"]
+        if not p.exists():
+            problems.append(f"{ds}: columns file {e['name']} missing")
+        else:
+            size = p.stat().st_size
+            if size != e["bytes"]:
+                problems.append(f"{ds}: {e['name']} is {size} bytes, manifest says {e['bytes']}")
+            if size > PART_HARD_BYTES:
+                problems.append(f"{ds}: {e['name']} is over the 95 MiB stop")
+            if sha256_file(p) != e["sha256"]:
+                problems.append(f"{ds}: {e['name']} sha256 differs from the manifest")
+            if e["sha256"][:8] not in p.name:
+                problems.append(f"{ds}: {e['name']} is not named by its content hash")
+            try:
+                if footer_len(p) != e["footer_len"]:
+                    problems.append(f"{ds}: {e['name']} footer length differs from the manifest")
+                if pq is not None:
+                    meta = pq.read_schema(p).metadata or {}
+                    if meta.get(b"build_id", b"").decode() != m["build_id"]:
+                        problems.append(f"{ds}: {e['name']} build_id differs from the manifest")
+            except Exception as err:
+                problems.append(f"{ds}: {e['name']} unreadable as Parquet ({err.__class__.__name__})")
+        if layers_dir is not None:
+            archive = Path(layers_dir) / f"{ds}.pmtiles"
+            if not archive.exists():
+                problems.append(f"{ds}: archive {archive.name} missing in {layers_dir}")
+            elif sha256_file(archive) != m.get("archive_sha256"):
+                problems.append(f"{ds}: archive_sha256 differs from {archive.name}")
+    cdir = root / "columns"
+    if cols and cdir.exists():
+        names = {m["file"]["name"] for m in cols.values()}
+        for f in sorted(cdir.iterdir()):
+            if f.name not in names:
+                problems.append(f"columns: {f.name} is not in the manifest (orphan)")
     return problems

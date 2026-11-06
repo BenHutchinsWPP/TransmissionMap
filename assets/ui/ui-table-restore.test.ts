@@ -50,6 +50,9 @@ vi.mock('../dataset-query.js', async (orig) => ({
   },
 }));
 
+// The table's size estimate reads the columns file's footer; here the file is "unavailable", so a restore fetches nothing.
+vi.mock('../columns/columns-read.js', () => ({ columnsEntry: async () => ({ ok: false, reason: 'unavailable' }) }));
+
 // jsdom has no CSS.escape.
 (globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s.replace(/["\\]/g, '\\$&') };
 

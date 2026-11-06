@@ -42,6 +42,11 @@ vi.mock('./user-data/copy-rows.js', async importOriginal => ({
   }),
 }));
 const geo = vi.hoisted(() => ({ on: true }));
+const qspy = vi.hoisted(() => ({ opts: [] as unknown[] }));
+vi.mock('./dataset-query.js', async importOriginal => {
+  const o = await importOriginal<typeof import('./dataset-query.js')>();
+  return { ...o, query: ((id: string, opts: unknown) => (qspy.opts.push(opts), o.query(id, opts as never))) as typeof o.query };
+});
 vi.mock('./ui/ui-geocoder.js', () => ({
   placeSearchOn: () => geo.on,
   findPlaces: vi.fn(async (q: string) => q === 'Down' ? Promise.reject(new Error('498 Invalid Token')) : q === 'Nowhere' ? [] : [{
@@ -179,7 +184,7 @@ describe('a refused call changes nothing', () => {
     ['on not a boolean', () => api.setLayerVisible('railroads', 'yes' as unknown as boolean)],
     ['unknown basemap', () => api.setBasemap('satellite')],
     ['unknown field', () => api.setWhere(GEN, [{ field: 'no_such_field', op: '=', value: 1 }])],
-    ['where on a layer without a dataset', () => api.setWhere('railroads', [])],
+    ['where on a layer without a dataset', () => api.setWhere('nexrad-radar', [])],
     ['bad area kind', () => api.setArea({ kind: 'planets', codes: ['X'] } as never)],
     ['bad style', () => api.setStyle('railroads', { opacity: 7 })],
     ['bad selection mode', () => api.setSelection({ mode: 'mark', ids: {} } as never)],
@@ -245,11 +250,11 @@ describe('reading', () => {
     if (!r.ok) throw new Error(r.reason);
     const gen = r.result.find(l => l.id === GEN)!;
     expect(gen.queryable).toBe(true);
-    expect(r.result.find(l => l.id === 'railroads')!.queryable).toBe(false);
+    expect(r.result.find(l => l.id === 'nexrad-radar')!.queryable).toBe(false);
   });
 
   it('showTable opens only a queryable layer', async () => {
-    expect((await api.showTable({ layerId: 'railroads' })).ok).toBe(false);
+    expect((await api.showTable({ layerId: 'nexrad-radar' })).ok).toBe(false);
     expect((await api.showTable({ layerId: 'nope' })).ok).toBe(false);
     expect(openTable).not.toHaveBeenCalled();
     expect(await api.showTable({ layerId: GEN })).toEqual({ ok: true, result: { layerId: GEN } });
@@ -364,11 +369,27 @@ describe('copyToMyData', () => {
   };
   beforeEach(() => { cp.rows = []; cp.result = null; cp.avail = true; state.sourcesData = {}; state.sourcesLoaded = {}; seed(5); });
 
+  it('queries the view, not the whole dataset', async () => {
+    qspy.opts.length = 0;
+    await api.copyToMyData({ layerId: GEN });
+    expect(qspy.opts[0]).toMatchObject({ scope: 'view' });
+  });
+
   it('copies the queried rows and tells counts only, with no url:write', async () => {
     const r = await api.copyToMyData({ layerId: GEN, where: [{ field: 'nameplate_mw', op: '>=', value: 102 }] });
     expect(r).toMatchObject({ ok: true, result: { outcome: 'copied', n: 3, total: 3, complete: true } });
     expect(cp.rows[0].map(x => x.id)).toEqual(['2:1', '3:1', '4:1']);
     expect(writes).toBe(0);
+  });
+
+  it('a download offer keeps simplified, missing and unread like a copy', async () => {
+    const download = { kind: 'download', n: 5, chars: 2e6, fc: { type: 'FeatureCollection', features: [] }, filename: 'x.geojson',
+      simplified: 1, missing: 2, unread: 3 };
+    cp.result = download;
+    const r = await api.copyToMyData({ layerId: GEN });
+    expect(r).toMatchObject({ ok: true, result: { outcome: 'download-offered', simplified: 1, missing: 2, unread: 3 } });
+    cp.result = { kind: 'copied', n: 5, simplified: 1, missing: 2, unread: 3 };
+    expect(await api.copyToMyData({ layerId: GEN })).toMatchObject({ ok: true, result: { outcome: 'copied', simplified: 1, missing: 2, unread: 3 } });
   });
 
   it('with no where, copies what the view filters to (layer off: its where)', async () => {
@@ -386,7 +407,7 @@ describe('copyToMyData', () => {
       await api.copyToMyData({ layerId: GEN, area: { kind: 'bogus', codes: ['x'] } as never }),
       await api.copyToMyData({ layerId: GEN, ids: [{} as never] }),
       await api.copyToMyData({ layerId: GEN, ids: [] }),
-      await api.copyToMyData({ layerId: 'railroads' }),
+      await api.copyToMyData({ layerId: 'nexrad-radar' }),
       await api.copyToMyData({ layerId: 'osm-substations-points' }),
     ];
     for (const r of bad) expect(r.ok).toBe(false);

@@ -62,7 +62,7 @@ async function rowsOf(layerId: string, polygons: boolean, where?: Condition[]): 
   const d = describe(layerId);
   if (!d.ok) return d;
   if (!d.result.queryable) return fail(d.result.reason);
-  return query(layerId, { limit: QUERY_MAX_ROWS, fragments: polygons, ...(where?.length && { where }) });
+  return query(layerId, { limit: QUERY_MAX_ROWS, fragments: polygons, scope: 'view', ...(where?.length && { where }) });
 }
 
 function coverage(results: QueryResult[], layerIds: string[]): Coverage {

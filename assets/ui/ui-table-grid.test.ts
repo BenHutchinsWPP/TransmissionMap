@@ -158,6 +158,21 @@ describe('table grid', () => {
     expect(env.map.fitBounds).toHaveBeenCalledOnce();
   });
 
+  it('Enter on a row\'s zoom button stays with the button (the range never opens an editor)', async () => {
+    await open();
+    const down = (el: Element) => el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    down(cell(1, 2));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    const errors: unknown[] = [];
+    const onErr = (e: ErrorEvent) => { errors.push(e.error ?? e.message); e.preventDefault(); };
+    window.addEventListener('error', onErr);
+    const btn = q<HTMLButtonElement>('.td-row[data-i="2"] .td-zoom-btn');
+    btn.focus();
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    window.removeEventListener('error', onErr);
+    expect(errors).toEqual([]);
+  });
+
   it('a values filter sets the layer\'s `where`, the table reloads, the ▾ is marked; Clear removes just that field', async () => {
     await open();
     q('[data-filter="sub_type"]').click();

@@ -49,9 +49,9 @@ distance columns and the "nearest" column show the threshold's unit.
 | Limit | Value | Where |
 |---|---|---|
 | CSV file size | 50 MB, refused before it is read | `MAX_FILE_BYTES` in `ui-proximity.ts` |
-| Points | 100,000 rows, refused right after parsing, before the column dialog and any feature is built (`maxRows` of `pickCsvPoints`) | `MAX_POINTS` in `ui-proximity.ts` |
+| Points | 100,000 rows, refused before the column dialog | `MAX_POINTS` in `ui-proximity.ts` |
 | Pairs kept | 1,000,000 (`MAX_PAIRS`); enumeration stops there | `proximity.ts` |
-| Pairs CSV | refused above 200 MB of UTF-8 (estimated from the first 200 rows, bytes not characters); the refusal shows the estimated size in MB (`px.csvTooBig`) | `MAX_CSV_BYTES` in `proximity/pairs-csv.ts` |
+| Pairs CSV | refused above an estimated 200 MB (UTF-8 bytes); the refusal gives the estimate | `MAX_CSV_BYTES` in `proximity/pairs-csv.ts` |
 | CSV build | chunks of 10,000 rows, built in a worker as a `Blob`, with progress and Cancel; one download at a time | `CSV_CHUNK`, `csv-worker.ts` |
 | Sample | HIFLD substations in the current view, at most 15,000; above, "zoom in"; none, "no substations in view" | `SAMPLE_CAP` in `proximity/sample.ts` |
 
@@ -62,10 +62,7 @@ not the global top N and not the nearest pairs. A point with invalid coordinates
 
 ## The table pane
 
-The drawer has a `prox` pane (`assets/ui/ui-table.ts`, `openProx` / `closeProx` /
-`proxPanel`). It is alone in the drawer, never kept in `tm-drawer`, and has its own grid
-outside `.td-grid`. Closing it runs the tool's `drop()`, which releases the file and
-cancels any pairs run. The pane has two views:
+The results open in the bottom drawer's Proximity tab. Closing it releases the file and cancels any pairs run. The pane has two views:
 
 - **Groups**: only points in a group, ordered by group, then nearest distance, then CSV
   row. A row click selects the row and outlines its point and its group on the map; the camera
@@ -76,8 +73,7 @@ cancels any pairs run. The pane has two views:
 
 Each column header has a ▲/▼ sort button (asc, then desc, then off) above a filter box. A filter
 is a case-insensitive "contains" match on the cell's shown text or on its raw value (so `1234`
-finds `1,234`); all filters must match. Sort and filter run in the tab, over the rows in memory,
-not through `dataset-query.ts`. They are kept across a threshold or unit change and reset on a
+finds `1,234`); all filters must match. Sort and filter are kept across a threshold or unit change and reset on a
 new file or sample. A sort or filter over more than 100,000 rows shows a busy status while it
 runs, and **Clear filters** appears while any filter is set. On Pairs over a truncated list, the
 view says that sort and filter cover only the pairs kept. Enter on a selected range does nothing.
@@ -106,27 +102,19 @@ does not import the file into My Data.
 
 ## The map
 
-The tool's layers use the `px-` prefix: one source, `px-points` (tile buffer 512), and its
-layers `px-bubbles`, `px-points`, `px-focus` (the focused group's bubbles) and `px-focus-pt`
-(the focused point). They are added on the first result, removed (layers, then the source)
-when the tab closes or Reset runs, and never visibility-toggled. The two bubble layers stop
-at the zoom where the largest bubble outgrows the 512 px buffer (`bubbleMaxZoom`), past which a
-circle would be cut at tile edges; the points stay. Each new result replaces the data and the
-bubble radius, and the first result of a file fits the map to it. A tap on a point (through `map-input.ts`, `onMapTap`) focuses its
-row; `popup.ts` skips a tap on `px-points`, so no feature popup opens.
+The points and their bubbles are drawn on the map from the first result and removed when the tab closes or Reset runs. Bubbles are hidden past the zoom where the largest one would be cut at tile edges; the points stay. Each new result replaces them, and the first result of a file fits the map to it. A tap on a point marks its row; no feature popup opens.
 
 ## Privacy
 
 - The file never leaves the tab: it is not sent to any server, the chat or the link. There
   is no network request for it.
-- The map position is the exception any view has: flying to a point (only the row's ↗ button) moves the camera, so
+- Flying to a point (only the row's ↗ button) moves the camera, so
   the position goes in the link (4 decimals, about 11 m) like any camera move, and the
   basemap, aerial and terrain tiles are fetched for where the visitor looks.
 - No value from the file goes into `localStorage`, `sessionStorage`, the URL, `tm-drawer`,
-  a session snapshot, an undo step or the link. Nothing is in the share link.
+  a session snapshot or an undo step.
 - No value from the file goes into `recordDiagEvent`, an error text, the console or a
-  worker reason. `pairs-open.ts` states this for its refusals; `ui-proximity.ts` for the
-  pane.
+  worker reason.
 - Closing the tab drops every reference to the file and cancels any pairs, CSV or sample run.
 
 ## Try a sample

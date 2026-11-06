@@ -88,12 +88,20 @@ describe('resolveHits — edit mode', () => {
   });
 
   it('offers copy-tiled for a tiled line whose full geometry can be read', () => {
-    const line = f('osm-transmission-lines-kv300-hv', { sourceLayer: 'lines', id: 12 });
+    const line = f('osm-transmission-lines-hv', { sourceLayer: 'lines', id: 12 });
     const full = (ft: HitFeature) => ft.layer.id.startsWith('osm-transmission-lines');
     expect(resolveHits([line], 'edit', full)).toEqual({ kind: 'copy-tiled', feature: line });
     const tiled = f('padus-fill', { sourceLayer: 'padus', id: 2 });
     expect(resolveHits([tiled, line], 'edit', full)).toEqual({ kind: 'copy-tiled', feature: line });
     expect(resolveHits([line], 'edit')).toEqual({ kind: 'not-copyable' });
+  });
+
+  it('copies a HIFLD substation directly when the OSM polygon over it is not copyable (no geometry files)', () => {
+    const hifld = f('hifld-substations-hv', { id: 'H1', properties: { hifld_id: 'H1' } });
+    const poly = f('osm-substations-polygons-fill', { sourceLayer: 'substations', id: 5 });
+    const ready = (ft: HitFeature) => !ft.sourceLayer || ft.layer.id.startsWith('osm-substations-polygons');
+    expect(resolveHits([poly, hifld], 'edit', () => false)).toEqual({ kind: 'copy', feature: hifld });
+    expect(resolveHits([poly, hifld], 'edit', ready)).toEqual({ kind: 'copy-picker', features: [poly, hifld] });
   });
 
   it('returns none when only unpainted choropleth features were hit', () => {

@@ -12,7 +12,7 @@ USGS protected and managed land polygons.
 | **Version** | PAD-US 4.1 |
 | **Acquired** | 2026-06-02 |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
-| **Served** | `data/layers/padus.pmtiles` — PMTiles (806 MB SHP → 80 MB tiles; z3–10, `max_tile_bytes` 600000 in `tile_manifest.yaml`) |
+| **Served** | `data/layers/padus.pmtiles` — PMTiles (z3–10, `max_tile_bytes` 600000 in `tile_manifest.yaml`) |
 | **Built by** | `extract_padus.py` → `data/build/padus.{shp,csv}` |
 | **Raw input** | `PADUS4_1Geodatabase.gdb` — **not committed** (~596 MB) |
 

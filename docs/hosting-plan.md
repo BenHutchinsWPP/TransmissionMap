@@ -6,68 +6,64 @@ Where each asset class is hosted, and how the world transmission archive is cut.
 
 | asset class | host |
 |---|---|
-| `data/layers` — every built layer | orphan `data-static` branch, via `raw.githubusercontent.com` (`DATA_ORIGIN` in `assets/constants.ts`) |
-| `data/releases` — download packs | rolling GitHub Release `data-latest`, via `github.com/.../releases/download/` |
-| live feeds | orphan `data` branch, same host (`LIVE_ORIGIN`; [layers/wildfire-live.md](layers/wildfire-live.md)) |
-| `data/analysis` — transmission line GeoParquet (`make line-parquet`; [pipeline.md](pipeline.md) § *Line geometry*) | **not published** — a build reads it from `DATA_ORIGIN` + `data/analysis/` once it is there; `publish_data.sh` ships only the `data/layers/` paths `assets/constants.ts` names, so publishing it is a separate step. Every file is under the 100 MiB ceiling. |
-| data center moratoriums | orphan `data-moratoriums` branch, same host (`MORATORIUM_ORIGIN`); appended to and never force-pushed, so its history is the change record ([layers/dc-moratoriums.md](layers/dc-moratoriums.md)) |
+| `data/layers` — every built layer | `data.wpptx.org`, R2 bucket `data-wpptx-org` (`DATA_ORIGIN` in `assets/constants.ts`) |
+| `data/analysis` — geometry and columns Parquet, `index.json` ([pipeline.md](pipeline.md) § *Line geometry*, § *Columns files*) | `data.wpptx.org`, same bucket |
+| `data/releases` — download packs | `data.wpptx.org/data/releases/<name>.zip` |
+| live feeds | `live.wpptx.org`, R2 bucket `live-wpptx-org` (`LIVE_ORIGIN`; [layers/wildfire-live.md](layers/wildfire-live.md)) |
+| data center moratoriums | `moratoriums.wpptx.org`, R2 bucket `moratoriums-wpptx-org` (`MORATORIUM_ORIGIN`), `dc_moratoriums.geojson` at the bucket root ([layers/dc-moratoriums.md](layers/dc-moratoriums.md)) |
+| the app | GitHub Pages (`www.wpptx.org`) |
 
-`raw.githubusercontent.com` answers ranged `GET`s with `HTTP 206` and
-`access-control-allow-origin: *`, which is what PMTiles needs, and caps responses
-at `max-age=300`. Its one hard constraint is git's: **no file over 100 MiB.**
+Object keys are repo paths with no prefix. Every host answers ranged `GET`s with
+`HTTP 206` and `access-control-allow-origin: *`, which is what PMTiles and the
+Parquet readers need.
+Cloudflare's edge cache holds objects up to 512 MB; a larger object is read from
+R2 on every request.
 
-Probe it with a ranged `GET`, not `curl -I`: raw ignores `Range` on `HEAD` and
-answers `200` either way. The `pmtiles-range` check in `assets/diagnostics.ts`
-does this correctly.
+The `pmtiles-range` check in `assets/diagnostics.ts` probes a host with a ranged
+`GET`.
 
-GitHub Release assets send **no CORS header**, so they can back a download link
-(a plain navigation) but never a PMTiles source or any `fetch()`. That is why the
-two asset classes are split: layers must stay on raw, packs must not. Release
-assets take **2 GB per file** against the branch's 100 MiB, and they live outside
-the git object store, so publishing one never grows the repository.
+### Cache rules
 
-The tag rolls in place — `gh release upload --clobber` replaces assets under the
-same `data-latest` tag — because `RELEASES_ORIGIN` in `assets/constants.ts` bakes
-those URLs into the deployed bundle. Changing the tag orphans every download link
-in every already-deployed page.
+Each host's Cloudflare Cache Rule follows the object's `Cache-Control` and bypasses the cache when it is absent.
 
-## The voltage split
-
-Transmission ships as six planet-wide archives, one per voltage class.
-`scripts/build_global_tiles.py` (`TRANSMISSION_BANDS`) is the single definition;
-`src/registry/transmission.ts` (`OSM_TL_BANDS`) mirrors it on the frontend and
-derives the style-layer ids. Change one and you must change the other.
-
-| file | filter |
+| objects | `Cache-Control` |
 |---|---|
-| `osm_transmission_lines_kv0` | `kv < 50` |
-| `osm_transmission_lines_kv50` | `50 ≤ kv < 100` |
-| `osm_transmission_lines_kv100` | `100 ≤ kv < 125` |
-| `osm_transmission_lines_kv125` | `125 ≤ kv < 200` |
-| `osm_transmission_lines_kv200` | `200 ≤ kv < 300` |
-| `osm_transmission_lines_kv300` | `kv ≥ 300` |
+| content-hashed `*.<sha8>.parquet` | `public, max-age=31536000, immutable` |
+| other `data.wpptx.org` names | `public, max-age=3600, s-maxage=2592000` |
+| live feeds | `public, max-age=0, s-maxage=60` |
+| `dc_moratoriums.geojson` | `public, max-age=300` |
 
-As one world file the layer is past the ceiling, and six is the fewest bands
-that fit under it — at four or five, a middle band still exceeds it.
+`.pmtiles`, `.parquet` and `.gz` are served as `application/octet-stream`, never
+with a `Content-Encoding`.
 
-**`nominal_kv = -1` encodes unknown** — not NULL, not 0. Because -1 sorts below
-everything, `kv < 50` captures unknown for free. Unknown is ~18% of the layer, so
-a bottom band starting at 0 would silently drop it.
+### Live feeds and moratoriums
 
-Each cut point sits in a gap between real voltage classes (50, 100, 125, 200,
-300 kV), so no dense class is split across two archives. Re-derive the
-distribution before moving one.
+CI jobs commit the live feeds to the orphan `data` branch (one rolling commit),
+then upload each feed's output path (a file, or the whole `weather_live/`
+directory) to the bucket at the same key, after every push; unchanged objects
+are skipped. The `data-moratoriums` branch is the change record of the
+moratorium layer; its publish job uploads `dc_moratoriums.geojson` from the
+branch tip after each run, so a merged refresh PR or a revert is published by a
+`rebuild_only` dispatch.
 
-**Split on an attribute, never on geography.** The continental extracts overlap,
-so a geographic split serves the same line from two sources — drawn and labelled
-twice, because MapLibre's symbol collision detection is per-source. Voltage
-classes are disjoint: a line is in exactly one archive.
+## The transmission archive
+
+OSM transmission ships as one planet-wide archive,
+`data/layers/osm_transmission_lines.pmtiles` (zoom 2–11), tiled in one tippecanoe
+pass. The frontend reads it as one source, `osm_transmission_lines`, and the
+style-layer ids carry no suffix.
+
+**`nominal_kv = -1` encodes unknown** — not NULL, not 0.
+
+**Disjoint by construction.** The continental extracts overlap, so the merge
+keeps one copy of each line (below); the layer is then a single source, and
+MapLibre's per-source symbol collision detection sees every label.
 
 ## Simplification and maxzoom
 
 Vector tiles quantize onto a 4096-unit grid per tile (tippecanoe `detail=12`),
-which equals screen pixels four zooms up: a z11 transmission line is
-grid-limited to one screen pixel at z15.
+which equals screen pixels four zooms up: a z12 transmission line (2.4 m grid) is
+grid-limited to one screen pixel at z16.
 
 Transmission carries `--simplification=5 --simplify-only-low-zooms`. It is set
 wherever transmission is tiled — `rg simplify-only-low-zooms` lists them — and
@@ -75,13 +71,12 @@ every copy must stay in step.
 
 > [!WARNING]
 > `--simplify-only-low-zooms` is opt-in. Without it the Douglas-Peucker pass
-> also runs at maxzoom, putting ~5 tile units of tolerance on a z11 line — ~5
-> screen pixels at z15, visible where a line meets a substation bus. Lowering
-> `--simplification` instead is not equivalent: it also rewrites z2–z10, where 5
+> also runs at maxzoom, putting ~5 tile units of tolerance on a z12 line — ~5
+> screen pixels at z16, visible where a line meets a substation bus. Lowering
+> `--simplification` instead is not equivalent: it also rewrites z2–z11, where 5
 > is the tuned value.
 
-Reducing maxzoom shrinks the archive but degrades every reader's view; the
-voltage split is the lever to use instead.
+Reducing maxzoom shrinks the archive but degrades every reader's view.
 
 Pipeline lines and transmission both tile with `--maximum-tile-bytes=1000000`.
 tippecanoe thins any tile over the ceiling, and the densest tiles are filled by
@@ -116,11 +111,10 @@ dedupe to the three small point layers it concatenates.
   and a single tippecanoe pass gives every continent the same depth. The
   re-tiled layers do not use `--extend-zooms-if-still-dropping`, so each
   archive advertises exactly its spec's `max_zoom`: generators 13, substation
-  points 13, pipeline lines 12, substation and plant polygons 12, transmission
-  bands 11.
+  points 13, pipeline lines 12, substation and plant polygons 12, transmission 11.
 - **Strips `minz`.** `minz` is the per-feature zoom floor the tippecanoe `-j`
   ladder selects on, so tiling needs it, but nothing in `assets/` or `src/`
-  reads it. `tile-join -x minz` drops it when the voltage bands are cut.
+  reads it. `tile-join -pk -x minz` drops it from the transmission archive.
 - **Logs drop warnings.** tippecanoe's stderr lines about thinning (`Going to
   try`, `too many features`, `with detail`, `dropping`) are logged even when
   the command succeeds, so a build that thinned a layer shows it.
@@ -128,32 +122,12 @@ dedupe to the three small point layers it concatenates.
 ## Archive sizes with region tags
 
 Region tags ([pipeline.md § Region tags](pipeline.md#region-tags-scriptsregion_joinpy))
-keep each tagged archive within about 20% of the published, untagged build (hifld_natgas_lines, a small archive, is the outlier). Measured
-on the 2026-10-14 build, with stable feature ids:
+keep each tagged archive within about 20% of the untagged build (hifld_natgas_lines, a small archive, is the outlier).
 
-| archive | MiB | room to 100 MiB | vs published |
-|---|---|---|---|
-| `osm_pipelines_lines` | 69.4 | 30.6 | -11% |
-| `osm_substations_points` | 85.5 | 14.5 | +14% |
-| `osm_generators` | 80.5 | 19.5 | +7% |
-| `osm_transmission_lines_kv0` | 73.7 | 26.3 | +1% |
-| `osm_plants_polygons` | 76.4 | 23.6 | +9% |
-| `osm_transmission_lines_kv100` | 59.6 | 40.4 | +1% |
-| `osm_transmission_lines_kv200` | 55.1 | 44.9 | +3% |
-| `osm_transmission_lines_kv300` | 52.0 | 48.0 | +5% |
-| `osm_substations_polygons` | 49.7 | 50.3 | +19% |
-| `osm_transmission_lines_kv125` | 42.6 | 57.4 | +1% |
-| `hifld_transmission_lines` | 44.6 | 55.4 | +16% |
-| `osm_transmission_lines_kv50` | 32.7 | 67.3 | +3% |
-| `hifld_natgas_lines` | 26.6 | 73.4 | +69% |
-
-Stable feature ids ride in the tile's native id slot on the large OSM archives,
-which left them smaller than before the ids (pipelines 94.2 to 69.4 MiB). The
-three largest are still the ones to watch: a new tagged field, or a year of OSM
-growth, can take them toward the ceiling. `scripts/region_report.py --archive`
-prints this table for any build. That publish adds 0.98 GB of new objects;
-with the repository at 1.29 GB, the total is 2.21 GB against
-`SIZE_CEILING_KB`.
+Stable feature ids ride in the tile's native id slot on the large OSM archives. The
+largest archives are the ones to watch: a new tagged field, or a year of OSM
+growth, grows what each publish uploads. `scripts/region_report.py --archive`
+prints each archive's size against the untagged build.
 
 ## Substation zoom floor
 
@@ -162,25 +136,26 @@ Points are never dropped or coalesced: the substation spec carries `-r1
 starts at **z4** — below that a single tile holds most of the substations on
 Earth — and every point is present from z4 up.
 
-## Six sources on the frontend
+## One source on the frontend
 
-`planTransmissionLines()` in `assets/layers/layer-init.ts` takes a `sources` list
-and plans every style layer across all sources before starting the next, so paint
-order is tier-major and ascending kV puts EHV on top.
-
-A source declares its class as `kv: [min, max)`, and a style tier only gets a
-layer on a source whose range it overlaps. The cuts at 50, 100 and 200 kV
-coincide with existing tier boundaries, so most archives carry one kV tier.
-
-The cost is six PMTiles headers at map init instead of one, fetched in parallel.
+`planTransmissionLines()` in `assets/layers/layer-init.ts` plans the style layers
+of the one `osm_transmission_lines` source in tier order; `line-sort-key` from kV
+puts EHV on top, and the labels carry a `symbol-sort-key` (higher kV first).
 
 ## Publishing
 
-`scripts/publish_data.sh` publishes **only the layers `assets/constants.ts`
-names**, via `validate_build.py --list-expected`; the per-continent archives
-`make continental-all` leaves in `data/layers/` stay local. Layers go to the branch as one orphan commit (~1.2 GB, inside
-GitHub's ~2 GB per-push ceiling); download packs go to the `data-latest` Release
-in the same run.
+`make publish-r2` (`scripts/publish_r2.sh`) publishes **only the layers
+`assets/constants.ts` names**, via `validate_build.py --list-expected`, the
+`data/releases/*.zip` packs and the `data/analysis/` files `index.json` names, to
+the `data-wpptx-org` bucket from the owner's machine. The per-continent archives
+`make continental-all` leaves in `data/layers/` stay local.
+
+It uploads with `rclone copy --checksum`, one run per header set, objects first
+and manifests last, and never deletes: deployed bundles keep reading superseded
+objects. A fixed-name object that is about to change is first copied to
+`prev/<stamp>/`; `--rollback STAMP` restores it. The run prints the changed
+fixed-name URLs as the Cloudflare purge list. `--dry-run` needs no rclone or keys;
+`--prune-list` reports unreferenced objects.
 
 > [!WARNING]
 > Tile attributes are not free to drop. `operator` is a **search** field —
@@ -189,28 +164,3 @@ in the same run.
 > layer's columns are its `select` list in `build_global_tiles.py`, held equal
 > to the `tile_manifest.yaml` `select:` of the same id by
 > `scripts/test_global_tiles.py`.
-
-### Repository headroom — check before every publish
-
-`data-static` is force-pushed as a fresh orphan each publish, which deletes
-nothing: the previous tree's blobs become unreachable and keep counting against
-the repository. GitHub reclaims them with its own maintenance, on a schedule you
-do not control and cannot trigger — **only GitHub Support can run GC on demand.**
-GitHub's guidance is 1 GB recommended / 5 GB soft.
-
-That makes an overshoot one-way. Past the limit GitHub can restrict pushes, so
-you lose the ability to ship the fix; serving is unaffected (raw does not check
-repo size), but you would be stuck until Support prunes.
-
-`publish_data.sh` therefore **refuses to publish** when the result would cross
-`SIZE_CEILING_KB` (4.5 GiB by default). Its estimate counts only blobs whose
-content is not already on the branch — git stores by content hash, so
-republishing an unchanged file costs nothing, and a rebuild that changes every
-tile costs the full tree.
-
-> [!IMPORTANT]
-> Never bypass the check with `SKIP_SIZE_CHECK=1` to "just get this one out".
-> Publishing again cannot undo it. If headroom is short, move data off the branch
-> or open a GitHub Support ticket asking them to garbage-collect the repository —
-> and note that GC only frees objects nothing references, so the content has to
-> leave the branch *before* the ticket, not after.

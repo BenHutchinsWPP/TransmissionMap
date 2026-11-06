@@ -7,7 +7,14 @@ then copies the output to analysis/ beside this script.
 OSM input: the chain fixture of scripts/test_line_parquet.py (fids 11-71: 11, 21 (drawn
 reversed) and 31 form one 230 kV chain from a substation polygon to a tap), plus a 30 x 20 grid
 of short 115 kV lines near (20°E, 10°N), fids 1000-1599, so GEO spans three pages and a bbox read
-can skip some. HIFLD input: ID "160421" (a two-part MultiLineString) and "99".
+can skip some. HIFLD input: ID "160421" (a two-part MultiLineString) and "99". Substation
+polygons (osm_substations_polygons, IDX + GEO only): the five of test_line_parquet.POLYGONS,
+one MultiPolygon, one with a hole, one fid above 2^53 (Parquet/BigInt side only).
+build_id and `built` are pinned by --fixture, so a rerun writes the same bytes.
+
+Beside analysis/, for scripts/check_geometry_parquet.py --root analysis: the polygons' kept
+input (build/world/osm_substations_polygons.geojsonl.gz) and their archive, tiled with
+build_global_tiles.tile_polygons' flags (layers/osm_substations_polygons.pmtiles).
 """
 import json
 import shutil
@@ -18,7 +25,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent.parent.parent / "scripts"))
 import build_line_parquet as blp  # noqa: E402
-from test_line_parquet import LINES, SUB_POLY_FID, SUB_POINT_FID, _feature  # noqa: E402
+from test_line_parquet import (LINES, SUB_POLY_FID, SUB_POINT_FID, _feature,  # noqa: E402
+                               write_polygon_input)
+from test_check_geometry_parquet import build_polygon_archive, write_kept  # noqa: E402
 
 
 def main():
@@ -42,10 +51,14 @@ def main():
                          "MultiLineString") + "\n")
         f.write(_feature({"ID": "99"}, [[[-120.000001, 35.5], [-120.1, 35.6]]],
                          "MultiLineString") + "\n")
+    write_polygon_input(inp / f"{blp.SUBS_POLY}.geojsonl")
     blp.main(["--fixture", str(tmp)])
     out = HERE / "analysis"
     shutil.rmtree(out, ignore_errors=True)
     shutil.copytree(tmp / "analysis", out)
+    kept = HERE / "build" / "world" / f"{blp.SUBS_POLY}.geojsonl.gz"
+    write_kept(inp / f"{blp.SUBS_POLY}.geojsonl", kept)
+    build_polygon_archive(kept, HERE / "layers" / f"{blp.SUBS_POLY}.pmtiles")
     shutil.rmtree(tmp)
     total = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     print(f"wrote {out} ({total:,} bytes)")

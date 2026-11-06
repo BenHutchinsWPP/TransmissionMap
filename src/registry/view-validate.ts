@@ -124,8 +124,8 @@ export function validateStyleOverride(registryId: string, o: unknown): string | 
 export const MAX_SELECTION_IDS = 500;
 const SELECTION_MODES = ["isolate", "keep"];
 const MAX_ID_CHARS = 64;
-// Layers whose served id column holds strings ('1:1', 'lng_terminal:12', '107655', 'CA-MX US').
-const STRING_ID_LAYERS = new Set(["eia-generators", "hifld-natgas-lines", "hifld-natgas-points", "hifld-substations", "nerc-regions"]);
+// Layers whose served id column holds strings ('1:1', 'lng_terminal:12', '107655', 'CA-MX US', 'AESO', retail '40429', control area '19547', BIA 'LAR0001', BOEM '3c19bdc18b22', WECC path '66' / corridor '66c').
+const STRING_ID_LAYERS = new Set(["eia-generators", "hifld-natgas-lines", "hifld-natgas-points", "hifld-substations", "nerc-regions", "eia-ba", "retail-territories", "control-areas", "us-states", "countries", "admin1", "tribal-lands", "us-counties", "bia-tribal-lands", "boem-wind-leases", "wecc-paths"]);
 const hasControlChar = (s: string) => [...s].some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127);
 
 /** One layer's untrusted selected ids: null when the layer takes a selection

@@ -8,15 +8,15 @@ const m = vi.hoisted(() => ({
   kinds: {} as Record<string, 'geojson' | 'pmtiles'>,
   rows: {} as Record<string, unknown[]>,
   truncated: {} as Record<string, boolean>,
-  opts: [] as [string, { fragments?: boolean }][],
+  opts: [] as [string, { fragments?: boolean; scope?: string }][],
 }));
 vi.mock('./dataset-query.js', () => ({
   QUERY_MAX_ROWS: 5000,
   describe: (id: string) => id in m.kinds
     ? { ok: true, result: { layerId: id, queryable: true, kind: m.kinds[id] } }
-    : id === 'railroads' ? { ok: true, result: { layerId: id, queryable: false, reason: 'no schema' } }
+    : id === 'nexrad-radar' ? { ok: true, result: { layerId: id, queryable: false, reason: 'no schema' } }
       : { ok: false, reason: `"${id}" is not a layer id` },
-  query: async (id: string, o: { fragments?: boolean } = {}): Promise<Outcome<QueryResult>> => (m.opts.push([id, o]), { ok: true, result: {
+  query: async (id: string, o: { fragments?: boolean; scope?: string } = {}): Promise<Outcome<QueryResult>> => (m.opts.push([id, o]), { ok: true, result: {
     layerId: id, complete: m.kinds[id] === 'geojson', ...(m.kinds[id] === 'pmtiles' && { reason: 'vector tiles: loaded only' }),
     fields: [], rows: m.rows[id] as never, total: m.rows[id].length, truncated: !!m.truncated[id],
   } }),
@@ -45,6 +45,13 @@ const twoPieces = () => ({ id: 30, props: { name: 'Split' }, feature: { type: 'F
   type: 'MultiPolygon', coordinates: [[sq(0, 0, 5, 10)], [sq(5, 0, 10, 10)]] } } });
 
 suite('tile-split polygons', () => {
+  it('every query asks for the view, never the dataset', async () => {
+    await joinPoints({ points: 'pts', polygons: 'tiles' });
+    await crossings({ geometry: { type: 'LineString', coordinates: [[12, 5], [8, 5]] }, polygons: ['tiles'] });
+    expect(m.opts.length).toBeGreaterThan(2);
+    for (const [, o] of m.opts) expect(o.scope).toBe('view');
+  });
+
   it('joinPoints counts points in every piece and asks for fragments on the polygon side only', async () => {
     m.rows.tiles = [twoPieces()];
     m.rows.pts = [pt(1, 2, 5), pt(2, 8, 5), pt(3, 9, 1)];
@@ -85,7 +92,7 @@ suite('joinPoints', () => {
     expect(r).toMatchObject({ ok: true, result: { complete: false, reason: expect.stringMatching(/only the first 5000/) } });
   });
   it('refuses a layer that is not queryable or unknown', async () => {
-    expect(await joinPoints({ points: 'railroads', polygons: 'polys' })).toEqual({ ok: false, reason: 'no schema' });
+    expect(await joinPoints({ points: 'nexrad-radar', polygons: 'polys' })).toEqual({ ok: false, reason: 'no schema' });
     expect((await joinPoints({ points: 'pts', polygons: 'nope' })).ok).toBe(false);
     expect((await joinPoints({ points: 1, polygons: 'polys' } as never)).ok).toBe(false);
   });
@@ -107,7 +114,7 @@ suite('crossings', () => {
   it('validates the geometry and layers', async () => {
     expect((await crossings({ geometry: { type: 'Point' } as never, polygons: ['polys'] })).ok).toBe(false);
     expect((await crossings({ geometry: line([0, 0], [1, 1]), polygons: [] })).ok).toBe(false);
-    expect((await crossings({ geometry: line([0, 0], [1, 1]), polygons: ['railroads'] })).ok).toBe(false);
+    expect((await crossings({ geometry: line([0, 0], [1, 1]), polygons: ['nexrad-radar'] })).ok).toBe(false);
   });
 });
 

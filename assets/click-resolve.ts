@@ -3,8 +3,9 @@
 //       queryRenderedFeatures returned (already in CLICKABLE_LAYERS priority
 //       order) and the edit mode, decide what to show: nothing, one feature's
 //       popup, a disambiguation picker, or — in edit mode — a Copy-to-My-Data
-//       popup (`copy-tiled` for a tiled feature whose full geometry the line
-//       GeoParquet holds — the caller's `fullGeometry` predicate), a copy
+//       popup (`copy-tiled` for a tiled feature whose exact geometry can be
+//       had — a GeoParquet dataset or a tiled point layer: the caller's
+//       `fullGeometry` predicate), a copy
 //       picker, or a "tiled, can't copy" note. No map, DOM or
 //       clock: popup.ts queries, calls resolveHits(), and renders the result.
 // Deps: odin-outages.ts (outageFeatureLit), fema-nri.ts (nriFeatureLit),
@@ -70,8 +71,10 @@ export function resolveHits<F extends HitFeature>(
 
   if (mode === 'edit') {
     // Vector-tile (PMTiles) features carry a sourceLayer and are clipped at tile
-    // borders, so copies would be truncated — only allow GeoJSON-backed features,
-    // and tiled ones whose full geometry can be read (`fullGeometry`).
+    // borders, so copies would be truncated — only allow tiled ones whose full
+    // geometry can be read (`fullGeometry`) and GeoJSON-backed ones. A GeoJSON
+    // feature is clipped too (MapLibre tiles the source): the caller copies it from
+    // the loaded source data by its id, never from the piece the hit-test returned.
     const copyable = uniq.filter(ft => !ft.sourceLayer || fullGeometry(ft));
     if (copyable.length > 1) return { kind: 'copy-picker', features: copyable };
     if (copyable.length === 1) {

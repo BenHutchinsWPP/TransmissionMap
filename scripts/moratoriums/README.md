@@ -11,8 +11,10 @@ and refreshes it every week. Two parts:
 The map reads the published files from the root of the `data-moratoriums`
 branch. Each weekly run commits there directly, with the week's report as the
 commit message, so a week goes live without review and is undone with
-`git revert`. Dispatching with `publish: pull_request` opens a pull request
-instead, and merging it publishes.
+`git revert` followed by a `rebuild_only` dispatch. Dispatching with `publish: pull_request` opens a pull request
+instead, and merging it publishes to the branch; a `rebuild_only` dispatch then uploads
+the merged `dc_moratoriums.geojson` to the R2 bucket. Every run uploads the branch tip, so any
+push to `data-moratoriums` made outside a run, and a failed upload, reach the map with the next run or a `rebuild_only` dispatch.
 
 ## Directory layout
 
@@ -150,17 +152,9 @@ holds the search, model and contact secrets, runs the carry-over and
 with fresh checkouts, none of the research secrets and no research job
 output: it works the mode out again, requires the run date to be today or
 yesterday (UTC), and checks the artifact as untrusted input
-(`refresh/artifact.py`, whose header lists every rule) before copying it in:
-exact paths and file types under size caps, no links; rows in the shape
-`run.py` writes (schema headers, dates, states, levels, http(s) source URLs,
-its notes cell, no invisible characters) with ids not used before; updates
-rows that set only `status`, `date_adopted`, `date_expires` or append a source
-on a tracked row; the run report's exact shape; state and ledger entries
-either unchanged from the published copy or this run's own, no more of them
-than the report accounts for; and `notes.md` without raw HTML, reference-style
-links or non-http(s) links. A retry on a moved tip checks the hand-off again
+(`refresh/artifact.py`, whose header lists every rule) before copying it in. A retry on a moved tip checks the hand-off again
 against the new tip. The hand-off is named for the run attempt, so re-running
-publish alone needs research re-run too. It downloads Census itself rather than restoring a cache, then
+publish alone needs research re-run too. It downloads Census itself, then
 rebuilds, checks and publishes. Report and row text in the PR body and commit
 message is defanged (`pr.py`: no mentions, entities, issue references, autolinks,
 links other than the source links, images, HTML, code spans or table-cell breaks). `rebuild_only` runs `publish`
@@ -246,7 +240,7 @@ A direct run's report is its commit message on `data-moratoriums` (and
 1. Read the report: new rows on the map, updated rows (each event with its old and new value), changes rejected in review with their reasons, QA flags, territory warnings, fetch rate, caps hit, cost.
 2. Open each source link for the rows. Every new row, and every tracked row a refresh changed, is marked unconfirmed; a new row carries its quote in its notes. To confirm one, add an `updates.csv` line `<file>,<id>,confirmed,,<YYYY-MM-DD>` (the research row's id, the date you checked it) under `inputs/research/weekly/` and rebuild as in step 4.
 3. Read `inputs/research/weekly/<date>/notes.md`: leads that failed verification (page unreadable, quote not found, no county), changes rejected in review, seed-page results, and a per-state line of leads, new measures and rejections. Promote a lead or a rejected change by adding a row to that week's CSVs, citing a page.
-4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, under `inputs/research/weekly/`: on `data-moratoriums` for a direct run (then rebuild locally with `rebuild.sh` and commit the regenerated files), or in the PR branch then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them. A dropped row stays dropped: when a later run finds the same measure (same place, type and adoption year) or the same upstream change again, it becomes a `dropped by a reviewer` lead, not a new row. To take back a whole direct week, `git revert` its commit.
+4. To reject a row, add an `updates.csv` line with `field=DROP` for its id (columns `file,id,field,old,new,source_urls,source_quality,notes`; `file` is the CSV it came from), or delete the row, under `inputs/research/weekly/`: on `data-moratoriums` for a direct run (then rebuild locally with `rebuild.sh` and commit the regenerated files), or in the PR branch then dispatch `mode=rebuild_only`. Do not edit the published CSVs or geojson by hand; the rebuild regenerates them. A dropped row stays dropped: when a later run finds the same measure (same place, type and adoption year) or the same upstream change again, it becomes a `dropped by a reviewer` lead, not a new row. To take back a whole direct week, `git revert` its commit, then dispatch `rebuild_only`.
 5. For a pull request, merge it. The map serves the new files from `data-moratoriums`.
 
 ## Moving the Moratorium Nation pin

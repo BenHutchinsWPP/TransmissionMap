@@ -7,7 +7,7 @@
 
 An **experience** is a hand-built view of the map — camera, layers, filters,
 basemap, 3D — paired with a short narrative explaining the engineering behind
-it. Users reach them from `File ▸ Experiences…` or from a `?exp=<slug>` link.
+it. Users reach them from `File ▸ Experiences` or from a `?exp=<slug>` link.
 
 ## The four files
 

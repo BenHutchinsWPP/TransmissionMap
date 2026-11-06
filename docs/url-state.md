@@ -72,7 +72,7 @@ string and the filter would never save or restore, with no error raised.
 | `oc` | OGF planned-lines color-by (`r`=region, `s`=status) | codec, `OC_*` maps |
 | `wc` | WestTEC 10 Yr color-by (`s`=scenario, `d`=dataset) | codec, `WC_*` maps |
 | `nr` | FEMA National Risk Index hazard (the NRI field prefix, lowercased: `wfir`, `hrcn`, …) | codec, `NRI_HAZARDS` in `registry/conditions.ts` |
-| `rc` | Routing constraints concern (a `CONCERNS` id as it stands: `floodplain`, `land-manager`, …; dev server only while the layer is; an existing id keeps its cells, new ids are added, never renamed) | codec, `CONCERNS` in `src/colors/route-constraints.ts` |
+| `rc` | Routing constraints concern (a `CONCERNS` id: `floodplain`, `land-manager`, …; dev server only, like the layer; an id keeps its cells and is never renamed) | codec, `CONCERNS` in `src/colors/route-constraints.ts` |
 | `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `ws`=Windstream, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
 | `so` | Fire smoke opacity (integer percent, `0`–`100`) | codec |
 | `bm` | basemap | codec, `BM_*_CODE` maps |
@@ -163,8 +163,8 @@ so older links are byte-identical.
   `vx` is formatted just before `exp`. The encoded string is cached against
   its JSON, since the link is rewritten on every `moveend`.
 - **Versioning:** `v` is 1. Any other value drops the whole param; there is no
-  migration code until a v2 ships with its own. `sel` and `sv` arrived under `v` 1: a
-  build from before one drops the unknown section and opens the rest of the link.
+  migration code until a v2 ships with its own. A build
+  that does not know a section drops it and opens the rest of the link.
 - **Decoding is a trust boundary** (`decodeVx`): the param is capped at 8,192
   chars before anything else (a view file's hash may run to 16 KB, so view files
   open with a 16,384-char cap through `parseUrlState(params, { vxMaxChars })`);
@@ -216,8 +216,8 @@ so older links are byte-identical.
   a non-list drops `vx.sv`. The setters (`setServices` / `addService` in
   `assets/view-state.ts`, through `validateServices`) refuse the same list
   whole with a message, so a view never holds what a link cannot carry. Five
-  services at the byte cap (CJK titles and credits at their length caps) beside
-  `where`, `style` and a full 500-id selection encode to ~5,900 chars, inside the 8,192 cap (`assets/url-state-sv.test.ts`).
+  services at the byte cap beside `where`, `style` and a full 500-id selection
+  fit inside the 8,192 cap (`assets/url-state-sv.test.ts`).
   **Trust:** a link, a view file, an Undo or a story may name any https URL;
   `renderServices()` fetches a service only when its URL is vetted
   (`service-hosts.ts` `isVetted`) or in the session's approved set
@@ -246,7 +246,7 @@ so older links are byte-identical.
 - Size: a view with three `where` layers and five style entries encodes to
   ~340 chars, well inside the 2,000-char link target. A view whose `vx` passes
   8,192 chars is still written, with one notice per session
-  (`toast.linkTooLarge`) pointing to File ▸ Save view…; the view file carries it.
+  (`toast.linkTooLarge`) pointing to File ▸ Save ▸ Save view; the view file carries it.
 
 ### `af` — the Area filter
 
@@ -291,9 +291,9 @@ from `defaultView()`, so there is one place to change it.
 
 ## View files
 
-File ▸ Save view… downloads `map-view.tmview.json`:
+File ▸ Save ▸ Save view downloads `map-view.tmview.json`:
 `{"format":"tmview","v":1,"title":…,"note":…,"hash":…}`, where `hash` is exactly
-the address-bar hash (`url-state.ts`'s `currentHash()`). File ▸ Open… treats a
+the address-bar hash (`url-state.ts`'s `currentHash()`). File ▸ Open ▸ View file treats a
 `.json` as a view file when its `format` is `tmview` (or its name ends in
 `.tmview.json`); anything else goes to the GeoJSON importer as before. A view
 file is untrusted input: `v` must be 1, `hash` a string of at most 16 KB, and

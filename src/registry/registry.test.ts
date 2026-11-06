@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import { LAYERS, LAYER_SOURCES, layerById } from './index.js';
 import { FIELD_SCHEMA } from './field-schema.js';
+import { COLUMNS_DATASETS } from './columns.js';
 import { CLICKABLE_LAYERS, UNOWNED_CLICKABLE } from '../../assets/popup.js';
 
 describe('layerById', () => {
@@ -86,9 +87,7 @@ describe('CLICKABLE_LAYERS click hit-test priority', () => {
     "osm-dc-circles",
     "osm-dc-points",
     "osm-dc-heat-points",
-    "osm-transmission-lines-kv100-hv", "osm-transmission-lines-kv125-hv",
-    "osm-transmission-lines-kv200-hv", "osm-transmission-lines-kv300-hv",
-    "osm-transmission-lines-kv50-mv",
+    "osm-transmission-lines-hv", "osm-transmission-lines-mv",
     "osm-transmission-lines-lv",
     "osm-transmission-lines-unknown",
     "hifld-transmission-lines-hv", "hifld-transmission-lines-mv", "hifld-transmission-lines-lv", "hifld-transmission-lines-unknown",
@@ -191,6 +190,19 @@ describe('LayerDef.dataset', () => {
     const named = new Set(LAYERS.map(l => l.dataset));
     for (const key of Object.keys(FIELD_SCHEMA)) {
       expect(named.has(key), `no registry layer carries dataset "${key}"`).toBe(true);
+    }
+  });
+});
+
+describe('COLUMNS_DATASETS (columns-only Parquet)', () => {
+  it('lists the eleven datasets', () => {
+    expect(COLUMNS_DATASETS).toHaveLength(11);
+  });
+
+  it('every dataset has a pmtiles registry layer with a dataset and a data.id', () => {
+    for (const key of COLUMNS_DATASETS) {
+      const layers = LAYERS.filter(l => l.dataset === key && l.data?.kind === 'pmtiles' && l.data.id);
+      expect(layers.length, `no pmtiles layer with dataset "${key}" and data.id`).toBeGreaterThan(0);
     }
   });
 });

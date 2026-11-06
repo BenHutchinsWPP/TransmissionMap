@@ -255,7 +255,8 @@ describe('addAllLayers sources', () => {
   });
 
   it('credits each registry layer\'s source with that layer\'s data.credit', () => {
-    for (const l of LAYERS.filter(l => l.data)) {
+    // us-counties draws on the shared county join source, whose one attribution also credits ODIN and FEMA NRI
+    for (const l of LAYERS.filter(l => l.data && l.id !== 'us-counties')) {
       expect(spec(layerSourceId(l.id))?.attribution, l.id).toBe(l.data!.credit);
     }
   });

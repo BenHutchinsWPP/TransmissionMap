@@ -34,18 +34,15 @@ adds nothing to them.
 | Fuel disc (glyph "Fuel mix") | positive net generation by fuel, area ∝ MW, inside a dashed ring sized by load | `net_generation_adjusted_mwh` by `generation_energy_source` |
 | Ring around a node | generation ÷ load: a closed dark-blue ring when generation covers load, otherwise an orange arc of the covered fraction over a grey track | `net_generation_adjusted_mwh` ÷ `demand_adjusted_mwh` |
 
-All values are MW at the end of the hour (the PUDL `_mwh` suffix is a relabel).
+All values are MW at the end of the hour; PUDL's `_mwh` column names hold the same hourly MW.
 The numbers sit beside each bubble (below it, or above when that collides),
 so they read at any bubble size; labels that would overlap give way to the
-larger BA until the map is zoomed in. The bubble popup lists every number on the map for that BA (load, generation,
-net interchange, each fuel, each neighbour with both sides' reports), so the
-hour can be read back off the map.
+larger BA until the map is zoomed in. The bubble popup lists that BA's numbers (load, generation,
+net interchange, each fuel, each neighbour with both sides' reports).
 
 **Numbers on bubbles** is a checkbox on the layer row. It is on by default in
 the balancing authority, EIA region and interconnection groupings and off in the
-WECC area grouping, where the Drawer tab carries the figures instead. The link
-param `gn` sets it explicitly (`gn=1` on, `gn=0` off); without it the default
-above applies.
+WECC area grouping, where the Drawer tab carries the figures instead.
 
 **Ring:** none when load is unknown or zero, or for nodes outside EIA-930.
 
@@ -141,5 +138,5 @@ reports), `a` (as `from` reported it), `b` (as `to` reported it).
   up as lower load.
 - **Storage is signed.** A charging battery reports negative net generation;
   the disc draws positive fuels only and the popup prints the sign.
-- **Large first read.** The first hour reads ~5 MB; later hours inside the same
-  half-year read only the fuel rows (~0.2 MB per three days).
+- **Large first read.** The first hour reads the half-year's operations tables; later hours inside the same
+  half-year read only the fuel rows.

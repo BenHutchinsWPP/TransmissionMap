@@ -10,11 +10,11 @@
 // services/service-spec.js (SERVICE_LAYER_PREFIX — a linked service's feature
 // popup, looked up in state.services), src/colors/fuel.js + icons.js (the Grid
 // Operations fuel rows' colour and icon). LINE_LENGTH_SLOT: the hidden row the
-// transmission line popups leave for popup.ts's exact length.
+// transmission line and pipeline popups leave for popup.ts's exact length.
 
 import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmRef } from '../src/registry/osm-fid.js';
-import { osmTlLayerIds } from '../src/registry/transmission.js';
+import { OSM_TL_POPUP_IDS } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, NRI_RATINGS } from '../src/colors/buckets.js';
 import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
@@ -368,9 +368,7 @@ export function renderGridEdge(p: Record<string, unknown>) {
 const WESTTEC_SCENARIO_LABELS: Record<string, string> = Object.fromEntries(
   WESTTEC_SCENARIO_BUCKETS.flatMap(b => (b.values ?? []).map(v => [v, b.label])));
 
-const OSM_TL_POPUP_IDS = osmTlLayerIds("hv", "mv", "lv", "unknown", "dc");
-
-// Where popup.ts puts a transmission line's exact length once its line-file
+// Where popup.ts puts a line's exact length once its line-file
 // lookup lands (lines/line-read.ts); hidden until then, and when it fails.
 export const LINE_LENGTH_SLOT = "popup-line-length";
 const lengthSlot = `<div class="popup-row ${LINE_LENGTH_SLOT}" hidden></div>`;
@@ -433,12 +431,14 @@ const _defs = [
   [["hifld-natgas-interstate", "hifld-natgas-intrastate", "hifld-natgas-hgl", "hifld-natgas-gathering"], (p: Record<string, unknown>) =>
     title((p.name as string) || (p.operator as string) || t("popup.hifldPipeline")) +
     row("popup.type", p.pipe_type) +
+    lengthSlot +
     row("popup.operator", p.operator)],
   [["hifld-natgas-points", "hifld-petroleum-facilities"], renderHifldNatgasPts],
   [["osm-pipelines-lines"], (p: Record<string, unknown>) =>
     title((p.name as string) || t("popup.pipeline")) +
     row("popup.substance", p.substance) +
     row("popup.type", p.facil_type) +
+    lengthSlot +
     row("popup.operator", p.operator)],
   [["railroads"], (p: Record<string, unknown>) =>
     title((p.RROWNER1 as string) || t("popup.railroad")) +
@@ -448,6 +448,7 @@ const _defs = [
     row("popup.netClass", RAIL_NET_LABELS[p.NET as string] || (p.NET as string)) +
     row("popup.tracks", p.TRACKS) +
     row("popup.passenger", p.PASSNGR ? t("popup.yes") : null) +
+    lengthSlot +
     row("popup.state", p.STATEAB)],
   [["osm-pipelines-points"], (p: Record<string, unknown>) =>
     title((p.pipeline as string) || t("popup.pipelineFeature")) +
@@ -711,6 +712,11 @@ function serviceOf(layerId: string) {
 }
 
 // `id` is the clicked feature's MapLibre id (a native stable id rides there).
+// Copies stored before the single world archive name the band's style layer
+// with a voltage-band segment; the layer id has none.
+export const migrateSrc = (src: unknown) =>
+  typeof src === "string" ? src.replace(/^osm-transmission-lines-kv\d+-/, "osm-transmission-lines-") : src;
+
 export function buildPopupHtml(layerId: string, properties: Record<string, unknown>, id?: unknown) {
   if (layerId.startsWith(SERVICE_LAYER_PREFIX)) {
     const service = serviceOf(layerId);
@@ -719,7 +725,7 @@ export function buildPopupHtml(layerId: string, properties: Record<string, unkno
   if (layerId.startsWith("user-")) {
     // Features copied from a main layer carry __src = origin layer id; reuse its
     // formatted popup so the source's data/labels survive the copy.
-    const src = properties.__src as string | undefined;
+    const src = migrateSrc(properties.__src);
     if (typeof src === "string" && Object.hasOwn(POPUP_RENDERERS, src)) return POPUP_RENDERERS[src](properties);
     return buildUserFeatureHtml(properties);
   }

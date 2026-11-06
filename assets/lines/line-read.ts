@@ -1,27 +1,31 @@
 // ─── Transmission line GeoParquet reader (lazy chunk) ─────────────────────────
-// Role: full geometry and exact lengths of the OSM world and HIFLD transmission
-//       lines, read by HTTP range from the GeoParquet files
+// Role: full geometry (and, for lines, exact lengths) of the OSM world and HIFLD
+//       transmission lines and gas pipelines and of polygon datasets (OSM substation and
+//       power-plant polygons, utility territories, EIA balancing authorities, HIFLD control areas, NERC regions, critical habitat, PAD-US, US states, countries, admin-1, tribal lands, counties, ZIP code areas, BIA tribal lands, BOEM wind leases) and of rail lines,
+//       read by HTTP range from the GeoParquet files
 //       scripts/build_line_parquet.py writes under data/analysis/ (layout:
 //       docs/pipeline.md § Line geometry). A registry layer names its dataset
-//       in `data.analysis` (src/types.ts). Every call returns a LineOutcome;
-//       nothing throws into the map.
-//   lookup(layerId, fid)            IDX: fid → {row, length_km, chain, circuits};
+//       in `data.analysis` (src/types.ts); an index entry's `geometry` is 'line'
+//       (read as 'line' when absent) or 'polygon' (IDX + GEO only: no CHAINS, no
+//       length: length_km is NaN). Every call returns a LineOutcome; nothing
+//       throws into the map.
+//   lookup(layerId, fid)            IDX: fid → {row, length_km, chain, circuits, geometry};
 //                                   one IDX request (the row group whose fid
 //                                   statistics hold it), cached for the session
 //   lineGeometry(layerId, fid)      IDX → the GEO part holding the row → one row
 //                                   through the offset index
 //   chainGeometry(layerId, fid)     the way's chain in order (CHAINS, by chain
 //                                   statistics), each way's geometry and `rev`
-//   selectionGeometry(layerId, fids, bbox)  ≤ 1,000 ids: ≤ 20 one by one, more
-//                                   by the GEO bbox column index (pages whose
-//                                   bbox meets `bbox`), filtered on fid
+//   selectionGeometry(layerId, fids, bbox)  ≤ 1,000 ids: ≤ 20 one by one, more by
+//                                   the cheaper of two plans (`selectionPlan`, planned
+//                                   bytes from the footers and the bbox page index):
+//                                   the GEO pages whose bbox meets `bbox`, filtered
+//                                   on fid, or the ids' IDX groups, then their rows
 //   lineDataset(layerId)            the dataset's manifest entry (credit, licence)
-// Requests: plain `Range: bytes=N-M` GETs, same-origin credentials only (a
-//   signed-in dev tunnel needs its cookie; the data host gets none), never a HEAD
-//   or a suffix range — byteLength and the footer length come from index.json.
-//   Fetched ranges are cached for the session; a range inside a cached one is
-//   served from it. Row runs closer than RUN_GAP rows are read as one. Each
-//   request is aborted after TIMEOUT_MS, so a stalled one leaves no entry behind.
+// Requests: through parquet/range-io.ts (bounded range GETs, a 10 s timeout per
+//   request, ≤ 6 in flight, a 32 MiB LRU byte cache, the index.json load). Row
+//   runs closer than RUN_GAP rows are read as one. Each call is also cut at
+//   TIMEOUT_MS as a whole (`guard`), which then stops its queued and running requests.
 // Failures (LineFailure): `unavailable` (no index.json: the files are not
 //   published here; remembered for the session), `offline`, `not-found` (the id is not in IDX: index.json
 //   is fetched again once per session, in case the build moved on), `stale-build`
@@ -29,174 +33,75 @@
 //   a 404 or another document, or a row pointer lands on another fid; each call
 //   that meets it reads index.json again and retries once, so a tab open across
 //   a rebuild recovers), `too-many`, `timeout` (TIMEOUT_MS per call).
-// Deps: hyparquet + fzstd (only in this chunk), constants.ts (DATA.line_index),
-//   src/registry (layerById). Imported only from lazy code: popup.ts and
-//   ui/ui-table.ts (dynamic: the length row, whether the files are here),
-//   lines/line-copy.ts, ui/ui-line.ts.
+// Deps: parquet/range-io.ts (requestLog, groupsHolding and rowRuns re-exported),
+//   hyparquet (column and offset index readers; only in lazy chunks),
+//   src/registry (layerById). Imported only from lazy code: popup.ts (dynamic: the
+//   length row, the edit-mode probe), ui/ui-table.ts and user-data/copy-rows.ts
+//   (dynamic: whether the files are here), lines/line-copy.ts, ui/ui-line.ts.
 
-import { parquetMetadataAsync, parquetReadObjects, readColumnIndex, readOffsetIndex,
-  type AsyncBuffer, type FileMetaData, type ColumnChunk, type Compressors } from 'hyparquet';
-import { decompress } from 'fzstd';
-import { DATA } from '../constants.js';
+import { readColumnIndex, readOffsetIndex, type FileMetaData, type ColumnChunk } from 'hyparquet';
+import { Fail as IoFail, loadIndex, forgetIndex, openFile, readRows, groupsHolding, rowRuns, RUN_GAP, withSignal,
+  resetRangeIo, type FileEntry, type Key, type OpenFile } from '../parquet/range-io.js';
 import { layerById } from '../../src/registry/index.js';
+
+export { requestLog, groupsHolding, rowRuns } from '../parquet/range-io.js';
 
 export type LineFailure = 'unavailable' | 'offline' | 'not-found' | 'stale-build' | 'too-many' | 'timeout';
 export type LineOutcome<T> = { ok: true; result: T } | { ok: false; reason: LineFailure };
 
-export interface IdxRow { row: number; length_km: number; chain: number; circuits: number }
+export interface IdxRow { row: number; length_km: number; chain: number; circuits: number; geometry?: 'line' | 'polygon' }
 export interface ChainWay { fid: string | number; rev: boolean; length_km: number; geometry: GeoJSON.Geometry }
 export interface Chain { chain: number; ways: ChainWay[]; startSub: number | null; endSub: number | null }
 export interface Selection { geometries: Map<string, GeoJSON.Geometry>; missing: (string | number)[] }
 export type Bbox = [number, number, number, number];
 
-interface FileEntry { name: string; bytes: number; footer_len: number; rows: number; row_offset?: number }
 export interface DatasetEntry {
   path: string; dataset: string; build_id: string; attribution: string; label: string;
   source: string; url: string; licence: string; snapshot: string | null; fid_type: 'int64' | 'string';
+  geometry?: 'line' | 'polygon';
   idx: FileEntry; geo: FileEntry[]; chains: FileEntry | null;
 }
-interface Index { version: number; datasets: Record<string, DatasetEntry> }
 
 export const MAX_SELECTION = 1000;
 const BY_ID_MAX = 20;
-const RUN_GAP = 64;
 const TIMEOUT_MS = 10_000;
-const COMPRESSORS: Compressors = { ZSTD: (input: Uint8Array) => decompress(input) };
 
-class Fail extends Error { constructor(readonly reason: LineFailure) { super(reason); } }
+const Fail = IoFail<LineFailure>;
 
 // ─── Index ───────────────────────────────────────────────────────────────────
-const BASE = DATA.line_index.slice(0, DATA.line_index.lastIndexOf('/') + 1);
-let indexLoad: Promise<Index> | null = null;
 let refreshedOnce = false;
-
-/** fetch, aborted after TIMEOUT_MS (body included), so a stalled request leaves no pending cache entry. */
-async function fetchTimed<T>(url: string, init: RequestInit, read: (res: Response) => Promise<T>): Promise<T> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  try { return await read(await fetch(url, { ...init, signal: ctrl.signal })); }
-  catch (e) { throw e instanceof Fail ? e : new Fail(ctrl.signal.aborted ? 'timeout' : 'offline'); }
-  finally { clearTimeout(timer); }
-}
-
-function loadIndex(): Promise<Index> {
-  return indexLoad ??= fetchTimed(DATA.line_index, { credentials: 'same-origin', cache: 'no-cache' }, async res => {
-    if (!res.ok) throw new Fail('unavailable');
-    const idx = await res.json().catch(() => null) as Index | null;
-    if (!idx || typeof idx !== 'object' || !idx.datasets) throw new Fail('unavailable');
-    return idx;
-  }).catch(e => { if (!(e instanceof Fail && e.reason === 'unavailable')) indexLoad = null; throw e; });
-}
 
 async function datasetOf(layerId: string): Promise<DatasetEntry> {
   const ds = layerById(layerId)?.data?.analysis;
   if (!ds) throw new Fail('unavailable');
-  const entry = (await loadIndex()).datasets[ds];
+  const entry = (await loadIndex()).datasets?.[ds] as DatasetEntry | undefined;
   if (!entry) throw new Fail('unavailable');
   return entry;
 }
 
-// ─── Range-read files ────────────────────────────────────────────────────────
-interface Cached { start: number; end: number; data: Promise<ArrayBuffer> }
-interface OpenFile { buf: AsyncBuffer; meta: Promise<FileMetaData> }
-const files = new Map<string, OpenFile>();
-
-/** The last 500 range requests since the last reset — for tests and diagnostics. */
-export const requestLog: { url: string; start: number; end: number }[] = [];
-
-function fetchRange(url: string, start: number, end: number, size: number): Promise<ArrayBuffer> {
-  if (requestLog.push({ url, start, end }) > 500) requestLog.shift();
-  return fetchTimed(url, { credentials: 'same-origin', headers: { Range: `bytes=${start}-${end - 1}` } }, async res => {
-    if (res.status === 404) throw new Fail('stale-build');   // a content-hashed name the host no longer has
-    if (!res.ok) throw new Fail('offline');
-    const body = await res.arrayBuffer();
-    if (res.status === 206 && body.byteLength === end - start) return body;
-    if (res.status === 200 && body.byteLength === size) return body.slice(start, end);   // a host that ignores Range
-    if (res.status === 200) throw new Fail('stale-build');   // another document under that name (a dev server's page for a missing file)
-    throw new Fail('offline');
-  });
-}
-
-function openFile(ds: DatasetEntry, entry: FileEntry): OpenFile {
-  const url = BASE + ds.path + entry.name;
-  const hit = files.get(url);
-  if (hit) return hit;
-  const cache: Cached[] = [];
-  const buf: AsyncBuffer = {
-    byteLength: entry.bytes,
-    slice(start: number, end = entry.bytes) {
-      const c = cache.find(r => r.start <= start && end <= r.end);
-      if (c) return c.data.then(b => b.slice(start - c.start, end - c.start));
-      const data = fetchRange(url, start, end, entry.bytes);
-      const rec = { start, end, data };
-      cache.push(rec);
-      data.catch(() => cache.splice(cache.indexOf(rec), 1));
-      return data;
-    },
-  };
-  const meta = parquetMetadataAsync(buf, { initialFetchSize: entry.footer_len + 8 }).then(md => {
-    const build = md.key_value_metadata?.find(kv => kv.key === 'build_id')?.value;
-    if (build !== ds.build_id) throw new Fail('stale-build');
-    return md;
-  });
-  const file = { buf, meta };
-  files.set(url, file);
-  meta.catch(() => files.delete(url));
-  return file;
-}
-
-function readRows(file: OpenFile, md: FileMetaData, rowStart: number, rowEnd: number, columns?: string[], offsetIndex = false) {
-  return parquetReadObjects({ file: file.buf, metadata: md, rowStart, rowEnd, columns,
-    compressors: COMPRESSORS, useOffsetIndex: offsetIndex, rowFormat: 'object' }) as Promise<Record<string, unknown>[]>;
-}
-
-// ─── Row groups by statistics ────────────────────────────────────────────────
-type Key = bigint | string;
+// ─── Row keys ────────────────────────────────────────────────────────────────
 const keyOf = (ds: DatasetEntry, fid: string | number): Key | null => {
   if (ds.fid_type === 'string') return String(fid);
   try { return BigInt(fid); } catch { return null; }
 };
 const sameKey = (a: unknown, b: Key) => (typeof b === 'bigint' ? a === b : String(a) === b);
 
-/** The row groups whose `column` statistics may hold `key`, as [first row, end row). Pure. */
-export function groupsHolding(md: Pick<FileMetaData, 'row_groups'>, column: string, key: Key): [number, number][] {
-  const out: [number, number][] = [];
-  let start = 0;
-  for (const rg of md.row_groups) {
-    const n = Number(rg.num_rows);
-    const st = rg.columns.find((c: ColumnChunk) => c.meta_data?.path_in_schema.join('.') === column)?.meta_data?.statistics;
-    const lo = st?.min_value ?? st?.min, hi = st?.max_value ?? st?.max;
-    if (lo == null || hi == null || (lo as Key) <= key && key <= (hi as Key)) out.push([start, start + n]);
-    start += n;
-  }
-  return out;
-}
-
-/** Sorted row numbers → [start, end) runs, joining gaps of at most `gap` rows. Pure. */
-export function rowRuns(rows: number[], gap = RUN_GAP): [number, number][] {
-  const runs: [number, number][] = [];
-  for (const r of [...new Set(rows)].sort((a, b) => a - b)) {
-    const last = runs[runs.length - 1];
-    if (last && r - last[1] <= gap) last[1] = r + 1; else runs.push([r, r + 1]);
-  }
-  return runs;
-}
-
 // ─── Calls ───────────────────────────────────────────────────────────────────
 const lookups = new Map<string, Promise<IdxRow | null>>();
 
-async function guard<T>(fn: () => Promise<T>): Promise<LineOutcome<T>> {
+async function guard<T>(fn: (signal: AbortSignal) => Promise<T>): Promise<LineOutcome<T>> {
+  const stop = new AbortController();   // a timed-out or failed call stops its queued and running requests
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Fail('timeout')), TIMEOUT_MS); });
   // A rebuild renames the files under an open tab: read index.json again and try once more.
-  const run = () => fn().catch((e: unknown) => {
-    if (!(e instanceof Fail && e.reason === 'stale-build')) throw e;
-    indexLoad = null;
-    return fn();
+  const run = () => fn(stop.signal).catch((e: unknown) => {
+    if (!(e instanceof IoFail && e.reason === 'stale-build')) throw e;
+    forgetIndex();
+    return fn(stop.signal);
   });
   try { return { ok: true, result: await Promise.race([run(), timeout]) }; }
-  catch (e) { return { ok: false, reason: e instanceof Fail ? e.reason : 'offline' }; }
-  finally { clearTimeout(timer); }
+  catch (e) { return { ok: false, reason: e instanceof IoFail ? e.reason as LineFailure : 'offline' }; }
+  finally { clearTimeout(timer); stop.abort(); }
 }
 
 async function idxRow(ds: DatasetEntry, fid: string | number): Promise<IdxRow | null> {
@@ -207,7 +112,8 @@ async function idxRow(ds: DatasetEntry, fid: string | number): Promise<IdxRow | 
   for (const [a, b] of groupsHolding(md, 'fid', key)) {
     const hit = (await readRows(file, md, a, b)).find(r => sameKey(r.fid, key));
     if (hit) return {
-      row: Number(hit.row), length_km: Number(hit.length_km),
+      row: Number(hit.row), length_km: hit.length_km == null ? NaN : Number(hit.length_km),
+      geometry: ds.geometry ?? 'line',
       chain: hit.chain == null ? -1 : Number(hit.chain),
       circuits: hit.circuits == null ? -1 : Number(hit.circuits),
     };
@@ -224,7 +130,7 @@ async function find(layerId: string, fid: string | number): Promise<{ ds: Datase
   if (hit) return { ds, hit };
   if (!refreshedOnce) {
     refreshedOnce = true;
-    indexLoad = null;
+    forgetIndex();
     const fresh = await datasetOf(layerId);
     if (fresh.build_id !== ds.build_id) return find(layerId, fid);
   }
@@ -243,7 +149,7 @@ function partOf(ds: DatasetEntry, row: number): FileEntry {
 }
 
 /** Global rows → geometry, keyed by row; each row's fid is checked when `want` names it. */
-async function geometryByRows(ds: DatasetEntry, rows: number[]): Promise<Map<number, { fid: unknown; geometry: GeoJSON.Geometry }>> {
+async function geometryByRows(ds: DatasetEntry, rows: number[], signal?: AbortSignal): Promise<Map<number, { fid: unknown; geometry: GeoJSON.Geometry }>> {
   const byPart = new Map<FileEntry, number[]>();
   for (const r of rows) {
     const p = partOf(ds, r);
@@ -251,7 +157,7 @@ async function geometryByRows(ds: DatasetEntry, rows: number[]): Promise<Map<num
   }
   const out = new Map<number, { fid: unknown; geometry: GeoJSON.Geometry }>();
   await Promise.all([...byPart].map(async ([part, local]) => {
-    const file = openFile(ds, part);
+    const file = signal ? withSignal(openFile(ds, part), signal) : openFile(ds, part);
     const md = await file.meta;
     await Promise.all(rowRuns(local).map(async ([a, b]) => {
       const got = await readRows(file, md, a, b, ['fid', 'geometry'], true);
@@ -351,8 +257,48 @@ async function pagesMeeting(file: OpenFile, chunks: (ColumnChunk | undefined)[],
   return out;
 }
 
-export function selectionGeometry(layerId: string, fids: (string | number)[], bbox: Bbox): Promise<LineOutcome<Selection>> {
-  return guard(async () => {
+const groupBytes = (rg: FileMetaData['row_groups'][number]) =>
+  rg.columns.reduce((n, c) => n + Number(c.meta_data?.total_compressed_size ?? 0), 0);
+
+/** What each way of reading a selection would fetch, from the footers and the bbox page index. */
+export interface SelectionPlan { bbox: number; byId: number; runs: Map<FileEntry, [number, number][]>; choice: 'bbox' | 'id' }
+
+/** More than BY_ID_MAX ids: the GEO bytes the bbox runs cover, against the IDX groups holding the ids plus the
+ *  pages those ids' rows may fall in (a page per id at most); the smaller is chosen. Reads indexes, no geometry. */
+export async function selectionPlan(layerId: string, fids: (string | number)[], bbox: Bbox, signal?: AbortSignal): Promise<SelectionPlan> {
+  const ds = await datasetOf(layerId);
+  const sig = (f: OpenFile) => (signal ? withSignal(f, signal) : f);
+  let rows = 0, geoBytes = 0, bboxBytes = 0;
+  const runs = new Map<FileEntry, [number, number][]>();
+  await Promise.all(ds.geo.map(async part => {
+    const file = sig(openFile(ds, part));
+    const md = await file.meta;
+    let pr = 0, pb = 0;
+    for (const rg of md.row_groups) { pr += Number(rg.num_rows); pb += Number(chunkOf(rg, 'geometry')?.meta_data?.total_compressed_size ?? 0); }
+    const r = await bboxRanges(file, md, bbox);
+    runs.set(part, r);
+    rows += pr; geoBytes += pb;
+    bboxBytes += r.reduce((n, [a, b]) => n + (b - a), 0) * (pr ? pb / pr : 0);
+  }));
+  // A page holds the rows of at most ~1 MiB; an older file's 256-row pages are the same bound in rows.
+  const rowBytes = rows ? geoBytes / rows : 0;
+  const pageBytes = Math.max(rowBytes, Math.min(256 * rowBytes, 2 ** 20));
+  const file = sig(openFile(ds, ds.idx));
+  const md = await file.meta;
+  const groups = new Set<number>();
+  for (const fid of fids) {
+    const key = keyOf(ds, fid);
+    if (key === null) continue;
+    for (const [a] of groupsHolding(md, 'fid', key)) groups.add(a);
+  }
+  let idxBytes = 0, start = 0;
+  for (const rg of md.row_groups) { if (groups.has(start)) idxBytes += groupBytes(rg); start += Number(rg.num_rows); }
+  const byId = idxBytes + Math.min(fids.length * pageBytes, geoBytes);
+  return { bbox: bboxBytes, byId, runs, choice: byId < bboxBytes ? 'id' : 'bbox' };
+}
+
+export function selectionGeometry(layerId: string, fids: (string | number)[], bbox: Bbox, plan?: 'bbox' | 'id'): Promise<LineOutcome<Selection>> {
+  return guard(async signal => {
     if (fids.length > MAX_SELECTION) throw new Fail('too-many');
     const geometries = new Map<string, GeoJSON.Geometry>();
     const missing: (string | number)[] = [];
@@ -366,16 +312,37 @@ export function selectionGeometry(layerId: string, fids: (string | number)[], bb
       return { geometries, missing };
     }
     const ds = await datasetOf(layerId);
-    const want = new Set(fids.map(String));
-    await Promise.all(ds.geo.map(async part => {
-      const file = openFile(ds, part);
+    const sp = await selectionPlan(layerId, fids, bbox, signal);
+    if ((plan ?? sp.choice) === 'id') {
+      const file = withSignal(openFile(ds, ds.idx), signal);
       const md = await file.meta;
-      const runs = await bboxRanges(file, md, bbox);
-      await Promise.all(runs.map(async ([a, b]) => {
-        for (const r of await readRows(file, md, a, b, ['fid', 'geometry'], true))
-          if (want.has(String(r.fid))) geometries.set(String(r.fid), r.geometry as GeoJSON.Geometry);
+      const rowOf = new Map<string, number>();
+      const groups = new Set<string>();
+      const want = new Map<string, Key>();
+      for (const fid of fids) { const k = keyOf(ds, fid); if (k !== null) want.set(String(fid), k); }
+      for (const k of want.values()) for (const [a, b] of groupsHolding(md, 'fid', k)) groups.add(`${a}:${b}`);
+      await Promise.all([...groups].map(async g => {
+        const [a, b] = g.split(':').map(Number);
+        for (const r of await readRows(file, md, a, b)) if (want.has(String(r.fid))) rowOf.set(String(r.fid), Number(r.row));
       }));
-    }));
+      const geoms = await geometryByRows(ds, [...rowOf.values()], signal);
+      for (const [fid, row] of rowOf) {
+        const got = geoms.get(row);
+        if (!got) continue;
+        if (String(got.fid) !== fid) throw new Fail('stale-build');
+        geometries.set(fid, got.geometry);
+      }
+    } else {
+      const wantIds = new Set(fids.map(String));
+      await Promise.all(ds.geo.map(async part => {
+        const file = withSignal(openFile(ds, part), signal);
+        const md = await file.meta;
+        await Promise.all((sp.runs.get(part) ?? []).map(async ([a, b]) => {
+          for (const r of await readRows(file, md, a, b, ['fid', 'geometry'], true))
+            if (wantIds.has(String(r.fid))) geometries.set(String(r.fid), r.geometry as GeoJSON.Geometry);
+        }));
+      }));
+    }
     for (const fid of fids) if (!geometries.has(String(fid))) missing.push(fid);
     return { geometries, missing };
   });
@@ -385,8 +352,7 @@ export function lineDataset(layerId: string): Promise<LineOutcome<DatasetEntry>>
   return guard(() => datasetOf(layerId));
 }
 
-/** Test support: forget the index, the files and the lookups. */
+/** Test support: forget the index, the files, the cached bytes and the lookups. */
 export function resetLineRead() {
-  indexLoad = null; refreshedOnce = false;
-  files.clear(); lookups.clear(); requestLog.length = 0;
+  resetRangeIo(); refreshedOnce = false; lookups.clear();
 }

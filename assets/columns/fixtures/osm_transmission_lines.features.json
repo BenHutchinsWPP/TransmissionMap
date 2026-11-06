@@ -1,0 +1,291 @@
+{
+ "features": [
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -97.0,
+      32.0
+     ],
+     [
+      -96.5,
+      32.4
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000012,
+   "properties": {
+    "admin1": "|USAB|",
+    "countries": "|USA|",
+    "name": "Alpha",
+    "nominal_kv": 345,
+    "states": "|TX|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -97.2,
+      31.0
+     ],
+     [
+      -96.9,
+      31.3
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000022,
+   "properties": {
+    "admin1": "|USAB|",
+    "countries": "|USA|",
+    "nominal_kv": 138,
+    "states": "|TX|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -99.0,
+      31.5
+     ],
+     [
+      -98.4,
+      31.9
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000032,
+   "properties": {
+    "admin1": "|USAB|",
+    "countries": "|USA|",
+    "name": "",
+    "nominal_kv": -1,
+    "states": "|TX|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -101.9,
+      33.5
+     ],
+     [
+      -101.0,
+      33.9
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000042,
+   "properties": {
+    "admin1": "|USAB|",
+    "countries": "|USA|",
+    "name": "Bravo",
+    "nominal_kv": 230,
+    "states": "|TX|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -103.2,
+      32.5
+     ],
+     [
+      -102.8,
+      32.9
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000052,
+   "properties": {
+    "admin1": "|USAB|USAA|",
+    "countries": "|USA|",
+    "name": "Charlie",
+    "nominal_kv": 115,
+    "states": "|TX|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -103.1,
+      33.0
+     ],
+     [
+      -102.2,
+      33.4
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000062,
+   "properties": {
+    "admin1": "|USAB|USAA|",
+    "countries": "|USA|",
+    "name": "Delta",
+    "nominal_kv": 500,
+    "states": "|TX|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -106.7,
+      35.1
+     ],
+     [
+      -106.2,
+      35.3
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000072,
+   "properties": {
+    "admin1": "|USAA|",
+    "countries": "|USA|",
+    "nominal_kv": 69,
+    "states": "|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -106.9,
+      32.3
+     ],
+     [
+      -106.5,
+      32.6
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000082,
+   "properties": {
+    "admin1": "|USAA|",
+    "countries": "|USA|",
+    "name": "Echo",
+    "nominal_kv": -1,
+    "states": "|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -108.2,
+      32.7
+     ],
+     [
+      -107.6,
+      33.0
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000092,
+   "properties": {
+    "admin1": "|USAA|",
+    "countries": "|USA|",
+    "name": "Foxtrot",
+    "nominal_kv": 345,
+    "states": "|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      -107.9,
+      36.7
+     ],
+     [
+      -107.2,
+      36.9
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000102,
+   "properties": {
+    "admin1": "|USAA|",
+    "countries": "|USA|",
+    "name": "Golf",
+    "nominal_kv": 230,
+    "states": "|NM|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      2.3,
+      48.8
+     ],
+     [
+      2.9,
+      49.2
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000112,
+   "properties": {
+    "admin1": "|none|",
+    "countries": "|FRA|",
+    "name": "Hotel",
+    "nominal_kv": 400,
+    "states": "|none|"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     [
+      11.5,
+      48.1
+     ],
+     [
+      12.0,
+      48.4
+     ]
+    ],
+    "type": "LineString"
+   },
+   "id": 10000000122,
+   "properties": {
+    "admin1": "|none|",
+    "countries": "|DEU|",
+    "name": "India",
+    "nominal_kv": 220,
+    "states": "|none|"
+   },
+   "type": "Feature"
+  }
+ ],
+ "type": "FeatureCollection"
+}

@@ -22,8 +22,7 @@ with the bubble's size. With `circle-pitch-alignment: map` the same circle lies 
 ## Where it runs
 
 - **Grouping** (`proximityGroups`, method m5) runs on the main thread. Its memory is
-  O(n) typed arrays, and its time is near-linear on the measured sets, so it is short
-  enough for a one-shot run.
+  O(n) typed arrays and its time near-linear.
 - **Pairs** (`proximityPairs`) runs in a Web Worker, `assets/proximity/pairs-worker.ts`,
   started only by `assets/proximity/pairs-open.ts`. It posts progress about every 50,000
   pairs found, and the tab offers **Cancel**, which terminates the worker and resolves the
@@ -87,7 +86,7 @@ The fixtures (`assets/proximity/fixtures.ts`) are seeded and generated; they nev
 `data/`. The fixture generators are documented in that file's header.
 
 `assets/filters-where.test.ts` allowlists every `setFilter` call site. The `px-focus` /
-`px-focus-pt` call in `proximity-map.ts` has its line there, and a new call needs one too.
+`px-focus-pt` call in `proximity-map.ts` has its line there.
 
 ## Checklist for changing the tool
 

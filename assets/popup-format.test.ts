@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { osmTlLayerIds } from '../src/registry/transmission.js';
+import { OSM_TL_POPUP_IDS } from '../src/registry/transmission.js';
 import {
   row, websiteRow, title,
   renderEiaGen, renderOgfPlanned, renderHifldNatgasPts, renderGeoHydroPts,
@@ -380,7 +380,7 @@ describe('Data Center popup (osm-dc-circles)', () => {
 
 describe('OSM ID link', () => {
   const href = (html: string | null) => html?.match(/openstreetmap\.org\/([a-z]+\/\d+)/)?.[1];
-  const tl = osmTlLayerIds("hv")[0];
+  const tl = OSM_TL_POPUP_IDS[0]!;
 
   it('decodes a native fid into the element type and id', () => {
     expect(href(buildPopupHtml('osm-substations-points-hv', { name: 'S' }, 4535892832))).toBe('way/453589283');
@@ -488,17 +488,20 @@ describe('buildPopupHtml', () => {
     expect(out).toContain('Test Plant');
   });
 
-  // Every voltage-class archive gets its own style layers, so the popup router
-  // has to know all of them. A layer id built without the archive suffix matches
-  // only the sub-50 kV file, and popups silently stop working above it.
   it('routes every osm transmission style layer', () => {
-    const ids = osmTlLayerIds('hv', 'mv', 'lv', 'unknown', 'dc');
+    const ids = OSM_TL_POPUP_IDS;
     expect(ids.length).toBeGreaterThan(1);
     for (const id of ids) {
       const out = buildPopupHtml(id, { name: 'HV Line', nominal_kv: 345 });
       expect(out, id).toContain('HV Line');
       expect(out, id).toContain('345 kV');
     }
+  });
+
+  it('routes a My Data copy stored under a voltage-band style layer id', () => {
+    const out = buildPopupHtml('user-x', { name: 'Old Copy', nominal_kv: 345, __src: 'osm-transmission-lines-kv300-hv' });
+    expect(out).toContain('Old Copy');
+    expect(out).toContain('345 kV');
   });
 
   it('routes hifld-transmission-lines-hv with SUB_1/SUB_2', () => {

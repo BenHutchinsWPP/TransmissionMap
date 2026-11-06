@@ -34,7 +34,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids route-cube route-structures route-buildings route-buildings-national route-wetland route-cube-assemble route-constraints line-parquet region-domains eia930-bas test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data web clean clean-build distclean check
+.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids route-cube route-structures route-buildings route-buildings-national route-wetland route-cube-assemble route-constraints line-parquet columns-parquet columns-check geometry-check region-domains eia930-bas test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data publish-r2 web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -70,12 +70,16 @@ help:
 	@echo "  make route-wetland  pd b14 wetland (NWI wetland share per cell) from the state zips in data/raw/route/nwi/ (NWI_DIR=..., NWI_WORK=...; log in tmp/logs/route-wetland.log)"
 	@echo "  make route-structures  pd b13 bldg (homes per cell) from the USA Structures zips (fetch_route_inputs.py structures; STRUCTURES_DIR=...; log in tmp/logs/route-structures.log)"
 	@echo "  make route-cube-assemble  assemble the cube only, from the built bands in data/build/route/250m/ (log in tmp/logs/route-cube-assemble.log)"
-	@echo "  make line-parquet  transmission line GeoParquet (OSM world + HIFLD) → data/analysis/, dev-only (ARGS=\"--only <ds>\"; log in tmp/logs/line-parquet.log)"
+	@echo "  make line-parquet  exact-geometry GeoParquet (transmission and gas lines, OSM polygons, regions, critical habitat, PAD-US) → data/analysis/, dev-only (ARGS=\"--only <ds>\"; log in tmp/logs/line-parquet.log)"
+	@echo "  make columns-parquet  attribute-only Parquet of the 11 tiled datasets → data/analysis/columns/, dev-only (ARGS=\"--only <ds>\" or \"--scan-types\"; log in tmp/logs/columns-parquet.log)"
+	@echo "  make columns-check  hold the columns Parquet files to the tiles and IDX (ARGS=\"--only <ds>\", \"--mutate\" or \"--emit-reference DIR\"; log in tmp/logs/columns-check.log)"
+	@echo "  make geometry-check  hold data/analysis geometry files to the kept inputs and the tiles (ARGS=\"--only <ds>\" or \"--mutate\"; log in tmp/logs/geometry-check.log)"
 	@echo "  make route-constraints  route constraints layer: data/route/constraints/<concern>.pmtiles from the cube's pd_ files (ARGS=\"--only id1,id2 --force\"; log in tmp/logs/route-constraints.log)"
 	@echo "  make test-pipeline run pipeline smoke tests (scripts/test_*.py, stdlib-only pass then with PyYAML; no data/ needed)"
 	@echo "  make tiles       $(BUILD)/ → PMTiles + GeoJSON + ZIPs for the web app"
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
 	@echo "  make data-manifest  build per-layer provenance → data/layers/manifest.json (Data Credits page)"
+	@echo "  make publish-r2   copy layers, pack zips and data/analysis to the R2 bucket data-wpptx-org (ARGS=--dry-run first; needs rclone + .env.r2)"
 	@echo "  make publish-data publish a build: layers constants.ts names → orphan 'data-static' branch, download packs → 'data-latest' GitHub Release (needs public repo + gh)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
@@ -532,11 +536,26 @@ route-constraints:
 
 # ── Line geometry: transmission lines as GeoParquet → data/analysis/ ──────
 # OSM reads the merged world input `make global-tiles` keeps, so run that first.
-# Dev-only: publish_data.sh never ships data/analysis/. docs/pipeline.md § Line geometry.
+# publish_data.sh does not ship data/analysis/; publish_r2.sh does. docs/pipeline.md § Line geometry.
 line-parquet:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@mkdir -p tmp/logs tmp/build-tmp
 	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=14G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_line_parquet.py $(ARGS) > tmp/logs/line-parquet.log 2>&1; rc=$$?; head -20 tmp/logs/line-parquet.log; echo ...; tail -40 tmp/logs/line-parquet.log; exit $$rc
+
+columns-parquet:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=14G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_columns_parquet.py $(ARGS) > tmp/logs/columns-parquet.log 2>&1; rc=$$?; head -20 tmp/logs/columns-parquet.log; echo ...; tail -40 tmp/logs/columns-parquet.log; exit $$rc
+
+columns-check:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=14G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/check_columns_parquet.py $(ARGS) > tmp/logs/columns-check.log 2>&1; rc=$$?; head -20 tmp/logs/columns-check.log; echo ...; tail -40 tmp/logs/columns-check.log; exit $$rc
+
+geometry-check:
+	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
+	@mkdir -p tmp/logs tmp/build-tmp
+	@systemd-run --user --scope -q -E TMPDIR=$(CURDIR)/tmp/build-tmp -E CPL_TMPDIR=$(CURDIR)/tmp/build-tmp -p MemoryMax=14G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/check_geometry_parquet.py $(ARGS) > tmp/logs/geometry-check.log 2>&1; rc=$$?; head -20 tmp/logs/geometry-check.log; echo ...; tail -40 tmp/logs/geometry-check.log; exit $$rc
 
 test-pipeline:
 	@echo "stdlib only (what CI's runners see):"
@@ -569,6 +588,10 @@ data-manifest:
 # push, instead of shipping a stale file or a 404.
 publish-data: data-manifest
 	@bash $(SCRIPTS)/publish_data.sh
+
+# Static data → R2 (data.wpptx.org); keys and dashboard steps in local/r2-deploy.md.
+publish-r2: data-manifest
+	@bash $(SCRIPTS)/publish_r2.sh $(ARGS)
 
 # ── Serve static site ──────────────────────────────────────────────────────
 web:

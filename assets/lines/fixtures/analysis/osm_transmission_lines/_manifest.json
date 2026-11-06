@@ -1,7 +1,8 @@
 {
  "dataset": "osm_transmission_lines",
- "build_id": "20261022T194605Z-44f809",
- "built": "2026-10-22T19:46:05Z",
+ "build_id": "fixture",
+ "built": "1970-01-01T00:00:00Z",
+ "geometry": "line",
  "snapshot": null,
  "attribution": "© OpenStreetMap contributors",
  "label": "OSM Transmission Lines",
@@ -16,10 +17,10 @@
  "length": "sphere R=6371.0088 km, haversine per part",
  "idx": {
   "role": "idx",
-  "name": "osm_transmission_lines.idx.4959f28f.parquet",
-  "bytes": 3034,
-  "sha256": "4959f28f2cc73909a525967ec4756525682598d40a7057d82f4f4461fbc05aff",
-  "footer_len": 1200,
+  "name": "osm_transmission_lines.idx.9c2d25e9.parquet",
+  "bytes": 2998,
+  "sha256": "9c2d25e9de9c00ad81e50c4f667e40b85c07580d8ae0cbad02ab3f464ff22f32",
+  "footer_len": 1164,
   "rows": 607,
   "columns": [
    "fid",
@@ -32,10 +33,10 @@
  "geo": [
   {
    "role": "geo",
-   "name": "osm_transmission_lines.geo.p0.8692c821.parquet",
-   "bytes": 9513,
-   "sha256": "8692c82143a0dd5f7903d57299b660116a6a042e94a940e6385f8d447f91b962",
-   "footer_len": 2560,
+   "name": "osm_transmission_lines.geo.p0.0febfc06.parquet",
+   "bytes": 9477,
+   "sha256": "0febfc06f8eea44417952230816d9a1d127c8111c325b885d6c5f8c37731532a",
+   "footer_len": 2524,
    "rows": 607,
    "part": 0,
    "row_offset": 0
@@ -43,10 +44,10 @@
  ],
  "chains": {
   "role": "chains",
-  "name": "osm_transmission_lines.chains.6bc770b6.parquet",
-  "bytes": 1986,
-  "sha256": "6bc770b64ab3e8b115b14c83150891c66c292a0d4f923e01f58970223482d8a7",
-  "footer_len": 1552,
+  "name": "osm_transmission_lines.chains.a0c0aeab.parquet",
+  "bytes": 1950,
+  "sha256": "a0c0aeab245c22914e98b4a0f412300f61eb886b712a9ceb113219f8ac3008d7",
+  "footer_len": 1516,
   "rows": 4,
   "columns": [
    "chain",

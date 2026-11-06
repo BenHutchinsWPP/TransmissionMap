@@ -176,14 +176,14 @@ group('describe', () => {
   });
 
   it('says a layer without a dataset is not queryable, and why', () => {
-    expect(describe('us-states')).toEqual({ ok: true, result: {
-      layerId: 'us-states', queryable: false, reason: '"us-states" has no field schema, so it takes no query' } });
+    expect(describe('nexrad-radar')).toEqual({ ok: true, result: {
+      layerId: 'nexrad-radar', queryable: false, reason: '"nexrad-radar" has no field schema, so it takes no query' } });
     expect(describe('nope')).toMatchObject({ ok: false });
   });
 
-  it('marks a vector-tile layer incomplete', () => {
+  it('marks a vector-tile layer with a columns file complete (each call\'s result says what it read)', () => {
     const d = describe('osm-transmission-lines');
-    expect(d.ok && d.result.queryable && d.result).toMatchObject({ kind: 'pmtiles', complete: false });
+    expect(d.ok && d.result.queryable && d.result).toMatchObject({ kind: 'pmtiles', complete: true });
   });
 });
 
@@ -247,7 +247,7 @@ group('vector-tile layers', () => {
     const piece = (x0: number, x1: number) => ({ type: 'Feature', id: 7, geometry: { type: 'Polygon', coordinates: sq(x0, x1) }, properties: {} }) as GeoJSON.Feature;
     fakeMap({ 'osm-plants-polygons-fill': { source: 'osm-plants-polygons', sourceLayer: 'osm_plants_polygons' } },
       { 'osm-plants-polygons': [piece(0, 1), piece(1, 2)] });
-    const first = await query('osm-plants-polygons');
+    const first = await query('osm-plants-polygons', { scope: 'view' });
     expect(first.ok && first.result.rows).toHaveLength(1);
     expect(first.ok && first.result.rows[0].feature.geometry.type).toBe('Polygon');
     const merged = await query('osm-plants-polygons', { fragments: true });
@@ -258,18 +258,17 @@ group('vector-tile layers', () => {
   it('read the loaded tiles once per stable id and say they are incomplete', async () => {
     const line = (id: number, kv: number) => ({ type: 'Feature', id, geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
       properties: { nominal_kv: kv } }) as GeoJSON.Feature;
-    // Two map layers on one source, and a second source: each read once, ids deduplicated.
+    // Several map layers on one source: the source is read once, ids deduplicated.
     fakeMap({
-      'osm-transmission-lines-kv300-hv': { source: 'osm-transmission-lines-kv300', sourceLayer: 'osm_transmission_lines' },
-      'osm-transmission-lines-kv300-dc': { source: 'osm-transmission-lines-kv300', sourceLayer: 'osm_transmission_lines' },
-      'osm-transmission-lines-kv200-hv': { source: 'osm-transmission-lines-kv200', sourceLayer: 'osm_transmission_lines' },
+      'osm-transmission-lines-hv': { source: 'osm-transmission-lines', sourceLayer: 'osm_transmission_lines' },
+      'osm-transmission-lines-dc': { source: 'osm-transmission-lines', sourceLayer: 'osm_transmission_lines' },
+      'osm-transmission-lines-mv': { source: 'osm-transmission-lines', sourceLayer: 'osm_transmission_lines' },
     }, {
-      'osm-transmission-lines-kv300': [line(12, 345), line(12, 345), line(22, 500)],
-      'osm-transmission-lines-kv200': [line(32, 230)],
+      'osm-transmission-lines': [line(12, 345), line(12, 345), line(22, 500), line(32, 230)],
     });
-    const r = await count('osm-transmission-lines');
+    const r = await count('osm-transmission-lines', { scope: 'view' });
     expect(r).toMatchObject({ ok: true, result: { total: 3, complete: false } });
-    const q = await query('osm-transmission-lines', { where: [{ field: 'nominal_kv', op: '>=', value: 400 }] });
+    const q = await query('osm-transmission-lines', { scope: 'view', where: [{ field: 'nominal_kv', op: '>=', value: 400 }] });
     expect(q.ok && q.result.rows.map(x => x.id)).toEqual([22]);
   });
 });

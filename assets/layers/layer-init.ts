@@ -11,15 +11,13 @@
 //              genPlantTextLayout, GEN_PLANT_TEXT_PAINT)
 // Deps: state.ts, constants.ts (COUNTY_SRC*), layer-source.ts (layerSource,
 //       pmtilesUrl), layer-plan.ts (applyLayerPlan, LayerPlan),
-//       src/colors/voltage.ts, src/registry/transmission.ts (OSM_TL_TIERS),
-//       src/types.ts (DataKey).
+//       src/colors/voltage.ts, src/registry/transmission.ts (OSM_TL_TIERS).
 // The lazy GeoJSON loader (ensureLayerData, fetchGeojson) lives in layer-data.ts.
 
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
 import { COUNTY_SRC, COUNTY_SRC_LAYER } from '../constants.js';
 import { layerSource, pmtilesUrl } from './layer-source.js';
-import type { DataKey } from '../../src/types.js';
 import { voltageColorExpr } from '../../src/colors/voltage.js';
 import { applyLayerPlan, type LayerPlan, type PlanStep } from './layer-plan.js';
 import { OSM_TL_TIERS } from '../../src/registry/transmission.js';
@@ -147,51 +145,25 @@ const DC_LABEL_MINZOOM = 6;
 const DC_LABEL_COLOR = "#0f172a";
 const DC_LABEL_HALO = "#f8fafc";
 
-// `sources` is a list so a layer can span several archives; `key` names an
-// archive's DATA file when it is not the registry layer's own `data.key`. Every style layer is
-// added across ALL sources before the next one starts, so paint order stays
-// global: a 765 kV line in one archive draws over a 20 kV line in another, not
-// under it. `suffix` distinguishes the per-source layer ids and is "" when there
-// is only one source, which is what the HIFLD caller passes.
-//
-// A source may also declare the voltage range it holds, as `kv: [min, max)`.
-// OSM transmission ships as six archives split by voltage class, and a style
-// tier only needs a layer on a source whose range it overlaps — an `mv` layer
-// over the EHV archive would match nothing but still cost a per-frame filter
-// evaluation. Omitting `kv` means "could hold anything", which is what a single
-// undivided archive is.
-export function planTransmissionLines({ sources, sourceLayer, registryId, prefix,
+// One source (the registry layer's own `data`, source id = registryId) carries
+// every tier. A tier with no range of its own (the DC overlays, the name label)
+// applies to all voltages.
+export function planTransmissionLines({ sourceLayer, registryId, prefix,
                                kvExpr, color, opacity, nameField = undefined as (string | undefined), undergroundExpr = undefined as (ExpressionSpecification | undefined),
                                dcExpr = undefined as (ExpressionSpecification | undefined) }: {
-  sources: { id: string; key?: DataKey; suffix?: string; kv?: [number, number] }[];
   sourceLayer: string; registryId: string; prefix: string;
   kvExpr: ExpressionSpecification; color: string | ExpressionSpecification; opacity: Record<string, number>; nameField?: string; undergroundExpr?: ExpressionSpecification;
   dcExpr?: ExpressionSpecification;
 }): LayerPlan {
-  // Every source carries the registry layer's credit: the six voltage-class
-  // sources share one, and MapLibre collapses the byte-identical strings into one.
-  const plan: LayerPlan = sources.map(s => layerSource(registryId, { id: s.id, key: s.key }));
+  const plan: LayerPlan = [layerSource(registryId)];
 
-  // Half-open [min, max) overlap. A tier with no range (the DC overlays) applies
-  // to every source, since HVDC runs at every voltage class.
-  const holds = (s: { kv?: [number, number] }, kv?: [number, number]) =>
-    !s.kv || !kv || (s.kv[0] < kv[1] && kv[0] < s.kv[1]);
-
-  // Plans one style layer per source that can hold the tier.
-  const addAcross = (tier: string, spec: (srcId: string) => Record<string, unknown>, kv?: [number, number]) => {
-    for (const s of sources) {
-      if (!holds(s, kv)) continue;
-      const id = `${prefix}${s.suffix ?? ""}-${tier}`;
-      plan.push({ layer: { id, source: s.id, "source-layer": sourceLayer, ...spec(s.id) } as LayerSpecification });
-    }
+  const addLayer = (tier: string, spec: Record<string, unknown>) => {
+    plan.push({ layer: { id: `${prefix}-${tier}`, source: registryId, "source-layer": sourceLayer, ...spec } as LayerSpecification });
   };
 
   // Tiers added lowest-voltage first so higher tiers paint on top; line-sort-key
   // orders by kV within each tier. z2 is the floor both transmission tilesets
-  // are built to; the tiers above it are style choices about clutter. The kV
-  // range each tier selects comes from OSM_TL_TIERS, the same table the registry
-  // derives its layer ids from, so the two cannot disagree about which archive
-  // carries which tier.
+  // are built to; the tiers above it are style choices about clutter.
   const tierStyle: Record<string, { minzoom: number; filter: FilterSpecification }> = {
     lv:      { minzoom: 9, filter: ["all", [">", kvExpr, 0], ["<", kvExpr, 50]] },
     unknown: { minzoom: 5, filter: ["<=", kvExpr, 0] },
@@ -209,12 +181,12 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
     if (undergroundExpr) {
       paint["line-dasharray"] = ["case", undergroundExpr, ["literal", [3, 3]], ["literal", [1, 0]]] as unknown as ExpressionSpecification;
     }
-    addAcross(t.id, () => ({
+    addLayer(t.id, {
       type: "line",
       minzoom: t.minzoom, filter: t.filter,
       layout: { "line-cap": "round", "line-join": "round", "line-sort-key": kvExpr },
       paint,
-    }), t.kv);
+    });
   }
 
   // HVDC white dashes, drawn over every kV tier.  This is the zoomed-OUT cue:
@@ -223,7 +195,7 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
   // are not meant to — placement (dash of the base stroke) and current (these
   // white ticks) are separate readings.
   if (dcExpr) {
-    addAcross("dc", () => ({
+    addLayer("dc", {
       type: "line",
       minzoom: 2, filter: dcExpr as FilterSpecification,
       layout: { "line-cap": "butt", "line-join": "round" },
@@ -233,15 +205,16 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
         "line-dasharray": DC_STRIPE_DASH,
         "line-opacity":   0.95,
       },
-    }));
+    });
 
     // Zoomed-IN cue: name the circuit outright with a repeating "DC" along the
     // route, dense enough that a corridor is unmistakable at a glance.
-    addAcross("dc-label", () => ({
+    addLayer("dc-label", {
       type: "symbol",
       minzoom: DC_LABEL_MINZOOM, filter: dcExpr as FilterSpecification,
       layout: {
         "symbol-placement":        "line",
+        "symbol-sort-key":         ["-", 10000, kvExpr] as unknown as ExpressionSpecification,
         "text-field":              "DC",
         "text-font":               ["Noto Sans Regular"],
         "text-size":               ["interpolate", ["linear"], ["zoom"], 6, 10, 10, 12, 14, 14] as unknown as ExpressionSpecification,
@@ -259,17 +232,18 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
         "text-halo-width": 1.8,
         "text-halo-blur":  0.3,
       },
-    }));
+    });
   }
 
   if (!nameField) return plan;
   const name    = ["coalesce", ["get", nameField], ""] as unknown as ExpressionSpecification;
   const hasName = ["!=", name, ""] as FilterSpecification;
-  addAcross("label", () => ({
+  addLayer("label", {
     type: "symbol",
     minzoom: 9, filter: hasName,
     layout: {
       "symbol-placement":        "line",
+      "symbol-sort-key":         ["-", 10000, kvExpr] as unknown as ExpressionSpecification,
       "text-field":              name,
       "text-font":               ["Noto Sans Regular"],
       "text-size":               ["interpolate", ["linear"], ["zoom"], 9, 9, 12, 11, 15, 13] as unknown as ExpressionSpecification,
@@ -287,7 +261,7 @@ export function planTransmissionLines({ sources, sourceLayer, registryId, prefix
       "text-halo-width": 2,
       "text-halo-blur":  0.5,
     },
-  }));
+  });
   return plan;
 }
 

@@ -22,7 +22,7 @@ describe('featureId', () => {
   });
 
   it('returns nothing for a layer that declares no id, or a feature without one', () => {
-    expect(featureId('bia-tribal-lands', { id: 7, properties: {} })).toBeUndefined();
+    expect(featureId('nexrad-radar', { id: 7, properties: {} })).toBeUndefined();
     expect(featureId('no-such-layer', { id: 7 })).toBeUndefined();
     expect(featureId('mines', { properties: { name: 'x' } })).toBeUndefined();
   });
@@ -30,7 +30,7 @@ describe('featureId', () => {
   it('reads the id inside a filter the same way', () => {
     expect(featureIdExpr('osm-transmission-lines')).toEqual(['id']);
     expect(featureIdExpr('nerc-regions')).toEqual(['get', 'sub_nm']);
-    expect(featureIdExpr('bia-tribal-lands')).toBeUndefined();
+    expect(featureIdExpr('nexrad-radar')).toBeUndefined();
   });
 });
 
@@ -57,8 +57,8 @@ const blockOf = (l: (typeof LAYERS)[number]) =>
 const declaring = LAYERS.filter(l => l.data?.id);
 
 // Join sources no registry layer declares: their builders set promoteId
-// themselves (layer-init.ts, nws-zone-join.ts).
-const JOIN_SOURCE_IDS: Record<string, string> = { county_boundaries: 'GEOID', nws_zones: 'key' };
+// themselves (nws-zone-join.ts). county_boundaries is declared by us-counties.
+const JOIN_SOURCE_IDS: Record<string, string> = { nws_zones: 'key' };
 
 describe('registry stable ids match scripts/tile_manifest.yaml', () => {
   it('every declaring layer has a manifest block or a built_elsewhere entry', () => {
@@ -83,5 +83,11 @@ describe('registry stable ids match scripts/tile_manifest.yaml', () => {
       if (id in JOIN_SOURCE_IDS) expect(b.field, id).toBe(JOIN_SOURCE_IDS[id]);
       else expect(declared.has(id), `${id} declares id_field ${b.field}; declare data.id on its layer`).toBe(true);
     }
+  });
+});
+
+describe('registry data.analysis names its geometry dataset', () => {
+  it('every layer with data.analysis names the dataset its own data.key builds', () => {
+    expect(LAYERS.filter(l => l.data?.analysis && l.data.analysis !== l.data.key).map(l => `${l.id}: ${l.data!.analysis}`)).toEqual([]);
   });
 });

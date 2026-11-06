@@ -15,19 +15,9 @@ import {
 } from './layer-init.js';
 import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
-import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 
 export function planOsmTransmission(): LayerPlan {
   return planTransmissionLines({
-    // One source per voltage-class archive, ascending — OSM_TL_BANDS is the
-    // single definition of the split and also derives the layer ids the registry
-    // lists. Ascending order is paint order: EHV is added last and draws on top.
-    sources: OSM_TL_BANDS.map(b => ({
-      id:     `osm-transmission-lines${b.suffix}`,
-      key:    b.dataKey,
-      suffix: b.suffix,
-      kv:     b.kv,
-    })),
     sourceLayer: "osm_transmission_lines",
     registryId: "osm-transmission-lines", prefix: "osm-transmission-lines",
     kvExpr: ["coalesce", ["get", "nominal_kv"], -1],

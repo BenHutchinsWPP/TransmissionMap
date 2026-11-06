@@ -601,24 +601,6 @@
   "description": "European land cover classes, 2018 (EEA, Copernicus)."
  },
  {
-  "id": "natural-earth-rivers",
-  "title": "Natural Earth rivers",
-  "category": "environment",
-  "kind": "geojson",
-  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_rivers_lake_centerlines.geojson",
-  "style": {
-   "kind": "line",
-   "color": "#4ab6c6",
-   "opacity": 0.9,
-   "width": 1.2
-  },
-  "credit": "Made with Natural Earth",
-  "licence": "Public domain (Natural Earth)",
-  "source": "https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-rivers-lake-centerlines/",
-  "host": "raw.githubusercontent.com",
-  "description": "World rivers and lake centerlines, 1:110m."
- },
- {
   "id": "spc-outlook-day1",
   "title": "SPC convective outlook, day 1",
   "category": "hazards",
@@ -1004,42 +986,6 @@
   "source": "https://www.census.gov/data/developers/data-sets/TIGERweb-map-service.html",
   "host": "tigerweb.geo.census.gov",
   "description": "Census tract boundaries (US Census Bureau TIGERweb), drawn by the server."
- },
- {
-  "id": "natural-earth-countries",
-  "title": "World countries (Natural Earth)",
-  "category": "boundaries",
-  "kind": "geojson",
-  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson",
-  "style": {
-   "kind": "line",
-   "color": "#868e96",
-   "opacity": 0.9,
-   "width": 0.8
-  },
-  "credit": "Made with Natural Earth",
-  "licence": "Public domain (Natural Earth)",
-  "source": "https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/",
-  "host": "raw.githubusercontent.com",
-  "description": "Country outlines, 1:110m."
- },
- {
-  "id": "natural-earth-admin1",
-  "title": "States and provinces (Natural Earth)",
-  "category": "boundaries",
-  "kind": "geojson",
-  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_1_states_provinces.geojson",
-  "style": {
-   "kind": "line",
-   "color": "#adb5bd",
-   "opacity": 0.9,
-   "width": 0.6
-  },
-  "credit": "Made with Natural Earth",
-  "licence": "Public domain (Natural Earth)",
-  "source": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-1-states-provinces/",
-  "host": "raw.githubusercontent.com",
-  "description": "First-level administrative boundaries, 1:50m."
  },
  {
   "id": "usgs-topo",

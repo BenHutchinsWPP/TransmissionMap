@@ -3,13 +3,14 @@
 Exact lengths, copies with full geometry, a fault locator and an elevation profile for
 the OSM world and HIFLD transmission lines. They read the line GeoParquet that
 `make line-parquet` builds ([pipeline.md](pipeline.md) § *Line
-geometry*); on a host without `index.json` each entry point stays hidden.
+geometry*), served from `data.wpptx.org/data/analysis/`; on a host without `index.json`
+each entry point stays hidden.
 
 ## Entry points
 
 | where | what | code |
 |---|---|---|
-| a transmission line's popup | a **Length** row (one IDX range read), **Copy to My Data** and **Line tools**, added once the lookup answers | `assets/popup.ts` → `assets/lines/line-read.ts` |
+| a transmission line's popup | a **Length** row (one small range read of the index), **Copy to My Data** and **Line tools**, added once the lookup answers | `assets/popup.ts` → `assets/lines/line-read.ts` |
 | edit mode, a click on a line | Copy to My Data with the full geometry (`resolveHits` → `copy-tiled`); no files → the "can't copy" note | `assets/click-resolve.ts`, `assets/lines/line-copy.ts` |
 | the table drawer, any GeoJSON layer or a line layer | **Copy N checked to My Data** (lines: "Copy N checked lines") into one new My Data layer, shown once the layer's copy answers `copyAvailable`; a GeoJSON layer copies each row's own geometry, a line layer the full geometry above | `assets/ui/ui-table.ts` → `assets/user-data/copy-rows.ts` (caps and download: `assets/user-data/copy-fit.ts`) |
 | popup ▸ Line tools | the drawer's **Line** tab: fault locator and elevation profile | `assets/ui/line-open.ts` → `assets/ui/ui-line.ts`, `assets/ui/line-profile.ts` |
@@ -25,7 +26,17 @@ GeoJSON download (attribution and licence as foreign members) instead. A copy is
 Data: no link change, no undo step. The table copies only the rows it lists, and on a
 tiled layer those are the loaded tiles' rows.
 
-A GeoJSON layer's checked rows copy their own geometry, with the same properties, credits and caps.
+A GeoJSON layer without geometry files copies its own geometry from the loaded source data, by id, with the same properties, credits and caps (in edit mode too: never the tile piece the map returns). The GeoJSON layers with geometry files (listed below) hide their table and chat copy until `index.json` answers; their edit-mode click copies the served outline from the source data until then, marked `geometry_source: "simplified from the served map layer"`.
+
+OSM pipelines and HIFLD gas pipelines copy their exact line geometry from the geometry files (the
+popup shows their length; Line tools stay with transmission). OSM substation and plant polygons copy
+their exact geometry from the geometry files, as do the utility territory, EIA balancing authority, HIFLD control area, NERC region, critical habitat and PAD-US layers (source precision, not the simplified outline the map draws). Railroads, US states, ZCTAs, counties, countries, admin-1 regions, tribal lands (Census and BIA) and BOEM wind leases copy the same way; WECC paths copy the served feature as it is. A copy over 64 MB of GeoJSON is refused with a pointer to the layer's download. A polygon is never
+copied from a tile, so one the files lack is left out. OSM substation points and OSM generators
+copy their exact point: a whole-dataset table row from the columns file, a map feature from the
+max-zoom tiles around it, else the tile point, marked `geometry_source: "simplified from map tiles"`.
+A copy reports separately the features the files do not hold and those left unread after a
+timeout. In edit mode, a line or polygon layer with geometry files is copyable once one probe of
+`index.json` answers; a point layer with a columns file needs no probe.
 
 The map chat's `copyToMyData` tool runs the same copy on the rows its `where`, `area` or `ids`
 pick (`assets/map-api.ts`, `assets/agent/tools.ts`). Above 50 features in one ask, the chat asks

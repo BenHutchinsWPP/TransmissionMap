@@ -3,9 +3,9 @@
 //         toolSchemas()          OpenAI-format `tools` (function name,
 //                                description, JSON-schema parameters); the
 //                                enums — layer ids, the queryable layers
-//                                (on describe only: the other data tools take
-//                                the id as a string, and dataset-query /
-//                                validateWhere refuse any other layer), filter
+//                                (the data tools take the id as a string, and
+//                                dataset-query / validateWhere refuse any
+//                                other layer; describe says queryable:false), filter
 //                                ops, area kinds, basemaps — are read from the
 //                                registry each call, so a new layer needs no
 //                                edit here. Field names stay out: `describe`
@@ -174,11 +174,9 @@ export interface OffPageRequest { tool: string; host: string; text: string; note
 
 function enums() {
   const layers = LAYERS.map(l => l.id);
-  const datasets = LAYERS.filter(l => l.dataset).map(l => l.id);
   const layer: Schema = { enum: layers };
   const layerRef: Schema = { type: 'string', description: 'a layer id from listLayers' };
-  const dataset: Schema = { enum: datasets };
-  const datasetRef: Schema = { type: 'string', description: 'a layer id describe takes' };
+  const datasetRef: Schema = { type: 'string', description: 'a layer id listLayers marks queryable' };
   const condition = obj({
     field: { type: 'string' },
     op: { enum: OPS },
@@ -193,8 +191,8 @@ function enums() {
     }, ['kind', 'codes']),
     type: ['object', 'null'],
   };
-  const filters = { where: whereList, area, asDrawn: { type: 'boolean', description: 'only what the map draws now' } } as Record<string, Schema>;
-  return { layer, layerRef, dataset, datasetRef, where, area, filters };
+  const filters = { where: whereList, area, asDrawn: { type: 'boolean', description: 'only what the map filters pass' } } as Record<string, Schema>;
+  return { layer, layerRef, datasetRef, where, area, filters };
 }
 
 const CHART: Schema = { type: ['string', 'object'], description: 'bar|pie|line, or a Vega-Lite spec without data' };
@@ -319,7 +317,7 @@ const TOOLS: ToolDef[] = [
   },
   {
     name: 'describe', description: "A queryable layer's fields, operators, domains, row count, credit. Call before filtering.",
-    parameters: () => obj({ layerId: enums().dataset }, ['layerId']),
+    parameters: () => obj({ layerId: enums().datasetRef }, ['layerId']),
     run: a => api.describe(a.layerId as string),
   },
   {
@@ -441,7 +439,7 @@ const TOOLS: ToolDef[] = [
     },
   },
   {
-    name: 'showCanvas', description: 'Draw a custom interactive view (HTML+JS) in a sandboxed frame. Data: window.TM_INPUT[layerId] = GeoJSON FeatureCollection. Returns shown or an error category only.',
+    name: 'showCanvas', description: 'Draw a custom view (HTML+JS) in a sandboxed frame. Data: window.TM_INPUT[layerId] = GeoJSON FeatureCollection. Returns shown or an error category only.',
     parameters: () => obj({
       title: { type: 'string', maxLength: 120 },
       html: { type: 'string', maxLength: MAX_CANVAS_HTML },

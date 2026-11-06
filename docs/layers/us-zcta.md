@@ -14,6 +14,7 @@ US ZIP Code Tabulation Area (ZCTA) polygons from the Census cartographic boundar
 | **Coverage** | 33,791 ZCTA polygons |
 | **Vintage** | 2020 — see Caveats below |
 | **Served** | `data/layers/us_zcta.pmtiles` — vector PMTiles, z4–11 (overzoomed past z11) |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/us_zcta/` |
 | **Built by** | `scripts/extract_us_census_boundaries.py` (`make census-boundaries`) → `data/build/us_zcta.gpkg` |
 | **Stable id** | `zcta5` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/census_boundaries/cb_2020_us_zcta520_500k.zip` |

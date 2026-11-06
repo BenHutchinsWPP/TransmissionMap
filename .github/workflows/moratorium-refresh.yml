@@ -355,7 +355,7 @@ jobs:
       (needs.plan.outputs.mode == 'rebuild_only' && needs.research.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # Deployment branches: main only. Phase Z adds the R2 token here.
+    # Deployment branches: main only. Holds the moratorium bucket's R2 key (upload step only).
     environment: moratoriums-publish
     permissions:
       contents: write        # push data-moratoriums / refresh/weekly
@@ -629,7 +629,22 @@ jobs:
               --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode rebuild_only
           fi
 
-      # Phase Z: the R2 upload of the published files goes here (the environment's R2 token).
+      - name: Upload dc_moratoriums.geojson to R2
+        # The data-moratoriums tip: unchanged in pull_request mode (the upload is then a
+        # no-op); a merged refresh PR is published by a rebuild_only dispatch.
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          git -C "$W/site" fetch --no-tags origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          out="$(mktemp -d "$RUNNER_TEMP/r2-moratoriums.XXXXXX")"
+          git -C "$W/site" show "origin/$BASE:dc_moratoriums.geojson" > "$out/dc_moratoriums.geojson"
+          bash scripts/install_rclone.sh "$RUNNER_TEMP/bin"
+          export PATH="$RUNNER_TEMP/bin:$PATH"
+          bash scripts/r2_upload.sh --bucket moratoriums-wpptx-org \
+            --cache-control "public, max-age=300" --root "$out" dc_moratoriums.geojson
+
 
       - name: Upload the PR body and rebuild log
         if: always()

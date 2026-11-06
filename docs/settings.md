@@ -6,7 +6,7 @@
 > label needs `RampDef.fmt`, not `unit`/`maxLabel` — those are static text,
 > fixed at module load.*
 
-The File ▸ Settings… dialog (`assets/ui/ui-settings.ts`) lets a user set each
+The File ▸ Settings dialog (`assets/ui/ui-settings.ts`) lets a user set each
 unit dimension independently — temperature, wind speed, distance, area,
 elevation, pressure. It's **per-dimension**, not a single US/Metric system
 field: a user can hold mixed preferences (wind in mph while distances stay

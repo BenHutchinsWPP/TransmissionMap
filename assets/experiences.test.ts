@@ -277,7 +277,7 @@ describe('every preset survives formatUrlState → parseUrlState', () => {
     expect(state.hillshade).toBe(true);
     expect([...state.legendFilters.fuel].sort()).toEqual(['hydro', 'pumped_storage']);
     expect([...state.legendFilters.kv].sort()).toEqual(['500-549', '550+']);
-    expect(state.layerVisibility['eia-generators']).toBe(true);
+    expect(state.layerVisibility['osm-plants-points']).toBe(true);
 
     applyPreset(presetOf('wecc-paths-and-plans'));
     expect(state.westtecColorBy).toBe('dataset');

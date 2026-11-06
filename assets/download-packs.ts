@@ -29,8 +29,8 @@ const CONTINENTS = [
 
 const FORMATS = [['csv', 'CSV'], ['geojson', 'GeoJSON'], ['shp', 'SHP'], ['tif', 'GeoTIFF']] as const;
 
-// Registry entries name packs by repo-relative path. In prod that maps to a flat
-// Release asset name; in dev (origin "") it stays a path the Vite server serves from disk.
+// Registry entries name packs by repo-relative path. In prod that maps to its key
+// under data/releases/ on the data host; in dev (origin "") it stays a path the Vite server serves from disk.
 const packUrl = (path: string, origin: string) =>
   origin ? origin + path.replace(/^data\/releases\//, '') : path;
 

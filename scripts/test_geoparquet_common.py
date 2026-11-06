@@ -16,6 +16,84 @@ HAVE_ARROW = HAVE_NUMPY and importlib.util.find_spec("pyarrow") is not None
 MiB = 2**20
 
 
+def _varint(b, i):
+    n = shift = 0
+    while True:
+        c = b[i]
+        i += 1
+        n |= (c & 0x7F) << shift
+        if not c & 0x80:
+            return n, i
+        shift += 7
+
+
+def _skip_value(b, i, t):
+    if t in (1, 2):
+        return i
+    if t == 3:
+        return i + 1
+    if t in (4, 5, 6):
+        return _varint(b, i)[1]
+    if t == 7:
+        return i + 8
+    if t == 8:
+        n, i = _varint(b, i)
+        return i + n
+    if t in (9, 10):
+        h = b[i]
+        i += 1
+        n, et = h >> 4, h & 15
+        if n == 15:
+            n, i = _varint(b, i)
+        for _ in range(n):
+            i = _skip_value(b, i, et)
+        return i
+    if t == 12:
+        return _struct(b, i)[0]
+    raise ValueError(t)
+
+
+def _struct(b, i):
+    """(end, {field id: int}) of a Thrift compact struct at b[i]."""
+    out, fid = {}, 0
+    while b[i]:
+        h = b[i]
+        i += 1
+        t = h & 15
+        if h >> 4:
+            fid += h >> 4
+        else:
+            z, i = _varint(b, i)
+            fid = z >> 1 ^ -(z & 1)
+        if t in (4, 5, 6):
+            z, j = _varint(b, i)
+            out[fid] = z >> 1 ^ -(z & 1)
+            i = j
+        else:
+            i = _skip_value(b, i, t)
+    return i + 1, out
+
+
+def page_sizes(path, column):
+    """Compressed data-page bytes of `column` in each row group (no dictionary pages)."""
+    import pyarrow.parquet as pq
+    md = pq.ParquetFile(str(path)).metadata
+    b = Path(path).read_bytes()
+    out = []
+    for g in range(md.num_row_groups):
+        for j in range(md.row_group(g).num_columns):
+            c = md.row_group(g).column(j)
+            if c.path_in_schema != column:
+                continue
+            assert c.dictionary_page_offset is None
+            i, end = c.data_page_offset, c.data_page_offset + c.total_compressed_size
+            while i < end:
+                i2, hdr = _struct(b, i)
+                out.append(hdr[3])
+                i = i2 + hdr[3]
+    return out
+
+
 class TestPlanParts(unittest.TestCase):
     def test_one_part_under_the_target(self):
         self.assertEqual(gc.plan_parts([10 * MiB, 20 * MiB]), [(0, 2)])
@@ -137,6 +215,149 @@ class TestWriter(unittest.TestCase):
         t = self._table()
         self.assertEqual(gc.statistics_columns(t.schema),
                          ["fid", "bbox.xmin", "bbox.ymin", "bbox.xmax", "bbox.ymax"])
+
+
+HAVE_SHAPELY = importlib.util.find_spec("shapely") is not None
+
+
+def _sq(x, y, s):
+    return [(x, y), (x + s, y), (x + s, y + s), (x, y + s), (x, y)]
+
+
+@unittest.skipUnless(HAVE_SHAPELY, "shapely not installed")
+class TestSphereArea(unittest.TestCase):
+    # Literals printed by assets/sandbox/geo-kit.ts `areaKm2` under node (tsx).
+    def _poly(self, *rings):
+        from shapely.geometry import Polygon
+        return Polygon(rings[0], list(rings[1:]))
+
+    def test_sphere_area_matches_geo_kit(self):
+        from shapely.geometry import MultiPolygon
+        self.assertAlmostEqual(gc.sphere_area_km2(self._poly(_sq(0, 0, 1))), 12363.718145179933, places=6)
+        self.assertAlmostEqual(gc.sphere_area_km2(self._poly(_sq(-100, 40, 2))), 37324.066125366095, places=6)
+        mp = MultiPolygon([self._poly(_sq(0, 0, 1)), self._poly(_sq(-100, 40, 2))])
+        self.assertAlmostEqual(gc.sphere_area_km2(mp), 49687.78427054603, places=6)
+
+    def test_sphere_area_holes_subtract(self):
+        poly = self._poly(_sq(-100, 40, 2), _sq(-99.5, 40.5, 1))
+        self.assertAlmostEqual(gc.sphere_area_km2(poly), 27992.69428397777, places=6)
+
+    def test_sphere_area_of_a_line_is_zero(self):
+        from shapely.geometry import LineString
+        self.assertEqual(gc.sphere_area_km2(LineString([(0, 0), (1, 1)])), 0)
+
+
+@unittest.skipUnless(HAVE_SHAPELY, "shapely not installed")
+class TestPointOnFeature(unittest.TestCase):
+    def test_point_line_polygon(self):
+        from shapely.geometry import LineString, MultiLineString, Point, Polygon
+        self.assertEqual(gc.point_on_feature(Point(3, 4)), (3, 4))
+        x, y = gc.point_on_feature(LineString([(0, 0), (1, 0), (3, 0)]))
+        self.assertAlmostEqual(x, 1.5, places=3)
+        self.assertAlmostEqual(y, 0, places=6)
+        x, y = gc.point_on_feature(MultiLineString([[(0, 0), (1, 0)], [(1, 0), (4, 0)]]))
+        self.assertAlmostEqual(x, 2.0, places=3)
+        poly = Polygon([(0, 0), (4, 0), (4, 4), (0, 4)], [[(1, 1), (3, 1), (3, 3), (1, 3)]])
+        pt = gc.point_on_feature(poly)
+        self.assertTrue(poly.contains(Point(pt)))
+
+
+def _pmtiles(path, meta, compression=2):
+    raw = json.dumps(meta).encode()
+    if compression == 2:
+        import gzip
+        raw = gzip.compress(raw)
+    head = bytearray(127)
+    head[:7] = b"PMTiles"
+    head[7] = 3
+    head[24:32] = (127).to_bytes(8, "little")
+    head[32:40] = len(raw).to_bytes(8, "little")
+    head[97] = compression
+    Path(path).write_bytes(bytes(head) + raw)
+
+
+class TestPmtilesFields(unittest.TestCase):
+    def test_reads_the_layer_fields(self):
+        meta = {"vector_layers": [{"id": "a", "fields": {"x": "Number"}},
+                                  {"id": "b", "fields": {"name": "String", "kv": "Number"}}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            for comp in (1, 2):
+                p = Path(tmp) / f"t{comp}.pmtiles"
+                _pmtiles(p, meta, comp)
+                self.assertEqual(gc.pmtiles_fields(p, "b"), {"name": "String", "kv": "Number"})
+            with self.assertRaises(KeyError):
+                gc.pmtiles_fields(p, "zzz")
+            (Path(tmp) / "bad").write_bytes(b"nope" * 40)
+            with self.assertRaises(ValueError):
+                gc.pmtiles_fields(Path(tmp) / "bad", "a")
+
+
+@unittest.skipUnless(HAVE_ARROW, "pyarrow not installed")
+class TestColumnsFiles(unittest.TestCase):
+    def _build(self, tmp, archive_bytes=b"archive"):
+        import pyarrow as pa
+        root, layers = Path(tmp) / "analysis", Path(tmp) / "layers"
+        (root / "columns").mkdir(parents=True)
+        layers.mkdir()
+        (layers / "ds.pmtiles").write_bytes(archive_bytes)
+        t = pa.table({"fid": pa.array([1, 2, 3], pa.int64()), "kind": ["a", "b", "a"]})
+        tmpf = root / "columns" / "ds.parquet"
+        gc.write_parquet(t, tmpf, gc.COLUMNS_PRESET, metadata={"build_id": "b1"})
+        dest, digest = gc.content_name(tmpf, "ds")
+        entry = gc.file_entry(dest, "columns", 3, digest)
+        gc.write_json(root / "index.json", {"columns": {"ds": {
+            "path": "columns/", "build_id": "b1", "file": entry,
+            "archive_sha256": gc.sha256_file(layers / "ds.pmtiles")}}})
+        return root, layers
+
+    def test_columns_clean(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, layers = self._build(tmp)
+            self.assertEqual(gc.check_analysis(root, layers), [])
+
+    def test_archive_sha_mismatch_orphan_and_build_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, layers = self._build(tmp)
+            (layers / "ds.pmtiles").write_bytes(b"another archive")
+            self.assertIn("archive_sha256", "\n".join(gc.check_analysis(root, layers)))
+            (root / "columns" / "stray.parquet").write_bytes(b"x")
+            self.assertIn("orphan", "\n".join(gc.check_analysis(root, layers)))
+            idx = json.loads((root / "index.json").read_text())
+            idx["columns"]["ds"]["build_id"] = "b2"
+            (root / "index.json").write_text(json.dumps(idx))
+            self.assertIn("build_id", "\n".join(gc.check_analysis(root, layers)))
+
+    def test_no_dictionary_and_string_fid_statistics(self):
+        import pyarrow as pa
+        t = pa.table({"fid": ["a", "b"], "kind": ["x", "y"], "px": pa.array([1.0, 2.0], pa.float32())})
+        self.assertEqual(gc.statistics_columns(t.schema), ["px"])
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "c.parquet"
+            gc.write_parquet(t, p, gc.COLUMNS_PRESET, no_dictionary=["kind"])
+            self.assertNotIn("kind", gc.dictionary_encoded(p))
+
+
+@unittest.skipUnless(HAVE_ARROW, "numpy/pyarrow not installed")
+class TestGeoPages(unittest.TestCase):
+    def sizes(self, rows):
+        import numpy as np
+        import pyarrow as pa
+        t = pa.table({"fid": pa.array(np.arange(len(rows))), "geometry": pa.array(rows, pa.binary())})
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "g.parquet"
+            gc.write_parquet(t, p, gc.GEO_PRESET)
+            return page_sizes(p, "geometry")
+
+    def test_geo_pages_close_at_about_one_mib_whatever_the_row_count(self):
+        import numpy as np
+        rng = np.random.default_rng(1)
+        small = self.sizes([rng.bytes(20_000) for _ in range(600)])      # 256 rows would be 5 MB
+        self.assertGreater(len(small), 8)
+        self.assertLessEqual(max(small), 1 * MiB + 16 * 20_000 + 4096)   # size is checked every write_batch_size (16) rows
+        big = 3_000_000
+        mixed = self.sizes([rng.bytes(big) if i % 100 == 7 else rng.bytes(2000) for i in range(600)])
+        self.assertLessEqual(max(mixed), 1 * MiB + big + 16 * 2000 + 4096)   # at most the batch that crossed the size
+        self.assertGreater(len(mixed), 5)
 
 
 if __name__ == "__main__":

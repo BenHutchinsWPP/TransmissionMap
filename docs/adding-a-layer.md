@@ -84,11 +84,8 @@ finds every expected layer by regexing `"data/layers/…"` out of this file, and
 template literal or a `.map()` is invisible to both, so the layer never gets
 pushed and `make validate` reports it as an orphan.
 
-A layer split across several archives (see [hosting-plan.md](hosting-plan.md))
-gets one `DATA` key each, and its builder opens each as a separate MapLibre
-source (`layerSource(id, { id: sourceId, key })`) — see `OSM_TL_BANDS` in
-`src/registry/transmission.ts` and `planTransmissionLines()` in
-`assets/layers/layer-init.ts`.
+A layer split across several archives gets one `DATA` key each, and its builder
+opens each as a separate MapLibre source (`layerSource(id, { id: sourceId, key })`).
 Everything keyed off `LayerDef.mapLayerIds` then follows for free; the registries
 keyed on a *source* or *style-layer* id do not (`assets/popup.ts`,
 `assets/popup-format.ts`, `assets/ui/ui-search.ts`, `assets/hover.ts`).

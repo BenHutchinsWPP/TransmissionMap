@@ -31,7 +31,7 @@ Every zip also includes `hifld-natgas.txt` (this doc) + `disclaimer.txt`.
 
 ## Pipeline Lines
 
-**~33,200 features** (2 source parquets merged, MultiLineString exploded)
+Two source parquets merged, MultiLineString exploded.
 
 | `pipe_type` | Count |
 |---|---:|
@@ -43,7 +43,7 @@ Every zip also includes `hifld-natgas.txt` (this doc) + `disclaimer.txt`.
 **Output fields:** `pipe_type`, `operator`, `name` (HGL only)
 
 **Source files:**
-- `natural-gas-interstate-and-intrastate-pipelines.parquet` — ~33,000 rows; `TYPEPIPE` → `pipe_type`, `Operator` → `operator`
+- `natural-gas-interstate-and-intrastate-pipelines.parquet` — `TYPEPIPE` → `pipe_type`, `Operator` → `operator`
 - `hydrocarbon-gas-liquid-pipelines.parquet` — ~130 rows; `pipe_type` hardcoded "HGL", `Opername` → `operator`, `Pipename` → `name`
 
 ---

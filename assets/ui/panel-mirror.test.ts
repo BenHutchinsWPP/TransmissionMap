@@ -457,7 +457,7 @@ describe('panel mirror', () => {
     expectPanelMatchesState('where link');
     applyView({});
     expect(chip().hidden).toBe(true);
-    expect(q('[data-where-chip="railroads"]')).toBeNull();   // no field schema: no chip
+    expect(q('[data-where-chip="nexrad-radar"]')).toBeNull();   // no field schema: no chip
   });
 
   it('commitWhere is one url:write and repaints the chip; its × clears the layer\'s conditions in one write', () => {

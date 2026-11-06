@@ -2,10 +2,11 @@
 // layer-source.ts: a registry layer's `data` declaration → its credited MapLibre
 // source by kind, the GeoJSON URL the loader fetches, and the source a registry
 // id shares. Then the registry-wide invariants the resolver relies on.
-// Deps: layer-source.ts, constants.ts (DATA, EMPTY_FC), src/registry (LAYERS,
+// Deps: layer-source.ts, layer-init.ts (countyBoundariesSource), constants.ts (DATA, EMPTY_FC), src/registry (LAYERS,
 // layerById, OSM_CREDIT).
 import { describe, it, expect } from 'vitest';
-import { DATA, EMPTY_FC } from '../constants.js';
+import { COUNTY_SRC, COUNTY_SRC_LAYER, DATA, EMPTY_FC } from '../constants.js';
+import { countyBoundariesSource } from './layer-init.js';
 import { LAYERS, layerById } from '../../src/registry/index.js';
 import { OSM_CREDIT } from '../../src/registry/sources.js';
 import { layerSource, layerDataUrl, layerSourceId, pmtilesUrl, SOURCE_DATA_URLS } from './layer-source.js';
@@ -35,10 +36,10 @@ describe('layerSource', () => {
     });
   });
 
-  it('takes a source id, file and extra options for a layer spread over several sources', () => {
-    expect(step('osm-transmission-lines', { id: 'osm-transmission-lines-kv300', key: 'osm_transmission_lines_kv300' }))
-      .toEqual({ source: 'osm-transmission-lines-kv300', spec: {
-        type: 'vector', url: pmtilesUrl('osm_transmission_lines_kv300'), attribution: OSM_CREDIT,
+  it('takes a source id, file and extra options', () => {
+    expect(step('osm-transmission-lines', { id: 'tl-alt', key: 'hifld_transmission_lines' }))
+      .toEqual({ source: 'tl-alt', spec: {
+        type: 'vector', url: pmtilesUrl('hifld_transmission_lines'), attribution: OSM_CREDIT,
       } });
     expect(step('osm-datacenters', { spec: { cluster: true } }).spec).toMatchObject({ type: 'geojson', cluster: true });
   });
@@ -64,13 +65,15 @@ describe('layerDataUrl and layerSourceId', () => {
 
   it('shares a source between layers declaring the same data, and follows the alias rows', () => {
     expect(layerSourceId('wildfire-smoke')).toBe('wildfire-live');
+    expect(layerSourceId('us-counties')).toBe(COUNTY_SRC);
     expect(layerSourceId('wildfire-incidents')).toBe('wildfire-live');
     expect(layerSourceId('weather-live')).toBe('weather-admin-lines');
     expect(layerSourceId('padus')).toBe('padus');
   });
 
   it('every lazily loaded registry layer resolves to a source the loader can fill', () => {
-    for (const l of LAYERS.filter(l => l.data?.kind === 'geojson' || layerSourceId(l.id) !== l.id)) {
+    // us-counties' source is the shared county join source, a vector one the loader never fills
+    for (const l of LAYERS.filter(l => l.id !== 'us-counties' && (l.data?.kind === 'geojson' || layerSourceId(l.id) !== l.id))) {
       expect(layerDataUrl(layerSourceId(l.id)), l.id).toBeDefined();
     }
   });
@@ -103,10 +106,24 @@ describe('registry data declarations', () => {
   });
 
   it('agree on kind, credit and stable id wherever they share a file', () => {
-    for (const l of declared) {
+    for (const l of declared.filter(l => l.id !== 'us-counties')) {
       const owner = layerById(layerSourceId(l.id))!;
       expect({ kind: l.data!.kind, credit: l.data!.credit, id: l.data!.id }, l.id)
         .toEqual({ kind: owner.data!.kind, credit: owner.data!.credit, id: owner.data!.id });
     }
+  });
+});
+
+describe('the shared county source', () => {
+  it('stays the one source the join layers paint on, unchanged by us-counties declaring its data', () => {
+    expect(countyBoundariesSource()).toEqual({ source: COUNTY_SRC, spec: {
+      type: 'vector',
+      url: pmtilesUrl('county_boundaries'),
+      promoteId: { [COUNTY_SRC_LAYER]: 'GEOID' },
+      attribution:
+        '<a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas.html">US Census TIGER</a>' +
+        ' | <a href="https://ornl.opendatasoft.com/explore/dataset/odin-real-time-outages-county/">ORNL ODIN</a>' +
+        ' | <a href="https://www.arcgis.com/home/item.html?id=39485e8035d446a5bff03259508ae355">FEMA NRI</a>',
+    } });
   });
 });

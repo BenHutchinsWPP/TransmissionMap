@@ -14,6 +14,7 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "US DOT BTS / FRA North American Rail Network" |
 | **Served** | `data/layers/railroads.pmtiles` — PMTiles, z4–13 |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/railroads/` |
 | **Built by** | `scripts/tile_manifest.yaml` (`railroads` block) → `build_tiles.py` — `ogr2ogr` field subset + `tippecanoe` |
 | **Region tags** | None — a context layer, see [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 | **Raw input** | `data/raw/railroads/narn_rail_lines.geojson` (~345 MB, **not committed**) |
@@ -42,22 +43,28 @@ BTS/FRA rail network lines (US + Canada + Mexico).
 (z4–z13, `--drop-densest-as-needed --coalesce-densest-as-needed`, layer name `railroads`).
 No field renaming — original BTS column names are preserved.
 
-**Kept fields:** `RROWNER1`, `NET`, `PASSNGR`, `TRACKS`, `DIVISION`, `SUBDIV`, `BRANCH`, `STATEAB`
+**Kept fields:** `FRAARCID` (the stable feature id, served as the vector-tile feature id), `RROWNER1`, `NET`, `PASSNGR`, `TRACKS`, `DIVISION`, `SUBDIV`, `BRANCH`, `STATEAB`
 
-**Dropped:** OBJECTID, FRA arc/node IDs, `RROWNER2/3`, `TRKRGHTS1–9`, FIPS codes, `MILES`/`KM`, `TIMEZONE`, etc. — not used by popup or search.
+**Dropped:** OBJECTID, FRA node IDs, `RROWNER2/3`, `TRKRGHTS1–9`, FIPS codes, `MILES`/`KM`, `TIMEZONE`, etc. — not used by popup or search.
 
 ## Fields
 
 | Column | Type | Fill | Notes |
 |--------|------|------|-------|
+| FRAARCID | int | 100% | FRA arc id; unique per line; the stable feature id |
 | RROWNER1 | str | high | Primary rail owner (reporting mark, e.g. `DMVW`, `BNSF`, `UP`). Popup title + search. |
-| NET | str | 100% | Network class. M=Main (95,934), O=Other (88,556), Y=Yard (79,014), I=Industrial (16,134), S=Siding (10,193), X=Out of service (6,534), A=Abandoned (4,267), T=Transit (1,473), R=Removed/rail-trail (623), F=Ferry (15) |
+| NET | str | 100% | Network class. M=Main, O=Other, Y=Yard, I=Industrial, S=Siding, X=Out of service, A=Abandoned, T=Transit, R=Removed/rail-trail, F=Ferry |
 | PASSNGR | str | ~7% | Passenger service code (A/V/C/B/T/…); null = freight-only. Popup shows "Yes" when set. |
-| TRACKS | int | 100% | Number of tracks |
+| TRACKS | int | 100% | Number of tracks; 0 means not recorded |
 | DIVISION | str | partial | Operating division |
 | SUBDIV | str | partial | Subdivision name — secondary search field |
 | BRANCH | str | partial | Branch/line name — search field |
 | STATEAB | str | 100% | 2-letter state/province abbreviation |
+
+## Geometry file
+
+`data/analysis/railroads/` (`scripts/build_line_parquet.py`, `docs/pipeline.md` § Line geometry): every line at the
+raw file's own precision, keyed by `FRAARCID`, with its length in IDX.
 
 ## Use
 

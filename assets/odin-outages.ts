@@ -43,7 +43,7 @@ import { t } from '../src/i18n/index.js';
 const REGISTRY_ID = "odin-outages";
 
 // 15-minute poll — the CI feed refreshes on a similar cadence; picks up a new
-// snapshot within a quarter-hour without hammering raw.githubusercontent.com.
+// snapshot within a quarter-hour.
 const REFRESH_MS = 15 * 60_000;
 // Above this pull age the snapshot is treated as unsafe and NOT painted.
 const MAX_AGE_MS = 6 * 60 * 60_000;   // 6 hours

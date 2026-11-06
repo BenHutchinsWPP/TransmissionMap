@@ -132,9 +132,9 @@ describe('setStyle', () => {
     const { layers } = recordingMap();
     const before = snapshot(layers);
     expect(setStyle('osm-transmission-lines', { size: 2, opacity: 0.5, color: '#123456' })).toBeNull();
-    const lv = layers.get('osm-transmission-lines-kv100-hv')!;
+    const lv = layers.get('osm-transmission-lines-hv')!;
     expect(lv.paint!['line-color']).toBe('#123456');
-    const beforeLv = before.find(l => l.id === 'osm-transmission-lines-kv100-hv')!;
+    const beforeLv = before.find(l => l.id === 'osm-transmission-lines-hv')!;
     expect(lv.paint!['line-opacity']).toEqual(scaleBy(beforeLv.paint!['line-opacity'], 0.5));
     const label = layers.get('osm-transmission-lines-label')!;
     expect(label.paint!['text-color']).toEqual(before.find(l => l.id === label.id)!.paint!['text-color']);

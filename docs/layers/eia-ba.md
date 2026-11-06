@@ -11,7 +11,7 @@ Polygon boundaries of the 85 balancing authorities and connected-operator areas 
 | **Feature service** | https://services5.arcgis.com/bsqU0jSPAuI04L89/arcgis/rest/services/Balancing_Authorities/FeatureServer/0 (layer: `ctl_area_region`) |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105). The ArcGIS item page carries no license statement, but the dataset is EIA's own, published through the [EIA Atlas](https://atlas.eia.gov/). |
 | **Attribution** | "U.S. Energy Information Administration" |
-| **Served** | `data/layers/eia_ba.geojson.gz` (~830 KB, gzipped GeoJSON, `simplify: 0.001`, `precision: 5`) — 85 features covering the US plus adjacent interconnected Canadian and Mexican balancing authorities (e.g. AESO, Alberta Electric System Operator). |
+| **Served** | `data/layers/eia_ba.geojson.gz` (gzipped GeoJSON, `simplify: 0.001`, `precision: 5`) — the US plus adjacent interconnected Canadian and Mexican balancing authorities (e.g. AESO, Alberta Electric System Operator). |
 | **Built by** | `scripts/extract_eia_ba.py` → `data/build/eia_ba.gpkg` + `eia_ba.csv` |
 | **Stable id** | `abbrev` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 

@@ -14,7 +14,7 @@ vi.mock('./user-data.js', () => ({
 const downloadFile = vi.fn();
 vi.mock('./user-data-export.js', () => ({ downloadFile: (...a: unknown[]) => downloadFile(...a) }));
 
-const { MAX_COPY_ITEMS, MAX_COPY_CHARS, MAX_STORE_CHARS, fitCopy, toDownload, commitCopy, creditText, downloadCopy,
+const { MAX_COPY_ITEMS, MAX_COPY_CHARS, MAX_STORE_CHARS, MAX_DOWNLOAD_CHARS, fitCopy, toDownload, commitCopy, creditText, downloadCopy,
   showCopyResult } = await import('./copy-fit.js');
 const { MAX_SELECTION } = await import('../lines/line-read.js');
 const { LAYERS } = await import('../../src/registry/index.js');
@@ -43,6 +43,26 @@ describe('caps', () => {
     stored = MAX_STORE_CHARS - 1000;
     expect(fitCopy(fs, META, stored, 'l').kind).toBe('fits');
     expect(fitCopy(fs, META, stored + 1, 'l').kind).toBe('download');
+  });
+});
+
+describe('the download ceiling', () => {
+  it('64 MB is still a download offer; one char over is refused as too-large, with its reason shown', () => {
+    const at = commitCopy(sized(MAX_DOWNLOAD_CHARS), META, 'l', undefined, 0);
+    expect(at.kind).toBe('download');
+    const over = commitCopy(sized(MAX_DOWNLOAD_CHARS + 1), META, 'l', undefined, 0);
+    expect(over).toEqual({ kind: 'refused', reason: 'too-large' });
+    expect(added).toHaveLength(0);
+    const btn = { textContent: '', title: '', disabled: true, addEventListener() {} } as unknown as HTMLButtonElement;
+    showCopyResult(btn, over, true, 'feature');
+    expect(btn.textContent).toContain("use the layer's download");
+    showCopyResult(btn, over, true, 'feature', 'osm-transmission-lines');
+    expect(btn.textContent).toContain("use the layer's download");
+    for (const id of ['padus', 'crithab']) {            // no download pack: no pointer to one
+      showCopyResult(btn, over, true, 'feature', id);
+      expect(btn.textContent).toContain('select fewer features');
+      expect(btn.textContent).not.toContain('download');
+    }
   });
 });
 
@@ -119,6 +139,20 @@ describe('showCopyResult', () => {
     expect(b.textContent).toContain('lines');
     showCopyResult(b, { kind: 'refused', reason: 'not-copyable' });
     expect(b.textContent).toContain('no copyable geometry');
+  });
+});
+
+describe('left-out counts', () => {
+  const btn = () => ({ textContent: '', title: '', disabled: true, addEventListener() {} }) as unknown as HTMLButtonElement;
+  it('shows missing and unread in their own words, with the count formatted', () => {
+    const b = btn();
+    showCopyResult(b, { kind: 'copied', n: 3, simplified: 0, missing: 1200, unread: 2 }, true, 'feature');
+    expect(b.textContent).toContain('1,200 not copied: not in the geometry files');
+    expect(b.textContent).toContain('2 not copied: the geometry files could not be read');
+  });
+  it('a download keeps simplified, missing and unread', () => {
+    const r = commitCopy(sized(MAX_COPY_CHARS + 10), META, 'layer', 'L', 4, 2, 3);
+    expect(r).toMatchObject({ kind: 'download', simplified: 4, missing: 2, unread: 3 });
   });
 });
 

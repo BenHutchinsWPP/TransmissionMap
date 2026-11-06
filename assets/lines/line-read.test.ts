@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { lookup, lineGeometry, chainGeometry, selectionGeometry, lineDataset, resetLineRead,
+import { lookup, lineGeometry, chainGeometry, selectionGeometry, selectionPlan, lineDataset, resetLineRead,
   requestLog, groupsHolding, rowRuns, MAX_SELECTION } from './line-read.js';
 
 const FIX = fileURLToPath(new URL('./fixtures/analysis/', import.meta.url));
@@ -148,6 +148,36 @@ describe('selectionGeometry', () => {
     const all = await selectionGeometry(OSM, grid([...Array(30).keys()], [...Array(20).keys()]).slice(0, 600), [19, 9, 24, 13]);
     expect(all.ok && all.result.geometries.size).toBe(600);
     expect(corner).toBeLessThan(bytes());
+  });
+
+  it('plans both ways from metadata and takes the cheaper; either plan returns the same geometries', async () => {
+    const corner = grid([0, 1, 2, 3, 4, 5], [0, 1, 2, 3]);                       // 24 lines, one corner
+    const spread = grid([0, 7, 14, 21, 29], [0, 5, 10, 15, 19]);                 // 25 lines across the grid
+    const cost: number[] = [];
+    for (const [fids, bb] of [[corner, [19.99, 9.99, 20.6, 10.4]], [spread, [19.99, 9.99, 23, 12]]] as [number[], [number, number, number, number]][]) {
+      resetLineRead();
+      const plan = await selectionPlan(OSM, fids, bb);
+      expect(plan.bbox).toBeGreaterThan(0);
+      expect(plan.byId).toBeGreaterThan(0);
+      expect(plan.choice).toBe(plan.byId < plan.bbox ? 'id' : 'bbox');
+      cost.push(plan.bbox);
+      const a = await selectionGeometry(OSM, fids, bb, 'bbox');
+      resetLineRead();
+      const b = await selectionGeometry(OSM, fids, bb, 'id');
+      expect(a.ok && b.ok).toBe(true);
+      if (a.ok && b.ok) {
+        expect(b.result.geometries).toEqual(a.result.geometries);
+        expect(b.result.missing).toEqual(a.result.missing);
+      }
+    }
+    expect(cost[1]).toBeGreaterThan(cost[0]);   // the wider bbox plans more bytes (the mini GEO is smaller than its IDX group, so bbox wins here)
+  });
+
+  it('a by-id plan lists ids the index lacks, and the chosen plan answers like the other', async () => {
+    const fids = [...grid([0, 1, 2, 3, 4, 5], [0, 1, 2, 3]), 999999];
+    const got = await selectionGeometry(OSM, fids, [19.99, 9.99, 20.6, 10.4], 'id');
+    expect(got.ok && got.result.missing).toEqual([999999]);
+    expect(got.ok && got.result.geometries.size).toBe(24);
   });
 
   it('reads up to 20 ids one by one and lists the ones it cannot find', async () => {

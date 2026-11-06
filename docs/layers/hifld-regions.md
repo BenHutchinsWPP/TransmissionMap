@@ -11,9 +11,9 @@ Three administrative-boundary polygon layers giving regulatory context to the in
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "HIFLD / DHS CISA" |
 | **Download origin** | [SeerAI HIFLD Archive](https://source.coop/repositories/seerai/hifld/description/) (source.coop) / Geodesic API — **manually placed** at `data/raw/hifld/regions/` |
-| **Served** | `data/layers/nerc_regions.geojson.gz` (16 feats, simplified) · `data/layers/control_areas.geojson.gz` (71 feats, simplified) · `data/layers/retail_territories.pmtiles` (z2–10) — NERC/BA are too small to tile and serve whole geometry so they copy cleanly in edit mode; Retail (~2,900 feats) stays PMTiles |
+| **Served** | `data/layers/nerc_regions.geojson.gz` (simplified) · `data/layers/control_areas.geojson.gz` (simplified) · `data/layers/retail_territories.pmtiles` (z2–10) — NERC/BA are too small to tile and serve whole geometry (simplified); Copy to My Data reads the geometry files at source precision; Retail stays PMTiles |
 | **Built by** | `extract_regions.py` → `data/build/{nerc_regions,control_areas,retail_territories}.{shp,csv}` |
-| **Stable id** | NERC regions `sub_nm`; retail territories `id` (the HIFLD ID, also the `retail` tag code); strings, promoted |
+| **Stable id** | NERC regions `sub_nm`; control areas `id` (the HIFLD ID, an EIA utility number); retail territories `id` (the HIFLD ID, also the `retail` tag code); strings, promoted |
 
 > The HIFLD Open portal closed September 16, 2025; datasets have been archived by SeerAI on source.coop.
 
@@ -39,7 +39,7 @@ geometry — it's a tabular preview.
 
 ### NERC Regions
 
-The Area picker's NERC list holds all eight region codes. Plants from the EIA layer carry EIA's own `nerc_region` (see [EIA Generators](eia-generators.md)), so an area of SPP or FRCC matches none of them: EIA files those plants under MRO or SERC.
+The Area picker's NERC list holds all eight region codes; EIA plants in SPP or FRCC territory match MRO or SERC instead (see [EIA Generators](eia-generators.md)).
 
 - **Computed:** `code` extracted from the `(ABBR)` parenthetical of `NAME`; `region` =
   `NAME` with trailing parenthetical stripped
@@ -57,11 +57,12 @@ The Area picker's NERC list holds all eight region codes. Plants from the EIA la
 
 - **Computed:** `color_idx` = stable CRC32 hash of `NAME` mod 6, so adjacent BAs get
   distinct fill colors
-- **Columns kept:** `name`, `state`, `color_idx`, `tot_cap`, `peak_ld`, `min_ld`,
+- **Columns kept:** `id`, `name`, `state`, `color_idx`, `tot_cap`, `peak_ld`, `min_ld`,
   `avail_cap`, `year`, `website`
 
 | Field | Source column | Notes |
 |---|---|---|
+| `id` | `ID` | string; the EIA utility number, unique per area |
 | `name` | `NAME` | |
 | `state` | `STATE` | |
 | `color_idx` | derived | 0–5 hash bucket for map fill |

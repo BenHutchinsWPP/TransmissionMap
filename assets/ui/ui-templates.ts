@@ -19,7 +19,7 @@
 //                    (src/registry/template-libs.json), as any Vega card does.
 //       The pane: a layer picker, a gallery of the templates that fit it, and a
 //       form built from formChoices(). GeoJSON reads the whole layer within the
-//       Area; a tiled one reads the view (switched-off layers offer Switch on);
+//       Area; a tiled one reads the view (switched-off layers offer Switch on) unless it has a columns file (Area, whole layer, on or off);
 //       cards beyond MAX_VIZ_CARDS collapse to Re-run; not in links, no undo.
 //       A card renders through ui-canvas.ts canvasCard({template: true, rerun});
 //       canvas-host.ts keeps at most MAX_LIVE frames live (an evicted card
@@ -45,7 +45,7 @@ import { vizPanel, openViz, vizOpen, registerVizSnapshot, mapIdle, drawerChanged
 import { canvasCard, claimRestoreSlots, releaseRestoreSlot } from './ui-canvas.js';
 import { el } from './services-dom.js';
 import {
-  showTemplate, validateTemplateArgs, formChoices, coverageArea, fieldLabel, measureLabel,
+  showTemplate, validateTemplateArgs, formChoices, coverageArea, viewOnly, fieldLabel, measureLabel,
   TOP_MIN, TOP_MAX, TOP_DEFAULT, WITHIN_MIN, WITHIN_MAX, WITHIN_DEFAULT, type FormChoices,
 } from '../templates/show-template.js';
 import { FIELD_SCHEMA, type FieldOp } from '../../src/registry/field-schema.js';
@@ -94,7 +94,11 @@ function tx<K extends keyof HTMLElementTagNameMap>(tag: K, key: string, params?:
 }
 
 // ─── Layers and templates ────────────────────────────────────────────────────
-const isTiled = (id: string) => layerById(id)?.data?.kind !== 'geojson';
+/** The template reads the current view of `id` (a tiled layer without a columns file, or a template needing full geometry). */
+const isTiled = (id: string, tid: string | null = tplId) => {
+  const def = tid ? templateById(tid) : undefined;
+  return def ? viewOnly(id, def) : layerById(id)?.data?.kind !== 'geojson';
+};
 const isOn = (id: string) => !!state.layerVisibility[id];
 
 /** The layers a ready template fits, the switched-on ones first. */
@@ -481,7 +485,7 @@ function trimCards() {
 /** Show a card again through showTemplate with its params, in place of `card`; null when shown, else the reason. */
 async function rerunCard(c: VizCard, card: HTMLElement): Promise<string | null> {
   if (!card.isConnected) return null;
-  if (isTiled(c.layer)) await mapIdle();
+  if (isTiled(c.layer, c.templateId)) await mapIdle();
   const r = await showTemplate({ ...c.params, template: c.templateId, layer: c.layer },
     host(live => { if (!card.isConnected) return false; card.replaceWith(live); return true; }));
   return r.ok ? null : reasonText(r.reason);
@@ -494,7 +498,7 @@ async function showFromForm(): Promise<void> {
   renderScope();
   setStatus(t('viz.drawing'));
   try {
-    if (isTiled(args.layer as string)) await mapIdle();
+    if (isTiled(args.layer as string, args.template as string)) await mapIdle();
     const r = await showTemplate(args, host(card => { q('.tv-cards').prepend(card); return true; }));
     setStatus(r.ok ? '' : reasonText(r.reason), r.ok ? 'info' : 'error');
   } finally {

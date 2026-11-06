@@ -29,7 +29,6 @@ response must allow that origin (CORS).
 | mesonet.agron.iastate.edu | goes-east-visible | 2026-10-22 | ok |
 | mrdata.usgs.gov | usgs-geology | 2026-10-22 | ok |
 | nowcoast.noaa.gov | nowcoast-cyclone-cone, nowcoast-sea-surface-temp, nowcoast-lightning, nowcoast-water-vapor | 2026-10-22 | ok |
-| raw.githubusercontent.com | natural-earth-rivers, natural-earth-countries, natural-earth-admin1 | 2026-10-22 | ok |
 | sdmdataaccess.sc.egov.usda.gov | ssurgo-soils | 2026-10-22 | ok |
 | services.arcgis.com | epa-repowering, uswtdb, epa-cleanups, federal-lands-2017, faa-airports, national-highway-system, dot-military-bases, fws-refuges, epa-lmop-landfill-gas, dot-alt-fuel-stations, dot-alt-fuel-corridors, hud-opportunity-zones, epa-sole-source-aquifers | 2026-10-22 | ok |
 | services1.arcgis.com | blm-section-368, blm-solar-zones, ut-energy-corridors, blm-national-monuments | 2026-10-22 | ok |

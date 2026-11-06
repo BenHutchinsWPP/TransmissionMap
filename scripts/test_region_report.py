@@ -4,8 +4,7 @@ The contract this guards: `|`-delimited lists and scalars count the same way
 across every input format (.geojsonl, .geojson.gz, .gpkg); absent, blank,
 `none` and malformed values are told apart and every share is over all
 features; per-zoom tile sizes come out of PMTiles root and leaf directories;
-the headroom estimate costs only blobs not already published, in whole KB; and
-the report exits non-zero once an archive passes the per-file cap. Synthetic
+the headroom estimate costs only blobs not already published, in whole KB. Synthetic
 files only — no data/, no network.
 """
 import collections
@@ -204,11 +203,10 @@ class Archives(unittest.TestCase):
         self.assertEqual(dict(z[1]), {100: 2, 300: 1})
         self.assertEqual(dict(z[2]), {50: 1})
 
-    def _run(self, cap=10**9, on_branch=(), repo_kb=0, ceiling_kb=10**6, blob=None, extra=(),
+    def _run(self, on_branch=(), repo_kb=0, ceiling_kb=10**6, blob=None, extra=(),
              listed=(), archive=None):
         out = io.StringIO()
-        with mock.patch.object(region_report, "CEILING_BYTES", cap), \
-             mock.patch.object(region_report, "published_blob", return_value=blob), \
+        with mock.patch.object(region_report, "published_blob", return_value=blob), \
              mock.patch.object(region_report, "listed_layers", return_value=list(listed)), \
              mock.patch.object(region_report, "published_shas", return_value=set(on_branch)), \
              mock.patch.dict("os.environ", {"SIZE_CEILING_KB": str(ceiling_kb)}), \
@@ -216,18 +214,6 @@ class Archives(unittest.TestCase):
             code = region_report.main(["--archive", archive or str(self.pm), *map(str, extra),
                                        "--repo-kb", str(repo_kb)])
         return code, out.getvalue()
-
-    def test_archive_at_cap_passes(self):
-        code, out = self._run(cap=self.size)
-        self.assertEqual(code, 0)
-        self.assertNotIn("OVER CAP", out)
-
-    def test_archive_one_byte_over_cap_fails(self):
-        self.pm.write_bytes(self.pm.read_bytes().ljust(3000, b"\0"))
-        code, out = self._run(cap=3000 - 1)
-        self.assertEqual(code, 1)
-        self.assertIn("OVER CAP", out)
-        self.assertIn("new objects (not on origin/data-static): 0 KB", out)
 
     def test_headroom_counts_unpublished_blob_once_in_whole_kb(self):
         self.pm.write_bytes(self.pm.read_bytes().ljust(3000, b"\0"))

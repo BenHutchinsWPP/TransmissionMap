@@ -646,6 +646,8 @@ const arrowOf = (field: string) => (cur().sort?.field === field ? (cur().sort!.d
 
 /** Ctrl/Cmd+C on the grid: the dragged range as TSV (header line, rows in view order), inside the keypress. */
 function onGridKey(ev: KeyboardEvent) {
+  // A row's own button (↗) keeps its Enter; SelectRange, with no editor to open, never sees it.
+  if (ev.key === 'Enter' && (ev.target as HTMLElement).closest('.tabulator-tableholder')) ev.stopPropagation();
   if ((ev.target as HTMLElement).closest('input, select, button')) return;
   if (ev.key === 'Enter') { ev.stopPropagation(); return; }
   if (!isCopyKey(ev) || !ui) return;

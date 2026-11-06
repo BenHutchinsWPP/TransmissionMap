@@ -75,5 +75,6 @@ package; a frame can hang the tab in browsers that share its process.
 ## Session restore
 
 `tm-chat` and `tm-drawer` (`sessionStorage`) restore only on a reload or back-forward of the
-same hash. They never hold the key, are validated on read as untrusted input, and a restore
-sends no request, runs no model code, writes no URL and adds no undo step.
+same hash. They never hold the key and are validated on read as untrusted input. To rebuild a table, a
+restore reads only the site's own `data/analysis/` index and columns files (same origin as the tiles). It
+sends no model, service, geocoder or third-party request, runs no model code, writes no URL and adds no undo step.

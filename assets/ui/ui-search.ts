@@ -6,7 +6,7 @@
 // hide it from search too, as they do from click and hover. The filters are
 // evaluated with the style-spec featureFilter, a lazy chunk shared with
 // popup.ts; until it loads, or if it cannot, search runs unfiltered.
-// Deps: state.ts, map-input.ts (onMapTap), registry (layerById, OSM_TL_BANDS),
+// Deps: state.ts, map-input.ts (onMapTap), registry (layerById),
 //       highlights.ts, state-bus.ts, diag-log.ts, utils.ts (escapeHtml).
 
 import { state } from '../state.js';
@@ -14,7 +14,6 @@ import type { FilterSpecification } from 'maplibre-gl';
 import { layerById } from '../../src/registry/index.js';
 import { recordDiagEvent } from '../diag-log.js';
 import { onMapTap } from '../map-input.js';
-import { OSM_TL_BANDS } from '../../src/registry/transmission.js';
 import { escapeHtml } from '../utils/utils.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
 import { on } from '../state-bus.js';
@@ -36,14 +35,7 @@ const SEARCH_SOURCES = [
   { sourceId: "hifld-substations",      sourceLayer: null,             label: "HIFLD Substation",   fields: ["name"] },
   { sourceId: "osm-generators",         sourceLayer: "osm_generators", label: "OSM Generator",      fields: ["name", "source", "operator"] },
   { sourceId: "osm-plants-points",      sourceLayer: null,             label: "Power Plant",        fields: ["name", "operator", "source"] },
-  // One entry per voltage-class archive — querySourceFeatures reads a single
-  // source, so a lone "osm-transmission-lines" entry would only ever find lines
-  // under 50 kV. They all report to the same registry layer for the visibility
-  // check, and a line is in exactly one archive, so results cannot duplicate.
-  ...OSM_TL_BANDS.map(b => ({
-    sourceId: `osm-transmission-lines${b.suffix}`, sourceLayer: "osm_transmission_lines",
-    label: "OSM Transmission", fields: ["name", "operator"], layerId: "osm-transmission-lines",
-  })),
+  { sourceId: "osm-transmission-lines", sourceLayer: "osm_transmission_lines", label: "OSM Transmission", fields: ["name", "operator"], layerId: "osm-transmission-lines" },
   { sourceId: "hifld-transmission-lines", sourceLayer: "hifld_transmission_lines", label: "HIFLD Transmission", fields: ["OWNER"],                   layerId: "hifld-transmission-lines" },
   { sourceId: "ogf-planned-transmission", sourceLayer: null, label: "Planned Transmission", fields: ["Project", "Owner", "FromSub", "ToSub", "StatesFull"] },
   { sourceId: "westtec-10yr", sourceLayer: null, label: "WestTEC Project", fields: ["name"] },

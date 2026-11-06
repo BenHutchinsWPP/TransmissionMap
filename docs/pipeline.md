@@ -27,11 +27,11 @@ make tiles
 # 5. Join the 8 continental OSM builds into one world tileset per layer
 make global-tiles
 
-# 6. (deploying) Push data/layers/ + data/releases/ to the data-static branch
-#    prod fetches from — local dev reads data/layers/ directly. Rebuilds the
-#    per-layer provenance manifest first (make data-manifest, chained via
-#    `publish-data: data-manifest`) so data/layers/manifest.json ships current.
-make publish-data
+# 6. (deploying) Upload data/layers/, data/analysis/ and data/releases/ to the
+#    R2 bucket behind data.wpptx.org, which prod fetches from — local dev reads
+#    data/layers/ directly. Run `make data-manifest` first so
+#    data/layers/manifest.json ships current.
+make publish-r2
 ```
 
 ### The data manifest (`make data-manifest`)
@@ -72,7 +72,7 @@ manifest that ships is freshly built, built-artifact sizes included once `make
 tiles`/`make global-tiles` have run, rather than stale or missing). Run it
 directly only to inspect `data/layers/manifest.json` on its own.
 
-`data/layers/manifest.json` is picked up by `make publish-data` automatically:
+`data/layers/manifest.json` is picked up by `make publish-r2` automatically:
 it's named as a double-quoted `"data/layers/…"` literal in `assets/constants.ts`
 (`DATA.data_manifest`), the same mechanism every other published layer uses.
 
@@ -171,7 +171,7 @@ The report measures the region fields over paths you pass in:
 ```bash
 python3 scripts/region_report.py \
   --input data/build/<layer>.geojsonl data/layers/eia_generators.geojson.gz \
-  --archive tmp/<build>/kv50.pmtiles=data/layers/osm_transmission_lines_kv50.pmtiles
+  --archive tmp/<build>/transmission.pmtiles=data/layers/osm_transmission_lines.pmtiles
 ```
 
 - **`--input`** (`.geojsonl`, `.gpkg`, `.csv` (region columns only), or a
@@ -184,21 +184,12 @@ python3 scripts/region_report.py \
   `tippecanoe-decode` writes for one zoom, so what the tiles carry is measured.
   Z defaults to the archive's maxzoom; the decode is streamed.
 - **`--archive PATH[=PUBLISHED]`** (`.pmtiles` or a shipped `.geojson.gz`):
-  bytes and headroom to the 100 MiB per-file cap (`CEILING_BYTES` in
-  `build_global_tiles.py`), per-zoom tile p50/p95/max for PMTiles, and the size
+  bytes, per-zoom tile p50/p95/max for PMTiles, and the size
   delta against the file at `PUBLISHED` (default: `PATH`) on the local
   `origin/data-static` ref — `git fetch` first for a current comparison.
   `PATH` is split at the last `=` unless the whole argument is an existing file.
-- **Repository headroom:** the estimate `publish_data.sh` runs before a publish
-  (see [hosting-plan.md](hosting-plan.md) § *Repository headroom*), over the
-  set it would push — every path `validate_build.py --list-expected` names, with
-  each archive standing in for its `PUBLISHED` path. Files over the per-file cap
-  are left out, blobs are deduped by hash, and only blobs not already in the
-  `data-static` tree count. The sum plus the repository size (from `gh`, or
-  `--repo-kb`) is checked against `SIZE_CEILING_KB`.
 
-The script exits 1 when any archive is over the per-file cap, and 2 — before
-printing any table — when a path is missing or a `.gpkg` is not a GeoPackage.
+The script exits 2 — before printing any table — when a path is missing or a `.gpkg` is not a GeoPackage.
 
 ---
 
@@ -226,9 +217,15 @@ together.
 | WestTEC 10 Yr | `fid` | 12-hex content id (sha1 of attributes + part endpoints on a 0.01° grid; `scripts/westtec_ogf.py`) — the publisher has no key, so a content edit yields a new id | `promoteId` |
 | Mines / NREL hydrothermal | `mine_id` / `UID` | MSHA mine ID / publisher UID | `promoteId` (`built_elsewhere` in the manifest) |
 | Retail territories, NERC regions | `id` / `sub_nm` | HIFLD ID / region name | `promoteId` |
+| HIFLD control areas (balancing authorities) | `id` | HIFLD `ID` (the EIA utility number), one polygon each | `promoteId` |
 | PAD-US | `fid` | integer content id: 13 hex digits of a sha1 over the source attributes, source-CRS bounds (1 m grid) and vertex count (`scripts/extract_padus.py`) — no key is set on every record, so an edited record yields a new id | native tile id (`native_id`) |
 | Critical habitat | `entity_id` | FWS ECOS listing-entity id, one polygon each | `promoteId` |
 | Data center moratoriums | `fid` | the jurisdiction: `state:TX`, `county:48201`, `utility:<EIA-861 no.>`, `ba:ERCO`, `place:<state>:<place GEOID>`, `point:<state>:<hash>` (`scripts/moratoriums/build_layer.py`) | `promoteId` (`built_elsewhere`; served from the `data-moratoriums` branch, so `make stable-ids ARGS="--only dc_moratoriums --layers-dir <checkout>"`) |
+| Railroads (BTS NARN) | `FRAARCID` | the publisher's FRA arc id, one line each, unique | native tile id (`native_id`) |
+| BIA tribal lands (AIAN-LAR) | `LARID` | the publisher key (`LAR0001`), one polygon each; the extract stops on a null or duplicate | `promoteId` |
+| BOEM offshore wind leases | `fid` | 12-hex content id (sha1 of lease number, type, date, bounds on a 1e-6° grid and vertex count; `scripts/extract_boem_wind.py`); an identical duplicate takes `-<n>` — easements repeat the lease number | `promoteId` |
+| US counties | `GEOID` | the 5-digit county code, one polygon each | `promoteId` (the shared county source) |
+| WECC paths | `id` | string: `"66"` for a catalog marker, `"66c"` for its corridor line; hand-maintained, never read as a number (`built_elsewhere`) | `promoteId` |
 | US states, ZCTA, tribal lands, EIA BAs, countries, admin-1 | `stusps`, `zcta5`, `geoid`, `abbrev`, `iso_a3`, `code` | the region-tag code | `promoteId` |
 
 **Where ids are built.** In the extract scripts, so the `data/build/` intermediates
@@ -241,9 +238,9 @@ for popup links.
 
 **World merge.** `build_global_tiles.py` dedupes the seam copies of each OSM layer on
 `fid`; the first continent in `REGION_CODES` keeps its copy. Transmission is tiled once
-with ids assigned beforehand, then cut into the six voltage-class archives with
-`tile-join`, which carries the ids through: a way sits in exactly one band with the
-same id.
+with ids assigned beforehand; `tile-join` carries the ids through to
+`osm_transmission_lines.pmtiles`.
+The merge applies the same `output_mw` caps as the parser (`osm_common.py`), so world layers are capped whatever the age of the continental intermediates.
 
 **Footguns.**
 - A GeoPackage reserves `fid` for its own primary key. Write intermediates that carry
@@ -275,7 +272,7 @@ no input row has, or an attribute the row lacks, is a mismatch too. The region f
 a world build adds after the merge are not compared, and an input field the tiles
 leave out (a null, `minz`) is not counted. It exits non-zero on any mismatch; memory
 grows with the sample, not the input. `--only <id>` checks one layer; a layer with no
-`id_field` (railroads) is not checked.
+`id_field` is not checked.
 
 The tile builds need tippecanoe ≥ 2.55.0, the release from which every feature keeps
 its own attribute strings at every zoom; `make check` prints the version on PATH, and
@@ -288,14 +285,32 @@ first on PATH is the one that runs.
 The copy, fault-locator and elevation-profile tools need each transmission line's
 full geometry and exact length, which the tiles cannot give: a tile carries a line cut
 into pieces and snapped to its grid. `scripts/build_line_parquet.py` writes them as
-GeoParquet into `data/analysis/`, one directory per dataset. **Dev-only:** nothing
-under `data/analysis/` is published (`publish_data.sh` ships only the `data/layers/`
-paths `assets/constants.ts` names), and publishing it is a separate decision.
+GeoParquet into `data/analysis/`, one directory per dataset. `make publish-r2`
+uploads them to `data.wpptx.org`.
 
 | dataset | input |
 |---|---|
 | `osm_transmission_lines` | `data/build/world/transmission_world.geojsonl.gz` — the merged, deduped, untagged world input `build_global_tiles.py` keeps (`keep_merged`) |
 | `hifld_transmission_lines` | `data/build/transmission_hifld.gpkg`, through the tile build's own `ogr2ogr -lco COORDINATE_PRECISION=6` |
+| `osm_substations_polygons` | the world OSM substation polygons, from the same kept merge (`geometry: polygon`) |
+| `osm_plants_polygons` | the world OSM plant polygons, from the same kept merge (`geometry: polygon`) |
+| `osm_pipelines_lines` | the world OSM pipelines, from the same kept merge (`geometry: line`, IDX and GEO, no CHAINS) |
+| `hifld_natgas_lines` | `data/build/hifld_natgas_lines.gpkg`; the ids and 1e-6° coordinates are the tile build's (`ogr2ogr`, precision 6); string fids (`ng:<FID>`, `hgl:<FID>`), no CHAINS |
+| `retail_territories` | `data/build/retail_territories.gpkg`, read as stored (source precision, not the tiles' precision 5); string fids (`id`) (`geometry: polygon`) |
+| `eia_ba` | `data/build/eia_ba.gpkg`, read as stored; string fids (`abbrev`) (`geometry: polygon`) |
+| `nerc_regions` | `data/build/nerc_regions.gpkg`, read as stored; string fids (`sub_nm`) (`geometry: polygon`) |
+| `control_areas` | `data/build/control_areas.gpkg`, read as stored; string fids (`id`) (`geometry: polygon`) |
+| `crithab` | `data/build/crithab.gpkg`, read as stored; integer fids (`entity_id`) (`geometry: polygon`) |
+| `padus` | `data/build/padus.gpkg`, read as stored; integer fids (the content id column `fid`) (`geometry: polygon`) |
+| `railroads` | `data/raw/railroads/narn_rail_lines.geojson`, read as stored; integer fids (`FRAARCID`), IDX with `length_km` and GEO, no CHAINS (`geometry: line`) |
+| `bia_tribal_lands` | `data/build/bia_tribal_lands.geojson`, read as stored; string fids (`LARID`) (`geometry: polygon`) |
+| `boem_wind_leases` | `data/build/boem_wind_leases.geojson`, read as stored; string fids (content id `fid`) (`geometry: polygon`) |
+| `us_states` | `data/build/us_states.gpkg`, read as stored; string fids (`stusps`) (`geometry: polygon`) |
+| `countries` | `data/build/countries.gpkg`, read as stored; string fids (`iso_a3`) (`geometry: polygon`) |
+| `admin1_boundaries` | `data/build/admin1_boundaries.gpkg`, read as stored; string fids (`code`) (`geometry: polygon`) |
+| `tribal_lands` | `data/build/tribal_lands.gpkg`, read as stored; string fids (`geoid`) (`geometry: polygon`) |
+| `us_zcta` | `data/build/us_zcta.gpkg`, read as stored; string fids (`zcta5`) (`geometry: polygon`) |
+| `county_boundaries` | `data/build/county_boundaries.geojson`, read as stored; string fids (`GEOID`) (`geometry: polygon`) |
 
 Reading the kept merge, not the continental GeoPackages, is what makes the ids and the
 1e-6° coordinates exactly the ones the tiles were built from. So run
@@ -311,14 +326,17 @@ Files per dataset (`<ds>/`; the layout rules live in `scripts/geoparquet_common.
 | `<ds>.chains.<sha8>.parquet` (OSM) | `chain`, `seq` | `chain`, `seq`, `fid`, `row`, `rev`, `length_km`, `start_sub`, `end_sub` |
 | `_manifest.json` | | per file: bytes, sha256, footer length, rows (GEO: part and row offset); `build_id`, snapshot date, provenance from `data_manifest.yaml` |
 
+A polygon dataset has IDX and GEO only (no CHAINS, no length). Its `index.json` entry
+carries `geometry: "polygon"`; an entry without it is `"line"`.
+
 `data/analysis/index.json` holds every dataset's manifest, so a reader learns each
 file's length and footer length without a `HEAD`. Every file carries the run's
 `build_id` in its key-value metadata; a file is named by its content hash, so each
 build writes new names and removes the old files.
 
 - **Layout.** IDX and CHAINS: 4k-row groups, statistics on the sort key only. GEO:
-  64k-row groups, 256-row pages (`max_rows_per_page` and `write_batch_size`), page
-  index on, statistics on `fid` and `bbox`. ZSTD 9. GEO is cut on row-group boundaries
+  groups of up to 64k rows, closed before 16 MiB of WKB (a larger row is its own
+  group); pages of up to 256 rows and about 1 MiB; page index on, statistics on `fid` and `bbox`. ZSTD 9. GEO is cut on row-group boundaries
   into parts of about 64 MiB (95 MiB is a hard stop). No dictionary on `fid`, `row`,
   measures, `bbox` or `geometry`: `write_parquet` asserts it.
 - **HIFLD `fid`** is the publisher `ID` as a string, the type the tiles carry.
@@ -336,11 +354,81 @@ Run `make line-parquet` (`ARGS="--only <ds>"`; memory-capped at 14 GB; log in
 
 - `make stable-ids ARGS="--lines"` — every id the served archives carry at max zoom
   is in IDX (0 missing), IDX has no duplicate, IDX `row` and CHAINS `row` point at
-  their fid's GEO row on a 1,000-row sample, and 1,000 sampled tile pieces lie within
-  1.5 grid units of their GEO line. IDX ids no z11 tile carries are counted, not
-  failed: tippecanoe drops ways shorter than about one grid unit.
+  their fid's GEO row on a 1,000-row sample, and 1,000 sampled tile pieces lie on their GEO line: vertices more than one
+  grid unit inside the tile within 0.8 grid units, vertices on its edge or in its buffer within 2.5. IDX ids no max-zoom tile carries are counted, not
+  failed: tippecanoe drops ways shorter than about one grid unit. A layer served as GeoJSON (simplified at build) is also held to its geometry-file polygon by area (symmetric difference at most 5 % of the polygon's area): `eia_ba`, `nerc_regions`, `tribal_lands`, `bia_tribal_lands` and `boem_wind_leases` at 5 %, `control_areas` at 10 %; `us_states`, `countries` and `admin1_boundaries` are checked for ids only, their area difference reported but not judged. Tiled polygon layers have a placement ceiling in grid units: `retail_territories` 400, `us_zcta` 2,500, `county_boundaries` 3,100. `railroads` is held to the line rule above. The builder and `make geometry-check` refuse a GeoPackage or GeoJSON input that is not EPSG:4326 or has Z coordinates.
+- `make geometry-check` (`ARGS="--only <ds>"` or `"--mutate"`; log in `tmp/logs/geometry-check.log`)
+  — `scripts/check_geometry_parquet.py`, which shares no code with the builder. Against the
+  kept input: every input fid is in IDX once and no other, each IDX `row` holds its fid's GEO
+  row, each GEO geometry equals its input geometry exactly, and each `bbox` covers it.
+  Against the served archive (`stable_ids.py --lines`): a polygon tile piece and its GEO
+  polygon, both clipped to the tile and each opened by one z12 grid unit, have their vertices
+  within 2.5 grid units of the other's area (pieces both of whose opened sides are empty are
+  counted, not compared); lines as above. `--mutate` plants errors in scratch copies and passes only when both checks catch them.
 - `make validate` — each manifest matches its files (bytes, sha256, footer length,
   `build_id`, ≤ 95 MiB, no orphans).
+
+### Columns files (`make columns-parquet`)
+
+The table, `count`/`aggregate`/`query` and the templates answer for a whole tiled dataset,
+not just the loaded tiles, from one Parquet file of every feature's attributes.
+`scripts/build_columns_parquet.py` writes one per dataset into `data/analysis/columns/`
+(`<ds>.<sha8>.parquet`); `data/analysis/index.json` has a `columns` section naming each
+file, its bytes and footer length, and the `archive_sha256` of the archive it describes.
+`make publish-r2` uploads them with the line files.
+The datasets are listed in `src/registry/columns.ts` (`COLUMNS_DATASETS`).
+
+- **Input.** The rows tippecanoe read, not the tiles (`scripts/tile_inputs.py`): a world
+  layer reads its kept, region-tagged merged file in `data/build/world/`, a US layer the
+  manifest `src`. Ids and region tags are therefore the tiles' own.
+- **Columns.** The stable id (a native id as int64 `fid`), every attribute in the archive's
+  `vector_layers` fields, `length_km` (lines) or `area_km2` (polygons) on the sphere
+  (R = 6371.0088 km), and `px`/`py`: the point, a line's midpoint along it, a polygon's
+  point on surface. `px`/`py` are stored as int32 micro-degrees (round(x·1e6)); the reader
+  divides by 1e6.
+- **Layout.** Hilbert order on `px`/`py`, 64k-row groups, no page index, ZSTD 9. The footer
+  carries `build_id`, the dataset, geometry, id field and, per row group, the region codes
+  present, so a call with an Area or region condition reads only the groups that can match.
+- **Rows without geometry** are left out and counted in the log, as the tiles leave them
+  out. Rows the tiles drop for drawing stay in the file, so the dataset scope counts them.
+- **In the file, not in the max-zoom tiles:** each dataset's share is in `index.json` as `columns.<ds>.tiles_missing`.
+- **Read budgets** (cold cache, MB = 10^6 bytes):
+
+  | call | budget |
+  |---|---|
+  | world aggregate, OSM transmission by `nominal_kv` + sum `length_km` | ≤ 8 MB, ≤ 96 requests |
+  | the same with Area TX | ≤ 1.5 MB |
+  | table open, world, as drawn, unsorted | ≤ 4 MB |
+  | table open, `af=s.TX` | ≤ 2 MB |
+  | each footer | ≤ 256 KiB |
+
+  Above 2 MiB of planned bytes the table asks first; a call planning more than 32 MiB
+  (`COLUMNS_MAX_BYTES`) reads the view instead.
+- **Reading.** `assets/columns/columns-read.ts` over `assets/parquet/range-io.ts`, loaded only
+  by dynamic import from `dataset-query.ts`. A call with `scope: 'view'`, `fragments`, `ids`
+  or `geometry: 'full'`, or whose file is missing, stale or timed out, reads the loaded
+  tiles (`complete: false`).
+- **Publishing.** An archive and its columns file publish together: an entry whose
+  `archive_sha256` differs from the archive being uploaded is refused.
+
+Run `make columns-parquet` (`ARGS="--only <ds>"`; memory-capped at 14 GB; log in
+`tmp/logs/columns-parquet.log`), after the tiles it describes, then check:
+
+- `make columns-check` (`tmp/logs/columns-check.log`) — decodes each archive at its max
+  zoom with `tippecanoe-decode` and holds the file to it: every id a tile carries is in the
+  file, and every tile attribute equals the file's value (numbers to 12 significant
+  digits); the transmission sets' `length_km` also equals the line files' IDX. File-only ids
+  are counted, not failed. A point dataset's `px`/`py` equal its build input's coordinate
+  exactly, and a tile point lies within one max-zoom tile unit of them. It imports neither the
+  builder nor `tile_inputs.py`.
+  `ARGS="--emit-reference DIR"` writes totals over the whole file with region lists split in
+  Python (the reference the data test reads); `ARGS="--only <ds> --mutate"` plants a change
+  to one region code and one value in a scratch copy and passes only when the check catches both.
+- `TM_COLUMNS_DATA=1 npx vitest run assets/columns/columns-data.test.ts` — the built files,
+  served by range from disk, answer the dataset-scope calls with the reference totals and
+  within the budgets above (skipped without the env var). `TM_COLUMNS_MUTATE=1` drops a row
+  group and the run must fail.
+- `make validate` — each manifest entry matches its file, and each `archive_sha256` the archive in `data/layers/`.
 
 ## Windows
 
@@ -444,8 +532,7 @@ Two on-disk formats are served to the app, picked per layer by geometry profile:
 
 - **PMTiles** — vector tiles for *few-large* or *very dense* geometries (transmission /
   pipeline lines, OSM generators, OSM substations & plant polygons, PAD-US, tribal lands, regions). Tiles load lazily via
-  HTTP range requests and tippecanoe's simplification shrinks detailed geometry
-  dramatically (e.g. PAD-US 806 MB SHP → 62 MB tiles).
+  HTTP range requests and tippecanoe's simplification shrinks detailed geometry.
 - **Gzipped GeoJSON** (`.geojson.gz`) — for *many-small* geometries (plant
   points, EIA generators, pipeline points). Files are shipped **pre-gzipped**;
   the app fetches the `.gz` and decompresses in-browser via `DecompressionStream`
@@ -453,12 +540,12 @@ Two on-disk formats are served to the app, picked per layer by geometry profile:
   GeoJSON as its final step.
 
 Neither format lives in `main` — `data/layers/` and `data/releases/` are gitignored.
-`make publish-data` force-pushes the layers `assets/constants.ts` names to the orphan
-`data-static` branch; the per-continent join inputs stay local. Where each asset class
-is hosted, and the 100 MiB ceiling that shapes the archives, is
+`make publish-r2` uploads the layers `assets/constants.ts` names to the `data-wpptx-org`
+bucket (`data.wpptx.org`); the per-continent join inputs stay local. Where each asset class
+is hosted is
 [hosting-plan.md](hosting-plan.md). The GitHub Pages deploy
 (`.github/workflows/deploy.yml`) builds only the app bundle — it ships no data. The
-live wildfire feed uses a separate orphan `data` branch (see `layers/wildfire-live.md`).
+live feeds are served from `live.wpptx.org` (see `layers/wildfire-live.md`).
 
 The per-layer docs in [`layers/`](layers/) record which format each layer uses and the
 tippecanoe zoom range applied.

@@ -12,6 +12,7 @@ U.S. offshore wind lease outlines and planning areas.
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "Bureau of Ocean Energy Management" |
 | **Served** | `data/layers/boem_wind_leases.geojson.gz` — gzipped GeoJSON |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/boem_wind_leases/` |
 | **Built by** | `scripts/extract_boem_wind.py` (`make boem-wind`) |
 | **Raw input** | `data/raw/boem_wind/boem-renewable-energy-shapefiles.zip` |
 
@@ -34,6 +35,7 @@ STATE→state, ACRES→acres, LEASE_DATE→date, LEASE_TERM→term`).
 
 | Field | % filled | Example values |
 |---|---|---|
+| `fid` | 100% | 12-hex content id over lease number, type, date, bounds and vertex count — the stable feature id (an identical duplicate takes `-1`); easements repeat `lease`, so it is not a key |
 | `lease` | 100% | `OCS-A 0506` |
 | `company` | 100% | `The Narragansett Electric Company` |
 | `project` | 60% | `sea2shore: The Renewable Link` |
@@ -48,7 +50,7 @@ STATE→state, ACRES→acres, LEASE_DATE→date, LEASE_TERM→term`).
 `extract_boem_wind.py` (`make boem-wind`):
 1. Downloads the shapefile zip to `data/raw/boem_wind/` (skips if already present).
 2. Extracts `Offshore_Wind_Leases_outlines.shp`.
-3. Reprojects to EPSG:4326, renames fields (table above).
+3. Reprojects to EPSG:4326, strips text values, adds the content id `fid`, renames fields (table above).
 4. Writes `data/build/boem_wind_leases.geojson`; the tile manifest then gzips
    it to `data/layers/boem_wind_leases.geojson.gz`.
 

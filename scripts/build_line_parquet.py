@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""build_line_parquet.py — transmission line geometry as GeoParquet, for the
-copy, fault-locator and elevation-profile tools (docs/pipeline.md § Line
-geometry).
+"""build_line_parquet.py — exact feature geometry as GeoParquet, for the copy,
+fault-locator and elevation-profile tools (docs/pipeline.md § Line geometry).
 
-Two datasets, each a directory under data/analysis/:
+Twenty-one datasets (the DATASET table), each a directory under data/analysis/:
 
   osm_transmission_lines    the world OSM lines, all six kV classes in one set,
                             read from the merged input the tile build keeps
@@ -11,27 +10,64 @@ Two datasets, each a directory under data/analysis/:
                             ids and 1e-6° coordinates are exactly the tiles'
   hifld_transmission_lines  data/build/transmission_hifld.gpkg, converted with
                             the tile build's own ogr2ogr options (precision 6)
+  osm_substations_polygons  the world OSM substation polygons, from the merged
+                            input the tile build keeps (via tile_inputs.py);
+                            geometry "polygon": IDX (fid, row) and GEO only, no
+                            CHAINS and no length_km
+  osm_plants_polygons       the world OSM power-plant polygons, the same way
+  osm_pipelines_lines       the world OSM pipelines, from the same kept merge;
+                            geometry "line": IDX (fid, row, length_km) and GEO, no
+                            CHAINS
+  hifld_natgas_lines        data/build/hifld_natgas_lines.gpkg, converted with the
+                            tile build's ogr2ogr options (precision 6); string
+                            fids ("ng:<FID>", "hgl:<FID>"), IDX and GEO only
+  retail_territories        data/build/retail_territories.gpkg, polygon geometry at the
+  eia_ba                    GeoPackage's own precision (no tile rounding); string fids
+  nerc_regions              from the tile manifest's `id_field` (`id`, `abbrev`, `sub_nm`);
+  control_areas             IDX and GEO only
+  crithab                   data/build/crithab.gpkg and padus.gpkg, polygon geometry as
+  padus                     stored; integer fids from the tile manifest's `id_field`
+                            (`entity_id`; PAD-US's content id `fid`, a normal column of
+                            its GeoPackage); IDX and GEO only
+  us_states                 data/build/us_states.gpkg, countries.gpkg,
+  countries                 admin1_boundaries.gpkg and tribal_lands.gpkg, polygon
+  admin1_boundaries         geometry as stored; string fids from the tile manifest's
+  tribal_lands              `id_field` (`stusps`, `iso_a3`, `code`, `geoid`); IDX and
+                            GEO only; countries and admin1_boundaries are CC BY 4.0
+  us_zcta                   data/build/us_zcta.gpkg (`zcta5`) and data/build/
+  county_boundaries         county_boundaries.geojson (`GEOID`, read by `path`), polygon
+                            geometry as stored; zero-padded string fids, never coerced;
+                            IDX and GEO only
+  bia_tribal_lands          data/build/bia_tribal_lands.geojson (`LARID`) and
+  boem_wind_leases          boem_wind_leases.geojson (`fid`, a content id), read by `path`,
+                            polygon geometry as stored (invalid rings kept); string fids;
+                            IDX and GEO only
+  railroads                 data/raw/railroads/narn_rail_lines.geojson (`FRAARCID`, read by
+                            `path`), line geometry as stored; int64 fids; IDX (with
+                            length_km) and GEO only
 
 Per dataset (geoparquet_common.py holds the layout rules):
 
-  <ds>.idx.<sha8>.parquet       fid → row, length_km (+ chain, circuits for OSM),
-                                sorted by fid
+  <ds>.idx.<sha8>.parquet       fid → row, length_km (+ chain, circuits for OSM
+                                transmission lines; polygons: fid, row only), sorted by fid
   <ds>.geo.p<N>.<sha8>.parquet  fid, bbox, geometry (GeoParquet 1.1), Hilbert
                                 order on the centroid, cut into ~64 MiB parts
-  <ds>.chains.<sha8>.parquet    OSM only: ways joined end to end through
+  <ds>.chains.<sha8>.parquet    OSM transmission only: ways joined end to end through
                                 degree-2 nodes of one voltage, in order, with
                                 the substation at each chain end
   _manifest.json                bytes, sha256, footer length, rows, part row
-                                offsets, build_id, provenance
+                                offsets, build_id, provenance, geometry
+                                ("line" | "polygon"; readers treat absent as "line")
 
 and data/analysis/index.json, every dataset's manifest in one file. One Hilbert
 permutation per run writes GEO, IDX `row` and CHAINS `row`, and every file
 carries the run's `build_id` in its key-value metadata.
 
 Usage:
-  python scripts/build_line_parquet.py                          # both datasets
+  python scripts/build_line_parquet.py                          # every dataset
   python scripts/build_line_parquet.py --only hifld_transmission_lines
   python scripts/build_line_parquet.py --fixture DIR            # DIR/input → DIR/analysis
+                                                                # (build_id and `built` pinned)
 """
 import argparse
 import csv
@@ -59,18 +95,136 @@ REGION_CODES = ["na", "eu", "as", "sa", "af", "oc", "ca", "an"]   # build_global
 
 OSM = "osm_transmission_lines"
 HIFLD = "hifld_transmission_lines"
-DATASETS = (OSM, HIFLD)
+SUBS_POLY = "osm_substations_polygons"
+PLANTS_POLY = "osm_plants_polygons"
+PIPES = "osm_pipelines_lines"
+NATGAS = "hifld_natgas_lines"
+RETAIL = "retail_territories"
+EIA_BA = "eia_ba"
+NERC = "nerc_regions"
+CONTROL_AREAS = "control_areas"
+CRITHAB = "crithab"
+PADUS = "padus"
+US_STATES = "us_states"
+COUNTRIES = "countries"
+ADMIN1 = "admin1_boundaries"
+TRIBAL = "tribal_lands"
+US_ZCTA = "us_zcta"
+COUNTIES = "county_boundaries"
+BIA = "bia_tribal_lands"
+BOEM = "boem_wind_leases"
+RAILROADS = "railroads"
+FIXTURE_BUILD_ID = "fixture"
+FIXTURE_BUILT = "1970-01-01T00:00:00Z"
 
-# The ogr2ogr options build_tiles.py applies to the HIFLD layer
+# One row per dataset: geometry kind, the credit a copy carries, whether the
+# input is OSM (replication date in the manifest), the fid type the tiles carry,
+# whether CHAINS and `circuits` are written (OSM transmission only), and where the
+# input comes from: "kept" (the tile build's kept merge), "gpkg" (a data/build
+# GeoPackage; `id_field` is its tile id column; `exact` reads it as stored, with no
+# tile-precision rounding; a row may name `path` instead of `file`: any OGR-readable
+# file relative to the repo, `exact` only) or "special" (read by load_dataset).
+OSM_CREDIT = "© OpenStreetMap contributors"
+DATASET = {
+    OSM: {"geometry": "line", "osm": True, "attribution": OSM_CREDIT,
+          "fid_type": "int64", "chains": True, "input": "special"},
+    HIFLD: {"geometry": "line", "osm": False, "attribution": "HIFLD (DHS/CISA), via source.coop",
+            "fid_type": "string", "chains": False, "input": "gpkg",
+            "file": "transmission_hifld", "id_field": "ID"},
+    SUBS_POLY: {"geometry": "polygon", "osm": True, "attribution": OSM_CREDIT,
+                "fid_type": "int64", "chains": False, "input": "kept"},
+    PLANTS_POLY: {"geometry": "polygon", "osm": True, "attribution": OSM_CREDIT,
+                  "fid_type": "int64", "chains": False, "input": "kept"},
+    PIPES: {"geometry": "line", "osm": True, "attribution": OSM_CREDIT,
+            "fid_type": "int64", "chains": False, "input": "kept"},
+    NATGAS: {"geometry": "line", "osm": False, "attribution": "HIFLD (DHS/CISA), original data from EIA, via source.coop",
+             "fid_type": "string", "chains": False, "input": "gpkg",
+             "file": "hifld_natgas_lines", "id_field": "fid"},
+    RETAIL: {"geometry": "polygon", "osm": False, "attribution": "HIFLD (DHS/CISA), via source.coop",
+             "fid_type": "string", "chains": False, "input": "gpkg",
+             "file": "retail_territories", "id_field": "id", "exact": True},
+    EIA_BA: {"geometry": "polygon", "osm": False,
+             "attribution": "U.S. Energy Information Administration (EIA)",
+             "fid_type": "string", "chains": False, "input": "gpkg",
+             "file": "eia_ba", "id_field": "abbrev", "exact": True},
+    NERC: {"geometry": "polygon", "osm": False, "attribution": "HIFLD (DHS/CISA), via source.coop",
+           "fid_type": "string", "chains": False, "input": "gpkg",
+           "file": "nerc_regions", "id_field": "sub_nm", "exact": True},
+    CONTROL_AREAS: {"geometry": "polygon", "osm": False, "attribution": "HIFLD (DHS/CISA), via source.coop",
+                    "fid_type": "string", "chains": False, "input": "gpkg",
+                    "file": "control_areas", "id_field": "id", "exact": True},
+    CRITHAB: {"geometry": "polygon", "osm": False, "attribution": "US Fish & Wildlife Service — ECOS",
+              "fid_type": "int64", "chains": False, "input": "gpkg",
+              "file": "crithab", "id_field": "entity_id", "exact": True},
+    PADUS: {"geometry": "polygon", "osm": False, "attribution": "USGS Gap Analysis Project",
+            "fid_type": "int64", "chains": False, "input": "gpkg",
+            "file": "padus", "id_field": "fid", "exact": True},
+    US_STATES: {"geometry": "polygon", "osm": False,
+                "attribution": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+                "fid_type": "string", "chains": False, "input": "gpkg",
+                "file": "us_states", "id_field": "stusps", "exact": True},
+    COUNTRIES: {"geometry": "polygon", "osm": False,
+                "attribution": "geoBoundaries (William & Mary geoLab), CC BY 4.0",
+                "fid_type": "string", "chains": False, "input": "gpkg",
+                "file": "countries", "id_field": "iso_a3", "exact": True},
+    ADMIN1: {"geometry": "polygon", "osm": False,
+             "attribution": "geoBoundaries (William & Mary geoLab), CC BY 4.0",
+             "fid_type": "string", "chains": False, "input": "gpkg",
+             "file": "admin1_boundaries", "id_field": "code", "exact": True},
+    TRIBAL: {"geometry": "polygon", "osm": False, "attribution": "U.S. Census Bureau, TIGER/Line",
+             "fid_type": "string", "chains": False, "input": "gpkg",
+             "file": "tribal_lands", "id_field": "geoid", "exact": True},
+    US_ZCTA: {"geometry": "polygon", "osm": False,
+              "attribution": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+              "fid_type": "string", "chains": False, "input": "gpkg",
+              "file": "us_zcta", "id_field": "zcta5", "exact": True},
+    COUNTIES: {"geometry": "polygon", "osm": False,
+               "attribution": "U.S. Census Bureau, TIGER/Line cartographic boundary files",
+               "fid_type": "string", "chains": False, "input": "gpkg",
+               "path": "data/build/county_boundaries.geojson", "id_field": "GEOID", "exact": True},
+    BIA: {"geometry": "polygon", "osm": False, "attribution": "Bureau of Indian Affairs (BIA)",
+          "fid_type": "string", "chains": False, "input": "gpkg",
+          "path": "data/build/bia_tribal_lands.geojson", "id_field": "LARID", "exact": True},
+    BOEM: {"geometry": "polygon", "osm": False, "attribution": "Bureau of Ocean Energy Management (BOEM)",
+           "fid_type": "string", "chains": False, "input": "gpkg",
+           "path": "data/build/boem_wind_leases.geojson", "id_field": "fid", "exact": True},
+    RAILROADS: {"geometry": "line", "osm": False,
+                "attribution": "US DOT Bureau of Transportation Statistics (NTAD); rail geometry from the Federal Railroad Administration (FRA)",
+                "fid_type": "int64", "chains": False, "input": "gpkg",
+                "path": "data/raw/railroads/narn_rail_lines.geojson", "id_field": "FRAARCID", "exact": True},
+}
+# Datasets a fixture build skips when its input file is absent (the committed
+# fixtures predate them).
+def check_rows(rows):
+    """Stop on a gpkg row that names both or neither of `file` and `path`, or a `path` row that is not `exact`."""
+    for ds, row in rows.items():
+        if row["input"] == "gpkg" and ("file" in row) == ("path" in row):
+            raise SystemExit(f"{ds}: a gpkg dataset names exactly one of `file` and `path`")
+        if "path" in row and (not str(row["path"]).count("/") or str(row["path"]).endswith(".gz")):
+            raise SystemExit(f"{ds}: `path` is a repo-relative file with a directory, not .gz (got {row['path']!r})")
+        if "path" in row and not row.get("exact"):
+            raise SystemExit(f"{ds}: a `path` input is read as stored, so the row must be `exact`")
+
+
+check_rows(DATASET)
+
+FIXTURE_OPTIONAL = (PLANTS_POLY, PIPES, NATGAS, RETAIL, EIA_BA, NERC, CONTROL_AREAS, CRITHAB, PADUS,
+                    US_STATES, COUNTRIES, ADMIN1, TRIBAL, US_ZCTA, COUNTIES, BIA, BOEM, RAILROADS)
+DATASETS = tuple(DATASET)
+
+
+# The ogr2ogr options build_tiles.py applies to a GeoPackage layer
 # (tile_manifest.yaml `precision: 6`), so GEO holds the tiles' coordinates.
-HIFLD_ID = "ID"
-HIFLD_OGR_OPTIONS = ["-select", HIFLD_ID, "-lco", "COORDINATE_PRECISION=6"]
+def ogr_options(ds):
+    """The ogr2ogr options the tile build applies to a GeoPackage dataset (id column + precision 6)."""
+    return ["-select", DATASET[ds]["id_field"], "-lco", "COORDINATE_PRECISION=6"]
 
 # A chain end within this distance of an OSM substation point stops there and
 # names it (an end inside a substation polygon always does).
 SUB_POINT_M = 150.0
 NEAR_BINS_M = (25, 50, 100, 150, 300, 500)
-GEOMETRY_TYPES = {1: "LineString", 5: "MultiLineString"}   # shapely type ids
+GEOMETRY_TYPES = {"line": {1: "LineString", 5: "MultiLineString"},   # shapely type ids
+                  "polygon": {3: "Polygon", 6: "MultiPolygon"}}
 
 
 # ── Chains (stdlib) ───────────────────────────────────────────────────────────
@@ -159,13 +313,33 @@ def percentile(sorted_vals, q):
 class Inputs:
     """Where one run reads from: the real data/build/ files or a fixture dir."""
 
+    def kept_input(self, ds):
+        """The input files of a "kept" dataset: the fixture's, or the tile build's kept merge."""
+        if self.fixture:
+            return [self.fixture / "input" / f"{ds}.geojsonl"]
+        import build_global_tiles
+        return [build_global_tiles.kept_path(ds)]
+
+    def gpkg_input(self, ds):
+        """The input of a "gpkg" dataset: the fixture's GeoJSONSeq, or the tile build's GeoPackage."""
+        if self.fixture:
+            return self.fixture / "input" / ("transmission_hifld.geojsonl" if ds == HIFLD
+                                             else f"{ds}.geojsonl")
+        row = DATASET[ds]
+        return BUILD_DIR.parent.parent / row["path"] if "path" in row else BUILD_DIR / f"{row['file']}.gpkg"
+
+    def has_input(self, ds):
+        kind = DATASET[ds]["input"]
+        if kind == "kept":
+            return any(p.exists() for p in self.kept_input(ds))
+        return self.gpkg_input(ds).exists() if kind == "gpkg" else self.osm_lines.exists()
+
     def __init__(self, fixture=None):
         self.fixture = Path(fixture) if fixture else None
         base = self.fixture / "input" if fixture else None
         if base:
             self.osm_lines = _first_existing(base / "transmission_world.geojsonl.gz",
                                              base / "transmission_world.geojsonl")
-            self.hifld = base / "transmission_hifld.geojsonl"
             self.sub_points = [base / "substation_points.csv"]
             self.sub_polys = [base / "substation_polygons.geojsonl"]
             self.circuit_srcs = []
@@ -173,7 +347,6 @@ class Inputs:
         else:
             import build_global_tiles
             self.osm_lines = build_global_tiles.TRANSMISSION_KEPT
-            self.hifld = BUILD_DIR / "transmission_hifld.gpkg"
             self.sub_points = [BUILD_DIR / f"substation_osm_{c}.csv" for c in REGION_CODES]
             self.sub_polys = [BUILD_DIR / f"substation_polygons_{c}.gpkg" for c in REGION_CODES]
             self.circuit_srcs = [BUILD_DIR / f"transmission_lines_{c}.gpkg" for c in REGION_CODES]
@@ -189,6 +362,16 @@ def _first_existing(*paths):
 
 def _vsi(path):
     return f"/vsigzip/{path}" if str(path).endswith(".gz") else str(path)
+
+
+def require_wgs84_2d(path, ds):
+    """Stop on an input that is not EPSG:4326 or holds Z coordinates."""
+    import pyogrio
+    info = pyogrio.read_info(str(path))
+    if (info.get("crs") or "").upper() != "EPSG:4326":
+        raise SystemExit(f"{ds}: {path} is {info.get('crs')}, not EPSG:4326")
+    if "Z" in (info.get("geometry_type") or ""):
+        raise SystemExit(f"{ds}: {path} has Z coordinates ({info['geometry_type']})")
 
 
 def read_lines(path, id_field, columns):
@@ -311,13 +494,13 @@ def substation_at_nodes(nx, ny, subs, stats):
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-# The credit a copy of the geometry must carry (the ODbL asks for this wording).
-ATTRIBUTION = {OSM: "© OpenStreetMap contributors", HIFLD: "HIFLD (DHS/CISA), via source.coop"}
+# The credit a copy of the geometry must carry (the ODbL asks for this wording):
+# DATASET[ds]["attribution"].
 
 
 def provenance(ds):
     """label, source, url, licence from data_manifest.yaml, plus the attribution."""
-    out = {"attribution": ATTRIBUTION[ds]}
+    out = {"attribution": DATASET[ds]["attribution"]}
     try:
         import yaml
     except ImportError:
@@ -331,7 +514,7 @@ def provenance(ds):
 def snapshot_date(ds, inputs):
     """The OSM replication date of the extracts; None for HIFLD (a frozen copy
     whose files carry no edition date) and for a fixture."""
-    if ds == OSM and not inputs.fixture:
+    if DATASET[ds]["osm"] and not inputs.fixture:
         from build_data_manifest import osm_snapshot_date
         return osm_snapshot_date(ROOT)
     return None
@@ -340,6 +523,13 @@ def snapshot_date(ds, inputs):
 def load_dataset(ds, inputs, scratch):
     """(fids, kv or None, circuits or None, geoms) for one dataset."""
     import numpy as np
+    if DATASET[ds]["input"] == "kept":
+        srcs = [p for p in inputs.kept_input(ds) if p.exists()]
+        if not srcs:
+            raise SystemExit(f"{ds}: no input — run `make global-tiles LAYER={ds}` (it keeps the merged input)")
+        read = [read_lines(p, "fid", []) for p in srcs]
+        return (np.concatenate([r[0] for r in read]).astype(np.int64), None, None,
+                np.concatenate([r[2] for r in read]))
     if ds == OSM:
         if not inputs.osm_lines.exists():
             raise SystemExit(f"{inputs.osm_lines} missing — run `make global-tiles "
@@ -358,27 +548,35 @@ def load_dataset(ds, inputs, scratch):
         else:
             circuits = read_circuits(inputs.circuit_srcs, fids)
         return fids, kv, circuits, geoms
-    src = inputs.hifld
-    if src.suffix == ".gpkg":
-        seq = Path(scratch) / "transmission_hifld.geojsonl"
-        subprocess.run(["ogr2ogr", "-f", "GeoJSONSeq", str(seq), str(src), *HIFLD_OGR_OPTIONS],
+    src = inputs.gpkg_input(ds)
+    if not src.exists():
+        raise SystemExit(f"{src} missing — {ds} reads the tile build's GeoPackage; build that layer's data first")
+    if DATASET[ds].get("exact"):
+        require_wgs84_2d(src, ds)
+    if src.suffix == ".gpkg" and not DATASET[ds].get("exact"):
+        seq = Path(scratch) / f"{ds}.geojsonl"
+        subprocess.run(["ogr2ogr", "-f", "GeoJSONSeq", str(seq), str(src), *ogr_options(ds)],
                        check=True)
         src = seq
-    fids, _, geoms = read_lines(src, HIFLD_ID, [])
-    return fids.astype(str), None, None, geoms
+    import shapely
+    fids, _, geoms = read_lines(src, DATASET[ds]["id_field"], [])
+    if DATASET[ds].get("exact") and shapely.has_z(geoms).any():
+        raise SystemExit(f"{ds}: {src} has Z coordinates")
+    return (fids.astype(np.int64) if DATASET[ds]["fid_type"] == "int64" else fids.astype(str)), None, None, geoms
 
 
 def write_geo(table, gtypes, out_dir, ds, build_id, scratch):
     """Write GEO as parts cut on row-group boundaries; returns manifest entries."""
     import numpy as np
     trial = Path(scratch) / f"{ds}.geo.trial.parquet"
-    gc.write_parquet(table, trial, gc.GEO_PRESET)
+    rows = gc.geo_group_rows(table)
+    starts = np.concatenate([[0], np.cumsum(rows)]).tolist()
+    gc.write_parquet(table, trial, gc.GEO_PRESET, group_rows=rows)
     parts = gc.plan_parts(gc.row_group_bytes(trial))
     trial.unlink()
-    rg = gc.GEO_PRESET["row_group_size"]
     entries = []
     for n, (g0, g1) in enumerate(parts):
-        lo, hi = g0 * rg, min(g1 * rg, table.num_rows)
+        lo, hi = starts[g0], starts[g1]
         part = table.slice(lo, hi - lo)
         bb = part.column("bbox").combine_chunks()
         bounds = [float(np.min(bb.field("xmin"))), float(np.min(bb.field("ymin"))),
@@ -386,7 +584,7 @@ def write_geo(table, gtypes, out_dir, ds, build_id, scratch):
         meta = {"geo": json.dumps(gc.geo_metadata(gtypes, bounds)), "build_id": build_id,
                 "dataset": ds, "part": str(n), "row_offset": str(lo)}
         tmp = out_dir / f".{ds}.geo.p{n}.parquet"
-        gc.write_parquet(part, tmp, gc.GEO_PRESET, metadata=meta)
+        gc.write_parquet(part, tmp, gc.GEO_PRESET, metadata=meta, group_rows=rows[g0:g1])
         path, digest = gc.content_name(tmp, f"{ds}.geo.p{n}")
         if path.stat().st_size > gc.PART_HARD_BYTES:
             raise SystemExit(f"{path.name} is {path.stat().st_size} bytes, over the 95 MiB stop")
@@ -410,16 +608,24 @@ def build_dataset(ds, inputs, build_id):
         n = len(fids)
         if len(np.unique(fids)) != n:
             raise SystemExit(f"{ds}: duplicate fids in the input")
+        polygon = DATASET[ds]["geometry"] == "polygon"
         nverts = int(shapely.get_num_coordinates(geoms).sum())
-        lengths = gc.line_lengths_km(geoms)
-        log.info("  %d lines, %d vertices, %.0f km", n, nverts, lengths.sum())
+        lengths = None if polygon else gc.line_lengths_km(geoms)
+        if polygon:
+            log.info("  %d polygons, %d vertices", n, nverts)
+        else:
+            log.info("  %d lines, %d vertices, %.0f km", n, nverts, lengths.sum())
 
         cen = shapely.centroid(geoms)
         perm = np.argsort(gc.hilbert_key(shapely.get_x(cen), shapely.get_y(cen)), kind="stable")
         row_of = np.empty(n, dtype=np.int64)
         row_of[perm] = np.arange(n, dtype=np.int64)
 
-        gtypes = [GEOMETRY_TYPES[t] for t in np.unique(shapely.get_type_id(geoms)).tolist()]
+        types = GEOMETRY_TYPES[DATASET[ds]["geometry"]]
+        found = np.unique(shapely.get_type_id(geoms)).tolist()
+        if any(t not in types for t in found):
+            raise SystemExit(f"{ds}: geometry type ids {found} are not all {sorted(types.values())}")
+        gtypes = [types[t] for t in found]
         fid_arr = pa.array(fids)
         geo = pa.table({"fid": fid_arr.take(pa.array(perm)),
                         "bbox": gc.bbox_array(shapely.bounds(geoms)[perm]),
@@ -429,13 +635,14 @@ def build_dataset(ds, inputs, build_id):
 
         chain_of = None
         chains_entry, chain_stats = None, {}
-        if ds == OSM:
+        if DATASET[ds]["chains"]:
             chain_of, chains_entry, chain_stats = write_chains(
                 out_dir, ds, build_id, fids, kv, geoms, lengths, row_of, perm, inputs)
 
-        cols = {"fid": fid_arr, "row": pa.array(row_of),
-                "length_km": pa.array(lengths.astype(np.float32))}
-        if ds == OSM:
+        cols = {"fid": fid_arr, "row": pa.array(row_of)}
+        if not polygon:
+            cols["length_km"] = pa.array(lengths.astype(np.float32))
+        if DATASET[ds]["chains"]:
             cols["chain"] = pa.array(chain_of)
             cols["circuits"] = pa.array(circuits)
         idx = pa.table(cols)
@@ -449,11 +656,15 @@ def build_dataset(ds, inputs, build_id):
 
     manifest = {
         "dataset": ds, "build_id": build_id,
-        "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "built": FIXTURE_BUILT if inputs.fixture else
+                 datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "geometry": DATASET[ds]["geometry"],
         "snapshot": snapshot_date(ds, inputs), **provenance(ds),
-        "rows": n, "vertices": nverts, "total_km": round(float(lengths.sum()), 1),
-        "fid_type": "int64" if ds == OSM else "string",
-        "coordinate_grid_deg": 1e-6, "length": "sphere R=6371.0088 km, haversine per part",
+        "rows": n, "vertices": nverts,
+        **({} if polygon else {"total_km": round(float(lengths.sum()), 1)}),
+        "fid_type": DATASET[ds]["fid_type"],
+        "coordinate_grid_deg": None if DATASET[ds].get("exact") else 1e-6,
+        **({} if polygon else {"length": "sphere R=6371.0088 km, haversine per part"}),
         "idx": {**idx_entry, "columns": list(cols)},
         "geo": geo_entries,
         "chains": chains_entry,
@@ -565,15 +776,28 @@ def write_chains(out_dir, ds, build_id, fids, kv, geoms, lengths, row_of, perm, 
                                    columns=table.column_names), stats
 
 
-def write_index(out, manifests):
-    """data/analysis/index.json: every dataset's manifest, paths relative to it."""
+def load_index(out):
+    """data/analysis/index.json as a dict (a fresh one when absent). One that
+    does not parse is refused rather than reset, which would drop the sections
+    the other builder wrote."""
     path = out / "index.json"
-    index = {"version": 1, "datasets": {}}
-    if path.exists():
-        try:
-            index = json.loads(path.read_text())
-        except ValueError:
-            pass
+    if not path.exists():
+        return {"version": 1, "datasets": {}}
+    try:
+        index = json.loads(path.read_text())
+    except ValueError as err:
+        raise SystemExit(f"{path} does not parse ({err}) — fix or remove it; not overwriting")
+    if not isinstance(index, dict):
+        raise SystemExit(f"{path} is not a JSON object — fix or remove it; not overwriting")
+    index.setdefault("datasets", {})
+    return index
+
+
+def write_index(out, manifests):
+    """data/analysis/index.json: every dataset's manifest, paths relative to it.
+    Other top-level keys (`columns`) are kept."""
+    path = out / "index.json"
+    index = load_index(out)
     for m in manifests:
         index["datasets"][m["dataset"]] = {"path": f"{m['dataset']}/", **m}
     index["datasets"] = {k: index["datasets"][k] for k in sorted(index["datasets"])}
@@ -588,10 +812,14 @@ def main(argv=None):
     ap.add_argument("--fixture", help="read DIR/input, write DIR/analysis (tests)")
     args = ap.parse_args(argv)
     inputs = Inputs(args.fixture)
-    build_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + os.urandom(3).hex()
+    load_index(inputs.out)      # refuse an unparseable index.json before the long build
+    build_id = FIXTURE_BUILD_ID if args.fixture else \
+        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + os.urandom(3).hex()
     log.info("build_id %s → %s", build_id, inputs.out)
-    manifests = [build_dataset(ds, inputs, build_id) for ds in (args.only or DATASETS)]
-    write_index(inputs.out, manifests)
+    todo = args.only or [ds for ds in DATASETS
+                         if not (args.fixture and ds in FIXTURE_OPTIONAL and not inputs.has_input(ds))]
+    for ds in todo:
+        write_index(inputs.out, [build_dataset(ds, inputs, build_id)])
     log.info("✓ %s", inputs.out / "index.json")
     return 0
 

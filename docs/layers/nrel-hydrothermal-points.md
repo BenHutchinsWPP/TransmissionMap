@@ -14,7 +14,7 @@ Named low-temperature hydrothermal springs and wells (contiguous US + parts of A
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "NREL/DOE Geothermal Data Repository" |
 | **Citation** | Mullane, M., et al. (2016). *US Low-Temperature Hydrothermal Resource Potential*. GDR submission 842. NREL/DOE. https://gdr.openei.org/submissions/842 |
-| **Served** | `data/layers/nrel_hydrothermal_points.geojson.gz` — gzipped GeoJSON point layer (~1,200 features, lazy-loaded) |
+| **Served** | `data/layers/nrel_hydrothermal_points.geojson.gz` — gzipped GeoJSON point layer (lazy-loaded) |
 | **Built by** | `scripts/build_hydrothermal_pts.sh` → `data/build/hydrothermal/` → hosted GeoJSON + CSV |
 | **Stable id** | `UID`, the publisher key (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, `retail`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |

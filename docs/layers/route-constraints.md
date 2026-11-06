@@ -12,10 +12,10 @@ build has no row and no source, and its legend frame and Data Credits entry
 
 | | |
 |---|---|
-| **Provider** | The route cube's bands (`data/route/250m/pd_*`, and `osm_*` for the OpenStreetMap entries): USGS PAD-US, USFWS, EPA, NPS, BLM, USDA Forest Service, FAA, USACE, USGS 3DEP, NLCD (MRLC), DOE/ANL Section 368; FCC tall structures and USACE dams via HIFLD on source.coop (SeerAI); WorldPop; FEMA/ORNL USA Structures (observed footprint shares); PoPWest (TNC categories); OpenStreetMap (lakes, military, existing lines and parallel-line corridors). Per-band sources and rules: [routing.md](../routing.md) |
+| **Provider** | The route cube's bands (`data/route/250m/pd_*`, and `osm_*` for the OpenStreetMap entries): USGS PAD-US, USFWS, EPA, NPS, BLM, USDA Forest Service, FAA, USACE, USGS 3DEP, NLCD (MRLC), DOE/ANL Section 368; FCC tall structures and USACE dams via HIFLD on source.coop (SeerAI); WorldPop; FEMA/ORNL USA Structures (observed footprint shares); Power of Place – West (Wu 2023; The Nature Conservancy categories); OpenStreetMap (lakes, military, existing lines and parallel-line corridors). Per-band sources and rules: [routing.md](../routing.md) |
 | **Dataset** | One raster per concern in `src/colors/route-constraints.ts` (`CONCERNS`) |
-| **Coverage** | CONUS. An empty observed building cell does not establish vacancy or source completeness; imagery dates vary by source area. |
-| **License** | Public domain (US federal works, 17 U.S.C. §105) for the federal bands, NLCD and DOE/ANL Section 368; CC BY 4.0 for the tall-structure / dam bit (HIFLD packaging by SeerAI), the population concern (WorldPop), the observed building-footprint concerns (USA Structures), and the TNC categories (PoPWest, Wu et al. 2023); ODbL 1.0 for the OpenStreetMap entries (© OpenStreetMap contributors). Per [data-sources.md](../data-sources.md) |
+| **Coverage** | CONUS. A cell with no building footprint may still have buildings; imagery dates vary by area. |
+| **License** | Public domain (US federal works, 17 U.S.C. §105) for the federal bands, NLCD and DOE/ANL Section 368; CC BY 4.0 for the tall-structure / dam flag (HIFLD packaging by SeerAI), the population concern (WorldPop), the observed building-footprint concerns (USA Structures), and the TNC categories (PoPWest, Wu et al. 2023); ODbL 1.0 for the OpenStreetMap entries (© OpenStreetMap contributors). Per [data-sources.md](../data-sources.md) |
 | **Attribution** | The layer's map credit (`data.credit`) and the `route-constraints` entry of the Data Credits dialog |
 | **Served** | `data/route/constraints/<concern-id>.pmtiles` + `manifest.json` (paletted PNG raster PMTiles); not under `data/layers/`, so not published |
 | **Built by** | `scripts/build_route_constraints.py` (`make route-constraints`; log `tmp/logs/route-constraints.log`) |
@@ -40,7 +40,7 @@ Paletted raster, one class per colour; no hover readout. Colours come from
 `scripts/route_constraints.json` and the legend (`#routeConstraintsLegend`) reads
 directly.
 
-- **What constrains** — fixed precedence, independent of any routing method: tribal
+- **What constrains** — fixed precedence: tribal
   › military (PAD-US DOD) › wilderness study area › GAP 1–2 › critical habitat ›
   sage-grouse PHMA › occupied or historic site › floodplain › other federal manager.
   Overviews keep the highest-ranked class (`max`), so at low zoom a cell shows the

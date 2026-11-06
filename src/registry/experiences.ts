@@ -130,7 +130,7 @@ export const EXPERIENCES: MapExperience[] = [
     category: 'generation',
     summary: "Cascading federal dams turn one river basin into North America's largest dispatchable renewable engine.",
     narrative:
-      'Each blue drop is a hydro plant with units of 20 MW or more; the red lines are the 500 kV network they ' +
+      'Each blue drop is a hydro plant of 20 MW or more, sized by its total capacity; the red lines are the 500 kV network they ' +
       'feed. Follow the Columbia from Grand Coulee down to Bonneville, and the Snake from Lower Granite to Ice ' +
       'Harbor: the dams sit one after another, each using the drop to the next reservoir to run the same water ' +
       'through its turbines again. Bonneville Power Administration markets the output of 31 federal dams in the' +
@@ -144,14 +144,15 @@ export const EXPERIENCES: MapExperience[] = [
     keywords: ['hydro', 'dam', 'columbia', 'snake', 'bpa', 'bonneville', 'grand coulee'],
     camera: { center: [-120.2, 46.6], zoom: 6.7, pitch: 45, bearing: -10 },
     state: {
-      layersOn: ['eia-generators'],
+      // One point per plant: EIA has a point per generator, and a dam's units stack on one spot.
+      layersOn: ['osm-plants-points'],
       basemap: 'hydro',
       // Only the 500 kV lines the dams feed, faint, so the river basin stays legible.
       legendFilters: { fuel: ['hydro', 'pumped_storage'], kv: ['550+', '500-549'] },
-      // Run-of-river units under 20 MW crowd the main-stem dams.
-      where: { 'eia-generators': [{ field: 'nameplate_mw', op: '>=', value: 20 }] },
+      // Small run-of-river plants crowd the main-stem dams.
+      where: { 'osm-plants-points': [{ field: 'output_mw', op: '>=', value: 20 }] },
       style: {
-        'eia-generators': { size: 1.4 },
+        'osm-plants-points': { size: 1.4 },
         'osm-transmission-lines': { color: '#b91c1c', opacity: 0.9, size: 1.6 },
       },
       terrain3d: true,
@@ -180,7 +181,8 @@ export const EXPERIENCES: MapExperience[] = [
       'The grey dots mark the near-term drilling frontier; enhanced geothermal aims to reach the wider red areas by fracturing hot, dry rock.',
     ],
     keywords: ['geothermal', 'heat flow', 'geysers', 'imperial valley', 'basin and range'],
-    camera: { center: [-119.4, 36.9], zoom: 5.5 },
+    // Wide enough to show the hot West against the cool East.
+    camera: { center: [-110.5, 39.0], zoom: 4.2 },
     state: {
       layersOn: ['ihfc-geo-heatflow', 'nrel-hydrothermal-points', 'eia-generators'],
       layersOff: ['osm-transmission-lines'],
@@ -188,8 +190,8 @@ export const EXPERIENCES: MapExperience[] = [
       legendFilters: { fuel: ['geo'] },
       // The heat-flow wash and the hydrothermal systems sit behind the plants.
       style: {
-        'ihfc-geo-heatflow': { opacity: 0.4 },
-        'nrel-hydrothermal-points': { size: 0.5, opacity: 0.7, color: '#334155' },
+        'ihfc-geo-heatflow': { opacity: 0.75 },
+        'nrel-hydrothermal-points': { size: 0.4, opacity: 0.5, color: '#334155' },
         'eia-generators': { size: 1.6 },
       },
     },
@@ -205,7 +207,7 @@ export const EXPERIENCES: MapExperience[] = [
     summary: 'The richest onshore wind in North America sits far from the cities it could serve.',
     narrative:
       'The blue wash is average wind speed at 100 m, the hub height of a modern turbine: the darker the blue, ' +
-      'the stronger the wind. Each blue icon is a wind plant, and the white lines are the 300 kV and higher ' +
+      'the stronger the wind. Each blue icon is a wind plant, and the dark lines are the 300 kV and higher ' +
       'backbone. The plants crowd where wind and wires meet, across Iowa and the Texas and Oklahoma plains, ' +
       'while some of the windiest ground, in Wyoming and the Dakotas, has few lines to export from. That gap ' +
       'between resource and transmission is one of the largest expansion challenges on the grid.',
@@ -218,14 +220,13 @@ export const EXPERIENCES: MapExperience[] = [
     camera: { center: [-100.8, 40.2], zoom: 4.6 },
     state: {
       layersOn: ['nlr-wind-100m', 'eia-generators'],
-      // The turbine icons are pale blue: a dark base keeps them readable over the wash.
-      basemap: 'dark',
+      basemap: 'light',
       // The 300 kV+ backbone only: the gap between the wind and the lines is the story.
       legendFilters: { fuel: ['wind'], kv: BACKBONE_KV },
       style: {
-        'nlr-wind-100m': { opacity: 0.85 },
-        'eia-generators': { size: 0.8 },
-        'osm-transmission-lines': { color: '#f8fafc', opacity: 0.8, size: 1.2 },
+        'nlr-wind-100m': { opacity: 0.75 },
+        'eia-generators': { size: 1.0 },
+        'osm-transmission-lines': { color: '#0f172a', opacity: 0.8, size: 1.2 },
       },
     },
   },
@@ -317,36 +318,6 @@ export const EXPERIENCES: MapExperience[] = [
       basemap: 'dark',
     },
   },
-  {
-    id: 'population-load-density',
-    title: 'Continental Load Topography',
-    category: 'load',
-    summary: 'Where Americans live, against the mines and data centers that draw power far from them.',
-    narrative:
-      'The orange glow is population density: the brighter the glow, the more people per square mile. It is the' +
-      ' first-order map of electricity demand, concentrated on the coasts, around the Great Lakes and across ' +
-      'the Southeast. The cyan dots are data centers and the small icons are active energy and battery-mineral ' +
-      'mines, large loads that often sit far from where people live. The faint white lines are the 300 kV and ' +
-      'higher backbone that ties the two together.',
-    takeaways: [
-      'More than half of Americans live east of the Mississippi, on about a third of the land.',
-      'Data centers and mines add large, steady loads that do not follow the population.',
-      'Every long-distance transmission plan is a case for moving cheap interior power to these population centres.',
-    ],
-    keywords: ['population', 'demand', 'density', 'load', 'national'],
-    camera: { center: [-97.5, 38.6], zoom: 4.1 },
-    state: {
-      layersOn: ['worldpop-pop-density', 'mines', 'osm-datacenters'],
-      basemap: 'dark',
-      // Active energy and battery-metal mines only; sand-and-gravel pits are everywhere.
-      legendFilters: { kv: BACKBONE_KV, mines: ['energy', 'battery'], minesStatus: ['active'] },
-      style: {
-        'osm-transmission-lines': { color: '#e2e8f0', opacity: 0.6 },
-        'osm-datacenters': { color: '#38bdf8', size: 0.8 },
-        mines: { size: 0.55 },
-      },
-    },
-  },
 
   // ── Bulk transmission ──────────────────────────────────────────────────────
   {
@@ -385,26 +356,27 @@ export const EXPERIENCES: MapExperience[] = [
     summary: 'Three grids that run out of step, and the few DC links that join them.',
     narrative:
       'North America runs as three separate AC grids, the Western Interconnection, the Eastern Interconnection ' +
-      'and ERCOT, plus Quebec and Alaska. The tinted areas are NERC regions, which follow those boundaries ' +
-      'closely: WECC in the West, Texas RE for ERCOT, and the rest Eastern. Because the grids are not ' +
-      'synchronised, power crosses between them only through DC converters. The orange lines are long-distance ' +
-      'DC lines inside each grid; the seam ties themselves are back-to-back converters with no line at all, ' +
-      'listed below.',
+      'and ERCOT, plus Quebec and Alaska. The blue area is WECC, the Western Interconnection, and the red one ' +
+      'is Texas RE, which covers ERCOT; everything untinted is the Eastern Interconnection. Because the grids ' +
+      'are not synchronised, power crosses between them only through DC converters. Follow the edge of the blue ' +
+      'down the Plains: the dark 300 kV and higher lines thin out on both sides, and the few ties across it are ' +
+      'back-to-back converters with no line at all, listed below. The orange lines are long-distance DC lines ' +
+      'inside one grid.',
     takeaways: [
       'Only about 1,300 MW of tie capacity crosses the whole East-West seam.',
       'That limit is why a Plains wind surplus cannot follow the evening peak east or west.',
-      'In the grey network the seam shows as a gap: a north-south band through the Plains where the backbones barely meet.',
+      'Click a pin below to fly to a back-to-back tie on the seam.',
     ],
     keywords: ['interconnection', 'seam', 'hvdc', 'ercot', 'eastern', 'western', 'asynchronous'],
-    camera: { center: [-100.5, 38.3], zoom: 4.2 },
+    camera: { center: [-102.5, 38.5], zoom: 4.5 },
     state: {
-      // NERC regions sketch the three interconnections (WECC, Texas RE, the rest Eastern).
+      // Only the two NERC regions that match the smaller grids are tinted; the rest reads as Eastern.
       layersOn: ['nerc-regions', 'hifld-transmission-lines'],
       basemap: 'light',
-      legendFilters: { kv: BACKBONE_KV },
+      legendFilters: { kv: BACKBONE_KV, nerc: ['WECC', 'TRE'] },
       style: {
-        'nerc-regions': { opacity: 0.45 },
-        'osm-transmission-lines': { color: '#64748b', opacity: 0.7, size: 1.1 },
+        'nerc-regions': { opacity: 0.6 },
+        'osm-transmission-lines': { color: '#334155', opacity: 0.85, size: 1.2 },
         // The DC lines in front, in one strong colour.
         'hifld-transmission-lines': { color: '#f97316', size: 4 },
       },
@@ -490,27 +462,31 @@ export const EXPERIENCES: MapExperience[] = [
   ...(import.meta.env.DEV ? [TRANSMISSION_SITING] : []),
   {
     id: 'retail-utility-jurisdictions',
-    title: 'Public Power, Co-ops & Investor-Owned Utilities',
+    title: 'Co-ops & Public Power: Who Owns the Wires Outside the Cities',
     category: 'land',
-    summary: 'Who sells you electricity, drawn as territory, and why the rate you pay depends on the line you live behind.',
+    summary: 'Member-owned co-ops and public power districts serve most of rural America; investor-owned utilities serve most of its people.',
     narrative:
-      'Each colour is a kind of utility: blue investor-owned, green cooperative, orange municipal and purple ' +
-      'public or government. The patchwork shows who sells power at retail in each place, who sets the rates ' +
-      'and who oversees them: state commissions for investor-owned utilities, members and local boards for most' +
-      ' co-ops and municipals. The dark lines are the 300 kV and higher backbone, which crosses all of them ' +
-      'regardless of who serves the customers underneath.',
+      'Coloured areas are utilities that are not investor-owned: green cooperatives, owned by the customers ' +
+      'they serve; orange municipal utilities; purple public power, such as the public power districts that ' +
+      'serve all of Nebraska and Salt River Project around Phoenix. Most co-ops were founded in the 1930s and ' +
+      '1940s with federal Rural Electrification Administration loans, when investor-owned utilities found it ' +
+      'unprofitable to run lines to farms. The white areas are mostly investor-owned territory: the big cities ' +
+      'and the corridors between them.',
     takeaways: [
       "Cooperatives serve about one American in eight but cover more than half of the country's land.",
-      'Municipal utilities and federal power marketing administrations are governed locally or federally, outside state rate-of-return regulation.',
-      "A new generator's grid connection is studied by the transmission owner and its planning region, not by the retail utility.",
+      'A co-op or a municipal utility sets its rates through a board its customers elect; in most states the utility commission does not review them.',
+      'Few customers per mile of line makes rural service costly, which is why co-ops band together in generation-and-transmission co-ops they own jointly.',
+      'In the Utility type legend, switch on investor-owned to fill in the rest of the patchwork.',
     ],
     keywords: ['retail', 'utility', 'coop', 'municipal', 'iou', 'territory', 'rates'],
     camera: { center: [-97.5, 38.8], zoom: 4.2 },
     state: {
       layersOn: ['retail-territories'],
+      layersOff: ['osm-transmission-lines'],
       basemap: 'light',
-      legendFilters: { kv: BACKBONE_KV },
-      style: { 'osm-transmission-lines': { color: '#1e293b', opacity: 0.7, size: 1.2 } },
+      // Investor-owned off: its territories overlap the others', and the colours mix into mud.
+      legendFilters: { retail: ['coop', 'muni', 'public'] },
+      style: { 'retail-territories': { opacity: 0.8 } },
     },
   },
 
@@ -530,9 +506,11 @@ export const EXPERIENCES: MapExperience[] = [
       'Dense smoke and ash can make an energized line flash over without the fire reaching the right-of-way.',
       'A Public Safety Power Shutoff is a planned outage: the utility trades service for a lower chance of starting a fire.',
       'Hotspots update several times a day from satellite passes; perimeters and incidents update as fire agencies report them.',
+      'This view is live: a quiet map means a quiet fire season. Zoom out to find fires elsewhere.',
     ],
     keywords: ['wildfire', 'fire', 'smoke', 'psps', 'live'],
-    camera: { center: [-122.3, 41.5], zoom: 5.5 },
+    // The whole West: a live story cannot know in advance where the fires will be.
+    camera: { center: [-109.0, 40.0], zoom: 4.3 },
     state: {
       layersOn: ['wildfire-live', 'wildfire-smoke', 'wildfire-incidents'],
       basemap: 'dark',

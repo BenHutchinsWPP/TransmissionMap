@@ -6,9 +6,9 @@
 //   the offline fallback.
 //
 // Map data is not cached here. In production every layer comes from
-// raw.githubusercontent.com (DATA_ORIGIN / LIVE_ORIGIN in assets/constants.ts),
-// which is cross-origin, so those requests pass straight through to the
-// browser's HTTP cache (raw serves `max-age=300`). The SW is registered in
+// the wpptx.org data hosts (DATA_HOSTS in assets/constants.ts), which are
+// cross-origin, so those requests pass straight through to the browser's HTTP
+// cache. The SW is registered in
 // production only (src/main.ts).
 //
 // Cache invalidation:

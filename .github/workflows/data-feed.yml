@@ -44,6 +44,7 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.timeout-minutes }}
+    environment: live-publish      # holds the live bucket's R2 key (secrets in the upload step only)
     permissions:
       contents: write
 
@@ -112,12 +113,12 @@ jobs:
           fi
 
           # Per-attempt timeout so one hung feed can't eat the whole job
-          # before the push step runs: 3 attempts + 2×30s sleeps + push must
-          # fit under timeout-minutes. Multi-script jobs only — 0 disables
+          # before the push and R2 upload run: 3 attempts + 2×30s sleeps + push
+          # + upload must fit under timeout-minutes. Multi-script jobs only — 0 disables
           # `timeout`, keeping single-script callers on job-timeout-only.
           ATTEMPT=0
           if (( ${#SCRIPTS[@]} > 1 )); then
-            ATTEMPT=$(( (${{ inputs.timeout-minutes }} * 60 - 120) / 3 ))
+            ATTEMPT=$(( (${{ inputs.timeout-minutes }} * 60 - 240) / 3 ))
           fi
 
           pids=()
@@ -148,6 +149,7 @@ jobs:
           ODIN_ODS_APIKEY: ${{ secrets.ODIN_ODS_APIKEY }}
 
       - name: Amend rolling commit and force-push
+        id: push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -156,10 +158,29 @@ jobs:
           git commit --amend --no-edit --date=now
           git push --force-with-lease
 
+      - name: Upload to R2 (live-wpptx-org)
+        # Also after "No change": the upload then skips unchanged objects and
+        # heals an earlier failed one. Not after a failed push. A failure here
+        # fails the job, after the push has landed.
+        if: ${{ !cancelled() && steps.push.outcome == 'success' }}
+        env:
+          OUTPUTS: ${{ inputs.outputs }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          git show origin/main:scripts/install_rclone.sh > "$RUNNER_TEMP/install_rclone.sh"
+          git show origin/main:scripts/r2_upload.sh > "$RUNNER_TEMP/r2_upload.sh"
+          bash "$RUNNER_TEMP/install_rclone.sh" "$RUNNER_TEMP/bin"
+          export PATH="$RUNNER_TEMP/bin:$PATH"
+          # shellcheck disable=SC2086  # outputs is a whitespace-separated list
+          bash "$RUNNER_TEMP/r2_upload.sh" --bucket live-wpptx-org \
+            --cache-control "public, max-age=0, s-maxage=60" --root . $OUTPUTS
+
       - name: Surface fetch failures
         # After the push on purpose: a failed feed must not block the
         # successful one's data from landing.
-        if: steps.fetch.outputs.failed != ''
+        if: ${{ !cancelled() && steps.fetch.outputs.failed != '' }}
         run: |
           echo "::error::Feed script(s) failed after retries: ${{ steps.fetch.outputs.failed }}"
           exit 1

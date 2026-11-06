@@ -11,11 +11,11 @@
 //              layer-data.ts (layerDataUrl, layerSourceId),
 //              ../nws-zone-join.ts (pmtilesUrl), ../dataset-query.ts (layerSourceId),
 //              ../ui/ui-table.ts (layerSourceId, layerDataUrl).
-// Deps: constants.ts (DATA, EMPTY_FC), layer-plan.ts (PlanStep type),
+// Deps: constants.ts (DATA, EMPTY_FC, COUNTY_SRC), layer-plan.ts (PlanStep type),
 //       src/registry/index.ts (LAYERS, layerById), src/types.ts (LayerData, DataKey).
 
 import type { SourceSpecification } from 'maplibre-gl';
-import { DATA, EMPTY_FC } from '../constants.js';
+import { COUNTY_SRC, DATA, EMPTY_FC } from '../constants.js';
 import { LAYERS, layerById } from '../../src/registry/index.js';
 import type { DataKey, LayerData } from '../../src/types.js';
 import type { PlanStep } from './layer-plan.js';
@@ -53,6 +53,8 @@ const LAYER_SOURCE_ALIAS: Record<string, string> = {
   // petroleum facilities share the HIFLD points source (split by fac_type base
   // filter); the registry entry is commented out in src/registry/pipelines.ts.
   "hifld-petroleum-facilities": "hifld-natgas-points",
+  // the county tiles are the shared join source layer-init.ts builds once
+  "us-counties":        COUNTY_SRC,
 };
 
 /** The source a registry id's data loads into: an alias row, else the first

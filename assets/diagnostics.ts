@@ -300,12 +300,12 @@ export const DIAG_CHECKS: DiagCheck[] = [
   }),
 
   // ── Required hosts (the app already fetches all of these cross-origin) ──
-  check('data-static-host', 'Layer data host (data-static branch)', 'required', () =>
+  check('data-static-host', 'Layer data host (data.wpptx.org)', 'required', () =>
     hostCheck(DATA.usgs_seismic_pga_lut_meta, 'fail')),
 
-  check('data-live-host', 'Live feed host (data branch)', 'required', () =>
-    // A separate branch from the built layers: force-pushed hourly, so it can
-    // be unreachable while the layer branch is fine.
+  check('data-live-host', 'Live feed host (live.wpptx.org)', 'required', () =>
+    // A separate host from the built layers, so it can be unreachable while
+    // the layer host is fine.
     hostCheck(DATA.odin_outages, 'fail')),
 
   check('ofm-style', 'Basemap style (OpenFreeMap)', 'required', () =>
@@ -337,7 +337,7 @@ export const DIAG_CHECKS: DiagCheck[] = [
     // Range is a CORS-safelisted request header, so no preflight. Only the
     // status matters — reading Content-Range would need the host to expose it.
     // Any PMTiles archive proves the host.
-    const url = DATA.osm_transmission_lines_kv300;
+    const url = DATA.osm_transmission_lines;
     const p = await fetchProbe(url, { headers: { Range: 'bytes=0-127' } });
     discardBody(p.response);
     if (!p.response) return mk('fail', `${url} — ${p.detail}`);
@@ -416,6 +416,9 @@ export const DIAG_CHECKS: DiagCheck[] = [
   // The line profile's elevation host: the ImageServer's service description (~11 KB).
   check('usgs-3dep', 'USGS 3DEP elevation (optional, line profile)', 'optional', () =>
     hostCheck(`${ELEVATION_3DEP_URL}?f=json`, 'warn')),
+
+  check('moratorium-host', 'Data center moratoriums (moratoriums.wpptx.org, optional)', 'optional', () =>
+    hostCheck(DATA.dc_moratoriums, 'warn', { method: 'HEAD' })),
 
   // The Grid Operations layer's host: a HEAD of PUDL's small BA code table.
   check('pudl', 'EIA-930 hourly data (PUDL, optional, Grid Operations)', 'optional', () =>

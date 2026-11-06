@@ -41,6 +41,8 @@ BUILT_ELSEWHERE_SCRIPTS = {
     "mines": EXTRACT_MINES,
     "dc_moratoriums": ROOT / "scripts" / "moratoriums" / "build_layer.py",
 }
+# Built-elsewhere datasets with no script: the served file is edited by hand.
+HAND_MAINTAINED = {"wecc_paths"}
 REGION = set(region_join.REGION_FIELDS)
 
 
@@ -186,7 +188,7 @@ class FieldSchemaInTiles(unittest.TestCase):
         needs_yaml(self)
         self.assertEqual(written_properties(EXTRACT_MINES)[:3], ["mine_id", "name", "status"])
         for e in load_manifest().get("built_elsewhere", []):
-            if "select" in e:
+            if "select" in e and e["id"] not in HAND_MAINTAINED:
                 with self.subTest(dataset=e["id"]):
                     self.assertIn(e["id"], BUILT_ELSEWHERE_SCRIPTS, "no script to check its select: against")
                     self.assertEqual(e["select"], written_properties(BUILT_ELSEWHERE_SCRIPTS[e["id"]]))

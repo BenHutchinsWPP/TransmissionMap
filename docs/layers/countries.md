@@ -13,6 +13,7 @@ World country polygons — global background context for the US-focused infrastr
 | **Attribution** | "geoBoundaries — William & Mary geoLab" |
 | **Coverage** | 218 sovereign states |
 | **Served** | `data/layers/countries.geojson.gz` — gzipped GeoJSON, Douglas-Peucker 0.005° |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/countries/` |
 | **Built by** | `scripts/extract_cgaz_boundaries.py` (`make world-boundaries`) → `data/build/countries.gpkg` |
 | **Stable id** | `iso_a3` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/geoboundaries/geoBoundariesCGAZ_ADM0.zip` |

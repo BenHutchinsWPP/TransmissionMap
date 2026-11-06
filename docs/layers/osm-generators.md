@@ -13,7 +13,7 @@ For one-row-per-facility use [OSM Plants](osm-plants.md).
 | **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
 | **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
-| **Served** | `data/layers/osm_generators.pmtiles` — PMTiles, zoom 7–13. z14 alone was 48% of the archive; capping at z13 keeps it under the host's 100 MiB per-file ceiling and MapLibre overzooms above it. |
+| **Served** | `data/layers/osm_generators.pmtiles` — PMTiles, zoom 7–13. MapLibre overzooms above z13. |
 | **Built by** | `extract_osm_generators.py` → `data/build/generator_osm.csv` → `tippecanoe -l osm_generators` |
 | **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, served as the native vector-tile feature id; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, `retail`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
@@ -31,7 +31,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 - **Selected:** `power=generator` features — nodes plus non-solar polygon centroids
 - **Row filter / dedup:** ~1.7 M individual solar-panel polygons are **deduplicated against
   farm-level node generators** so a solar farm doesn't explode into thousands of points
-- **Computed:** `output_mw` per-unit nameplate parsed from OSM tags
+- **Computed:** `output_mw` per-unit nameplate parsed from OSM tags; a comma followed by one or two digits reads as a decimal point, and a value above the cap is null (generator 2,000 MW, wind turbine 30 MW)
 - **Columns kept:** `osm_id`, `name`, `source`, `gen_method`, `gen_type`, `output_mw`,
   `operator`, `start_date`, `manufactur`, `ref`, plus the region tags listed in the Source table
 

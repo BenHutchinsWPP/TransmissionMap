@@ -3,7 +3,8 @@
 extract_bia_tribal.py — Extract BIA AIAN-LAR tribal lands -> GEOJSON
 
 Reads data/raw/bia/bia_aian_national_lar.geojson and writes data/build/bia_tribal_lands.geojson
-retaining columns LARNAME and AGENCY.
+retaining columns LARID (the publisher key, the stable id), LARNAME and AGENCY.
+A null or duplicate LARID stops the extract.
 """
 
 import argparse
@@ -12,18 +13,28 @@ import os
 import sys
 from pathlib import Path
 
-try:
-    import geopandas as gpd
-except ImportError:
-    sys.stderr.write("ERROR: geopandas missing. Run: source venv/bin/activate\n")
-    sys.exit(1)
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)-8s  %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("extract_bia_tribal")
 
 RAW_FILE = Path("data/raw/bia/bia_aian_national_lar.geojson")
 
-def build() -> gpd.GeoDataFrame:
+def check_larid(ids) -> None:
+    """Raise ValueError on a null or duplicate LARID."""
+    ids = list(ids)
+    nulls = sum(1 for v in ids if v is None or v != v or str(v).strip() == "")
+    if nulls:
+        raise ValueError(f"{nulls} null LARID")
+    dups = sorted({v for v in ids if ids.count(v) > 1})
+    if dups:
+        raise ValueError(f"duplicate LARID: {', '.join(map(str, dups[:5]))}")
+
+
+def build():
+    try:
+        import geopandas as gpd
+    except ImportError:
+        sys.stderr.write("ERROR: geopandas missing. Run: source venv/bin/activate\n")
+        sys.exit(1)
     log.info("Reading GeoJSON: %s ...", RAW_FILE)
     gdf = gpd.read_file(RAW_FILE)
     if gdf.crs is None:
@@ -31,8 +42,13 @@ def build() -> gpd.GeoDataFrame:
     else:
         gdf = gdf.to_crs("EPSG:4326")
 
-    # Retain LARNAME and AGENCY
-    keep = [c for c in ["LARNAME", "AGENCY"] if c in gdf.columns] + ["geometry"]
+    if "LARID" not in gdf.columns:
+        sys.exit("ERROR: LARID column missing from the input")
+    try:
+        check_larid(gdf["LARID"])
+    except ValueError as e:
+        sys.exit(f"ERROR: {e}")
+    keep = [c for c in ["LARID", "LARNAME", "AGENCY"] if c in gdf.columns] + ["geometry"]
     gdf = gdf[keep]
     return gdf
 

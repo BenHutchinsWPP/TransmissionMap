@@ -86,23 +86,12 @@ npx vitest run --config vitest.route.config.ts assets/route/cube.validate.test.t
 
 | check | method | gate |
 |---|---|---|
-| PNAS cost | PNAS's 27 corridor geometries costed on our data with `pnas-wu2023`, ours ÷ PNAS | median within ±15 % |
-| PNAS corridors | the same 27 solved by us: length, mean distance from PNAS's line, line-only $/mi | length median within ±5 %, ≥ 80 % within ±15 %; deviation median ≤ 10 km; $/mi median within ±10 % |
+| PNAS cost | PNAS's 27 corridor geometries costed on our data with `pnas-wu2023` | `routing.md` § How it was checked |
+| PNAS corridors | the same 27 solved by us | `routing.md` § How it was checked |
 | PNAS spurs | 200 sampled 230 kV spurs | report only |
 | WestTEC | 19 WestTEC new lines with `tm-default` | report only (harness kept outside the repository) |
 
-Gates were set before the first run and move only for a sourced difference in inputs. After a
-rerun, update `routing.md` § How it was checked (results and the band-spec version).
-
-## Decisions
-
-| date | who | decision | why |
-|---|---|---|---|
-| 2026-10-16 | — | tribal land is a finite 100, not a barrier | so an endpoint inside or enclosed by tribal land still solves; see `routing.md` § Weights |
-| 2026-10-16 | — | WHP 2023 stands in for Wu's wildfire risk layer in Power of Place | see `routing.md` § Methods |
-| 2026-10-17 | — | sage-grouse: the Section 368 exemption on, both line exemptions off | see `routing.md` § Weights, sage-grouse exemptions |
-| 2026-10-30 | — | Wild & Scenic Rivers at 100, not excluded | see `routing.md` § Weights, why WPP differs |
-| 2026-11-02 | — | nonresidential and unknown-class building footprints weighted 1 | no calibrated value; a higher weight did not reliably cut roof crossings on the drawn route |
+Gates move only for a sourced difference in inputs.
 
 ## Study methods
 
@@ -113,7 +102,7 @@ rerun, update `routing.md` § How it was checked (results and the band-spec vers
 
 ## Route panel
 
-- **Strings:** the panel's `route.*` text lives in `src/i18n/route/<code>.ts` and loads with the panel (`loadRouteStrings()`, awaited by `route-panel-open.ts` beside the chunk); only the keys the boot bundle reads stay in `src/i18n/locales/<code>.ts` (the Routing constraints layer's concerns, the Tools item, the context menu, the drawer tab). `src/i18n/i18n.test.ts` holds that boot set exactly and scans the modules outside the route chunk for `route.*` keys.
+- **Strings:** see the AGENTS.md Route panel row; the boot-read `route.*` keys are the Routing constraints layer's concerns, the Tools item, the context menu and the drawer tab.
 - **Snapping:** the nearest HIFLD substation within 3 km whose voltage is at least the line type's
   floor (`assets/route/snap.ts`); otherwise the raw point.
 - **Cost waterfall:** in each cell, the line cost above base is split over the rows that set the
@@ -131,26 +120,23 @@ rerun, update `routing.md` § How it was checked (results and the band-spec vers
   The Method tab holds at most 2,000,000 positions across its layers (`UPLOAD_TOTAL_VERTICES`). Saved methods carry
   layer hashes only, never geometry.
 
-- **Aviation and flood bands (v8):** `aviation` (band 18, `aviation.tif`): FAA NTAD facilities/runways/runway ends (+ ADDS IAPEXISTS),
-  public domain, NTAD effective 2026/10/29; Part 77 surfaces rasterised on the 3DEP 1 arc-second DEM at 30 m, class = lowest
+- **Aviation and flood bands:** `aviation` (band 18, `aviation.tif`): FAA NTAD facilities/runways/runway ends (+ ADDS IAPEXISTS),
+  public domain; Part 77 surfaces rasterised on the 3DEP 1 arc-second DEM at 30 m, class = lowest
   surface AGL, 250 m cell = worst class of its 30 m pixels. Codes: 0 nodata, 1 evaluated (outside the notice extent, no surface below 61 m), 2 inside the 77.9(b) notice extent (lowest surface >= 61 m
   or none; outside the extent such a cell is 1), 3 [46, 61) m, 4 [30, 46) m, 5 < 30 m, 6 primary surface. Class labels state the lowest surface height only; "exceed"
   appears only in the method note with the assumed height (`aviationNote`, `route.obs.av.note`); FAA Form 7460-1 / OE/AAA decides.
-  `nfhl` (band 19, `nfhl.tif`): FEMA NFHL Key Layers (NFHL_Key_Layers_202610, last modified 15 Oct 2026), US federal work with
+  `nfhl` (band 19, `nfhl.tif`): FEMA NFHL Key Layers, US federal work with
   FEMA acknowledgement requested. Area shares of the 250 m cell: panels >= 0.5 observed, then SFHA >= 0.5 -> 2 else 1; panels < 0.5 -> 3.
   Provenance lives in `grid.json` `pd_band_sources`.
 - **Batch ZIP app commit:** the ZIP records the app commit as "unknown", since the build defines no commit stamp
   (`assets/ui/route-batch.ts`, `route-batch-run.ts`).
-- **Building-weight sensitivity (measured):** 300 reference lines on the v8 cube, without the existing-line discounts (the sweep is not the shipped `tm-default`). Footprint share along a line over the share 1 km either side: r = 0.69 (95 % CI 0.66 to 0.74, 297 lines); the CI excludes 1, so the pre-registered rule can label no weight "consistent with built lines". On the 148 held-out lines, nonresidential weight 5 cut roof metres crossed by about 25 % (-12,683 m of 50,542, CI -23,968 to -3,972, excludes 0) and moved routes 4.9 % closer to built lines (CI -0.3 % to 9.9 %, includes 0). Reference lines are older than many nearby buildings and buildings are kept out of an easement, so agreement cannot be told apart from that effect. A sensitivity report, not a calibration.
-- **Building weights (decided):** the building rows stay weight 1 (a decision, not a result of the sweep).
 
 ## Routing constraints layer
 
-**What constrains** draws one class per cell by a fixed draw order (tribal, military, WSA, GAP 1–2,
-critical habitat, PHMA, sites, floodplain, other federal land). That order is a rendering rule,
+**What constrains** draws one class per cell by a fixed draw order (see [`../layers/route-constraints.md`](../layers/route-constraints.md) § Raster values). That order is a rendering rule,
 not a ranking of the land; no visitor-facing text should present it as one. Its other rules are
 in the `AGENTS.md` task table.
-- **Concern switch:** a pick sets `state.routeConcern` through `setRouteConcern()` (`assets/route-constraints.ts`), which swaps the one raster source's url with `setRasterUrl()` (`assets/layers/layer-plan.ts`); a source not yet shown keeps the url for its first show, so a link or an Undo before then loads the right concern.
+- **Concern switch:** a pick sets `state.routeConcern` through `setRouteConcern()` (`assets/route-constraints.ts`), which swaps the one raster source's url with `setRasterUrl()` (`assets/layers/layer-plan.ts`).
 - **Zoom range and hosting:** the tiles are z3–z9, and z3–z8 for land cover and slope, which exceed 20 MiB at z9 (see `manifest.json`). `DATA.route_constraints` is in `NOT_SCRAPED` (`assets/constants.test.ts`), so `publish_data.sh` and `make validate` never see them.
 
 ## Crossing report

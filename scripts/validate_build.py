@@ -51,7 +51,7 @@ ADMIN_STYLE = Path("assets/layers/map-layers-admin.ts")
 CONSTANTS = Path("assets/constants.ts")
 LAYERS    = Path("data/build")  # input shapefiles live here
 OUT_DIR   = Path("data/layers")
-ANALYSIS_DIR = Path("data/analysis")  # build_line_parquet.py; never published
+ANALYSIS_DIR = Path("data/analysis")  # build_line_parquet.py; published by publish_r2.sh
 
 VECTOR_KEYS = ("shp", "geojson", "geojson_gz", "csv", "tif")
 
@@ -240,7 +240,7 @@ def run(strict: bool) -> int:
     # 5. line geometry files (data/analysis/, dev-only) ------------------------
     from geoparquet_common import check_analysis
     if ANALYSIS_DIR.exists():
-        problems = check_analysis(ANALYSIS_DIR)
+        problems = check_analysis(ANALYSIS_DIR, Path("data/layers"))
         for msg in problems:
             record(FAIL, f"data/analysis: {msg}")
         if not problems:

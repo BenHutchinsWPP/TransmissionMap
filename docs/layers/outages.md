@@ -21,7 +21,7 @@ provider, different pipeline.
 | **Vintage** | Live — a rolling snapshot; each pull stamps `generated_utc`. Upstream `source_modified` is usually `null` (the portal omits it), so freshness is judged from `generated_utc`. |
 | **License** | **None declared** in the ODIN metadata. DOE/ORNL public program — attribute "ORNL ODIN". Utilities self-report; treat as best-effort, not authoritative. |
 | **Attribution** | "ORNL ODIN" |
-| **Served (prod)** | `odin_outages.json` on the orphan **`data`** branch, fetched via `raw.githubusercontent.com` (CORS ok). URL in `assets/constants.ts` → `DATA.odin_outages`. |
+| **Served (prod)** | `odin_outages.json` at `live.wpptx.org` (bucket `live-wpptx-org`, uploaded by the feed job). URL in `assets/constants.ts` → `DATA.odin_outages`. |
 | **Served (dev)** | Local `data/layers/odin_outages.json` — **not in git** (`data/layers/` is gitignored). Produced by the fetch script below. |
 | **Built by** | `scripts/fetch_odin_outages.py` — one Opendatasoft `/exports/json` call for the per-incident records (`select` = the card fields; no geometry). The county/utility aggregates that drive the choropleth are **derived from those same records** in Python, so the map and the popup cards come from one instant and can never disagree. ~300 records worst case; output ~80 KB (~6 KB gzipped over the wire). |
 | **Boundaries** | Joined onto `data/layers/county_boundaries.pmtiles` (Census TIGER counties; source layer `county_boundaries`, attributes `GEOID`, `NAME`, `STUSPS`, `STATE_NAME`). Shared join infrastructure, not part of this layer's data. |

@@ -283,6 +283,36 @@ group('month bins', () => {
     }
   });
 
+  it('a point shape pass keeps the jurisdiction polygons, each at its centre', async () => {
+    const county: GeoJSON.Feature = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-100, 30], [-98, 30], [-98, 32], [-100, 32], [-100, 30]]] },
+      properties: { fid: 'county:1', name: 'C', cls: 'ban', last_event: null } };
+    loadGeojson(DCM, [point(0, { fid: 'point:1', name: 'P', cls: 'ban', last_event: null }), county]);
+    fakeMap({});
+    const r = ok(await shapeRows(DCM, { geometry: 'point' }));
+    expect(r.features).toHaveLength(2);
+    expect(r.features!.find(f => f.id === 'county:1')!.geometry).toEqual({ type: 'Point', coordinates: [-99, 31] });
+    expect(r.truncated).toBe(false);
+  });
+
+  it('reads WECC path markers only: the corridors are a drawing of a path, not a row', async () => {
+    const W = 'wecc-paths';
+    registerBaseFilter('wecc-path-corridors', ['==', ['get', 'isCorridor'], true]);
+    registerBaseFilter('wecc-paths-circles', ['!=', ['get', 'isCorridor'], true]);
+    const corridor: GeoJSON.Feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: [[-120, 40], [-121, 41]] },
+      properties: { id: '66c', number: 66, isCorridor: true } };
+    loadGeojson(W, [point(0, { id: '66', number: 66, status: 'Revised', isCorridor: false }),
+      point(1, { id: '65', number: 65, status: 'Added', isCorridor: false }), corridor]);
+    registerBaseFilter('wecc-path-corridors-outline', ['==', ['get', 'isCorridor'], true]);
+    registerBaseFilter('wecc-path-lines-highlight', ['==', ['get', 'number'], -1]);
+    fakeMap({ 'wecc-path-corridors': { type: 'line', source: 'wecc-paths' }, 'wecc-path-corridors-outline': { type: 'line', source: 'wecc-paths' },
+      'wecc-path-lines-highlight': { type: 'line', source: 'wecc-paths' }, 'wecc-paths-circles': { type: 'circle', source: 'wecc-paths' }, 'wecc-paths-label': { type: 'symbol', source: 'wecc-paths' } });
+    const c = await count(W, {});
+    expect(c.ok && c.result.total).toBe(2);
+    const r = ok(await shapeRows(W, { geometry: 'point' }));
+    expect(r.features!.map(f => f.id).sort()).toEqual(['65', '66']);
+    expect(r.truncated).toBe(false);
+  });
+
   it('refuses month bins on a year field', async () => {
     loadGeojson(EIA, eia(5));
     fakeMap({});
@@ -400,14 +430,13 @@ const piece = (id: number, kv: number, coords: number[][], x?: number, z = 8): G
     ...(x !== undefined && { _x: x, _y: 127, _z: z }) }) as GeoJSON.Feature;
 
 const TL_LAYERS: Record<string, FakeLayer> = {
-  'osm-transmission-lines-kv300-hv': { source: 'tl-kv300', minzoom: 2, type: 'line' },
-  'osm-transmission-lines-kv300-label': { source: 'tl-kv300', minzoom: 2, type: 'symbol' },
-  'osm-transmission-lines-lv': { source: 'tl-kv0', minzoom: 9, type: 'line' },
-  'osm-transmission-lines-unknown': { source: 'tl-kv0', minzoom: 5, type: 'line' },
-  'osm-transmission-lines-label': { source: 'tl-kv0', minzoom: 2, type: 'symbol' },
+  'osm-transmission-lines-hv': { source: 'tl', minzoom: 2, type: 'line' },
+  'osm-transmission-lines-lv': { source: 'tl', minzoom: 9, type: 'line' },
+  'osm-transmission-lines-unknown': { source: 'tl', minzoom: 5, type: 'line' },
+  'osm-transmission-lines-label': { source: 'tl', minzoom: 2, type: 'symbol' },
 };
 function tlBaseFilters() {
-  registerBaseFilter('osm-transmission-lines-kv300-hv', ['>=', ['to-number', ['get', 'nominal_kv'], -1], 100]);
+  registerBaseFilter('osm-transmission-lines-hv', ['>=', ['to-number', ['get', 'nominal_kv'], -1], 100]);
   registerBaseFilter('osm-transmission-lines-lv', ['all', ['>', ['to-number', ['get', 'nominal_kv'], -1], 0], ['<', ['to-number', ['get', 'nominal_kv'], -1], 50]]);
   registerBaseFilter('osm-transmission-lines-unknown', ['<=', ['to-number', ['get', 'nominal_kv'], -1], 0]);
   registerBaseFilter('osm-transmission-lines-label', ['has', 'name']);
@@ -415,13 +444,13 @@ function tlBaseFilters() {
 
 group('tiled layers: the current view', () => {
   const tiles = {
-    'tl-kv300': [
+    'tl': [
+      piece(7, 33, [[0.4, Y], [0.6, Y]], 128), piece(8, 0, [[0.4, Y], [0.9, Y]], 128),
       piece(5, 345, [[0.1, Y], [1.5, Y]], 128),        // runs into tile 129's buffer
       piece(5, 345, [[1.3, Y], [2.0, Y]], 129),        // starts in tile 128's buffer
       piece(5, 345, [[1.3, Y], [2.0, Y]], 129),        // the same tile again (overzoom)
       piece(6, 500, [[0.2, Y], [0.3, Y]], 128),
     ],
-    'tl-kv0': [piece(7, 33, [[0.4, Y], [0.6, Y]], 128), piece(8, 0, [[0.4, Y], [0.9, Y]], 128)],
   };
 
   it('reads the view once per line, km counted once across tile pieces, and names the tiers this zoom hides', async () => {
@@ -471,7 +500,7 @@ group('tiled layers: the current view', () => {
     fakeMap({ 'osm-gen-circles': { source: 'gen', minzoom: 4, type: 'symbol' } }, {}, 2);
     expect(refusal(await shapeRows('osm-generators', {}))).toMatch(/not drawn at zoom 2\.0: zoom in to 4/);
     // A layer whose shown map layers are labels only draws nothing to read, and says so (no "zoom in to Infinity").
-    fakeMap({ 'osm-transmission-lines-label': { source: 'tl-kv0', type: 'symbol' } }, {}, 6);
+    fakeMap({ 'osm-transmission-lines-label': { source: 'tl', type: 'symbol' } }, {}, 6);
     state.layerVisibility[OSM_TL] = true;
     const msg = refusal(await shapeRows(OSM_TL, {}));
     expect(msg).toMatch(/draws no features/);

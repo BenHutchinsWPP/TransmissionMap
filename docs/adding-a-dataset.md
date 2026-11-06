@@ -27,7 +27,7 @@ data/build/<id>.{csv,shp,geojson}    cleaned, selected columns
    │  make tiles  →  tile_manifest.yaml block          (manifest layers)
    │  make <target>  →  build_*.sh                     (rasters)
    ▼
-data/layers/<id>.{geojson.gz,pmtiles}    served to the app   (gitignored; published via make publish-data)
+data/layers/<id>.{geojson.gz,pmtiles}    served to the app   (gitignored; published via make publish-r2)
    │
    ▼
 frontend wiring  →  adding-a-layer.md
@@ -247,6 +247,6 @@ duplicate that here.
 [ ] region tags                   — asset: REGION_TAG_FILES (+ --fields for lines) and the fields in select:; context layer: none
 [ ] run: extract script → make region-tags (asset) → build_tiles.py --only <id> → file appears in data/layers/
 [ ] release_manifest.yaml         — one pack per layer (point→csv_only; line/polygon→geojson+shp; raster→tif), or skip:true if non-redistributable
-[ ] make publish-data             — push data/layers + data/releases → data-static branch (prod host)
+[ ] make publish-r2               — upload data/layers + data/analysis + data/releases → data.wpptx.org (prod host)
 [ ] → continue in adding-a-layer.md for all frontend wiring
 ```

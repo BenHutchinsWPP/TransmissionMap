@@ -102,14 +102,15 @@ def build_layer(layer):
         run(tip)
         os.replace(out_tmp, out)
         seq.unlink()
-        # A layer too large for one file under the host's 100 MiB ceiling is
-        # split into per-voltage-class archives, the same six the global build
-        # produces — the frontend names those, not the undivided file.
-        if layer.get("split_voltage_bands"):
-            from build_global_tiles import split_transmission_bands
-            split_transmission_bands(out, OUT, base=lid)
-            out.unlink()
-            print(f"  [done] {lid} split into voltage-class archives")
+        # The tiles are rewritten without the build-time `minz` column, as the
+        # global build writes them (build_global_tiles.finish_transmission).
+        if layer.get("drop_minz"):
+            from build_global_tiles import finish_transmission
+            world = out.with_name(out.stem + ".world.pmtiles")
+            os.replace(out, world)
+            finish_transmission(world, OUT, base=lid)
+            world.unlink()
+            print(f"  [done] {lid} written without minz")
             return
     else:
         sys.exit(f"ERROR: layer {lid}: unknown format {layer['format']!r}")

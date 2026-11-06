@@ -645,11 +645,12 @@ const SCENARIOS = {
 
     // (4) Keyboard: the range starts at the first row; ↓↓ → row 3 active
     // (the range's one row); Space checks it; Enter flies.
-    await page.click('.td-row[data-i="0"] .tabulator-cell:nth-child(2)');
+    // The first data cell (the check and zoom columns come before it).
+    await page.click('.td-row[data-i="0"] .tabulator-cell:nth-child(3)');
     await settle(page);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
-    await page.waitForTimeout(150);
+    await page.waitForFunction(() => document.querySelector('.td-row--active')?.dataset.i === '2', null, { timeout: 3000 }).catch(() => {});
     check('↓↓ makes row 3 active', await page.evaluate(() => document.querySelector('.td-row--active')?.dataset.i) === '2',
       await page.evaluate(() => document.querySelector('.td-row--active')?.dataset.i));
     await page.keyboard.press(' ');
@@ -793,10 +794,11 @@ const SCENARIOS = {
     });
     check('filter: the map draws only ≥ 500 MW', mapMw.length > 0 && mapMw.every(v => v >= 500), `${mapMw.length} drawn, min ${Math.min(...mapMw)}`);
     check('filter: the ▾ is marked', await page.evaluate(() => document.querySelector('.td-grid [data-filter="nameplate_mw"]').classList.contains('td-filter-btn--on')));
-    check('filter: a pill names it', (await page.evaluate(() => [...document.querySelectorAll('.td-pill')].map(p => p.textContent))).includes('nameplate_mw ≥ 500'));
+    const pills5f = await page.evaluate(() => [...document.querySelectorAll('.td-pill')].map(p => p.textContent));
+    check('filter: a pill names it', pills5f.includes('Nameplate (MW) ≥ 500'), pills5f.join(' | '));
     const chip = `[data-where-chip="${GEN}"]`;
     await page.locator(chip).scrollIntoViewIfNeeded().catch(() => {});
-    check('row chip: shown, naming the condition', await page.isVisible(chip) && (await page.textContent(`${chip} .layer-where-text`)) === 'nameplate_mw ≥ 500', await page.textContent(`${chip} .layer-where-text`));
+    check('row chip: shown, naming the condition', await page.isVisible(chip) && (await page.textContent(`${chip} .layer-where-text`)) === 'Nameplate (MW) ≥ 500', await page.textContent(`${chip} .layer-where-text`));
     await shot(page, 'table-15-filtered-map-chip');
     await page.click(`[data-where-clear="${GEN}"]`);
     await page.waitForFunction(b => document.querySelector('.td-count')?.textContent === b, before5f, { timeout: 20000 }).catch(() => {});
@@ -893,11 +895,15 @@ const SCENARIOS = {
       }
     } else check('a generator to click', false);
 
-    // (10b) The status line re-translates too: a vector layer's table says
-    // it holds the loaded tiles only (table.partial); switch to es and back.
-    await openTable(page, 'osm-substations-points');
-    await page.waitForSelector('.td-status[data-kind="warn"]:not([hidden])', { timeout: 30000 }).catch(() => {});
-    const partial = await page.evaluate(async () => {
+    // (10b) The status line re-translates too: a vector layer's table read
+    // from the loaded tiles says so (table.partial). Every queryable vector
+    // layer has a columns file, so this page is refused data/analysis/ and the
+    // table falls back to the tiles; switch to es and back.
+    await desk.route('**/data/analysis/**', r => r.fulfill({ status: 404, body: '' }));
+    const tiles = await open(desk, link);
+    await openTable(tiles.page, 'osm-substations-points');
+    await tiles.page.waitForSelector('.td-status[data-kind="warn"]:not([hidden])', { timeout: 30000 }).catch(() => {});
+    const partial = await tiles.page.evaluate(async () => {
       const i18n = await import('/src/i18n/index.ts');
       const bus = await import('/assets/state-bus.ts');
       const line = () => document.querySelector('.td-status').textContent;
@@ -915,6 +921,10 @@ const SCENARIOS = {
     check('status line: partial note in English', partial.en === partial.enWant && !!partial.en, partial.en);
     check('es: the status line is Spanish', partial.es === partial.want && partial.es !== partial.en, partial.es);
     check('en again: the status line is English', partial.back === partial.en, partial.back);
+    const tileErrs = tiles.errors.filter(e => !/status of 404/.test(e));   // the refused index.json
+    check('no console errors (tiles fallback)', tileErrs.length === 0, tileErrs.join(' | '));
+    await tiles.page.close();
+    await desk.unroute('**/data/analysis/**');
     await page.focus(HOLDER);
     await page.keyboard.press('Escape');
     check('no console errors', errors.length === 0, errors.join(' | '));
@@ -1358,7 +1368,7 @@ const SCENARIOS = {
       check('the chat\'s showTable stops at the size prompt', /MB/.test((await page.textContent('.td-status')) ?? ''));
       // × closes the table pane only; the chat beside it stays open and its
       // request resumes with the declined prompt, so the model's next reply shows.
-      await page.click('.td-close');
+      await page.click('.td-tab-x[data-pane="table"]');
       await idle(page).catch(() => {});
       const closed = await page.$$eval('.chat-bot', e => e.map(x => x.textContent));
       check('closing the table settles the prompt: the chat stays open, the model answers "Done.", Send back, no working line',
@@ -2637,10 +2647,196 @@ const SCENARIOS = {
     if (parts.includes('flows')) await templatesFlows(ctx);
   },
 
+  // Columns files: tiled layers listed in src/registry/columns.ts answer the table, the
+  // templates and the chat's aggregate for the whole dataset from data/analysis/columns/
+  // (dev server only: the dataset is unpublished). (1) The OSM lines table under Area Texas at
+  // zoom 5, layer on and off, = the pyarrow reference count (tmp/columns-ref; a dataset read
+  // is the layer's filters over the whole dataset whatever the zoom), no partial note, a row's
+  // fly button lands on and highlights that row's line; (2) compare-regions on a layer switched
+  // off draws, whole dataset, with the Area; (3) a mocked chat aggregate tells the model
+  // `complete: true` and the reference total; (4) data/analysis/ answered 404 -> the view-scoped
+  // wording; (5) the world table opened twice in one fresh page (the second open hits the warm
+  // byte cache), the size prompt answered on the first open.
+  async columns(ctx) {
+    if (PREVIEW) { check('the columns scenario needs the dev server (data/analysis/ is unpublished)', false); return; }
+    const OSM = 'osm-transmission-lines', SUBS = 'osm-substations-points', TX_CAM = '5/31.2/-99.4';
+    const TX = { kind: 'states', codes: ['TX'] };
+    const REF_TX = 32087;   // tmp/columns-ref/columns-reference.json: osm_transmission_lines, admin1_US-TX, USAB
+    const PARTIAL = 'Only the features in the map tiles loaded for this view';
+    const line = page => page.evaluate(() => {
+      const s = document.querySelector('.td-status');
+      return { count: document.querySelector('.td-count')?.textContent ?? '', note: document.querySelector('.td-note')?.textContent ?? '', status: !s || s.hidden ? '' : s.textContent, error: s?.dataset.kind === 'error' };
+    });
+    // Open a layer's table, answering the size prompt when it comes; `prompt` is its text, or false.
+    // The previous open's rows and count are blanked first, so only the new load can satisfy the wait;
+    // a table error ends it at once.
+    const openAnswering = async (page, id, tag = 'table') => {
+      await page.evaluate(() => {
+        document.querySelectorAll('.td-row').forEach(r => r.removeAttribute('data-i'));
+        const c = document.querySelector('.td-count');
+        if (c) c.textContent = '';
+      });
+      await openTable(page, id);
+      let prompt = false;
+      const end = Date.now() + 120000;
+      for (;;) {
+        const l = await line(page);
+        if (l.error) throw new Error('table error: ' + l.status);
+        const btn = await page.$('.td-status button.td-btn');
+        if (btn && !prompt) { prompt = l.status; await shot(page, `columns-size-prompt-${tag}`); await btn.click(); }
+        else if (!btn && /\d/.test(l.count) && await page.$('.td-row[data-i]')) break;
+        if (Date.now() > end) throw new Error('table did not load: ' + JSON.stringify(l));
+        await page.waitForTimeout(250);
+      }
+      await settle(page);
+      return prompt;
+    };
+    const closeTable = page => mod(page, '/assets/ui/ui-table.ts', m => m.closeTable());
+
+    const probe = await open(ctx, TX_CAM);
+    const vis = { ...(await st(probe.page, 'state.layerVisibility')), [OSM]: true, [SUBS]: false };
+    const linkTx = await hashFor(probe.page, { layerVisibility: vis, area: TX }, TX_CAM);
+    const linkTxOff = await hashFor(probe.page, { layerVisibility: { ...vis, [OSM]: false }, area: TX }, TX_CAM);
+    const linkWorld = await hashFor(probe.page, { layerVisibility: vis }, TX_CAM);
+    await probe.page.close();
+
+    // (1) The Texas table.
+    const { page, errors } = await open(ctx, linkTx);
+    const p1 = await openAnswering(page, OSM, 'tx');
+    const c1 = await line(page);
+    log('  table:', JSON.stringify(c1), 'prompt:', JSON.stringify(p1));
+    // A dataset read is the layer's filters over the whole dataset at any zoom: layer on at z5 = the reference.
+    const total = c => Number(c.count.match(/of ([\d,]+)/)?.[1].replace(/,/g, '') ?? c.count.match(/[\d,]+/)?.[0].replace(/,/g, ''));
+    check('OSM lines table, Area Texas, zoom 5, layer on: total = the pyarrow reference count', total(c1) === REF_TX, `${c1.count}; reference ${REF_TX.toLocaleString('en')}`);
+    check('no partial note', !c1.status.includes(PARTIAL) && !/loaded tiles|current view only/.test(c1.note), JSON.stringify(c1));
+    await shot(page, 'columns-1-table-tx');
+    const cam0 = await st(page, 'state.map.getCenter().toArray()');
+    await page.locator('.td-row[data-i="0"] .td-zoom-btn').click();
+    await settle(page);
+    await page.waitForTimeout(1500);
+    const cam1 = await st(page, 'state.map.getCenter().toArray()');
+    // Row 0's id: the drawer snapshot (saved when the tab is hidden) names the active row.
+    const hl = await page.evaluate(async () => {
+      const { state } = await import('/assets/state.ts');
+      const dq = await import('/assets/dataset-query.ts');
+      const feats = async id => (await state.map.getSource(id)?.getData())?.features ?? [];
+      const all = [...await feats('highlight-pts'), ...await feats('highlight-lines')];
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      let active = null;
+      try { active = JSON.parse(sessionStorage.getItem('tm-drawer')).data.table.active; } catch { /* unread */ }
+      delete document.visibilityState;
+      document.dispatchEvent(new Event('visibilitychange'));
+      // The highlight keeps no feature id: the active row's id is read back from the columns file and its fields compared.
+      const f = ['name', 'nominal_kv', 'operator'];
+      const r = active === null ? null : await dq.query('osm-transmission-lines', { ids: [Number(active)], fields: f });
+      const row = r?.ok ? r.result.rows[0]?.props : null;
+      return { n: all.length, lines: (await feats('highlight-lines')).length, active: active === null ? null : String(active), row, same: !!row && all.length === 1 && f.every(k => (all[0].properties?.[k] ?? null) === (row[k] ?? null)) };
+    });
+    check('a row\'s fly button flies there', cam0.join() !== cam1.join(), `${cam0.map(v => v.toFixed(2))} -> ${cam1.map(v => v.toFixed(2))}`);
+    check('...and highlights that row\'s line (its name, kV and operator = those of row 0\'s id)', hl.active !== null && hl.lines >= 1 && hl.same, JSON.stringify(hl));
+    await shot(page, 'columns-1b-row-flown');
+    await closeTable(page);
+    check('no console errors (Texas table, row fly and highlight)', errors.length === 0, errors.join(' | '));
+    await page.close();
+    // The same table with the layer off lists every feature: the pyarrow reference count.
+    const off = await open(ctx, linkTxOff);
+    await openAnswering(off.page, OSM, 'tx-off');
+    const c1b = await line(off.page);
+    check('same table, layer off: total = the pyarrow reference count', total(c1b) === REF_TX && !c1b.status.includes(PARTIAL), `${c1b.count} vs ${REF_TX.toLocaleString('en')}`);
+    await shot(off.page, 'columns-1c-table-tx-layer-off');
+    await off.page.close();
+
+    // (2) compare-regions on a layer that is off.
+    const k = await templateKit(ctx);
+    await k.page.goto('about:blank');
+    await ready(k.page, { url: URL_BASE + '#' + linkTx, settle: true });
+    check('substations layer is off for the template', (await st(k.page, `state.layerVisibility['${SUBS}']`)) === false);
+    await k.openViz();
+    const opts = await k.page.evaluate(async id => { const { formChoices } = await import('/assets/templates/show-template.ts'); const { templateById } = await import('/assets/templates/catalogue.ts'); const f = formChoices(templateById('compare-regions'), id); return { by: f.by.map(x => x.name), split: f.split.map(x => x.name), tiled: f.tiled }; }, SUBS);
+    log('  compare-regions choices:', JSON.stringify(opts));
+    const cmp = await k.showViz(SUBS, 'compare-regions', { by: opts.by[0], split: 'states' });
+    const cardText = cmp.card ? await cmp.card.evaluate(c => c.textContent) : '';
+    log('  card:', JSON.stringify(cmp.info), 'status:', cmp.status, 'posted:', cmp.posted.join());
+    check('compare-regions draws on the switched-off layer (no "switch the layer on" refusal)', !!cmp.card && cmp.posted.some(t => t === 'drawn' || t === 'rendered') && !/switch .* on|turn .* on/i.test(cmp.status + cardText), `${cmp.status} | ${cmp.info?.title}`);
+    // The card's own data: the spec the frame was sent (data.values), and the card's partial notes.
+    const sent = cmp.frame ? await cmp.frame.evaluate(() => {
+      const found = [];
+      const walk = o => {
+        if (!o || typeof o !== 'object') return;
+        if (Array.isArray(o)) { o.forEach(walk); return; }
+        if (o.data && Array.isArray(o.data.values)) found.push(o.data.values);
+        for (const x in o) walk(o[x]);
+      };
+      walk(window.__tmIn ?? []);
+      return found.sort((a, b) => b.length - a.length)[0] ?? [];
+    }).catch(() => []) : [];
+    const partialNotes = cmp.card ? await cmp.card.$$eval('.chat-canvas-partial', ns => ns.map(n => n.textContent)) : ['no card'];
+    const regionsIn = [...new Set(sent.map(r => r.rkey))];
+    log('  card row sample:', JSON.stringify(sent.slice(0, 3)), 'split field: states');
+    log('  card rows:', sent.length, 'regions:', JSON.stringify(regionsIn), 'partial notes:', JSON.stringify(partialNotes));
+    check('...and its own data is the whole dataset (the card carries no partial note) with Area TX only', sent.length > 0 && partialNotes.length === 0 && regionsIn.length === 1 && regionsIn[0] === 'TX' && !/only the loaded|partial|view/i.test(cmp.info?.errors ?? ''), JSON.stringify({ rows: sent.length, regionsIn, partialNotes }));
+    await k.cardShot(cmp.card, 'columns-2-compare-regions');
+    check('no console errors (templates)', k.rig.errors.length === 0, k.rig.errors.join(' | '));
+    await k.rig.close();
+
+    // (3) A mocked chat aggregate on a columns layer.
+    const chat = await chatRig(ctx, body => {
+      const ms = body?.messages ?? [];
+      const u = ms.map(m => m.role).lastIndexOf('user');
+      if (!String(ms[u]?.content ?? '').toLowerCase().includes('breakdown')) return null;
+      const tools = ms.slice(u + 1).filter(m => m.role === 'tool').length;
+      if (tools === 0) return { tool_calls: [call('g1', 'aggregate', { layerId: OSM, area: TX, groupBy: 'nominal_kv' })] };
+      return { content: 'Counted.' };
+    }, { cam: TX_CAM });
+    await chat.say('what is the breakdown of lines by voltage');
+    const told = chat.toolMsgs().get('g1') ?? '';
+    log('  tool g1:', told.slice(0, 300));
+    const toldTotal = Number(told.match(/"total":\s*(\d+)/)?.[1]);
+    check('chat aggregate on a columns layer tells the model complete: true and the reference total', /"complete":true/.test(told) && toldTotal === REF_TX, `total ${toldTotal}; ${told.slice(0, 200)}`);
+    await shot(chat.page, 'columns-3-chat-aggregate');
+    check('no console errors (chat)', chat.errors.length === 0, chat.errors.join(' | '));
+    await chat.close();
+
+    // (4) data/analysis/ answered 404: the view-scoped wording.
+    const hits = [];
+    const rig = await lineRig(ctx, { viewport: { width: 1400, height: 900 } }, async c => {
+      await c.route(/\/data\/analysis\//, r => { hits.push(r.request().url()); return r.fulfill({ status: 404, body: '404: Not Found', headers: { 'access-control-allow-origin': '*' } }); });
+    });
+    await rig.go(linkTx);
+    await openAnswering(rig.page, OSM, '404');
+    const c4 = await line(rig.page);
+    log('  404 table:', JSON.stringify(c4));
+    check('index.json was requested and answered 404', hits.some(u => /index\.json/.test(u)), hits.join(' '));
+    check('index.json 404: the table says it lists the loaded tiles only', c4.status.includes(PARTIAL), JSON.stringify(c4));
+    await shot(rig.page, 'columns-4-index-404');
+    const loud = rig.errors.filter(e => !/status of 404/.test(e));
+    check('no console errors but the browser\'s own 404 line', loud.length === 0, rig.errors.join(' | '));
+    await rig.close();
+
+    // (5) The world table twice in one fresh page: the second open reads from the warm byte cache.
+    const w = await open(ctx, linkWorld);
+    const opens = [];
+    for (const n of [1, 2]) {
+      const t0 = Date.now();
+      const prompt = await openAnswering(w.page, OSM, `world-${n}`);
+      const c = await line(w.page);
+      opens.push({ n, prompt, count: c.count, ms: Date.now() - t0 });
+      await shot(w.page, `columns-5-world-open-${n}`);
+      await closeTable(w.page);
+      await w.page.waitForTimeout(500);
+    }
+    log('  world opens:', JSON.stringify(opens));
+    const wtotal = o => Number(o.count.match(/of ([\d,]+)/)?.[1].replace(/,/g, '') ?? o.count.match(/[\d,]+/)?.[0].replace(/,/g, ''));
+    check('world table: the size prompt appeared on open 1, and both opens list the same non-zero total', !!opens[0].prompt && wtotal(opens[0]) > 0 && wtotal(opens[0]) === wtotal(opens[1]), JSON.stringify(opens));
+    check(`world table: no console error or pageerror across both opens (size prompt: open 1 ${opens[0].prompt ? 'yes' : 'no'}, open 2 ${opens[1].prompt ? 'yes' : 'no'})`, w.errors.length === 0, w.errors.join(' | '));
+    await w.page.close();
+  },
+
   // The transmission line tools. On the dev server the line GeoParquet under
   // data/analysis/ comes from the page's own origin. On a preview build the page reads
   // it from the data host: TM_DATA_HOST names a stand-in (SKILL.md § Line tools on a
-  // preview build) and lineRig sends every data-static request there, the page's URL
+  // preview build) and lineRig sends every data-host request there, the page's URL
   // and CSP unchanged; the checks that read app state run on a dev-server twin at the
   // same viewport and link (TM_DEV_URL), which reads the same local files. USGS 3DEP is
   // answered by context.route from a synthetic surface, Terrain Tiles are refused (and
@@ -2842,7 +3038,7 @@ const SCENARIOS = {
     } else check('an OSM line in view whose chain ends at a substation, opened', false, `${subLines.length} candidates`);
 
     // ── HIFLD: end A is SUB_1 at the end nearest the HIFLD substation of that name.
-    if (await page.isVisible('.td-close')) await page.click('.td-close');
+    if (await page.isVisible('.td-tab-x[data-pane="line"]')) await page.click('.td-tab-x[data-pane="line"]');
     await page.waitForTimeout(300);
     if (!PREVIEW) {
       const left = await st(page, "[...state.map.getStyle().layers.map(l => l.id), ...Object.keys(state.map.getStyle().sources)].filter(id => id.startsWith('lt-'))");
@@ -2880,14 +3076,14 @@ const SCENARIOS = {
       }
       await settle(page);
       await shot(page, 'lines-4-hifld-ends');
-      await page.click('.td-close');
+      await page.click('.td-tab-x[data-pane="line"]');
     } else check('a HIFLD line with SUB_1 and SUB_2 to open', false, JSON.stringify(hifld?.props ?? null));
 
     // ── The table: "Copy N checked lines" shows once the layer's files answer.
     check('table: "Copy N checked lines" is offered on HIFLD lines', await tableCopyShown(page, HIFLD, true));
     await shot(page, 'lines-4b-table-copy');
     // A build's reads are reported at the stand-in's URL (the route rewrote them in the network layer).
-    const own = PREVIEW ? [RAW_DATA, DATA_HOST] : [URL_BASE];
+    const own = PREVIEW ? [PROD_DATA, DATA_HOST] : [URL_BASE];
     const bad = rig.reads.filter(([u, s]) => !own.some(o => u.startsWith(o)) || (s !== 200 && s !== 206));
     check(`the line files are read from ${PREVIEW ? 'the data host' : 'the page origin'} (index 200, parts by range 206)`,
       rig.reads.length > 0 && !bad.length && rig.reads.some(([u, s]) => /index\.json$/.test(u) && s === 200) && rig.reads.some(([, s]) => s === 206),
@@ -3150,8 +3346,9 @@ const SCENARIOS = {
         });
       }
       all.change[label] = runs;
-      const st2 = await page.textContent('.px-status');
-      check(`${label}: a threshold change redraws (both sources set, status refreshed)`, runs.every(x => Number.isFinite(x.toIdle)) && st2 !== statusBefore, `${statusBefore} → ${st2}`);
+      // The runs alternate two thresholds and may end on the first one, so each run's status is held to the one before it.
+      const seen = [statusBefore, ...runs.map(x => x.status)];
+      check(`${label}: a threshold change redraws (both sources set, status refreshed)`, runs.every(x => Number.isFinite(x.toIdle)) && seen.slice(1).every((x, i) => x !== seen[i]), seen.join(' → '));
       await shot(page, `proximity-2-change-${label}`);
     }
     const has2 = await mapHas();
@@ -3305,14 +3502,14 @@ const SCENARIOS = {
 // ── The line tools' rig (lines, lines-absent) ────────────────────────────────
 const DEV_URL = process.env.TM_DEV_URL ?? 'http://localhost:5199/';
 const DATA_HOST = process.env.TM_DATA_HOST;
-// What a production build reads its data from: DATA_ORIGIN in assets/constants.ts.
-const RAW_DATA = 'https://raw.githubusercontent.com/BenHutchinsWPP/TransmissionMap/data-static/';
+// What a production build reads its data from: DATA_HOST in assets/constants.ts.
+const PROD_DATA = 'https://data.wpptx.org/';
 
 /**
  * The app page in a fresh context (`setup(context)` adds routes first), plus, on a
  * preview build, a twin page on the dev server (`O`) at the same viewport whose app
  * modules the checks read; on the dev server `O` is the page itself. With
- * TM_DATA_HOST every data-static request goes to that host, the page's URL and CSP
+ * TM_DATA_HOST every data-host request goes to that host, the page's URL and CSP
  * unchanged, so the browser's CORS and range handling meet that host's headers.
  * `reads` lists every data/analysis/ response as [url, status]. `go(hash)` loads the
  * link afresh in both (a hash with state params reloads the app anyway).
@@ -3326,7 +3523,7 @@ async function lineRig(ctx, opts, setup = async () => {}) {
   const c = await ctx.browser().newContext({ ...opts, ignoreHTTPSErrors: !!DATA_HOST });
   await c.addInitScript(init);
   await setup(c);
-  if (DATA_HOST) await c.route(RAW_DATA + '**', r => r.continue({ url: DATA_HOST + r.request().url().slice(RAW_DATA.length) }));
+  if (DATA_HOST) await c.route(PROD_DATA + '**', r => r.continue({ url: DATA_HOST + r.request().url().slice(PROD_DATA.length) }));
   const errors = [], reads = [];
   const page = await c.newPage();
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
@@ -3433,6 +3630,10 @@ async function tableCopyShown(page, layerId, expect) {
 // The templates scenario's rig and helpers, shared by its three parts: a no-key chat rig over Texas
 // with the frames' messages tapped, the Visualize pane driver (showViz), ink and pixel probes, the
 // action toast, downloads with their CSV/PNG checks, and a click on a mark found by colour (clickAct).
+// nearest is catalogued ready: false (assets/templates/catalogue.ts): neither the gallery nor the chat offers it,
+// so its steps are skipped and the gallery is held to showing no nearest card.
+const NEAREST_READY = false;
+
 async function templateKit(ctx) {
   const GEN = 'eia-generators', SUBS = 'hifld-substations', GAS = 'hifld-natgas-points';
   const OGF = 'ogf-planned-transmission', OSMTX = 'osm-transmission-lines';
@@ -3927,9 +4128,12 @@ async function templatesBase(ctx) {
       await page.mouse.click(x, y);
       await page.waitForTimeout(400);
       const c0 = camOf(await hashOf(page));
-      if ((await menuItems(osm.frame)).length) await osm.frame.click('.kit-menu button >> nth=1');
-      await page.waitForTimeout(2500);
+      const li3 = await menuItems(osm.frame);
+      if (li3.length) await osm.frame.click('.kit-menu button >> nth=1');
+      await page.waitForFunction(c => location.hash.split('?')[0] !== c, c0, { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(500);
       const h3 = await hashOf(page);
+      if (camOf(h3) === c0) log(`  zoom: menu ${JSON.stringify(li3)}`);
       check('lines-by-class action: Zoom the map here moves the camera (≤ z14), with no view change and no toast', camOf(h3) !== c0 && params(h3) === params(L0)
         && Number(camOf(h3).replace('#', '').split('/')[0]) <= 14.01 && !(await toastText()), `${c0} → ${camOf(h3)}`);
       await page.evaluate(() => { location.hash = '#7/31.0/-97.0' + (location.hash.includes('?') ? '?' + location.hash.split('?')[1] : ''); });
@@ -4489,23 +4693,31 @@ async function templatesSpread(ctx) {
     check('form flow: split offers the fields other than by, and follows a by change', splits.length > 0 && !splits.includes(by)
       && !splits2.includes(splits[0]) && splits2.includes(by), `${by}: ${splits.join(',')} · ${splits[0]}: ${splits2.join(',')}`);
     await page.selectOption('.tv-layer', 'osm-datacenters');
-    await page.click('.tv-card[data-template="nearest"]');
-    const l2 = await page.$eval('.tv-layer2', s => s.value);
-    const noMeasure = !(await page.$('.tv-measure')) && !(await page.$('.tv-top'));
-    await page.selectOption('.tv-cond-field', 'max_kv');
-    await page.selectOption('.tv-cond-op', '>=');
-    const set = (sel, v) => page.$eval(sel, (e, x) => { e.value = x; e.dispatchEvent(new Event('change')); }, v);
-    await set('.tv-cond-value', '230');
-    const unit = await page.$eval('.tv-within', e => e.closest('label').textContent);
-    await set('.tv-within', '5');
-    await page.$eval('.tv-form', f => f.scrollIntoView({ block: 'end' }));
-    await shot(page, 'templates-w10-nearest-form');
-    const nf = await showViz(null, 'nearest');
-    cardOk('nearest from the form (≥ 230 kV, 5 mi)', nf, 'drawn');
-    const p2 = await nf.frame?.evaluate(() => ({ layer2: TM_INPUT.second?.layer, within: TM_INPUT.params.within, n2: TM_INPUT.second?.features.length })).catch(e => ({ e: e.message }));
-    check('form nearest: HIFLD substations by default, no measure or top, within in the visitor\'s unit sent as km',
-      l2 === SUBS && noMeasure && /\(mi\)/.test(unit) && p2?.layer2 === SUBS && Math.abs(p2.within - 8.05) < 0.01, `${l2} · ${unit} · ${JSON.stringify(p2)}`);
-    await cardShot(nf.card, 'templates-w10-nearest-from-form');
+    if (!NEAREST_READY) {
+      await page.waitForTimeout(300);
+      await page.waitForSelector('.tv-card[data-template="points-per-polygon"]', { timeout: 5000 }).catch(() => {});
+      const cards = await page.$$eval('.tv-card', cs => cs.map(c => c.dataset.template));
+      check('the gallery offers points-per-polygon but no nearest card (ready: false)', cards.includes('points-per-polygon') && !cards.includes('nearest'), cards.join(','));
+    } else {
+      await page.selectOption('.tv-layer', 'osm-datacenters');
+      await page.click('.tv-card[data-template="nearest"]');
+      const l2 = await page.$eval('.tv-layer2', s => s.value);
+      const noMeasure = !(await page.$('.tv-measure')) && !(await page.$('.tv-top'));
+      await page.selectOption('.tv-cond-field', 'max_kv');
+      await page.selectOption('.tv-cond-op', '>=');
+      const set = (sel, v) => page.$eval(sel, (e, x) => { e.value = x; e.dispatchEvent(new Event('change')); }, v);
+      await set('.tv-cond-value', '230');
+      const unit = await page.$eval('.tv-within', e => e.closest('label').textContent);
+      await set('.tv-within', '5');
+      await page.$eval('.tv-form', f => f.scrollIntoView({ block: 'end' }));
+      await shot(page, 'templates-w10-nearest-form');
+      const nf = await showViz(null, 'nearest');
+      cardOk('nearest from the form (≥ 230 kV, 5 mi)', nf, 'drawn');
+      const p2 = await nf.frame?.evaluate(() => ({ layer2: TM_INPUT.second?.layer, within: TM_INPUT.params.within, n2: TM_INPUT.second?.features.length })).catch(e => ({ e: e.message }));
+      check('form nearest: HIFLD substations by default, no measure or top, within in the visitor\'s unit sent as km',
+        l2 === SUBS && noMeasure && /\(mi\)/.test(unit) && p2?.layer2 === SUBS && Math.abs(p2.within - 8.05) < 0.01, `${l2} · ${unit} · ${JSON.stringify(p2)}`);
+      await cardShot(nf.card, 'templates-w10-nearest-from-form');
+    }
     // A world OSM layer by US states (the admin1 alias): the frame outlines the states.
     const ps = await showViz('osm-plants-points', 'points-per-polygon', { by: 'states' });
     cardOk('per state (OSM power plants, the states alias)', ps, 'drawn');
@@ -4636,7 +4848,7 @@ async function templatesFlows(ctx) {
   }
 
   // ── nearest: OSM data centers → HIFLD substations; EIA generators → HIFLD substations ──
-  if (want('neardc')) {
+  if (NEAREST_READY && want('neardc')) {
   const nr = await showViz('osm-datacenters', 'nearest');
   cardOk('nearest (OSM data centers → HIFLD substations)', nr, 'drawn');
   check('nearest: the map is inked', (await ink(nr.frame)) > 3000, String(await ink(nr.frame)));
@@ -4674,15 +4886,17 @@ async function templatesFlows(ctx) {
     check('nearest CSV: id, label, distance, nearest columns', /ID/.test(csvHead) && /Distance \((km|mi)\)/.test(csvHead) && /Nearest/.test(csvHead), csvHead);
   }
   }
-  const nr2 = await showViz(GEN, 'nearest');
-  cardOk('nearest (EIA generators → HIFLD substations)', nr2, 'drawn');
-  {
-    const t = await nr2.frame.evaluate(() => ({ truncated: TM_INPUT.truncated, truncation: TM_INPUT.truncation ?? '', n: TM_INPUT.features.length, rows: TM_INPUT.rows.length, second: TM_INPUT.second.features.length, bytes: JSON.stringify(TM_INPUT).length }));
-    check('nearest EIA: every generator measured and sent (no cut at 8 MB)', !t.truncated && t.n === t.rows, JSON.stringify(t));
-    const counts = await nr2.frame.evaluate(() => document.querySelector('.nr-row.nr-stat')?.textContent);
-    check('nearest EIA: the threshold starts at 10 mi with most plants within', /Within: [\d,]+ \(9\d/.test(txt(counts)), txt(counts));
+  if (NEAREST_READY) {
+    const nr2 = await showViz(GEN, 'nearest');
+    cardOk('nearest (EIA generators → HIFLD substations)', nr2, 'drawn');
+    {
+      const t = await nr2.frame.evaluate(() => ({ truncated: TM_INPUT.truncated, truncation: TM_INPUT.truncation ?? '', n: TM_INPUT.features.length, rows: TM_INPUT.rows.length, second: TM_INPUT.second.features.length, bytes: JSON.stringify(TM_INPUT).length }));
+      check('nearest EIA: every generator measured and sent (no cut at 8 MB)', !t.truncated && t.n === t.rows, JSON.stringify(t));
+      const counts = await nr2.frame.evaluate(() => document.querySelector('.nr-row.nr-stat')?.textContent);
+      check('nearest EIA: the threshold starts at 10 mi with most plants within', /Within: [\d,]+ \(9\d/.test(txt(counts)), txt(counts));
+    }
+    await cardShot(nr2.card, 'templates-f-3-nearest-eia');
   }
-  await cardShot(nr2.card, 'templates-f-3-nearest-eia');
 
   // ── buildout-map: EIA generators by year, data-center moratoriums by month ──
   const bo = await showViz(GEN, 'buildout-map');
@@ -4766,7 +4980,7 @@ async function templatesFlows(ctx) {
   }
 
   // ── The chat: a tiled layer2 is refused with the hint; the model is told numbers only ──
-  {
+  if (NEAREST_READY) {
     const fx = body => {
       const ms = body?.messages ?? [];
       const tools = ms.slice(ms.map(m => m.role).lastIndexOf('user') + 1).filter(m => m.role === 'tool').length;
@@ -4801,7 +5015,7 @@ async function templatesFlows(ctx) {
     await p.click('#toolsMenuBtn');
     await p.click('[data-action="open-visualize"]');
     await p.waitForSelector('#td-viz:not([hidden]) .tv-layer', { timeout: 30000 });
-    for (const [tpl, lyr, name] of [['flow', GEN, 'templates-f-9-phone-flow'], ['nearest', 'osm-datacenters', 'templates-f-10-phone-nearest'], ['buildout-map', GEN, 'templates-f-11-phone-buildout']]) {
+    for (const [tpl, lyr, name] of [['flow', GEN, 'templates-f-9-phone-flow'], ['nearest', 'osm-datacenters', 'templates-f-10-phone-nearest'], ['buildout-map', GEN, 'templates-f-11-phone-buildout']].filter(([tpl]) => NEAREST_READY || tpl !== 'nearest')) {
       await p.selectOption('.tv-layer', lyr);
       await p.waitForTimeout(300);
       await p.$eval(`.tv-card[data-template="${tpl}"]`, b => { b.scrollIntoView({ block: 'center' }); b.click(); });

@@ -1,6 +1,6 @@
 # Weather Forecast
 
-**Live weather fields** worldwide — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout, formatted to the display units chosen in File ▸ Settings… (see [settings.md](../settings.md)); humidity and cloud cover are always %. Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 2× finer resolution (0.125°) as a lossy WebP.
+**Live weather fields** worldwide — temperature, wind, humidity, dew point, cloud cover, and pressure — rebuilt every ~3 hours. Panel group: **Conditions**. Continuous raster; each variable has its own hover readout, formatted to the display units chosen in File ▸ Settings (see [settings.md](../settings.md)); humidity and cloud cover are always %. Internally stored in SI units (Celsius, m/s, %, mb) at 0.25° resolution; displayed at upsampled 2× finer resolution (0.125°) as a lossy WebP.
 
 ## Source
 

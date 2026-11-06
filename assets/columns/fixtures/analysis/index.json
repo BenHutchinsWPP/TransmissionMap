@@ -1,0 +1,91 @@
+{
+ "version": 1,
+ "datasets": {},
+ "columns": {
+  "osm_substations_points": {
+   "path": "columns/",
+   "build_id": "fixture",
+   "file": {
+    "name": "osm_substations_points.36b46060.parquet",
+    "bytes": 2702,
+    "sha256": "36b46060bc828a8eb65207f067d9e016e1ff10d869fe4400dbb6bb7453a1eeb2",
+    "footer_len": 1883,
+    "rows": 6
+   },
+   "geometry": "point",
+   "id": {
+    "field": "fid",
+    "native": true
+   },
+   "columns": [
+    "fid",
+    "name",
+    "nominal_kv",
+    "px",
+    "py"
+   ],
+   "archive_sha256": null,
+   "snapshot": null,
+   "tiles_missing": null
+  },
+  "osm_transmission_lines": {
+   "path": "columns/",
+   "build_id": "fixture",
+   "file": {
+    "name": "osm_transmission_lines.9159ada3.parquet",
+    "bytes": 6282,
+    "sha256": "9159ada309b87125d4d440733683dddbb40ee730cbc50bc01cefd0d2550a05e7",
+    "footer_len": 4005,
+    "rows": 12
+   },
+   "geometry": "line",
+   "id": {
+    "field": "fid",
+    "native": true
+   },
+   "columns": [
+    "fid",
+    "admin1",
+    "countries",
+    "name",
+    "nominal_kv",
+    "states",
+    "length_km",
+    "px",
+    "py"
+   ],
+   "archive_sha256": null,
+   "snapshot": null,
+   "tiles_missing": null
+  },
+  "retail_territories": {
+   "path": "columns/",
+   "build_id": "fixture",
+   "file": {
+    "name": "retail_territories.949ca1d7.parquet",
+    "bytes": 3916,
+    "sha256": "949ca1d76ca847b3742c995e0222c067d32fdc561358fbe815bb54157ec0f8af",
+    "footer_len": 2645,
+    "rows": 6
+   },
+   "geometry": "polygon",
+   "id": {
+    "field": "id",
+    "native": false
+   },
+   "columns": [
+    "customers",
+    "id",
+    "name",
+    "retail",
+    "type",
+    "area_km2",
+    "px",
+    "py"
+   ],
+   "archive_sha256": null,
+   "snapshot": null,
+   "tiles_missing": null
+  }
+ }
+}

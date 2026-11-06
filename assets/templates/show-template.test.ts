@@ -123,8 +123,8 @@ describe('validateTemplateArgs', () => {
     expect(refusal({ ...base, title: 'a\nb' })).toMatch(/title/);
     expect(refusal({ ...base, area: { kind: 'states', codes: ['ZZZ'] } })).not.toBe('');
     expect(refusal({ ...base, where: [{ field: 'nope', op: '==', value: 1 }] })).not.toBe('');
-    expect(refusal({ template: 'composition', layer: 'osm-transmission-lines', area: { kind: 'states', codes: ['TX'] } }))
-      .toMatch(/tiled layer: tiled layers cover the current view only/);
+    expect(refusal({ template: 'lines-by-class', layer: 'osm-transmission-lines', area: { kind: 'states', codes: ['TX'] } }))
+      .toMatch(/tiled layer: lines-by-class covers the current view only/);
   });
 
   it('defaults: a facet-linked category, the first additive measure (else length / area, else count), top 10', () => {
@@ -143,8 +143,16 @@ describe('validateTemplateArgs', () => {
     state.where = { 'eia-generators': [{ field: 'nameplate_mw', op: '>=', value: 100 }] };
     const eia = validateTemplateArgs({ template: 'composition', layer: 'eia-generators' });
     expect(eia.ok && [eia.result.area, eia.result.where]).toEqual([state.area, state.where['eia-generators']]);
-    const lines = validateTemplateArgs({ template: 'composition', layer: 'osm-transmission-lines' });
+    const lines = validateTemplateArgs({ template: 'lines-by-class', layer: 'osm-transmission-lines' });
     expect(lines.ok && lines.result.area).toBeNull();
+    // A columns-file layer reads the whole dataset: it takes the Area (given or the view's), and formChoices says so.
+    const col = validateTemplateArgs({ template: 'composition', layer: 'osm-transmission-lines' });
+    expect(col.ok && col.result.area).toEqual(state.area);
+    const given = validateTemplateArgs({ template: 'composition', layer: 'osm-transmission-lines', area: { kind: 'states', codes: ['NM'] } });
+    expect(given.ok && given.result.area).toEqual({ kind: 'states', codes: ['NM'] });
+    const tpl = (id: string) => templateById(id)!;
+    expect(formChoices(tpl('composition'), 'osm-transmission-lines')!.tiled).toBe(false);
+    expect(formChoices(tpl('lines-by-class'), 'osm-transmission-lines')!.tiled).toBe(true);
     const none = validateTemplateArgs({ template: 'composition', layer: 'eia-generators', area: null, where: [] });
     expect(none.ok && [none.result.area, none.result.where]).toEqual([null, []]);
   });
@@ -474,6 +482,15 @@ describe('showTemplate', () => {
     const r = await showTemplate({ template: 'composition', layer: 'osm-transmission-lines' }, h);
     expect(r.ok && r.result).toMatchObject({ scope: 'view', complete: false, partial: true, tiersHidden: ['lt100'] });
     expect(h.calls[0][4].partial).toHaveLength(1);
+  });
+
+  it('a stride sample from the columns file shows on the card and in the result', async () => {
+    m.shape.mockResolvedValueOnce({ ok: true, result: { ...RESULT, layerId: 'osm-substations-points', by: [], measure: 'count', rows: [{ count: 30000 }], features: [], truncated: true, truncation: 'features: every 3rd of 90,000 kept (30,000)' } });
+    const h = host();
+    const r = await showTemplate({ template: 'density', layer: 'osm-substations-points' }, h);
+    expect(r.ok && r.result).toMatchObject({ truncated: expect.stringContaining('every 3rd of 90,000') });
+    expect(h.calls[0][4].partial).toHaveLength(1);
+    expect((h.calls[0][3] as TemplatePayload).truncation).toMatch(/every 3rd of 90,000/);
   });
 
   it("a vega template's card gets a Table of the injected rows, by the legend's labels and the kit's headings", async () => {

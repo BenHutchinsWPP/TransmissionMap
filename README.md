@@ -25,7 +25,7 @@ npm run dev
 # open http://localhost:5173
 ```
 
-The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from the `data-static` branch over `raw.githubusercontent.com`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md); for where each asset class is hosted, [docs/hosting-plan.md](docs/hosting-plan.md).
+The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from `data.wpptx.org`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md); for where each asset class is hosted, [docs/hosting-plan.md](docs/hosting-plan.md).
 
 ---
 

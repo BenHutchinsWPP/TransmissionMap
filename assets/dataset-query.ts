@@ -22,8 +22,17 @@
 //       zoom reaches, `ids` keeps only those features (featureId()), and every
 //       test runs through style-spec featureFilter (a lazy chunk, shared with
 //       ui-search.ts). A GeoJSON layer reads the whole file from
-//       state.sourcesData, loading it first with loadSource(). A vector-tile
-//       layer reads only the loaded tiles (querySourceFeatures, deduplicated on
+//       state.sourcesData, loading it first with loadSource().
+//       A vector-tile layer whose dataset is in COLUMNS_DATASETS (scope
+//       'dataset', the default) reads its columns file (columns/columns-read.ts,
+//       dynamic import): every row, pruned by row group on the Conditions of
+//       `where`, `area` and (asDrawn) the view's where and Area, each row tested
+//       as {type, id, properties}; rows carry a point on the feature
+//       (`pointOnly`), length/area come from the file's measures. `fragments`,
+//       `ids`, `scope: 'view'` and shapeRows `geometry: 'full'` stay on the view,
+//       and so does a call whose file is missing, stale, timed out or over
+//       COLUMNS_MAX_BYTES (`reason` says why). Any other vector-tile layer reads
+//       only the loaded tiles (querySourceFeatures, deduplicated on
 //       featureId()) and says so: `complete: false, reason`. With
 //       `fragments: true` the pieces of a tile-cut polygon are merged into one
 //       MultiPolygon per id (parts concatenated, not unioned).
@@ -34,23 +43,24 @@
 //       field-roles.ts (rolesOf),
 //       condition-compile.ts (toMapLibreFilter), view-validate.ts (validateWhere,
 //       validateArea), area-filter.ts (areaCondition), filters.ts
-//       (effectiveFilter), visibility.ts (wantedLayout, modeOf), feature-id.ts
+//       (effectiveFilter, whereOwnership), visibility.ts (wantedLayout, modeOf), feature-id.ts
 //       (featureId), layers/layer-data.ts (loadSource, liveGeneratedUtc),
 //       layers/layer-source.ts (layerSourceId), layers/base-filters.ts
 //       (BASE_LAYER_FILTERS), transmission.ts (OSM_TL_TIERS), buckets.ts
-//       (kvBucketOf), sandbox/geo-kit.ts (lengthKm, areaKm2, bbox);
-//       @maplibre/maplibre-gl-style-spec
-//       (featureFilter, dynamic import).
+//       (kvBucketOf), sandbox/geo-kit.ts (lengthKm, areaKm2, bbox),
+//       src/registry/columns.ts (COLUMNS_DATASETS); dynamic imports:
+//       @maplibre/maplibre-gl-style-spec (featureFilter) and
+//       columns/columns-read.ts (hyparquet stays out of the boot bundle).
 
 import type { FilterSpecification } from 'maplibre-gl';
 import { state } from './state.js';
-import { layerById } from '../src/registry/index.js';
+import { layerById, LAYERS } from '../src/registry/index.js';
 import { FIELD_SCHEMA, YEAR_IN_TEXT, type FieldDef, type FieldOp } from '../src/registry/field-schema.js';
 import { rolesOf, aliasFields, type RoleField, type Roles } from '../src/registry/field-roles.js';
 import { toMapLibreFilter, type Condition } from '../src/registry/condition-compile.js';
 import { validateWhere, validateArea } from '../src/registry/view-validate.js';
 import { areaCondition, ADMIN1_TO_STATE, type AreaFilter } from '../src/registry/area-filter.js';
-import { effectiveFilter } from './filters.js';
+import { effectiveFilter, whereOwnership } from './filters.js';
 import { wantedLayout, modeOf } from './visibility.js';
 import { featureId, type FeatureId } from './feature-id.js';
 import { loadSource, liveGeneratedUtc } from './layers/layer-data.js';
@@ -59,6 +69,8 @@ import { BASE_LAYER_FILTERS } from './layers/base-filters.js';
 import { OSM_TL_TIERS } from '../src/registry/transmission.js';
 import { kvBucketOf } from '../src/colors/buckets.js';
 import { bbox, lengthKm, areaKm2 } from './sandbox/geo-kit.js';
+import { COLUMNS_DATASETS } from '../src/registry/columns.js';
+import type { ColumnsEntry, ColumnsRow } from './columns/columns-read.js';
 
 /** Why a call was refused; `code` names the one refusal a caller acts on. */
 export type Refusal = { reason: string; code?: 'area-unreachable' };
@@ -93,11 +105,20 @@ export const DISPLAY_FIELDS: Record<string, string[]> = {
   "osm-pipelines-lines": ["name", "operator"],
   "osm-pipelines-points": ["pipeline", "operator"],
   "hifld-natgas-lines": ["name", "operator", "pipe_type"],
+  "railroads": ["RROWNER1", "SUBDIV", "BRANCH"],
   "hifld-natgas-points": ["name", "operator", "state"],
   "nrel-hydrothermal-points": ["name", "state", "county"],
   "mines": ["name", "commodity", "operator", "state"],
   "osm-datacenters": ["name", "operator", "addr_city", "addr_state"],
   "nerc-regions": ["region", "sub_nm", "code", "state"],
+  "control-areas": ["name", "state"],
+  "eia-ba": ["name"],
+  "admin1": ["name"],
+  "us-counties": ["NAME"],
+  "tribal-lands": ["name"],
+  "bia-tribal-lands": ["LARNAME"],
+  "boem-wind-leases": ["lease", "project"],
+  "wecc-paths": ["name"],
   "retail-territories": ["name", "state"],
   "padus": ["name"],
   "crithab": ["comname", "sciname"],
@@ -134,8 +155,10 @@ export type Description =
 export interface QueryOpts {
   where?: Condition[];
   area?: AreaFilter | null;
-  asDrawn?: boolean;       // also only what the map draws now (the visible map layers' filters)
-  ids?: readonly FeatureId[];  // only these features (featureId()), e.g. the selection's
+  asDrawn?: boolean;       // also only what the map's filters pass (the shown map layers' filters; a dataset-scope read ignores the zoom)
+  ids?: readonly FeatureId[];  // only these features (featureId()), e.g. the selection's; read from the view
+  /** 'dataset' (default): a COLUMNS_DATASETS layer reads its whole columns file; 'view': the loaded tiles. */
+  scope?: 'dataset' | 'view';
 }
 export interface RowOpts {
   fields?: string[];       // default: every allowed field
@@ -145,7 +168,8 @@ export interface RowOpts {
 }
 export interface AggregateOpts { groupBy: string; sum?: string[] }
 
-export interface QueryRow { id: FeatureId | null; props: Record<string, unknown>; feature: GeoJSON.Feature }
+/** `pointOnly`: a columns-file row, whose `feature.geometry` is a point on the feature, not its shape. */
+export interface QueryRow { id: FeatureId | null; props: Record<string, unknown>; feature: GeoJSON.Feature; pointOnly?: true }
 export interface Group { key: string | number | null; count: number; sums: Record<string, number> }
 interface Coverage { layerId: string; complete: boolean; reason?: string }
 export interface QueryResult extends Coverage { fields: string[]; rows: QueryRow[]; total: number; truncated: boolean }
@@ -212,8 +236,99 @@ export function describe(layerId: string): Outcome<Description> {
 }
 
 function coverage(layerId: string, kind: 'geojson' | 'pmtiles'): Coverage {
-  return kind === 'geojson' ? { layerId, complete: true }
-    : { layerId, complete: false, reason: 'vector tiles: only the features in the tiles loaded for the current view' };
+  return kind === 'geojson' || hasColumns(layerId) ? { layerId, complete: true } : viewCoverage(layerId);
+}
+
+const VIEW_REASON = 'vector tiles: only the features in the tiles loaded for the current view';
+const viewCoverage = (layerId: string, why?: string): Coverage =>
+  ({ layerId, complete: false, reason: why ? `${VIEW_REASON} (${why})` : VIEW_REASON });
+
+// ─── Columns files (scope 'dataset') ─────────────────────────────────────────
+/** The most a dataset-scope call may plan to read (compressed column chunks); above it the call uses the view. */
+export const COLUMNS_MAX_BYTES = 32 * 1024 * 1024;
+const COLUMNS_SET: ReadonlySet<string> = new Set(COLUMNS_DATASETS);
+
+/** Whether `layerId` is a vector-tile layer with a columns file (static: the same answer on every call). */
+export function hasColumns(layerId: string): boolean {
+  const e = layerById(layerId);
+  return !!e?.dataset && e.data?.kind !== 'geojson' && COLUMNS_SET.has(e.dataset);
+}
+
+/** Whether a call reads the columns file: a COLUMNS_DATASETS layer, unless it asks for the view, pieces or ids. */
+const datasetScope = (layerId: string, opts: { scope?: string; fragments?: boolean; ids?: unknown }) =>
+  opts.scope !== 'view' && !opts.fragments && !opts.ids && hasColumns(layerId);
+
+// Why a dataset-scope call answered from the view instead.
+const WHY: Record<string, string> = {
+  unavailable: 'no whole-dataset file is published for it',
+  offline: 'its whole-dataset file could not be reached',
+  'stale-build': 'its whole-dataset file is out of date',
+  timeout: 'its whole-dataset file timed out',
+  'unsafe-id': 'its whole-dataset file holds an id too large to read',
+  'too-large': `the whole-dataset read would exceed ${COLUMNS_MAX_BYTES / 1024 / 1024} MiB`,
+  error: 'its whole-dataset file could not be read',
+};
+class Miss extends Error { constructor(readonly reason: string) { super(reason); } }
+const whyOf = (e: unknown) => {
+  const r = (e as { reason?: unknown } | null)?.reason;
+  return WHY[typeof r === 'string' && Object.hasOwn(WHY, r) ? r : 'error'];
+};
+
+type ColumnsMod = typeof import('./columns/columns-read.js');
+let columnsMod: Promise<ColumnsMod> | null = null;
+const loadColumns = () => columnsMod ??= import('./columns/columns-read.js');
+
+/** `conds` and `filters`: everything the row test reads (what columnsFor reads columns for). */
+interface ColumnsCtx { mod: ColumnsMod; entry: ColumnsEntry; groups: number[]; conds: Condition[]; filters: unknown[] }
+
+/** The dataset's columns file and the row groups the `prune` Conditions leave (none when `nothing`);
+ *  throws a Miss or a read failure. */
+async function openColumns(
+  dataset: string, prune: Condition[], conds: Condition[], filters: unknown[], nothing = false,
+): Promise<ColumnsCtx> {
+  const mod = await loadColumns();
+  const e = await mod.columnsEntry(dataset);
+  if (!e.ok) throw new Miss(e.reason);
+  const md = await mod.columnsMeta(e.result);
+  return { mod, entry: e.result, groups: nothing ? [] : mod.pruneGroups(md, prune), conds, filters };
+}
+
+async function withinBudget(c: ColumnsCtx, columns: readonly string[]) {
+  if (await c.mod.plannedBytes(c.entry, c.groups, columns) > COLUMNS_MAX_BYTES) throw new Miss('too-large');
+}
+
+/** A columns row as the feature buildTest reads: `gtype` the file's geometry, the geometry a point on it (when read). */
+type ColumnsFeature = GeoJSON.Feature & { gtype: number; measures: Record<string, number> };
+function asFeature(r: ColumnsRow): ColumnsFeature {
+  const { px, py } = r.measures;
+  return { type: 'Feature', id: r.id, properties: r.properties, gtype: r.type, measures: r.measures,
+    geometry: px !== undefined && py !== undefined ? { type: 'Point', coordinates: [px, py] } : null as never };
+}
+
+let ownerOf: Record<string, string> | null = null;
+
+/** The call's own Conditions — `where` and the area's — which the row test applies (buildTest). */
+function ownConds(dataset: string, opts: QueryOpts): Condition[] {
+  const c = opts.area && areaCondition(dataset, opts.area);
+  return [...(opts.where ?? []), ...(c && c !== 'all' && !('unfiltered' in c) ? [c] : [])];
+}
+
+/** The Conditions every row a call passes must meet, for row-group pruning: `where`, the area's and, under
+ *  asDrawn, the view's where and Area — when every map layer of the layer obeys them (effectiveFilter ANDs
+ *  them unless a kept selection ORs its ids in). The legend parts are not pruned. */
+function pruneConds(dataset: string, layerId: string, opts: QueryOpts): Condition[] {
+  const out = ownConds(dataset, opts);
+  const add = (a: AreaFilter | null) => {
+    const c = a && areaCondition(dataset, a);
+    if (c && c !== 'all' && !('unfiltered' in c)) out.push(c);
+  };
+  if (opts.asDrawn) {
+    ownerOf ??= whereOwnership(LAYERS);
+    const owned = (layerById(layerId)?.mapLayerIds ?? []).every(id => ownerOf![id] === layerId);
+    const kept = state.sel?.mode !== 'isolate' && !!state.sel?.ids[layerId]?.length;
+    if (owned && !kept) { out.push(...(state.where[layerId] ?? [])); add(state.area); }
+  }
+  return out;
 }
 
 // ─── Pure core ───────────────────────────────────────────────────────────────
@@ -250,7 +365,7 @@ export function buildTest(
   const ids = opts.ids && new Set<FeatureId>(opts.ids);
   return (f) => {
     if (ids && !ids.has(featureId(layerId, f) as FeatureId)) return false;
-    const feature = { type: GEOMETRY_TYPE[f.geometry?.type] ?? 0, properties: f.properties ?? {}, id: f.id };
+    const feature = { type: (f as Partial<ColumnsFeature>).gtype ?? GEOMETRY_TYPE[f.geometry?.type] ?? 0, properties: f.properties ?? {}, id: f.id };
     if (own && !own.filter({ zoom }, feature as never)) return false;
     return !drawnTests || drawnTests.some(t => !t || t.filter({ zoom }, feature as never));
   };
@@ -271,25 +386,30 @@ const compareValues = (a: unknown, b: unknown): number => {
   return String(a).localeCompare(String(b));
 };
 
+/** The checked fields and limit of a row query, or why not. */
+function rowPlan(layerId: string, opts: RowOpts): { fields: string[]; limit: number } | string {
+  const fields = opts.fields ?? allowedFields(layerId);
+  const limit = opts.limit ?? QUERY_MAX_ROWS;
+  if (!Number.isInteger(limit) || limit < 1 || limit > QUERY_MAX_ROWS) return `limit must be a whole number from 1 to ${QUERY_MAX_ROWS}`;
+  return checkFields(layerId, [...fields, ...(opts.orderBy ? [opts.orderBy.field] : [])]) ?? { fields, limit };
+}
+
+/** The row order of `orderBy` over properties: numbers as numbers, empties last either way. */
+const propOrder = ({ field, desc }: NonNullable<RowOpts['orderBy']>) =>
+  (a: { properties?: GeoJSON.GeoJsonProperties }, b: { properties?: GeoJSON.GeoJsonProperties }) => {
+    const av = a.properties?.[field], bv = b.properties?.[field];
+    const c = compareValues(av, bv);
+    return desc && !isEmpty(av) && !isEmpty(bv) ? -c : c;
+  };
+
 export function runQuery(
   layerId: string, features: readonly GeoJSON.Feature[], test: (f: GeoJSON.Feature) => boolean, opts: RowOpts = {},
 ): Outcome<Omit<QueryResult, keyof Coverage>> {
-  const fields = opts.fields ?? allowedFields(layerId);
-  const limit = opts.limit ?? QUERY_MAX_ROWS;
-  if (!Number.isInteger(limit) || limit < 1 || limit > QUERY_MAX_ROWS) {
-    return { ok: false, reason: `limit must be a whole number from 1 to ${QUERY_MAX_ROWS}` };
-  }
-  const err = checkFields(layerId, [...fields, ...(opts.orderBy ? [opts.orderBy.field] : [])]);
-  if (err) return { ok: false, reason: err };
+  const p = rowPlan(layerId, opts);
+  if (typeof p === 'string') return { ok: false, reason: p };
+  const { fields, limit } = p;
   let hits = features.filter(test);
-  if (opts.orderBy) {
-    const { field, desc } = opts.orderBy;
-    hits = [...hits].sort((a, b) => {
-      const av = a.properties?.[field], bv = b.properties?.[field];
-      const c = compareValues(av, bv);
-      return desc && !isEmpty(av) && !isEmpty(bv) ? -c : c;
-    });
-  }
+  if (opts.orderBy) hits = [...hits].sort(propOrder(opts.orderBy));
   const rows = hits.slice(0, limit).map(f => ({
     id: featureId(layerId, f) ?? null,
     props: Object.fromEntries(fields.map(k => [k, f.properties?.[k] ?? null])),
@@ -301,20 +421,27 @@ export function runQuery(
 export function runAggregate(
   layerId: string, features: readonly GeoJSON.Feature[], test: (f: GeoJSON.Feature) => boolean, opts: AggregateOpts,
 ): Outcome<Omit<AggregateResult, keyof Coverage>> {
+  const acc = aggregator(layerId, opts);
+  if (typeof acc === 'string') return { ok: false, reason: acc };
+  for (const f of features) if (test(f)) acc.add(f);
+  return { ok: true, result: acc.result() };
+}
+
+/** A group-by accumulator over passing features (one at a time), or why the options are refused. */
+function aggregator(layerId: string, opts: AggregateOpts): { add(f: GeoJSON.Feature): void; result(): Omit<AggregateResult, keyof Coverage> } | string {
   const q = queryable(layerId);
-  if ('reason' in q) return { ok: false, reason: q.reason };
+  if ('reason' in q) return q.reason;
   const sum = opts.sum ?? [];
   const err = checkFields(layerId, [opts.groupBy, ...sum]);
-  if (err) return { ok: false, reason: err };
+  if (err) return err;
   const schema = FIELD_SCHEMA[q.dataset];
   const notNumber = sum.find(f => schema[f]?.type !== 'number');
-  if (notNumber) return { ok: false, reason: `"${notNumber}" is not a number field, so it cannot be summed` };
+  if (notNumber) return `"${notNumber}" is not a number field, so it cannot be summed`;
   // A region list (|TX|NM|) counts the feature once under each of its codes.
   const list = !!schema[opts.groupBy]?.list;
   const groups = new Map<string | number | null, Group>();
   let total = 0;
-  for (const f of features) {
-    if (!test(f)) continue;
+  const add = (f: GeoJSON.Feature) => {
     total++;
     const raw = f.properties?.[opts.groupBy];
     const keys: (string | number | null)[] = list && typeof raw === 'string'
@@ -329,10 +456,13 @@ export function runAggregate(
         if (Number.isFinite(n)) g.sums[s] += n;
       }
     }
-  }
-  const order = sum[0];
-  const sorted = [...groups.values()].sort((a, b) => order ? b.sums[order] - a.sums[order] : b.count - a.count);
-  return { ok: true, result: { groupBy: opts.groupBy, sum, groups: sorted, total } };
+  };
+  const result = () => {
+    const order = sum[0];
+    const sorted = [...groups.values()].sort((a, b) => order ? b.sums[order] - a.sums[order] : b.count - a.count);
+    return { groupBy: opts.groupBy, sum, groups: sorted, total };
+  };
+  return { add, result };
 }
 
 // ─── Map-facing ──────────────────────────────────────────────────────────────
@@ -344,8 +474,10 @@ async function loadFeatureFilter(): Promise<FeatureFilterFn> {
 /** The current filters of `layerId`'s map layers that the map shows now
  *  (wantedLayout: a mode-hidden heat or icon layer does not count, nor one
  *  outside its minzoom/maxzoom at the current zoom); [] when the layer is off. */
-export function drawnFilters(layerId: string): (FilterSpecification | null)[] {
-  return shownMapLayers(layerId).filter(inZoom).map(id => effectiveFilter(id));
+export function drawnFilters(layerId: string, atZoom = true): (FilterSpecification | null)[] {
+  const second = layerById(layerId)?.drawnOnly ?? [];
+  return shownMapLayers(layerId).filter(id => !second.includes(id) && (atZoom ? inZoom(id) : drawsFeatures(layerId, id)))
+    .map(id => effectiveFilter(id));
 }
 
 function shownMapLayers(layerId: string): string[] {
@@ -412,43 +544,154 @@ export function withPolygonParts(base: GeoJSON.Feature, piece: GeoJSON.Feature):
   return { ...base, geometry: { type: 'MultiPolygon', coordinates: [...a, ...b] } };
 }
 
-async function prepare(layerId: string, opts: QueryOpts & { fragments?: boolean }): Promise<Refusal | {
-  test: (f: GeoJSON.Feature) => boolean; features: GeoJSON.Feature[]; cov: Coverage;
+/** The feature test for `opts` and, under asDrawn, the drawn filters it holds (at the map's zoom); or why there is none.
+ *  `dataset`: the same for a columns-file read, where "as drawn" is the layer's filters over the whole dataset at any zoom. */
+async function compileTest(layerId: string, opts: QueryOpts): Promise<Refusal | {
+  test: (f: GeoJSON.Feature) => boolean; drawn?: (FilterSpecification | null)[];
+  dataset: { test: (f: GeoJSON.Feature) => boolean; drawn?: (FilterSpecification | null)[] };
 }> {
   const q = queryable(layerId);
   if ('reason' in q) return q;
   const compile = await loadFeatureFilter();
-  const test = buildTest(layerId, opts, compile, state.map?.getZoom() ?? 0, opts.asDrawn ? drawnFilters(layerId) : undefined);
+  const drawn = opts.asDrawn ? drawnFilters(layerId) : undefined;
+  // A layer with `drawnOnly` map layers reads only the features its other map layers draw.
+  const own = drawn ?? (layerById(layerId)?.drawnOnly ? baseFilters(layerId) : undefined);
+  const test = buildTest(layerId, opts, compile, state.map?.getZoom() ?? 0, own);
   if (typeof test !== 'function') return test;
-  const features = await featuresOf(layerId, opts.fragments);
-  if (typeof features === 'string') return { reason: features };
-  const entry = layerById(layerId)!;
-  const cov = coverage(layerId, entry.data!.kind === 'geojson' ? 'geojson' : 'pmtiles');
+  if (!opts.asDrawn || !datasetScope(layerId, opts)) return { test, drawn, dataset: { test, drawn } };
+  const all = drawnFilters(layerId, false);
+  const dtest = buildTest(layerId, opts, compile, state.map?.getZoom() ?? 0, all);
+  return typeof dtest === 'function' ? { test, drawn, dataset: { test: dtest, drawn: all } } : dtest;
+}
+
+/** `cov` with the asDrawn note: the layer is off, or not drawn at this zoom. */
+function drawnCoverage(cov: Coverage, layerId: string, opts: QueryOpts, dataset = false): Coverage {
   if (opts.asDrawn && !state.layerVisibility[layerId]) cov.reason = `"${layerId}" is off, so the map draws none of it`;
-  else if (opts.asDrawn && !drawnFilters(layerId).length && shownMapLayers(layerId).length) {
+  else if (opts.asDrawn && !dataset && !drawnFilters(layerId).length && shownMapLayers(layerId).length) {
     cov.reason = `"${layerId}" is not drawn at zoom ${state.map!.getZoom().toFixed(1)}`;
   }
-  return { test, features, cov };
+  return cov;
+}
+
+/** `run` over the layer's columns file (scope 'dataset'): its result, or why the call goes to the view. */
+async function fromColumns<T>(
+  layerId: string, opts: QueryOpts, drawn: (FilterSpecification | null)[] | undefined, run: (c: ColumnsCtx) => Promise<T>,
+): Promise<{ result: T } | { why: string }> {
+  const ds = layerById(layerId)!.dataset!;
+  try {
+    // asDrawn with nothing drawn passes no row: no row group is read.
+    const c = await openColumns(ds, pruneConds(ds, layerId, opts), ownConds(ds, opts), drawn ?? [], !!drawn && !drawn.length);
+    return { result: await run(c) };
+  } catch (e) {
+    return { why: whyOf(e) };
+  }
+}
+
+/** The features a view-scope call reads, and its coverage (`why`: the reason a dataset-scope call is here). */
+async function viewFeatures(layerId: string, opts: QueryOpts & { fragments?: boolean }, why?: string): Promise<Refusal | {
+  features: GeoJSON.Feature[]; cov: Coverage;
+}> {
+  const features = await featuresOf(layerId, opts.fragments);
+  if (typeof features === 'string') return { reason: features };
+  const geojson = layerById(layerId)!.data!.kind === 'geojson';
+  return { features, cov: drawnCoverage(geojson ? { layerId, complete: true } : viewCoverage(layerId, why), layerId, opts) };
+}
+
+/** Dataset-scope rows in two phases: the test and sort columns for every row of the kept groups, then the
+ *  fields (and the point) for the kept rows only. Unsorted, the first `limit` passing rows in file order. */
+async function queryColumns(
+  layerId: string, c: ColumnsCtx, test: (f: GeoJSON.Feature) => boolean, opts: RowOpts, plan: { fields: string[]; limit: number },
+): Promise<Omit<QueryResult, keyof Coverage>> {
+  const { mod, entry } = c;
+  const order = opts.orderBy && propOrder(opts.orderBy);
+  const first = mod.columnsFor(entry, c.conds, c.filters, opts.orderBy ? [opts.orderBy.field] : []);
+  const rest = mod.columnsFor(entry, [], [], [...plan.fields, 'px', 'py'], { rows: true });
+  await withinBudget(c, first);
+  let total = 0;
+  const kept = await mod.readTwoPhase(entry, c.groups, first, rest, async rows => {
+    let keep: ColumnsRow[] = [];
+    for await (const r of rows) {
+      if (!test(asFeature(r))) continue;
+      total++;
+      if (!order) { if (keep.length < plan.limit) keep.push(r); continue; }
+      keep.push(r);
+      // A stable sort keeps file order among equals, as runQuery's sort of every hit does.
+      if (keep.length >= 2 * plan.limit) keep = keep.sort(order).slice(0, plan.limit);
+    }
+    return order ? keep.sort(order).slice(0, plan.limit) : keep;
+  });
+  const rows = kept.map((r): QueryRow => {
+    const f = asFeature(r);
+    return {
+      id: featureId(layerId, f) ?? null,
+      props: Object.fromEntries(plan.fields.map(k => [k, r.properties[k] ?? null])),
+      feature: { type: 'Feature', id: f.id, geometry: f.geometry, properties: f.properties },
+      pointOnly: true,
+    };
+  });
+  return { fields: plan.fields, rows, total, truncated: total > rows.length };
 }
 
 export async function query(layerId: string, opts: QueryOpts & RowOpts = {}): Promise<Outcome<QueryResult>> {
-  const p = await prepare(layerId, opts);
+  const p = await compileTest(layerId, opts);
   if ('reason' in p) return { ok: false, ...p };
-  const r = runQuery(layerId, p.features, p.test, opts);
-  return r.ok ? { ok: true, result: { ...p.cov, ...r.result } } : r;
+  let why: string | undefined;
+  if (datasetScope(layerId, opts)) {
+    const plan = rowPlan(layerId, opts);
+    if (typeof plan === 'string') return { ok: false, reason: plan };
+    const r = await fromColumns(layerId, opts, p.dataset.drawn, c => queryColumns(layerId, c, p.dataset.test, opts, plan));
+    if ('result' in r) return { ok: true, result: { ...drawnCoverage({ layerId, complete: true }, layerId, opts, true), ...r.result } };
+    why = r.why;
+  }
+  const v = await viewFeatures(layerId, opts, why);
+  if ('reason' in v) return { ok: false, ...v };
+  const r = runQuery(layerId, v.features, p.test, opts);
+  return r.ok ? { ok: true, result: { ...v.cov, ...r.result } } : r;
 }
 
 export async function count(layerId: string, opts: QueryOpts = {}): Promise<Outcome<CountResult>> {
-  const p = await prepare(layerId, opts);
+  const p = await compileTest(layerId, opts);
   if ('reason' in p) return { ok: false, ...p };
-  return { ok: true, result: { ...p.cov, total: p.features.filter(p.test).length } };
+  let why: string | undefined;
+  if (datasetScope(layerId, opts)) {
+    const r = await fromColumns(layerId, opts, p.dataset.drawn, async c => {
+      const cols = c.mod.columnsFor(c.entry, c.conds, c.filters, []);
+      await withinBudget(c, cols);
+      let total = 0;
+      for await (const row of c.mod.readGroups(c.entry, c.groups, cols)) if (p.dataset.test(asFeature(row))) total++;
+      return total;
+    });
+    if ('result' in r) return { ok: true, result: { ...drawnCoverage({ layerId, complete: true }, layerId, opts, true), total: r.result } };
+    why = r.why;
+  }
+  const v = await viewFeatures(layerId, opts, why);
+  if ('reason' in v) return { ok: false, ...v };
+  return { ok: true, result: { ...v.cov, total: v.features.filter(p.test).length } };
 }
 
 export async function aggregate(layerId: string, opts: QueryOpts & AggregateOpts): Promise<Outcome<AggregateResult>> {
-  const p = await prepare(layerId, opts);
+  const p = await compileTest(layerId, opts);
   if ('reason' in p) return { ok: false, ...p };
-  const r = runAggregate(layerId, p.features, p.test, opts);
-  return r.ok ? { ok: true, result: { ...p.cov, ...r.result } } : r;
+  let why: string | undefined;
+  if (datasetScope(layerId, opts)) {
+    const acc = aggregator(layerId, opts);
+    if (typeof acc === 'string') return { ok: false, reason: acc };
+    const r = await fromColumns(layerId, opts, p.dataset.drawn, async c => {
+      const cols = c.mod.columnsFor(c.entry, c.conds, c.filters, [opts.groupBy, ...(opts.sum ?? [])]);
+      await withinBudget(c, cols);
+      for await (const row of c.mod.readGroups(c.entry, c.groups, cols)) {
+        const f = asFeature(row);
+        if (p.dataset.test(f)) acc.add(f);
+      }
+      return acc.result();
+    });
+    if ('result' in r) return { ok: true, result: { ...drawnCoverage({ layerId, complete: true }, layerId, opts, true), ...r.result } };
+    why = r.why;
+  }
+  const v = await viewFeatures(layerId, opts, why);
+  if ('reason' in v) return { ok: false, ...v };
+  const r = runAggregate(layerId, v.features, p.test, opts);
+  return r.ok ? { ok: true, result: { ...v.cov, ...r.result } } : r;
 }
 
 // ─── Template data pass ──────────────────────────────────────────────────────
@@ -467,8 +710,10 @@ export interface ShapeOpts {
   bins?: { field: string; scale?: BinScale | 'auto'; /** Aim for about this many bins (2–60; default 20). */ buckets?: number };
   geometry?: 'none' | 'point' | 'full';   // features beside the rows (default none)
   limitFeatures?: number;                 // 1–SHAPE_MAX_FEATURES, default SHAPE_MAX_FEATURES
-  /** A layer read whole (a template's second layer): a tiled layer is refused, and features are never cut. */
+  /** A layer read whole (a template's second layer): a tiled layer is refused (unless read from its columns file), and features are never cut. */
   complete?: true;
+  /** 'dataset' (default): a COLUMNS_DATASETS layer reads its whole columns file; 'view': the loaded tiles. */
+  scope?: 'dataset' | 'view';
 }
 export type BinScale = 'lin' | 'log';
 /** The binned values' own quantiles (nearest rank over every value, not the bins): n values, p10, median, p90. */
@@ -477,7 +722,7 @@ export type ShapeKey = string | number | null;
 export interface ShapeRow { [field: string]: ShapeKey | undefined; count: number; sum?: number }
 export interface ShapeResult {
   layerId: string;
-  scope: 'area' | 'view';                 // GeoJSON: the whole file (∧ area); tiles: the current view
+  scope: 'area' | 'view';                 // GeoJSON or a columns file: the whole layer (∧ area); tiles: the current view
   by: string[]; measure: string; unit?: string; time?: string; timeBin?: 'year' | 'month';
   /** Numeric bins: row `bin` i is [edges[i], edges[i + 1]) (also its `lo` / `hi`); a feature without a value is in the row with `bin: null`. */
   bins?: { field: string; scale: BinScale; edges: number[]; stats?: BinStats };
@@ -557,8 +802,8 @@ function planShape(layerId: string, opts: ShapeOpts): ShapePlan | string {
     if (!['auto', 'lin', 'log'].includes(scale)) return `bins.scale must be "auto", "lin" or "log"`;
     if (b.buckets !== undefined && (!Number.isInteger(b.buckets) || b.buckets < 2 || b.buckets > 60)) return 'bins.buckets must be a whole number from 2 to 60';
     const name = b.field;
-    const valueOf = name === 'length_km' ? (f: GeoJSON.Feature) => f.geometry ? lengthKm(f.geometry as never) : null
-      : name === 'area_km2' ? (f: GeoJSON.Feature) => f.geometry ? areaKm2(f.geometry as never) : null
+    const valueOf = name === 'length_km' ? measureOf('length_km', lengthKm)
+      : name === 'area_km2' ? measureOf('area_km2', areaKm2)
       : roleOf(name)?.role === 'time' ? (f: GeoJSON.Feature) => yearOf(f.properties?.[name])
       : (f: GeoJSON.Feature) => numberOf(f.properties?.[name]);
     bins = { field: name, scale, ...(b.buckets !== undefined && { buckets: b.buckets }), valueOf };
@@ -568,8 +813,8 @@ function planShape(layerId: string, opts: ShapeOpts): ShapePlan | string {
   const limit = opts.limitFeatures ?? SHAPE_MAX_FEATURES;
   if (!Number.isInteger(limit) || limit < 1 || limit > SHAPE_MAX_FEATURES) return `limitFeatures must be a whole number from 1 to ${SHAPE_MAX_FEATURES}`;
   const sumOf = measure === 'count' ? null
-    : measure === 'length_km' ? (f: GeoJSON.Feature) => f.geometry ? lengthKm(f.geometry as never) : 0
-    : measure === 'area_km2' ? (f: GeoJSON.Feature) => f.geometry ? areaKm2(f.geometry as never) : 0
+    : measure === 'length_km' || measure === 'area_km2'
+      ? (f: GeoJSON.Feature) => measureOf(measure, measure === 'length_km' ? lengthKm : areaKm2)(f) ?? 0
     : (f: GeoJSON.Feature) => { const n = Number(f.properties?.[measure]); return Number.isFinite(n) ? n : 0; };
   const unit = measure === 'length_km' ? 'km' : measure === 'area_km2' ? 'km²' : roleOf(measure)?.unit;
   const alias = new Set(aliasFields(roles).map(f => f.name));
@@ -586,6 +831,13 @@ function planShape(layerId: string, opts: ShapeOpts): ShapePlan | string {
     ...(bins && { bins }), geometry, limit: opts.complete ? Infinity : limit, label: roles.label,
   };
 }
+
+/** A derived measure of a feature: a columns row's own (`measures`; its geometry is only a point), else from the geometry. */
+const measureOf = (name: 'length_km' | 'area_km2', fromGeometry: (g: never) => number) => (f: GeoJSON.Feature): number | null => {
+  const ms = (f as Partial<ColumnsFeature>).measures;
+  if (ms) return ms[name] ?? null;
+  return f.geometry ? fromGeometry(f.geometry as never) : null;
+};
 
 /** A number as a number condition reads it (condition-compile.ts: a value, then to-number): none, null
  *  and '' have none; anything else is Number(v) when finite, else null (no finite range matches it). */
@@ -710,78 +962,99 @@ function centre(g: GeoJSON.Geometry): GeoJSON.Point | null {
  *  pass: a count and (for a measure) a sum per row, totals counting each
  *  feature once, and up to `limit` features carrying the binned values. */
 function runShape(layerId: string, features: readonly GeoJSON.Feature[], test: (f: GeoJSON.Feature) => boolean, plan: ShapePlan) {
-  const groups = new Map<string, ShapeRow>();
+  const acc = shapeAccumulator(plan);
   const out: GeoJSON.Feature[] | null = plan.geometry === 'none' ? null : [];
+  for (const f of features) {
+    if (!test(f) || (plan.usOnly && !usTagged(f))) continue;
+    acc.add(f);
+    if (out && out.length < plan.limit) { const g = shapeFeature(layerId, f, plan); if (g) out.push(g); }
+  }
+  return acc.finish(out, out && acc.count() > out.length ? `features: ${out.length} of ${acc.count()} kept` : undefined);
+}
+
+/** A feature beside the rows: the full geometry or its centre, the label, the by / time / bin / measure values. */
+function shapeFeature(layerId: string, f: GeoJSON.Feature, plan: ShapePlan): GeoJSON.Feature | null {
+  const geometry = !f.geometry ? null : plan.geometry === 'full' ? f.geometry : centre(f.geometry);
+  if (!geometry) return null;
+  const p = f.properties ?? {};
+  const props: Record<string, unknown> = { [plan.label]: p[plan.label] ?? null };
+  for (const s of plan.by) {
+    props[s.name] = s.bin ? s.bin(p[s.name]) : s.map ? `|${keysOf(p[s.read!], s).join('|')}|` : p[s.name] ?? null;
+  }
+  if (plan.time) props[plan.time] = plan.timeKey(p[plan.time]);
+  if (plan.bins) props[plan.bins.field] = plan.bins.valueOf(f);
+  if (plan.sumOf) props[plan.measure] = plan.sumOf(f);
+  return { type: 'Feature', id: featureId(layerId, f), geometry, properties: props };
+}
+
+/** The rows of a shape pass, fed one passing feature at a time. Each feature keeps three numbers (its
+ *  key combination, binned value and measure) until finish(), since bin edges need every value first. */
+function shapeAccumulator(plan: ShapePlan) {
   const [b0, b1] = plan.by;
-  let count = 0, sum = 0;
-  // Bins: the passing features' values first (the edges need them all), then one grouping pass over the same features.
-  let passing: readonly GeoJSON.Feature[] = features;
-  let isIn = plan.usOnly ? (f: GeoJSON.Feature) => test(f) && usTagged(f) : test;
-  let binned: { values: (number | null)[]; scale: BinScale; edges: number[] } | null = null;
-  if (plan.bins) {
-    passing = features.filter(isIn);
-    isIn = () => true;
-    const values = passing.map(plan.bins.valueOf);
-    binned = { values, ...binEdges(values.filter((v): v is number => v !== null), plan.bins.scale, plan.bins.buckets) };
-  }
-  let n = -1;
-  for (const f of passing) {
-    n++;
-    if (!isIn(f)) continue;
-    const p = f.properties ?? {};
-    const m = plan.sumOf ? plan.sumOf(f) : 0;
-    count++; sum += m;
-    const year = plan.time ? plan.timeKey(p[plan.time]) : null;
-    let bin: number | null = null;
-    if (binned) { const v = binned.values[n]; const i = v === null ? -1 : binIndex(binned.edges, v); bin = i < 0 ? null : i; }
-    const k0 = b0 ? keysOf(p[b0.read ?? b0.name], b0) : NULL_KEY, k1 = b1 ? keysOf(p[b1.read ?? b1.name], b1) : NULL_KEY;
-    for (const a of k0) {
-      for (const b of k1) {
-        const key = `${a}\u0001${b}\u0001${year}\u0001${bin}`;
-        let row = groups.get(key);
-        if (!row) {
-          row = { count: 0 } as ShapeRow;
-          if (b0) row[b0.name] = a;
-          if (b1) row[b1.name] = b;
-          if (plan.time) row[plan.time] = year;
-          if (binned) {
-            row.bin = bin;
-            if (bin !== null) { row.lo = binned.edges[bin]; row.hi = binned.edges[bin + 1]; }
-          }
-          if (plan.sumOf) row.sum = 0;
-          groups.set(key, row);
-        }
-        row.count++;
-        if (plan.sumOf) row.sum! += m;
-      }
-    }
-    if (out && out.length < plan.limit && f.geometry) {
-      const geometry = plan.geometry === 'full' ? f.geometry : centre(f.geometry);
-      if (!geometry) continue;
-      const props: Record<string, unknown> = { [plan.label]: p[plan.label] ?? null };
-      for (const s of plan.by) {
-        props[s.name] = s.bin ? s.bin(p[s.name]) : s.map ? `|${keysOf(p[s.read!], s).join('|')}|` : p[s.name] ?? null;
-      }
-      if (plan.time) props[plan.time] = year;
-      if (binned) props[plan.bins!.field] = binned.values[n];
-      if (plan.sumOf) props[plan.measure] = m;
-      out.push({ type: 'Feature', id: featureId(layerId, f), geometry, properties: props });
-    }
-  }
-  const rows = [...groups.values()];
-  const stats = binned && binStats(binned.values);
-  const t = plan.time;
-  rows.sort((x, y) => (t ? compareValues(x[t], y[t]) : 0) || (binned ? compareValues(x.bin, y.bin) : 0) || (y.sum ?? y.count) - (x.sum ?? x.count));
-  const cut: string[] = [];
-  if (rows.length > SHAPE_MAX_ROWS) cut.push(`rows: the first ${SHAPE_MAX_ROWS} of ${rows.length} groups kept`);
-  if (out && count > out.length) cut.push(`features: ${out.length} of ${count} kept`);
+  const combos = new Map<string, number>();
+  const comboKeys: { k0: ShapeKey[]; k1: ShapeKey[]; year: ShapeKey }[] = [];
+  const combo: number[] = [], values: (number | null)[] = [], ms: number[] = [];
   return {
-    by: plan.by.map(s => s.name), measure: plan.measure, ...(plan.unit && { unit: plan.unit }),
-    ...(plan.time && { time: plan.time, timeBin: plan.timeBin }),
-    ...(binned && { bins: { field: plan.bins!.field, scale: binned.scale, edges: binned.edges, ...(stats && { stats }) } }),
-    rows: rows.slice(0, SHAPE_MAX_ROWS), ...(out && { features: out }), ...(plan.usOnly && { usOnly: true as const }),
-    totals: { count, ...(plan.sumOf && { sum }) },
-    truncated: cut.length > 0, ...(cut.length && { truncation: cut.join('; ') }),
+    count: () => combo.length,
+    add(f: GeoJSON.Feature) {
+      const p = f.properties ?? {};
+      const k0 = b0 ? keysOf(p[b0.read ?? b0.name], b0) : NULL_KEY, k1 = b1 ? keysOf(p[b1.read ?? b1.name], b1) : NULL_KEY;
+      const year = plan.time ? plan.timeKey(p[plan.time]) : null;
+      const key = `${k0.join('\u0002')}\u0001${k1.join('\u0002')}\u0001${year}`;   // as fine as finish()'s row key
+      let c = combos.get(key);
+      if (c === undefined) { combos.set(key, c = comboKeys.length); comboKeys.push({ k0, k1, year }); }
+      combo.push(c);
+      if (plan.bins) values.push(plan.bins.valueOf(f));
+      ms.push(plan.sumOf ? plan.sumOf(f) : 0);
+    },
+    finish(features: GeoJSON.Feature[] | null, featureCut?: string) {
+      const groups = new Map<string, ShapeRow>();
+      const binned = plan.bins
+        ? { values, ...binEdges(values.filter((v): v is number => v !== null), plan.bins.scale, plan.bins.buckets) } : null;
+      let sum = 0;
+      for (let n = 0; n < combo.length; n++) {
+        const { k0, k1, year } = comboKeys[combo[n]];
+        const m = ms[n];
+        sum += m;
+        let bin: number | null = null;
+        if (binned) { const v = binned.values[n]; const i = v === null ? -1 : binIndex(binned.edges, v); bin = i < 0 ? null : i; }
+        for (const a of k0) {
+          for (const b of k1) {
+            const key = `${a}\u0001${b}\u0001${year}\u0001${bin}`;
+            let row = groups.get(key);
+            if (!row) {
+              row = { count: 0 } as ShapeRow;
+              if (b0) row[b0.name] = a;
+              if (b1) row[b1.name] = b;
+              if (plan.time) row[plan.time] = year;
+              if (binned) {
+                row.bin = bin;
+                if (bin !== null) { row.lo = binned.edges[bin]; row.hi = binned.edges[bin + 1]; }
+              }
+              if (plan.sumOf) row.sum = 0;
+              groups.set(key, row);
+            }
+            row.count++;
+            if (plan.sumOf) row.sum! += m;
+          }
+        }
+      }
+      const rows = [...groups.values()];
+      const stats = binned && binStats(binned.values);
+      const t = plan.time;
+      rows.sort((x, y) => (t ? compareValues(x[t], y[t]) : 0) || (binned ? compareValues(x.bin, y.bin) : 0) || (y.sum ?? y.count) - (x.sum ?? x.count));
+      const cut: string[] = [];
+      if (rows.length > SHAPE_MAX_ROWS) cut.push(`rows: the first ${SHAPE_MAX_ROWS} of ${rows.length} groups kept`);
+      if (featureCut) cut.push(featureCut);
+      return {
+        by: plan.by.map(s => s.name), measure: plan.measure, ...(plan.unit && { unit: plan.unit }),
+        ...(plan.time && { time: plan.time, timeBin: plan.timeBin }),
+        ...(binned && { bins: { field: plan.bins!.field, scale: binned.scale, edges: binned.edges, ...(stats && { stats }) } }),
+        rows: rows.slice(0, SHAPE_MAX_ROWS), ...(features && { features }), ...(plan.usOnly && { usOnly: true as const }),
+        totals: { count: combo.length, ...(plan.sumOf && { sum }) },
+        truncated: cut.length > 0, ...(cut.length && { truncation: cut.join('; ') }),
+      };
+    },
   };
 }
 
@@ -899,10 +1172,13 @@ export function mergeViewPieces(layerId: string, pieces: Iterable<GeoJSON.Featur
 
 /** Whether map layer `mlId` draws the layer's own features: any non-symbol
  *  layer, or a symbol layer the registry makes clickable (`clickPriority`:
- *  an icon layer such as osm-gen-circles); a label companion is not. */
+ *  an icon layer such as osm-gen-circles); a label companion is not, nor a
+ *  layer the registry lists in `drawnOnly` (WECC corridors). */
 function drawsFeatures(layerId: string, mlId: string): boolean {
+  const def = layerById(layerId);
+  if (def?.drawnOnly?.includes(mlId)) return false;
   const type = (state.map?.getLayer(mlId) as { type?: string } | undefined)?.type;
-  return type !== 'symbol' || Object.hasOwn(layerById(layerId)?.clickPriority ?? {}, mlId);
+  return type !== 'symbol' || Object.hasOwn(def?.clickPriority ?? {}, mlId);
 }
 
 /** The base filters (each map layer's own inline filter, null — pass-all — where
@@ -921,12 +1197,52 @@ function hiddenTiers(shown: string[], drawn: string[]): string[] | undefined {
   return OSM_TL_TIERS.map(t => t.id).filter(t => !on.has(t) && shown.some(id => tierOf(id) === t));
 }
 
+/** The shape pass over a columns file: the grouping columns of every passing row in one read; then, for
+ *  point features, every k-th passing row (k = ceil(passing / limit), so the sample spans the whole result)
+ *  read again with its label and point. */
+async function shapeColumns(
+  layerId: string, c: ColumnsCtx, test: (f: GeoJSON.Feature) => boolean, plan: ShapePlan, baseFilters: unknown[],
+): Promise<Omit<ShapeResult, 'layerId' | 'scope' | 'complete' | 'precision'>> {
+  const { mod, entry } = c;
+  const wanted = [...plan.by.map(b => b.read ?? b.name), ...(plan.time ? [plan.time] : []),
+    ...(plan.bins ? [plan.bins.field] : []), plan.measure];
+  const filters = [...c.filters, ...baseFilters];
+  const first = mod.columnsFor(entry, c.conds, filters, wanted);
+  const second = plan.geometry === 'none' ? [] : mod.columnsFor(entry, [], [], [...wanted, plan.label, 'px', 'py'], { rows: true });
+  await withinBudget(c, [...new Set([...first, ...second])]);
+  const acc = shapeAccumulator(plan);
+  const passing: number[] = [];
+  for await (const row of mod.readGroups(entry, c.groups, first)) {
+    const f = asFeature(row);
+    if (!test(f) || (plan.usOnly && !usTagged(f))) continue;
+    acc.add(f);
+    if (second.length) passing.push(row.at);
+  }
+  if (!second.length) return acc.finish(null);
+  const k = Math.max(1, Math.ceil(passing.length / plan.limit));
+  const picked = k > 1 ? passing.filter((_, i) => i % k === 0) : passing;
+  const got = await mod.readRowsAt(entry, picked, second);
+  const features: GeoJSON.Feature[] = [];
+  for (const at of picked) {
+    const r = got.get(at);
+    if (!r) throw new Miss('stale-build');
+    const g = shapeFeature(layerId, asFeature(r), plan);
+    if (g) features.push(g);
+  }
+  const cut = k > 1 ? `features: every ${k}-th of ${passing.length} kept (${features.length})`
+    : features.length < passing.length ? `features: ${features.length} of ${passing.length} kept` : undefined;
+  return acc.finish(features, cut);
+}
+
 /** The template data pass: the layer's features (`where`, `area` and the
  *  base filter of its feature-drawing map layers — not the legend chips) grouped by up to two fields
  *  and a year, with counts and a measure's sum per row, in one pass with no
  *  row cap below SHAPE_MAX_ROWS and every cut reported (`truncated`).
- *  GeoJSON layers read the whole file (scope 'area'); a vector-tile layer
- *  reads the current view only (scope 'view', `complete: false`), must be on,
+ *  GeoJSON layers read the whole file (scope 'area'). A COLUMNS_DATASETS layer
+ *  reads its columns file (scope 'area', `complete: true`, on or off; features
+ *  are points, every k-th passing row past the limit); with `geometry: 'full'`,
+ *  `scope: 'view'` or a file it cannot use it reads like any other vector-tile
+ *  layer: the current view only (scope 'view', `complete: false`), must be on,
  *  takes no `area`, and names the voltage tiers this zoom does not draw. */
 export async function shapeRows(layerId: string, opts: ShapeOpts = {}): Promise<Outcome<ShapeResult>> {
   const q = queryable(layerId);
@@ -943,8 +1259,17 @@ export async function shapeRows(layerId: string, opts: ShapeOpts = {}): Promise<
     if (typeof features === 'string') return { ok: false, reason: features };
     return { ok: true, result: { layerId, scope: 'area', ...runShape(layerId, features, test, plan), complete: true, precision: 'full geometry' } };
   }
-  if (opts.complete) return { ok: false, reason: `"${layerId}" is a tiled layer: it covers the current view only, and this needs the whole layer` };
-  if (opts.area) return { ok: false, reason: `"${layerId}" is a tiled layer: tiled layers cover the current view only, so leave out area and frame the region on the map` };
+  let why: string | undefined;
+  if (datasetScope(layerId, opts) && plan.geometry !== 'full') {
+    const test = buildTest(layerId, { where: opts.where, area: opts.area }, compile, zoom, baseFilters(layerId));
+    if (typeof test !== 'function') return { ok: false, ...test };
+    const r = await fromColumns(layerId, { where: opts.where, area: opts.area }, undefined, c => shapeColumns(layerId, c, test, plan, baseFilters(layerId) ?? []));
+    if ('result' in r) return { ok: true, result: { layerId, scope: 'area', ...r.result, complete: true, precision: 'whole features (columns file)' } };
+    why = r.why;
+  }
+  const whyNote = why ? ` (${why})` : '';
+  if (opts.complete) return { ok: false, reason: `"${layerId}" is a tiled layer: it covers the current view only, and this needs the whole layer${whyNote}` };
+  if (opts.area) return { ok: false, reason: `"${layerId}" is a tiled layer: tiled layers cover the current view only, so leave out area and frame the region on the map${whyNote}` };
   if (!state.layerVisibility[layerId]) return { ok: false, reason: `"${layerId}" is off: switch the layer on to use it in a template` };
   const map = state.map;
   if (!map || !state.mapReady) return { ok: false, reason: 'the map is not ready' };
@@ -963,7 +1288,7 @@ export async function shapeRows(layerId: string, opts: ShapeOpts = {}): Promise<
   const tiersHidden = hiddenTiers(shown, drawn);
   return { ok: true, result: {
     layerId, scope: 'view', ...runShape(layerId, features, test, plan),
-    complete: false, reason: `vector tiles: the current view only, from the tiles loaded at zoom ${zoom.toFixed(1)}`,
+    complete: false, reason: `vector tiles: the current view only, from the tiles loaded at zoom ${zoom.toFixed(1)}${whyNote}`,
     ...(tiersHidden && { tiersHidden }),
     precision: `tile geometry at zoom ${zoom.toFixed(1)}, clipped to the view`,
   } };

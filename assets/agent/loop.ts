@@ -150,8 +150,8 @@ export function toolContent(name: string, o: Outcome<unknown>): string {
   }
   // A copy tells the model counts and the outcome; the download and every feature stay on the page.
   if (name === 'copyToMyData') {
-    const { outcome, n, total, simplified, complete, reason, layerName } = (o.result ?? {}) as Record<string, unknown>;
-    return JSON.stringify({ data: { outcome, n, total, simplified, complete, reason, layerName } });
+    const { outcome, n, total, simplified, missing, unread, complete, reason, layerName } = (o.result ?? {}) as Record<string, unknown>;
+    return JSON.stringify({ data: { outcome, n, total, simplified, missing, unread, complete, reason, layerName } });
   }
   if (name === 'showCanvas') {
     const p = (o.result as { partial?: unknown } | null)?.partial;

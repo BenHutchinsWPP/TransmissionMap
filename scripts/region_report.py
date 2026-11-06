@@ -17,8 +17,7 @@ Two halves, both over paths given on the command line:
     defaults to the archive's maxzoom), streamed, so what the tiles carry is
     measured rather than the build input.
   * Archives (`--archive PATH[=PUBLISHED]`): built `.pmtiles` or shipped
-    `.geojson.gz`. Reports bytes and headroom to the per-file cap
-    (build_global_tiles.CEILING_BYTES), per-zoom tile p50/p95/max for PMTiles
+    `.geojson.gz`. Reports bytes, per-zoom tile p50/p95/max for PMTiles
     (pmtiles_stats.entries — directories only, no tile payloads), and the
     delta against the blob at PUBLISHED (default: PATH itself) on the local
     `origin/data-static` ref, read with `git ls-tree -l` (no download).
@@ -26,22 +25,20 @@ Two halves, both over paths given on the command line:
 Repository headroom is publish_data.sh's estimate over the set it would push:
 every path `validate_build.py --list-expected` names, with each archive given
 here substituted at its PUBLISHED path (or added, when that path isn't
-listed). Files over the per-file cap are skipped, as drop_oversized does;
-blobs are deduped by hash, and any blob already anywhere in the
+listed). Blobs are deduped by hash, and any blob already anywhere in the
 `origin/data-static` tree costs nothing. The sum plus the current repository
 size (`gh api repos/<slug> --jq .size`, or `--repo-kb`) is checked against
 SIZE_CEILING_KB, read from publish_data.sh (or the environment, as that
 script does).
 
-Exit status is 1 when any archive is over the per-file cap, so the report can
-gate a build; a missing or unreadable path exits 2 before any table prints.
+A missing or unreadable path exits 2 before any table prints.
 
     python3 scripts/region_report.py \\
         --input data/build/tx.geojsonl \\
-        --archive data/layers/osm_transmission_lines_kv50.pmtiles
+        --archive data/layers/osm_transmission_lines.pmtiles
 
 Dependencies: stdlib only (sqlite3 reads `.gpkg` attributes, csv reads `.csv`);
-imports build_global_tiles (CEILING_BYTES) and pmtiles_stats (entries) from
+imports pmtiles_stats (entries) from
 this folder; `tippecanoe-decode` for `--sample-pmtiles`; runs validate_build.py
 (needs PyYAML, as publish_data.sh does) for the publish set; `git` for the
 published tree, `gh` (optional) for the repo size.
@@ -63,7 +60,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_global_tiles import CEILING_BYTES  # noqa: E402
 from pmtiles_stats import entries  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -303,11 +299,11 @@ def listed_layers():
 
 
 def new_object_bytes(paths, on_branch):
-    """Bytes of distinct blobs among `paths` not already in `on_branch` (over-cap files skipped)."""
+    """Bytes of distinct blobs among `paths` not already in `on_branch`."""
     new = {}
     for p in paths:
         p = Path(p)
-        if not p.is_file() or p.stat().st_size > CEILING_BYTES:
+        if not p.is_file():
             continue
         sha = blob_sha(p)
         if sha not in on_branch:
@@ -350,19 +346,16 @@ def repo_kb():
 
 
 def report_archives(args_list, current_kb=None):
-    """Print the archive tables and the headroom estimate; return the count over the cap."""
-    over = 0
+    """Print the archive tables and the headroom estimate."""
     substitutes = {}
     zoom_tables = []
     ref = _git("rev-parse", "--short", PUBLISHED_REF) or "missing"
-    print(f"\n== Archives (cap {CEILING_BYTES / 2**20:.0f} MiB; published = local {PUBLISHED_REF} @ {ref}) ==")
-    print(f"{'archive':<44} {'bytes':>12} {'MiB':>7} {'cap room MiB':>12} {'published':>12} {'delta':>16}")
+    print(f"\n== Archives (published = local {PUBLISHED_REF} @ {ref}) ==")
+    print(f"{'archive':<44} {'bytes':>12} {'MiB':>7} {'published':>12} {'delta':>16}")
     for arg in args_list:
         local, published = parse_archive_arg(arg)
         substitutes[published] = local
         size = Path(local).stat().st_size
-        if size > CEILING_BYTES:
-            over += 1
         blob = published_blob(published)
         if blob is None:
             pub, delta = "-", "not published"
@@ -375,9 +368,8 @@ def report_archives(args_list, current_kb=None):
                 delta = f"{size - pub_size:+d} ({100 * (size - pub_size) / pub_size:+.2f}%)"
             else:
                 delta = f"{size:+d} (from 0 B)"
-        flag = "  OVER CAP" if size > CEILING_BYTES else ""
         print(f"{_short(local):<44} {size:>12} {size / 2**20:>7.1f} "
-              f"{(CEILING_BYTES - size) / 2**20:>12.1f} {pub:>12} {delta:>16}{flag}")
+              f"{pub:>12} {delta:>16}")
         if local.endswith(".pmtiles"):
             zoom_tables.append((local, tile_sizes(local)))
 
@@ -393,7 +385,7 @@ def report_archives(args_list, current_kb=None):
     listed = listed_layers()
     if listed is None:
         print("publish set: unknown")
-        return over
+        return
     files = {p: ROOT / p for p in listed}
     added = sum(p not in files for p in substitutes)
     files.update(substitutes)
@@ -408,7 +400,6 @@ def report_archives(args_list, current_kb=None):
         projected = current_kb + added_kb
         verdict = "fits" if projected <= ceiling else "OVER the publish ceiling"
         print(f"repo {current_kb} KB + new {added_kb} KB = {projected} KB ({projected / 2**20:.2f} GB): {verdict}")
-    return over
 
 
 def _short(path):
@@ -463,11 +454,9 @@ def main(argv=None):
         print_inputs(a.input)
     if a.sample_pmtiles:
         print_samples(a.sample_pmtiles)
-    over = 0
     if a.archive:
-        over = report_archives(a.archive, a.repo_kb if a.repo_kb is not None else repo_kb())
-        print(f"\n{over} archive(s) over the per-file cap.")
-    return 1 if over else 0
+        report_archives(a.archive, a.repo_kb if a.repo_kb is not None else repo_kb())
+    return 0
 
 
 if __name__ == "__main__":

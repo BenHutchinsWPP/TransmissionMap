@@ -17,7 +17,7 @@ HIFLD transmission line segments (US, 69–765 kV).
 | **Region tags** | `states`, `counties`, `ba`, `nerc`, by `make region-tags` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 > The HIFLD Open portal closed September 16, 2025; datasets have been archived by third parties.
-> The SeerAI parquet adds ~23,000 lines at 69 kV and ~4,800 new ≥100 kV lines vs. the prior local HIFLD export.
+> The SeerAI parquet includes lines down to 69 kV.
 
 ## Download pack
 
@@ -57,5 +57,5 @@ _Counts approximate, from the SeerAI HIFLD archive snapshot (`transmission_lines
 ## Line tools
 
 Exact lengths, copies with full geometry, the fault locator and the elevation profile read this
-layer's line GeoParquet (`make line-parquet`, dev-only until published): see
+layer's line GeoParquet (`make line-parquet`, dev-only): see
 [../line-tools.md](../line-tools.md) and [../pipeline.md](../pipeline.md) § *Line geometry*.

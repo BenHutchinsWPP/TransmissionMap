@@ -39,8 +39,7 @@ original USFS RMRS Fire Lab data publication above.
 
 The **continuous** WHP index (`whp2023_cnt_conus.tif`) is in the same archive but
 not built — the classified product is the canonical, interpretable map layer. It is
-Int32 with values from 0 to 107,890 and NoData 2147483647 (`gdalinfo -mm` on the source
-raster; the RDS-2015-0047-4 metadata notes continuous values above 100,000 occur).
+Int32 with values from 0 to 107,890 and NoData 2147483647.
 
 ## Raster values
 

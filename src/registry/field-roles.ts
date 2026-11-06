@@ -76,6 +76,7 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
   'hifld-natgas-lines': {
     geometry: 'line', label: 'name', display: OSM_NAMED, facets: { pipe_type: 'natgasLine' },
   },
+  'railroads': { geometry: 'line', label: 'RROWNER1', display: {} },
   'hifld-natgas-points': {
     geometry: 'point', label: 'name', display: { ...OSM_NAMED, state: 'category' }, facets: { fac_type: 'natgasPts' },
   },
@@ -95,6 +96,17 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
     geometry: 'polygon', label: 'sub_nm', display: { region: 'category', sub_nm: 'label', state: 'category' },
     facets: { code: 'nerc' },
   },
+  'control-areas': { geometry: 'polygon', label: 'name', display: { name: 'label', state: 'category' } },
+  'us-counties': { geometry: 'polygon', label: 'NAME', display: { NAME: 'label' } },
+  'us-zcta': { geometry: 'polygon', label: 'zcta5', display: {} },
+  'bia-tribal-lands': { geometry: 'polygon', label: 'LARNAME', display: { LARNAME: 'label' } },
+  'wecc-paths': { geometry: 'point', label: 'name', display: { name: 'label' } },
+  'boem-wind-leases': { geometry: 'polygon', label: 'lease', display: { lease: 'label', project: 'category' } },
+  'us-states': { geometry: 'polygon', label: 'name', display: {} },
+  'countries': { geometry: 'polygon', label: 'name', display: {} },
+  'admin1': { geometry: 'polygon', label: 'name', display: { name: 'label' } },
+  'tribal-lands': { geometry: 'polygon', label: 'name', display: { name: 'label' }, facets: { area_type: 'tribal' } },
+  'eia-ba': { geometry: 'polygon', label: 'name', display: { name: 'label' } },
   'retail-territories': {
     geometry: 'polygon', label: 'name', display: { name: 'label', state: 'category' }, facets: { type: 'retail' },
   },

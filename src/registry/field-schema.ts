@@ -249,6 +249,16 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
     ba: BA_FIELD,
     nerc: NERC_FIELD,
   },
+  railroads: {
+    NET: category('FRA network class: M main, O other, Y yard, I industrial, S siding, X out of service, A abandoned, T transit, R removed (rail-trail), F ferry.', ['M', 'O', 'Y', 'I', 'S', 'X', 'A', 'T', 'R', 'F']),
+    RROWNER1: category('Primary rail owner, by reporting mark (e.g. BNSF, UP).'),
+    PASSNGR: category('Passenger service code; absent on freight-only track.'),
+    STATEAB: category('Two-letter state or province abbreviation.'),
+    DIVISION: category('Operating division.'),
+    SUBDIV: category('Subdivision name.'),
+    BRANCH: category('Branch or line name.'),
+    TRACKS: { ...measure('tracks', 'Number of tracks; 0 means not recorded.'), additive: false },
+  },
   hifld_natgas_points: {
     fac_type: category('HIFLD natural-gas / petroleum facility type.', ['lng_terminal', 'underground', 'spr', 'trading_hub', 'processing', 'border_cross', 'peak_shaving', 'lng_storage', 'pol_terminal']),
     status: category('Facility status as the source records it (IN SERVICE, Active, ACTIVE, Inactive, …).'),
@@ -331,6 +341,53 @@ export const FIELD_SCHEMA: Record<string, Record<string, FieldDef>> = {
 
   nerc_regions: {
     code: category('NERC reliability region abbreviation.', facetValues('nerc')),
+  },
+  control_areas: {
+    tot_cap: measure('MW', 'Total generating capacity, in MW; 0 or empty where unreported (~20 %).'),
+    peak_ld: measure('MW', 'Peak load, in MW; 0 or empty where unreported (~20 %).'),
+    min_ld: measure('MW', 'Minimum load, in MW; 0 or empty where unreported (~20 %).'),
+    avail_cap: measure('MW', 'Available capacity, in MW; 0 or empty where unreported (~20 %).'),
+  },
+  county_boundaries: {
+    STUSPS: category('State or territory (USPS code).'),
+    STATE_NAME: category('State or territory name.'),
+  },
+  us_zcta: {
+    zcta5: category('Five-digit ZIP Code Tabulation Area code, a zero-padded string.'),
+  },
+  bia_tribal_lands: {
+    AGENCY: category('BIA agency that administers the land area.'),
+  },
+  boem_wind_leases: {
+    type: category('Lease type.', ['Commercial', 'Easement', 'Research']),
+    state: category('State or states the lease lies off, free text (e.g. "CA", "Rhode Island / Massachusetts").'),
+    company: category('Leaseholder.'),
+    acres: measure('acres', 'Lease area, in acres.'),
+    date: textYear('Lease date, free text MM/DD/YYYY; its year is the first YEAR_IN_TEXT match.'),
+  },
+  wecc_paths: {
+    status: category('Catalog status of the path (markers only).', ['Revised', 'Added', 'Active']),
+    rating_category: category('Catalog rating type (markers only).', ['Accepted Rating', 'Existing Rating', 'Other Rating']),
+    mw_fwd: { ...measure('MW', 'Transfer limit in the forward direction (dir_fwd); null when not rated. Limits of different paths are not additive.'), additive: false },
+    mw_rev: { ...measure('MW', 'Transfer limit in the reverse direction (dir_rev); null when not rated. Limits of different paths are not additive.'), additive: false },
+  },
+  us_states: {
+    name: category('State or territory name.'),
+  },
+  countries: {
+    name: category('Country or territory name.'),
+  },
+  admin1_boundaries: {
+    country: category('Country the first-level subdivision belongs to.'),
+    iso_a3: category('Country code (ISO 3166-1 alpha-3, or a numeric disputed unit).'),
+  },
+  tribal_lands: {
+    area_type: category('Census tribal area type.', facetValues('tribal')),
+    recognized: category('Federal or state recognition, derived from the Census feature class.', ['Federal', 'State']),
+    acres_land: measure('acres', 'Land area, in acres.'),
+  },
+  eia_ba: {
+    area_sqmi: measure('sq mi', 'Balancing authority area, in square miles.'),
   },
   retail_territories: {
     type: category('Retail electric service territory ownership type.', facetValues('retail')),

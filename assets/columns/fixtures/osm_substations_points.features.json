@@ -1,0 +1,94 @@
+{
+ "features": [
+  {
+   "geometry": {
+    "coordinates": [
+     -97.0,
+     32.0
+    ],
+    "type": "Point"
+   },
+   "id": 10000000011,
+   "properties": {
+    "name": "S1",
+    "nominal_kv": "345"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     -97.2,
+     31.0
+    ],
+    "type": "Point"
+   },
+   "id": 10000000021,
+   "properties": {
+    "name": "S2",
+    "nominal_kv": "138"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     -101.5,
+     33.7
+    ],
+    "type": "Point"
+   },
+   "id": 10000000031,
+   "properties": {
+    "name": "S3",
+    "nominal_kv": "230"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     -106.6,
+     35.2
+    ],
+    "type": "Point"
+   },
+   "id": 10000000041,
+   "properties": {
+    "nominal_kv": "115"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     -108.0,
+     32.8
+    ],
+    "type": "Point"
+   },
+   "id": 10000000051,
+   "properties": {
+    "name": "S5",
+    "nominal_kv": "69"
+   },
+   "type": "Feature"
+  },
+  {
+   "geometry": {
+    "coordinates": [
+     2.5,
+     48.9
+    ],
+    "type": "Point"
+   },
+   "id": 10000000061,
+   "properties": {
+    "name": "S6",
+    "nominal_kv": "400"
+   },
+   "type": "Feature"
+  }
+ ],
+ "type": "FeatureCollection"
+}

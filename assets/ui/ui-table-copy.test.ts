@@ -26,9 +26,10 @@ vi.mock('../dataset-query.js', async (orig) => ({
 }));
 
 let lineOk = true;
+let lineOffline = false;   // the files cannot be reached this time: not cached, asked again
 vi.mock('../lines/line-read.js', async (orig) => ({
   ...(await orig<typeof import('../lines/line-read.js')>()),
-  lineDataset: async () => (lineOk ? { ok: true, result: {} } : { ok: false, reason: 'unavailable' }),
+  lineDataset: async () => (lineOffline ? { ok: false, reason: 'offline' } : lineOk ? { ok: true, result: {} } : { ok: false, reason: 'unavailable' }),
 }));
 
 const copyRowsSpy = vi.fn();
@@ -55,7 +56,7 @@ const open = async (layerId: string, n = rowCount) => {
 describe('table copy button', () => {
   beforeAll(() => { const env = installDrawerEnv(); Object.defineProperty(env.container, 'clientHeight', { value: 800, configurable: true }); });
   afterAll(resetDrawerEnv);
-  beforeEach(() => { rowCount = 3; lineOk = true; copyRowsSpy.mockClear(); });
+  beforeEach(() => { rowCount = 3; lineOk = true; lineOffline = false; copyRowsSpy.mockClear(); });
   afterEach(() => closeTable());
 
   it('is shown on a GeoJSON layer', async () => {
@@ -65,9 +66,32 @@ describe('table copy button', () => {
     expect(q<HTMLButtonElement>('.td-copy').disabled).toBe(true);
   });
 
-  it('is hidden on a tiled layer with no line files', async () => {
-    await open('osm-substations-points');
+  it('is hidden on a tiled polygon layer (PAD-US) until its files answer, then shown', async () => {
+    lineOffline = true;
+    await open('padus');
+    await settle();
     expect(q('.td-copy').hidden).toBe(true);
+    lineOffline = false;
+    await open('padus');
+    await vi.waitFor(() => expect(q('.td-copy').hidden).toBe(false));
+  });
+
+  it('a tiled point layer shows it with the features wording, files or not', async () => {
+    lineOk = false;
+    await open('osm-substations-points');
+    await vi.waitFor(() => expect(q('.td-copy').hidden).toBe(false));
+    expect(q('.td-copy').textContent).toBe('＋ Copy 0 checked to My Data');
+  });
+
+  it('a polygon dataset stays hidden while its files cannot be read, and shows with the features wording once they answer', async () => {
+    lineOffline = true;
+    await open('osm-substations-polygons');
+    await settle();   // the files' answer (offline) has arrived and was not cached
+    expect(q('.td-copy').hidden).toBe(true);
+    lineOffline = false;
+    await open('osm-substations-polygons');
+    await vi.waitFor(() => expect(q('.td-copy').hidden).toBe(false));
+    expect(q('.td-copy').textContent).toBe('＋ Copy 0 checked to My Data');
   });
 
   it('a line layer shows it with its own wording once its line files answer', async () => {

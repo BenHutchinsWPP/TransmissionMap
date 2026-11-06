@@ -41,7 +41,7 @@
 //       ui/table-open.js (openTable), ui/ui-geocoder.js (findPlaces, placeSearchOn),
 //       dataset-query.js (describe, query, count, aggregate, allowedFields, Outcome), spatial-join.js (joinPoints, crossings),
 //       sandbox/sandbox-host.js (runInSandbox; dynamic import), user-data/copy-fit.js (MAX_COPY_ITEMS, types),
-//       user-data/copy-rows.js (copyMode, copyAvailable, copyRows; dynamic import only),
+//       user-data/copy-rows.js (copyMode, copyNoun, copyAvailable, copyRows; dynamic import only),
 //       view-validate.js (selectionSize), services/service-spec.js (parseServiceUrl, validateServiceSpec,
 //       validateStyle), services/service-hosts.js (isVetted), services/service-trust.js (isAllowed),
 //       services/service-load.js (detectDrawKind),
@@ -276,15 +276,16 @@ export interface CopyOpts {
   confirm?: (n: number, layerName: string) => Promise<boolean>;
 }
 export interface CopyOutcome {
-  outcome: 'copied' | 'download-offered'; n: number; total: number; simplified?: number; complete: boolean;
+  outcome: 'copied' | 'download-offered'; n: number; total: number; simplified?: number; missing?: number; unread?: number; complete: boolean;
   reason?: 'too-large' | 'storage-full'; layerName: string; download?: CopyDownload;
 }
 
 const COPY_REFUSALS: Record<string, string> = {
-  unavailable: 'full geometry for this layer is not available here', offline: 'the line files could not be reached',
-  'not-found': 'a feature was not found in the line files', 'stale-build': 'the line files changed; try again',
-  'too-many': `at most ${MAX_COPY_ITEMS} features at a time`, timeout: 'the line files timed out',
+  unavailable: 'full geometry for this layer is not available here', offline: 'the geometry files could not be reached',
+  'not-found': 'a feature was not found in the geometry files', 'stale-build': 'the geometry files changed; try again',
+  'too-many': `at most ${MAX_COPY_ITEMS} features at a time`, timeout: 'the geometry files timed out',
   'not-copyable': 'this layer has no copyable geometry', empty: 'nothing to copy',
+  'too-large': "too large to copy (over 64 MB); the layer's download has the full data",
 };
 
 export async function copyToMyData(a: CopyArgs, opts: CopyOpts = {}): Promise<Outcome<CopyOutcome>> {
@@ -300,36 +301,44 @@ export async function copyToMyData(a: CopyArgs, opts: CopyOpts = {}): Promise<Ou
     const err = selectionIdsError(a.layerId, a.ids);
     if (err) return fail(err);
   }
-  if (mode === 'lines' && !state.layerVisibility[a.layerId]) return fail('turn the layer on first');
+  if ((mode === 'full' || mode === 'point') && !state.layerVisibility[a.layerId]) return fail('turn the layer on first');
   if (!(await rowsMod.copyAvailable(a.layerId))) return fail('full geometry for this layer is not available here');
   // A bare request means what the map draws when the layer is on (as showTable does).
   const bare = !a.where && a.area === undefined && !a.ids;
   const drawn = bare && !!state.layerVisibility[a.layerId];
   const q = await query(a.layerId, {
     ids: a.ids, where: bare && !drawn ? state.where[a.layerId] : a.where,
-    area: bare && !drawn ? state.area : a.area, asDrawn: drawn || undefined, limit: MAX_COPY_ITEMS + 1,
+    area: bare && !drawn ? state.area : a.area, asDrawn: drawn || undefined, limit: MAX_COPY_ITEMS + 1, scope: 'view',
   });
   if (!q.ok) return q;
   const { rows, total } = q.result;
   if (total > MAX_COPY_ITEMS) return fail(`${total} features match; at most ${MAX_COPY_ITEMS} can be copied at a time`);
   if (!rows.length) return fail('nothing matches');
   const layer = layerById(a.layerId)!;
-  const layerName = t(mode === 'lines' ? 'line.copyLayer' : 'table.copyLayer', { layer: t(layer.titleKey), n: rows.length.toLocaleString() });
+  const layerName = t(rowsMod.copyNoun(a.layerId) === 'line' ? 'line.copyLayer' : 'table.copyLayer', { layer: t(layer.titleKey), n: rows.length.toLocaleString() });
   if (opts.confirmAbove !== undefined && rows.length > opts.confirmAbove) {
     if (!opts.confirm) return fail("needs the visitor's confirm");
     if (!(await opts.confirm(rows.length, layerName))) return fail('the visitor declined');
   }
-  const r = await rowsMod.copyRows(a.layerId, rows, layerName);
-  if (r.kind === 'refused') return fail(COPY_REFUSALS[r.reason] ?? 'the copy was refused');
+  const r = await rowsMod.copyRows(a.layerId, rows, layerName, state.map?.getZoom());
+  if (r.kind === 'refused') {
+    const noPack = r.reason === 'too-large' && !Object.values(layer.downloads).some(Boolean);
+    return fail(noPack ? 'too large to copy (over 64 MB); ask for fewer features' : COPY_REFUSALS[r.reason] ?? 'the copy was refused');
+  }
   if (r.kind === 'download') {
     return ok({
       outcome: 'download-offered', n: r.n, total, complete: q.result.complete,
       reason: r.storageFull ? 'storage-full' : 'too-large', layerName, download: r,
+      ...(r.simplified && { simplified: r.simplified }),
+      ...(r.missing && { missing: r.missing }),
+      ...(r.unread && { unread: r.unread }),
     });
   }
   return ok({
     outcome: 'copied', n: r.n, total, complete: q.result.complete, layerName,
     ...(r.simplified > 0 && { simplified: r.simplified }),
+    ...(r.missing && { missing: r.missing }),
+    ...(r.unread && { unread: r.unread }),
   });
 }
 

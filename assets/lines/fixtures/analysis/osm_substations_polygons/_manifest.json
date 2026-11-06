@@ -1,0 +1,41 @@
+{
+ "dataset": "osm_substations_polygons",
+ "build_id": "fixture",
+ "built": "1970-01-01T00:00:00Z",
+ "geometry": "polygon",
+ "snapshot": null,
+ "attribution": "© OpenStreetMap contributors",
+ "label": "OSM Substations (Polygons)",
+ "source": "OpenStreetMap contributors",
+ "url": "https://www.openstreetmap.org/copyright",
+ "licence": "ODbL 1.0 (attribution + share-alike required)",
+ "rows": 5,
+ "vertices": 35,
+ "fid_type": "int64",
+ "coordinate_grid_deg": 1e-06,
+ "idx": {
+  "role": "idx",
+  "name": "osm_substations_polygons.idx.b052ef1c.parquet",
+  "bytes": 897,
+  "sha256": "b052ef1cc1ddcffad68aab4d6f2ff4222499ee587e2d4f16cb9a491111bf89a4",
+  "footer_len": 726,
+  "rows": 5,
+  "columns": [
+   "fid",
+   "row"
+  ]
+ },
+ "geo": [
+  {
+   "role": "geo",
+   "name": "osm_substations_polygons.geo.p0.181d906c.parquet",
+   "bytes": 3297,
+   "sha256": "181d906c41de89049a42171dbb21476b69a0b58ed125856a1594edebb594c25d",
+   "footer_len": 2489,
+   "rows": 5,
+   "part": 0,
+   "row_offset": 0
+  }
+ ],
+ "chains": null
+}

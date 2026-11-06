@@ -19,6 +19,8 @@ and maintained by hand (see [Caveats](#caveats)).
 | Dataset | 2026 Path Rating Catalog — Public Version (V3, March 2026) |
 | License | Public Version, published by WECC for public use |
 | Attribution | WECC Path Rating Catalog |
+| Copy to My Data | the served feature, as it is (no geometry file) |
+| Table, chat, templates | the path markers; corridors appear on the map only |
 | Served | `data/layers/wecc_paths.geojson.gz` (markers) · `wecc_path_lines.geojson.gz` (matched lines) |
 | Built by | Maintained by hand |
 | Raw input | `2026 Path Rating Catalog Public_V3.pdf` |
@@ -47,6 +49,7 @@ the served GeoJSON is a derived extract.
 
 | Field | Notes | Example |
 |---|---|---|
+| `id` | Stable feature id, first property: the path number on a marker, with `c` appended on a corridor; unique over the file | `66` / `66c` |
 | `number` | WECC path number (the on-map label) | `66` |
 | `name` | `number: catalog name`, prefixed so a copied feature keeps its number and it's keyboard-searchable; en-dashes normalized to plain `-` | `66: California-Oregon Intertie (COI)` |
 | `status` | `Revised` / `Added` (active paths only) | `Revised` |
@@ -61,7 +64,9 @@ the served GeoJSON is a derived extract.
 | `lines` | List of transmission lines defining the path | `["Malin to Round Mt. 500 kV", …]` |
 | `n_lines` | Count of `lines` | `3` |
 | `source` | Catalog citation | `2026 WECC Path Rating Catalog …` |
-| `isCorridor` | On the digitized corridor LineStrings only (`true`); absent on point markers | `true` |
+| `isCorridor` | `true` on the digitized corridor LineStrings, `false` on point markers | `true` |
+
+An edit to the `.gz` keeps `id` unique and the compact JSON form.
 
 62 active paths, all displayed with coordinates derived from public sources
 (HIFLD/OSM substations + hand-digitized public cut-plane corridors — no
@@ -108,8 +113,8 @@ kv, wecc_line, score:3.0}` — no rebuild needed.
   markers, `number:`-prefixed / hyphen-normalized names, notes, and hand-added
   OSM highlight lines. Edit them in place (decompress, change, `gzip` back).
   They are **not in `main`** (`data/layers/` is gitignored) — the canonical
-  copies live on the orphan `data-static` branch; if your local `data/layers/`
-  lacks them, recover from there before editing, and re-run `make publish-data`
+  copies are served from `data.wpptx.org`; if your local `data/layers/`
+  lacks them, recover from there before editing, and re-run `make publish-r2`
   after.
 - **Catalog vs CSV ratings drift.** Where the PDF and CSV disagree, the PDF wins
   (e.g. EOR catalog 10,650 MW vs CSV 10,100; COI 4,800 vs 5,100). The CSV is an

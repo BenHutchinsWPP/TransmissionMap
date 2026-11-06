@@ -9,6 +9,20 @@ describe('selectionIdsError', () => {
     ['eia-generators', ['1:1', '27:3']],
     ['hifld-natgas-points', ['lng_terminal:12']],
     ['nerc-regions', ['CA-MX US']],
+    ['eia-ba', ['AESO']],
+    ['control-areas', ['19547']],
+    ['us-states', ['TX']],
+    ['countries', ['115']],
+    ['admin1', ['USAB']],
+    ['admin1', ['1110']],
+    ['tribal-lands', ['0010']],
+    ['us-counties', ['08123']],
+    ['us-zcta', ['00501']],
+    ['bia-tribal-lands', ['LAR0001']],
+    ['boem-wind-leases', ['0a1b2c3d4e5f']],
+    ['wecc-paths', ['66']],
+    ['wecc-paths', ['66c']],
+    ['retail-territories', ['40429']],
     ['hifld-substations', ['107655']],
     ['osm-plants-points', [1261615731]],
     ['osm-transmission-lines', [12345678902, 9876543213]],
@@ -26,6 +40,18 @@ describe('selectionIdsError', () => {
     ['eia-generators', ['a\nb'], 'a control character'],
     ['eia-generators', [true], 'not a string or number'],
     ['hifld-substations', [107655], 'a number on a string-id layer'],
+    ['eia-ba', [5], 'a number on a string-id layer'],
+    ['control-areas', [19547], 'a number on a string-id layer'],
+    ['us-states', [48], 'a number on a string-id layer'],
+    ['admin1', [1110], 'a number on a string-id layer'],
+    ['countries', [115], 'a number on a string-id layer'],
+    ['tribal-lands', [10], 'a number on a string-id layer'],
+    ['us-counties', [8123], 'a number on a string-id layer'],
+    ['us-zcta', [501], 'a number on a string-id layer'],
+    ['bia-tribal-lands', [1], 'a number on a string-id layer'],
+    ['boem-wind-leases', [1], 'a number on a string-id layer'],
+    ['wecc-paths', [66], 'a number on a string-id layer'],
+    ['retail-territories', [40429], 'a number on a string-id layer'],
     ['eia-generators', [11], 'a number on a string-id layer'],
     ['eia-generators', [], 'no ids'],
   ] as [string, unknown[], string][])('rejects %s %j (%s)', (id, ids) => {
@@ -33,7 +59,7 @@ describe('selectionIdsError', () => {
   });
 
   it('rejects a layer without a dataset or stable id, and an unknown layer', () => {
-    expect(selectionIdsError('us-states', ['TX'])).toMatch(/takes no selection/);
+    expect(selectionIdsError('nexrad-radar', ['48201'])).toMatch(/takes no selection/);
     expect(selectionIdsError('nope', [1])).toMatch(/not a layer id/);
   });
 });

@@ -16,6 +16,7 @@ MapLibre `feature-state`, instead of each shipping duplicated county geometry.
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
 | **Attribution** | "U.S. Census Bureau, TIGER/Line" |
 | **Served** | `data/layers/county_boundaries.pmtiles` — PMTiles, source layer `county_boundaries`, z2–8 |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/county_boundaries/` |
 | **Built by** | `scripts/build_boundaries.sh` (`make boundaries`); also wired as a `scripts/tile_manifest.yaml` block so `make tiles` can rebuild it from the same intermediate |
 | **Stable id** | `GEOID` (string, promoted); see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Raw input** | `data/raw/boundaries/cb_2025_us_county_500k.zip` |

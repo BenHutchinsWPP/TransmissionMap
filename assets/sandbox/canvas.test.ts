@@ -28,7 +28,7 @@ describe('src/registry/canvas-hosts.json', () => {
     vi.resetModules();
     vi.stubEnv('VITE_ESRI_API_KEY', 'test-key');
     const c = await import('../constants.js');
-    const drop = new Set(['https://raw.githubusercontent.com', new URL(c.GEOCODER_URL).origin, new URL(c.ELEVATION_3DEP_URL).origin, c.OPENROUTER_ORIGIN, new URL(c.PUDL_BASE_URL).origin]);
+    const drop = new Set([...c.DATA_HOSTS.map(h => new URL(h).origin), new URL(c.GEOCODER_URL).origin, new URL(c.ELEVATION_3DEP_URL).origin, c.OPENROUTER_ORIGIN, new URL(c.PUDL_BASE_URL).origin]);
     expect(canvasHosts).toEqual(c.CSP_HOSTS.filter(h => !drop.has(h)));
   });
 });

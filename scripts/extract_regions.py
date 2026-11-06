@@ -14,7 +14,7 @@ Inputs (manual placement; gitignored under data/raw/):
 
 Output schemas:
   nerc_regions      code, sub_nm, region, state, website
-  control_areas     name, state, tot_cap, peak_ld, min_ld, avail_cap, year, website
+  control_areas     id, name, state, tot_cap, peak_ld, min_ld, avail_cap, year, website
   retail_territories id, name, type, state, customers, retail_mwh, sumr_peak, wntr_peak,
                      hold_co, ctrl_area, year, website
 """
@@ -106,7 +106,14 @@ def _color_idx(name: str, n: int = 6) -> int:
 
 def build_control_areas(parquet: Path) -> gpd.GeoDataFrame:
     gdf = _read(parquet)
+    ids = [str(int(v)) if isinstance(v, float) and v.is_integer() else str(v).strip()
+           for v in gdf["ID"].where(gdf["ID"].notna(), None)]
+    if gdf["ID"].isna().any() or "" in ids:
+        raise ValueError("control areas have a null ID")
+    if len(set(ids)) != len(ids):
+        raise ValueError("control area IDs are not unique")
     return gpd.GeoDataFrame({
+        "id":        ids,
         "name":      gdf["NAME"].apply(clean_str),
         "state":     gdf["STATE"].apply(clean_str),
         "color_idx": gdf["NAME"].apply(_color_idx),

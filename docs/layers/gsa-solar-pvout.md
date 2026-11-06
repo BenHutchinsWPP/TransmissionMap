@@ -10,7 +10,7 @@
 | **Vintage** | Global Solar Atlas v2 (Solargis model, 1994/1999/2007–onward depending on region) |
 | **License** | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** — Solargis / World Bank — **attribution required** |
 | **Attribution required** | "© 2024 Global Solar Atlas / Solargis / World Bank" — carried on the MapLibre raster source `attribution` |
-| **Served** | `data/layers/gsa_solar_pvout.pmtiles` — raster PMTiles (WEBP, baked color, z2–7, 11 MB) + `gsa_solar_pvout_lut.i16.gz`/`.json` for hover readout (1.2 MB gzipped, lazy-loaded) |
+| **Served** | `data/layers/gsa_solar_pvout.pmtiles` — raster PMTiles (WEBP, baked color, z2–7) + `gsa_solar_pvout_lut.i16.gz`/`.json` for hover readout (gzipped, lazy-loaded) |
 | **Built by** | `scripts/build_solar_resource.sh` (+ `scripts/solar_color_ramp.txt`) → `data/build/solar/` → PMTiles + COG |
 | **Raw input** | `PVOUT.tif` from global GSA zip (auto-downloaded to `data/raw/solar/` — **zip not committed**, ~345 MB) |
 

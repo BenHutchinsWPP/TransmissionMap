@@ -47,20 +47,17 @@ describe('constants.ts data paths', () => {
   });
 });
 
-// Download packs are GitHub Release assets under the tag publish_data.sh uploads
-// to; the tag is baked into every deployed link. RELEASES_ORIGIN is resolved at
-// module load, so the prod branch takes a fresh import.
+// Download packs sit on the data host under data/releases/, the keys
+// publish_r2.sh uploads them to. RELEASES_ORIGIN is resolved at module load, so
+// the prod branch takes a fresh import.
 describe('RELEASES_ORIGIN — download pack host', () => {
   afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
-  it('names the tag publish_data.sh uploads to in prod, and is empty in dev', async () => {
-    const tag = readFileSync(new URL('../scripts/publish_data.sh', import.meta.url), 'utf8')
-      .match(/RELEASE_TAG="\$\{RELEASE_TAG:-([\w-]+)\}"/)?.[1];
-    expect(tag).toBe('data-latest');
+  it('is data/releases/ on the data host in prod, and empty in dev', async () => {
     vi.resetModules();
     vi.stubEnv('PROD', true);
     const { RELEASES_ORIGIN } = await import('./constants.js');
-    expect(RELEASES_ORIGIN).toMatch(new RegExp(`/releases/download/${tag}/$`));
+    expect(RELEASES_ORIGIN).toBe('https://data.wpptx.org/data/releases/');
     vi.resetModules();
     vi.stubEnv('PROD', false);
     expect((await import('./constants.js')).RELEASES_ORIGIN).toBe('');

@@ -14,6 +14,7 @@ American Indian and Alaska Native Land Area Representation (AIAN-LAR) from the B
 | **License** | Public domain |
 | **Attribution** | "Bureau of Indian Affairs - Branch of Geospatial Support" |
 | **Served** | `data/layers/bia_tribal_lands.geojson.gz` — lazy GeoJSON (full geometry; features copyable in the UI) |
+| **Copy to My Data** | the exact geometry, from the geometry file in `data/analysis/bia_tribal_lands/` |
 | **Built by** | `extract_bia_tribal.py` → `data/build/bia_tribal_lands.{geojson,shp}` |
 | **Raw input** | `data/raw/bia/bia_aian_national_lar.geojson` |
 
@@ -29,12 +30,13 @@ American Indian and Alaska Native Land Area Representation (AIAN-LAR) from the B
 - **Selected:** all AIAN-LAR areas
 - **Row filter:** none
 - **Reprojected:** to EPSG:4326
-- **Columns trimmed:** kept `LARNAME`, `AGENCY`
+- **Columns trimmed:** kept `LARID`, `LARNAME`, `AGENCY`
 
 ## Fields
 
 | Field | Description |
 |---|---|
+| `LARID` | Publisher key (`LAR0001`); the stable feature id. The extract stops on a null or duplicate |
 | `LARNAME` | Name of the land area representation |
 | `AGENCY` | BIA Agency responsible for the area |
 

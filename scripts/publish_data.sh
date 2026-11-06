@@ -45,18 +45,6 @@ trap 'rm -f "$GIT_INDEX_FILE"' EXIT
 
 gb() { awk -v k="$1" 'BEGIN { printf "%.2f GB", k/1048576 }'; }
 
-# GitHub hard-rejects any file > 100 MiB. Skip oversized layers so the push
-# succeeds; a skipped layer breaks its map layer, so this should never fire —
-# it is a backstop, not a strategy. Download packs no longer come through here.
-drop_oversized() {
-  while IFS= read -r big; do
-    echo "WARNING: skipping $big ($(du -h "$big" | cut -f1)) — exceeds GitHub 100 MiB limit; host it elsewhere"
-    git rm --cached --quiet -- "$big"
-  done < <(git ls-files --cached | while IFS= read -r f; do
-             [ -f "$f" ] && [ "$(stat -c%s "$f")" -gt 104857600 ] && echo "$f"
-           done)
-}
-
 # A force-push deletes nothing. The previous tree's blobs become unreachable and
 # keep counting against the repository until GitHub's own maintenance reclaims
 # them — on a schedule we do not control, and which cannot be triggered from
@@ -110,7 +98,6 @@ git read-tree --empty
 python3 scripts/validate_build.py --list-expected | while IFS= read -r f; do
   [ -f "$f" ] && echo "$f"
 done | xargs -r git add -f --
-drop_oversized
 # An empty tree here would force-push a blank production data host.
 [ -n "$(git ls-files)" ] || { echo "ERROR: nothing staged for data-static — check validate_build.py --list-expected."; exit 1; }
 headroom_preflight

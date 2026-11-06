@@ -6,52 +6,65 @@
 Which of the 15 template archetypes (`src/registry/template-signatures.ts`) each queryable layer can fill, from its field roles.
 
 - **Y** fits: a GeoJSON layer, the whole dataset.
+- **D** fits: a vector-tile layer with a columns file, the whole dataset when the file is present, else the view.
 - **P** fits, partial: a vector-tile layer, the features in the current view only.
 - **R** needs fields: fits once a field the served data already carries becomes readable (`pending` in `field-roles.ts`).
 - **—** does not apply: the geometry, or a role no field of the layer has.
 
 | layer | geometry | composition | ranking | distribution | timeline | buildout-map | flow | hierarchy | density | lines-by-class | scatter | compare-regions | points-per-polygon | pies-per-region | nearest | crossings |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| osm-substations-points | point | P | P | P | — | — | P | P | P | — | — | P | P | P | P | — |
-| osm-substations-polygons | polygon | P | P | P | — | — | P | P | P | — | — | P | P | P | — | — |
+| osm-substations-points | point | D | D | D | — | — | D | D | D | — | — | D | D | D | D | — |
+| osm-substations-polygons | polygon | D | D | D | — | — | D | D | D | — | — | D | D | D | — | — |
 | hifld-substations | point | Y | Y | Y | — | — | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
-| osm-transmission-lines | line | P | P | P | — | — | P | P | — | P | — | P | P | P | — | P |
-| hifld-transmission-lines | line | P | P | P | — | — | P | P | — | P | — | P | P | P | — | P |
+| osm-transmission-lines | line | D | D | D | — | — | D | D | — | P | — | D | D | D | — | P |
+| hifld-transmission-lines | line | D | D | D | — | — | D | D | — | P | — | D | D | D | — | P |
 | westtec-10yr | line | Y | Y | Y | — | — | Y | Y | — | Y | Y | Y | Y | Y | — | Y |
 | ogf-planned-transmission | line | Y | Y | Y | Y | — | Y | Y | — | Y | Y | Y | Y | Y | — | Y |
+| wecc-paths | point | Y | Y | Y | — | — | Y | Y | Y | — | Y | — | — | — | Y | — |
 | osm-plants-points | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
-| osm-plants-polygons | polygon | P | P | P | P | — | P | P | P | — | P | P | P | P | — | — |
-| osm-generators | point | P | P | P | — | — | P | P | P | — | — | P | P | P | P | — |
+| osm-plants-polygons | polygon | D | D | D | D | — | D | D | D | — | D | D | D | D | — | — |
+| osm-generators | point | D | D | D | — | — | D | D | D | — | — | D | D | D | D | — |
 | eia-generators | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
-| hifld-natgas-lines | line | P | P | P | — | — | P | P | — | P | — | P | P | P | — | P |
+| hifld-natgas-lines | line | D | D | D | — | — | D | D | — | P | — | D | D | D | — | P |
 | hifld-natgas-points | point | Y | Y | — | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
-| osm-pipelines-lines | line | P | P | P | — | — | P | P | — | P | — | P | P | P | — | P |
+| osm-pipelines-lines | line | D | D | D | — | — | D | D | — | P | — | D | D | D | — | P |
 | osm-pipelines-points | point | Y | Y | — | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
+| railroads | line | P | P | P | — | — | P | P | — | P | — | — | — | — | — | P |
 | nrel-hydrothermal-points | point | Y | Y | — | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
-| padus | polygon | P | P | P | P | — | P | P | P | — | P | — | — | — | — | — |
+| boem-wind-leases | polygon | Y | Y | Y | Y | — | Y | Y | Y | — | Y | — | — | — | — | — |
+| padus | polygon | D | D | D | D | — | D | D | D | — | D | — | — | — | — | — |
+| tribal-lands | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
+| bia-tribal-lands | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
 | mines | point | Y | Y | Y | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
-| crithab | polygon | P | P | P | — | — | P | P | P | — | — | — | — | — | — | — |
+| crithab | polygon | D | D | D | — | — | D | D | D | — | — | — | — | — | — | — |
 | osm-datacenters | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
 | dc-moratoriums | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | — | — | — | Y | — |
 | nerc-regions | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
-| retail-territories | polygon | P | P | P | — | — | P | P | P | — | P | — | — | — | — | — |
+| control-areas | polygon | Y | Y | Y | — | — | — | — | Y | — | Y | — | — | — | — | — |
+| eia-ba | polygon | — | — | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
+| retail-territories | polygon | D | D | D | — | — | D | D | D | — | D | — | — | — | — | — |
+| countries | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
+| admin1 | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
+| us-states | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
+| us-counties | polygon | P | P | P | — | — | P | P | P | — | — | — | — | — | — | — |
+| us-zcta | polygon | P | P | P | — | — | — | — | P | — | — | — | — | — | — | — |
 
 ## By archetype
 
-| archetype | signature | Y | P | R | families that fit |
-|---|---|---|---|---|---|
-| composition | C | 12 | 11 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
-| ranking | CR | 12 | 11 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
-| distribution | MT, length / area too | 9 | 11 | 0 | substations, transmission, generators, pipelines, land, load, regions |
-| timeline | T | 5 | 2 | 0 | transmission, generators, land, load |
-| buildout-map | T, on point | 4 | 0 | 0 | generators, load |
-| flow | C + CR | 12 | 11 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
-| hierarchy | CR + C | 12 | 11 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
-| density | —, on point/polygon | 10 | 7 | 0 | substations, generators, pipelines, renewable, land, load, regions |
-| lines-by-class | C, on line | 2 | 4 | 0 | transmission, pipelines |
-| scatter | MT + MT | 7 | 3 | 0 | substations, transmission, generators, land, load, regions |
-| compare-regions | R + C | 10 | 8 | 0 | substations, transmission, generators, pipelines, renewable, load |
-| points-per-polygon | R | 10 | 8 | 0 | substations, transmission, generators, pipelines, renewable, load |
-| pies-per-region | R + C | 10 | 8 | 0 | substations, transmission, generators, pipelines, renewable, load |
-| nearest | —, on point, + point layer | 9 | 2 | 0 | substations, generators, pipelines, renewable, load |
-| crossings | —, on line, + polygon layer | 2 | 4 | 0 | transmission, pipelines |
+| archetype | signature | Y | D | P | R | families that fit |
+|---|---|---|---|---|---|---|
+| composition | C | 20 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| ranking | CR | 20 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| distribution | MT, length / area too | 18 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| timeline | T | 6 | 2 | 0 | 0 | transmission, generators, renewable, land, load |
+| buildout-map | T, on point | 4 | 0 | 0 | 0 | generators, load |
+| flow | C + CR | 16 | 11 | 2 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| hierarchy | CR + C | 16 | 11 | 2 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| density | —, on point/polygon | 19 | 7 | 2 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
+| lines-by-class | C, on line | 2 | 0 | 5 | 0 | transmission, pipelines, rail |
+| scatter | MT + MT | 10 | 3 | 0 | 0 | substations, transmission, generators, renewable, land, load, regions |
+| compare-regions | R + C | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
+| points-per-polygon | R | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
+| pies-per-region | R + C | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
+| nearest | —, on point, + point layer | 10 | 2 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
+| crossings | —, on line, + polygon layer | 2 | 0 | 5 | 0 | transmission, pipelines, rail |

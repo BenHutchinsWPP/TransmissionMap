@@ -23,7 +23,6 @@ from build_global_tiles import (
     LINE_FIELDS,
     RETILE,
     TILE_POLYGONS,
-    TRANSMISSION_BANDS,
     TRANSMISSION_BASE,
     TRANSMISSION_DROP_AFTER_TILING,
     TRANSMISSION_SELECT,
@@ -118,9 +117,9 @@ class TestGlobalTileConfig(unittest.TestCase):
             has_opts = " ".join(CSV_OPEN_OPTIONS) in " ".join(cmd)
             self.assertEqual(has_opts, spec["src_ext"] == ".csv", spec["base"])
 
-    def test_pipelines_fit_the_ceiling_with_ids(self):
+    def test_pipelines_keep_ids_at_z11(self):
         # A unique id per line limits coalescing; z11 with simplification kept
-        # off maxzoom is what fits the 100 MiB ceiling.
+        # off maxzoom.
         pipes = RETILE_BY_BASE["osm_pipelines_lines"]
         self.assertEqual(pipes["max_zoom"], 11)
         self.assertIn("--simplify-only-low-zooms", pipes["flags"])
@@ -151,41 +150,41 @@ class TestGlobalTileConfig(unittest.TestCase):
             for flag in NATIVE_ID_FLAGS:
                 self.assertIn(flag, line)
 
-    def test_transmission_bands_tile_the_whole_voltage_range(self):
-        # Contiguous and ascending, with an open bottom and an open top, so every
-        # line lands in exactly one archive. `nominal_kv = -1` encodes unknown, so
-        # the open bottom is what carries it — an unknown-voltage line is 18% of
-        # the layer and silently vanishes if the bottom band starts at 0.
-        cuts = []
-        for band in TRANSMISSION_BANDS:
-            f = band["filter"]
-            if f[0] == "<":
-                cuts.append(("bottom", f[2]))
-            elif f[0] == ">=":
-                cuts.append(("top", f[2]))
-            else:
-                self.assertEqual(f[0], "all")
-                cuts.append((f[1][2], f[2][2]))
-        self.assertEqual(cuts[0][0], "bottom", "bottom band must be open below")
-        self.assertEqual(cuts[-1][0], "top", "top band must be open above")
-        edges = [cuts[0][1]] + [hi for _, hi in cuts[1:-1]]
-        self.assertEqual(edges, sorted(edges), "bands must ascend")
-        self.assertEqual(len(edges), len(set(edges)), "bands must not overlap")
-        # Each interior band starts where the previous one ended.
-        for prev, band in zip(cuts, cuts[1:]):
-            lo = band[0] if band[0] != "top" else band[1]
-            self.assertEqual(lo, prev[1], f"gap or overlap at {lo}")
+    def test_transmission_is_one_archive_with_pk(self):
+        # One tile-join pass writes the single archive. -pk keeps merged tiles
+        # past tile-join's 500 KB default; -x minz drops the build-time column.
+        calls = []
+
+        def fake(cmd, desc, dry_run=False):
+            calls.append(cmd)
+
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.object(build_global_tiles, "run_cmd", fake), \
+             mock.patch.object(Path, "stat", return_value=mock.Mock(st_size=1)):
+            build_global_tiles.finish_transmission(Path(tmp) / "w.pmtiles", Path(tmp))
+        [cmd] = calls
+        self.assertEqual(cmd[0], "tile-join")
+        self.assertIn("-pk", cmd)
+        self.assertEqual(cmd[cmd.index("-x") + 1], "minz")
+        self.assertEqual(cmd.count("-o"), 1)
+        self.assertTrue(cmd[cmd.index("-o") + 1].endswith(f"/{TRANSMISSION_BASE}.pmtiles"))
+
+    def test_transmission_dry_run_logs_one_output(self):
+        with self.assertLogs(build_global_tiles.log, level="INFO") as cm, \
+             mock.patch.object(Path, "exists", return_value=True):
+            build_global_tiles.retile_transmission(dry_run=True)
+        self.assertEqual([m for m in cm.output if "$ tile-join" in m].__len__(), 1)
 
     def test_transmission_keeps_full_detail_at_maxzoom(self):
         # The simplification pass must stay off maxzoom: the 4096-unit tile grid
-        # at zoom z is screen pixels at z+4, so a tolerance applied at z11 is
-        # visible error at z15 where a line meets a substation bus.
+        # at zoom z is screen pixels at z+4, so a tolerance applied at z12 is
+        # visible error at z16 where a line meets a substation bus.
         self.assertIn("--simplify-only-low-zooms", TRANSMISSION_TIPPECANOE_FLAGS)
 
     def test_transmission_tiles_carry_the_ladder_attribute(self):
         # `minz` drives the -j zoom ladder, so tippecanoe must emit it — a filter
         # over a dropped attribute matches nothing. It is dropped again only
-        # after tiling, when the voltage bands are cut.
+        # after tiling.
         self.assertIn("minz", TRANSMISSION_SELECT)
         self.assertIn("minz", TRANSMISSION_DROP_AFTER_TILING)
 
@@ -259,7 +258,7 @@ class TestSeamDedupe(unittest.TestCase):
 
 class TestKeepMergedTransmission(unittest.TestCase):
     """build_line_parquet.py reads the merged world input, so it is kept gzipped
-    and untagged: copied before region tagging rewrites the file in place."""
+    and region-tagged: copied after region tagging rewrites the file in place."""
 
     def test_keep_merged_writes_an_identical_gzip(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -272,23 +271,41 @@ class TestKeepMergedTransmission(unittest.TestCase):
                 self.assertEqual(f.read(), seq.read_text())
             self.assertEqual([p.name for p in dest.parent.iterdir()], [dest.name])
 
-    def test_kept_before_tagging(self):
+    def _run(self, fn, *args):
         calls = []
         with tempfile.TemporaryDirectory() as tmp, \
                 mock.patch.object(build_global_tiles, "BUILD_DIR", Path(tmp)), \
                 mock.patch.object(build_global_tiles, "LAYERS_DIR", Path(tmp)), \
                 mock.patch.object(build_global_tiles, "_merge_deduped", return_value=(1, 1)), \
                 mock.patch.object(build_global_tiles, "keep_merged",
-                                  side_effect=lambda *a: calls.append("keep")), \
+                                  side_effect=lambda s, d: calls.append(("keep", Path(d)))), \
                 mock.patch.object(build_global_tiles, "_tag_regions",
-                                  side_effect=lambda *a: calls.append("tag")), \
+                                  side_effect=lambda *a: calls.append(("tag",))), \
                 mock.patch.object(build_global_tiles, "run_cmd",
-                                  side_effect=lambda *a, **k: calls.append("tile")
-                                  or (_ for _ in ()).throw(StopIteration)):
-            (Path(tmp) / "transmission_lines_na.gpkg").touch()
+                                  side_effect=lambda *a, **k: calls.append(("tile",))
+                                  or (_ for _ in ()).throw(StopIteration)), \
+                mock.patch.object(build_global_tiles, "_report"):
+            for code in REGION_CODES[:1]:
+                (Path(tmp) / f"transmission_lines_{code}.gpkg").touch()
+            for spec in RETILE + TILE_POLYGONS:
+                for p in (build_global_tiles._retile_inputs(spec) if "src_stem" in spec
+                          else [Path(tmp) / f"{spec['src']}_{REGION_CODES[0]}.gpkg"]):
+                    p.touch()
             with self.assertLogs("global_tiles", "INFO"), self.assertRaises(StopIteration):
-                build_global_tiles.retile_transmission()
-        self.assertEqual(calls, ["keep", "tag", "tile"])
+                fn(*args)
+            return calls, Path(tmp)
+
+    def test_kept_after_tag_transmission(self):
+        calls, tmp = self._run(build_global_tiles.retile_transmission)
+        self.assertEqual(calls[1][1], build_global_tiles.TRANSMISSION_KEPT)
+        self.assertEqual([c[0] for c in calls], ["tag", "keep", "tile"])
+
+    def test_kept_after_tag_retile_and_polygons(self):
+        for fn, spec in ((build_global_tiles.retile, RETILE[0]),
+                         (build_global_tiles.tile_polygons, TILE_POLYGONS[0])):
+            calls, tmp = self._run(fn, spec)
+            self.assertEqual([c[0] for c in calls], ["tag", "keep", "tile"], spec["base"])
+            self.assertEqual(calls[1][1], tmp / "world" / f"{spec['base']}.geojsonl.gz")
 
     def test_kept_file_is_under_data_build(self):
         self.assertEqual(build_global_tiles.TRANSMISSION_KEPT.relative_to(build_global_tiles.ROOT),

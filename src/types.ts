@@ -121,8 +121,9 @@ export interface LayerData {
   // scripts/tile_manifest.yaml (assets/feature-id.test.ts holds them together);
   // assets/feature-id.ts's featureId() reads it.
   id?: FeatureIdDecl;
-  // The line GeoParquet dataset (data/analysis/index.json `datasets` key) holding
-  // this layer's full geometry and exact lengths, read by assets/lines/line-read.ts.
+  // The GeoParquet dataset (data/analysis/index.json `datasets` key) holding this
+  // layer's full geometry (a line's exact length too), read by assets/lines/line-read.ts;
+  // a line or a polygon dataset (the entry's `geometry`).
   analysis?: string;
 }
 
@@ -188,6 +189,9 @@ export interface LayerDef {
   // Maps each layer id to its click hit-test priority: higher numbers tested
   // first when overlapping features exist. Only clickable layers, not heat/label/casing.
   clickPriority?: Record<string, number>;
+  // Map layers that draw a second picture of features the others already draw
+  // (WECC corridors): not read as the layer's features by assets/dataset-query.ts.
+  drawnOnly?: string[];
   // Minimum zoom level to fetch this layer's data; absent means fetch when visible.
   fromZoom?: number;
 }

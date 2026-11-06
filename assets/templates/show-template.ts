@@ -6,8 +6,8 @@
 //                    id; `layer` a layer whose field roles fit the template's
 //                    signature; each field param of the role its slot takes (a
 //                    refusal lists what the slot takes); `area` / `where`
-//                    through the link validators. An area is refused on a tiled
-//                    layer: tiles cover the current view.
+//                    through the link validators. An area is refused where the
+//                    template reads the view only (a tiled layer without a columns file).
 //         showTemplate(args, host)    validate → dataset-query.ts shapeRows →
 //                    the TemplatePayload (payload.ts), then host.render. Payload
 //                    ≤ 8 MB of JSON (capPayload: features cut first, then rows,
@@ -50,7 +50,7 @@
 import { CATALOGUE, templateById, templatesFor, queryableRoles, TEMPLATE_IDS, type TemplateDef } from './catalogue.js';
 import { topGroups, NEUTRAL } from './groups.js';
 import { TEMPLATE_PAYLOAD_VERSION, type TemplatePayload, type TemplateParam } from './payload.js';
-import { shapeRows, shapeSlots, type Outcome, type ShapeRow, type ShapeKey } from '../dataset-query.js';
+import { shapeRows, shapeSlots, hasColumns, type Outcome, type ShapeRow, type ShapeKey } from '../dataset-query.js';
 import { rolesOf, aliasFields, type RoleField, type Roles } from '../../src/registry/field-roles.js';
 import { fit, slotFields, type Slot } from '../../src/registry/template-signatures.js';
 import { layerById } from '../../src/registry/index.js';
@@ -270,8 +270,13 @@ export interface FormChoices {
   measure: { name: string; unit?: string }[];
   /** Timeline's `net` mode has a retirement year to subtract (with the default time). */
   net: boolean;
-  /** A tiled layer: the template reads the current view, and takes no area. */
+  /** The template reads the current view and takes no area (a tiled layer without a columns file, or full geometry). */
   tiled: boolean;
+}
+
+/** Whether `def` on `layerId` reads the current view only: a tiled layer without a columns file, or a template that needs full geometry. */
+export function viewOnly(layerId: string, def: TemplateDef): boolean {
+  return layerById(layerId)!.data!.kind !== 'geojson' && !(hasColumns(layerId) && def.geometry !== 'full');
 }
 
 /** What a form may offer for `def`'s params on `layerId` (null when the layer has no roles). */
@@ -287,7 +292,7 @@ export function formChoices(def: TemplateDef, layerId: string): FormChoices | nu
     by, split, time, layer2: def.params.layer2 ? layer2Choices(layerId) : [],
     measure: (def.params.measure ? measureChoices(roles, def) : []).map(name => ({ name, ...(unit(name) && { unit: unit(name) }) })),
     net: !!def.params.mode && !!retireField(roles, time[0]?.name),
-    tiled: entry.data.kind !== 'geojson',
+    tiled: viewOnly(layerId, def),
   };
 }
 
@@ -403,10 +408,10 @@ export function validateTemplateArgs(args: unknown): Outcome<ResolvedArgs> {
     title = a.title.trim();
   }
 
-  const tiled = layerById(layer)!.data!.kind !== 'geojson';
+  const tiled = viewOnly(layer, def);
   let area: AreaFilter | null = null;
   if (a.area !== undefined && a.area !== null) {
-    if (tiled) return no(`"${layer}" is a tiled layer: tiled layers cover the current view only, so leave out area and frame the region on the map`);
+    if (tiled) return no(`"${layer}" is a tiled layer: ${def.id} covers the current view only, so leave out area and frame the region on the map`);
     const err = validateArea(a.area);
     if (err) return no(err);
     area = a.area as AreaFilter;

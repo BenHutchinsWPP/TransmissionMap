@@ -12,9 +12,9 @@ OSM transmission line and cable features, worldwide.
 | **Source file** | The eight continental extracts (`<region>-latest.osm.pbf`) from [Geofabrik](https://download.geofabrik.de/) |
 | **Vintage** | Geofabrik daily extracts, as of the last pipeline run |
 | **Coverage** | Worldwide (8 continental Geofabrik extracts) |
-| **Served** | `data/layers/osm_transmission_lines_kv{0,50,100,125,200,300}.pmtiles` — six planet-wide PMTiles archives, zoom 2–11, one per voltage class. `make global-tiles` re-tiles the layer from the eight continental GeoPackages in one pass (deduping the seam overlaps) and cuts the classes out of the result. See [hosting-plan.md](../hosting-plan.md). |
+| **Served** | `data/layers/osm_transmission_lines.pmtiles` — one planet-wide PMTiles archive, zoom 2–12. `make global-tiles` re-tiles the layer from the eight continental GeoPackages in one pass (deduping the seam overlaps). See [hosting-plan.md](../hosting-plan.md). |
 | **Built by** | `extract_osm_lines.py` + `enrich_osm_tags.py` → `data/build/transmission_lines.gpkg` → `tippecanoe -l osm_transmission_lines` |
-| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, the native tile id in every voltage-class archive; a way keeps one id in exactly one band; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
+| **Stable id** | `fid` = OSM id x 10 + element type digit (1 node, 2 way, 3 relation), so `4535892832` is way 453589283, the native tile id; see [pipeline.md § Stable ids](../pipeline.md#stable-ids) |
 | **Region tags** | `countries`, `admin1`; inside the US also `counties`, `ba`, `nerc`, by `make global-tiles` — [pipeline.md § Region tags](../pipeline.md#region-tags-scriptsregion_joinpy) |
 
 ## Download pack
@@ -36,7 +36,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 - **Computed:** `nominal_kv` parsed to integer kV from raw OSM voltage text; `-1` sentinel = unknown; `is_undergrnd` flag derived from `power=cable` / `location` tags; `is_dc` from `frequency=0`
 - **Columns kept:** `nominal_kv`, `operator`, `name`, `minz`, plus the region tags listed in the Source table
 - **Simplification:** `--simplification=5 --simplify-only-low-zooms` — the
-  Douglas-Peucker pass runs on z2–z10 only, so maxzoom carries every vertex the
+  Douglas-Peucker pass runs on z2–z11 only, so maxzoom carries every vertex the
   tile grid holds. Dropping the flag re-simplifies maxzoom; see
   [hosting-plan.md](../hosting-plan.md).
 
@@ -139,5 +139,5 @@ these to the decimal.
 ## Line tools
 
 Exact lengths, copies with full geometry, the fault locator and the elevation profile read this
-layer's line GeoParquet (`make line-parquet`, dev-only until published): see
+layer's line GeoParquet (`make line-parquet`, dev-only): see
 [../line-tools.md](../line-tools.md) and [../pipeline.md](../pipeline.md) § *Line geometry*.

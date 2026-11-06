@@ -62,8 +62,7 @@ layers:
     native_id: true
     select: [fid, name, nominal_kv, operator, sub_type]
     min_zoom: 0
-    # z13 keeps every substation (nothing is dropped at any zoom) and brings the
-    # world archive from 106 MB to 84 MB, under the 100 MiB publishing ceiling.
+    # z13 keeps every substation (nothing is dropped at any zoom).
     max_zoom: 13
     flags: [-r1, --no-tile-size-limit, --no-feature-limit, --preserve-input-order]
 
@@ -82,7 +81,7 @@ layers:
     native_id: true
     select: [fid, name, source, gen_method, gen_type, output_mw, operator]
     min_zoom: 7
-    # max_zoom 13 keeps the archive under the 100 MiB publishing ceiling with no features dropped.
+    # max_zoom 13 keeps every feature, none dropped.
     max_zoom: 13
     max_tile_bytes: 2000000
     flags: [--drop-densest-as-needed, --extend-zooms-if-still-dropping]
@@ -96,12 +95,16 @@ layers:
   - id: railroads
     src: data/raw/railroads/narn_rail_lines.geojson
     format: pmtiles
-    select: [RROWNER1, NET, PASSNGR, TRACKS, DIVISION, SUBDIV, BRANCH, STATEAB]
+    id_field: FRAARCID
+    native_id: true
+    select: [FRAARCID, RROWNER1, NET, PASSNGR, TRACKS, DIVISION, SUBDIV, BRANCH, STATEAB]
     precision: 6
     min_zoom: 4
     max_zoom: 13
     simplification: 4
-    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed]
+    # each line keeps its own id, so dense z4 tiles cannot coalesce; these caps keep every z4 line
+    max_tile_bytes: 1000000
+    flags: [--drop-densest-as-needed, --coalesce-densest-as-needed, --maximum-tile-features=400000]
 
   - id: osm_pipelines_points
     src: data/build/pipeline_points.csv
@@ -117,9 +120,8 @@ layers:
     select: [fid, name, substance, operator]
     precision: 6
     min_zoom: 2
-    # z11 with --simplify-only-low-zooms keeps the world archive under the
-    # 100 MiB ceiling once every feature carries its id; mirrors
-    # build_global_tiles.py.
+    # z11 with --simplify-only-low-zooms is grid-limited once every feature
+    # carries its id; mirrors build_global_tiles.py.
     max_zoom: 11
     simplification: 4
     flags: [--simplify-only-low-zooms, --drop-densest-as-needed, --coalesce-densest-as-needed]
@@ -220,7 +222,8 @@ layers:
   - id: control_areas
     src: data/build/control_areas.gpkg
     format: geojson
-    select: [name, state, color_idx, tot_cap, peak_ld, min_ld, avail_cap, year, website]
+    id_field: id
+    select: [id, name, state, color_idx, tot_cap, peak_ld, min_ld, avail_cap, year, website]
     precision: 5
     simplify: 0.005
 
@@ -250,13 +253,15 @@ layers:
     src: data/build/tribal_lands.gpkg
     format: geojson
     id_field: geoid
+    select: [name, area_type, recognized, acres_land, acres_wtr, geoid]
     precision: 5
 
   - id: bia_tribal_lands
     src: data/build/bia_tribal_lands.geojson
     format: geojson
     precision: 5
-    select: [LARNAME, AGENCY]
+    id_field: LARID
+    select: [LARID, LARNAME, AGENCY]
 
   # `fid` is a content id (extract_padus.py): PAD-US has no key on every record.
   # max_tile_bytes 600000: z3–z7 keep their polygons; z8+ stay under the cap.
@@ -314,12 +319,12 @@ layers:
     select: [fid, nominal_kv, operator, name, is_undergrnd, is_dc, minz]
     precision: 6
     min_zoom: 2
-    max_zoom: 11
+    max_zoom: 12
     simplification: 5
-    # Emit the six per-voltage-class archives the frontend names rather than one
-    # file. The band table lives in build_global_tiles.py (TRANSMISSION_BANDS) so
-    # this path and `make global-tiles` cannot cut the layer differently.
-    split_voltage_bands: true
+    # One archive, osm_transmission_lines.pmtiles: build_tiles.py drops `minz`
+    # from the finished tiles through build_global_tiles.py's
+    # finish_transmission, the same step `make global-tiles` runs.
+    drop_minz: true
     flags:
       # Simplify the low zooms only, so maxzoom keeps every vertex the tile grid
       # can hold — one screen pixel of accuracy at z15, where a line meets a
@@ -383,7 +388,9 @@ layers:
   - id: boem_wind_leases
     src: data/build/boem_wind_leases.geojson
     format: geojson
+    select: [fid, lease, company, project, type, state, acres, date, term]
     precision: 5
+    id_field: fid
 
   # Natural Earth country/state border lines — white highlights above the
   # Weather (Live) wash. Shared infra, no standalone layer/legend.
@@ -409,6 +416,10 @@ layers:
 # stable_ids.py checks the served data/layers/<id>.geojson[.gz] (`--layers-dir`
 # for a file served from elsewhere).
 built_elsewhere:
+  # Hand-maintained gz (docs/layers/wecc-paths.md); not written by any script.
+  - id: wecc_paths
+    id_field: id
+    select: [id, number, name, isCorridor, status, revised, rating_category, dir_fwd, mw_fwd, mw_fwd_raw, dir_rev, mw_rev, mw_rev_raw, seasonal, rating_detail, lines, n_lines, source, note]
   - id: mines                     # scripts/extract_mines.py (`make mines`)
     id_field: mine_id
     select: [mine_id, name, status, cat, commodity, operator, employees, state]

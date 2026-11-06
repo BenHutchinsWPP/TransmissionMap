@@ -288,6 +288,19 @@ describe('the Visualize pane', () => {
   });
 });
 
+describe('a columns-file layer', () => {
+  it('accepts the Area and works switched off: no Switch on', async () => {
+    const { v, state } = await load();
+    state.area = { kind: 'states', codes: ['TX'] };
+    state.layerVisibility['osm-substations-points'] = false;
+    v.openVisualize('osm-substations-points');
+    pick('composition');
+    expect(document.querySelector('.tv-switch-on')).toBeNull();
+    expect(q('.tv-in-area')).toBeTruthy();
+    expect(q<HTMLButtonElement>('.tv-show').disabled).toBe(false);
+  });
+});
+
 describe('Visualize in the tab snapshot', () => {
   async function saved() {
     const { v } = await load();
