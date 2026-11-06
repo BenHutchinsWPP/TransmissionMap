@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   DIAG_CHECKS, DIAG_ENV, PROBE_TIMEOUT_MS,
-  fetchProbe, imgProbe, runDiagnostics, buildDiagReport,
+  fetchProbe, imgProbe, runDiagnostics, buildDiagReport, lifecycleLine,
   type DiagCheck, type DiagResult,
 } from './diagnostics.js';
 import { recordDiagEvent, clearDiagLog } from './diag-log.js';
@@ -242,6 +242,56 @@ describe('geocoder check', () => {
   });
 });
 
+describe('usgs-3dep check', () => {
+  it('probes the ImageServer description and warns when it does not answer', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => fakeResponse({ status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await byId('usgs-3dep').run()).status).toBe('ok');
+    expect(fetchMock.mock.calls[0][0]).toBe('https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer?f=json');
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    expect((await byId('usgs-3dep').run()).status).toBe('warn');
+  });
+});
+
+describe('openrouter check', () => {
+  it('probes the chat host with a plain keyless GET', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => fakeResponse({ status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await byId('openrouter').run()).status).toBe('ok');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://openrouter.ai/api/v1/models/count');
+    expect(init?.headers).toBeUndefined();
+    expect(init?.method).toBeUndefined();
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('warns rather than fails when the host does not answer', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    expect((await byId('openrouter').run()).status).toBe('warn');
+  });
+});
+
+describe('canvas host checks', () => {
+  it('probes each CDN and Google Fonts with a plain HEAD of a pinned file', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => fakeResponse({ status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    for (const id of ['cdn-jsdelivr', 'cdn-cdnjs', 'cdn-unpkg', 'google-fonts']) {
+      expect((await byId(id).run()).status).toBe('ok');
+    }
+    const hosts = fetchMock.mock.calls.map(([url]) => new URL(url).host);
+    expect(hosts).toEqual(['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'fonts.googleapis.com']);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.method).toBe('HEAD');
+      expect(init?.headers).toBeUndefined();
+    }
+  });
+
+  it('warns rather than fails when a CDN does not answer', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    expect((await byId('cdn-jsdelivr').run()).status).toBe('warn');
+  });
+});
+
 describe('snapshot freshness checks (ODIN, weather)', () => {
   it('skips a feed that has not loaded this session', async () => {
     freshness.odin = { ageMs: null, maxAgeMs: 6 * 60 * 60_000 };
@@ -339,6 +389,14 @@ describe('buildDiagReport', () => {
     expect(report).toContain('[layer]');
   });
 
+  it('redacts an OpenRouter key wherever it appears', () => {
+    const key = 'sk-or-v1-' + 'ab'.repeat(32);
+    recordDiagEvent('layer', `failed with ${key}`);
+    const report = buildDiagReport(results);
+    expect(report).not.toContain(key);
+    expect(report).toContain('sk-or-REDACTED');
+  });
+
   it('includes the environment, user agent, and every result grouped', () => {
     const report = buildDiagReport(results);
     expect(report).toContain(`Build: ${DIAG_ENV}`);
@@ -347,6 +405,19 @@ describe('buildDiagReport', () => {
     expect(report).toContain('Optional hosts');
     expect(report).toContain('WebGL2 rendering');
     expect(report).toContain('[WARN]');
+  });
+
+  it('carries the page-load line, and leaves the error log (and its badge) alone', () => {
+    const report = buildDiagReport(results);
+    expect(report).toMatch(/Page load: navigation \S+, wasDiscarded (true|false), dev server (true|false); previous page: /);
+    expect(report).toContain('none recorded this session');
+  });
+
+  it('words each previous-page state', () => {
+    const line = (previous: 'pagehide' | 'no-pagehide' | 'none') => lifecycleLine({ navigation: 'reload', wasDiscarded: true, dev: false, previous });
+    expect(line('pagehide')).toBe('Page load: navigation reload, wasDiscarded true, dev server false; previous page: closed normally (pagehide)');
+    expect(line('no-pagehide')).toContain('stopped without pagehide (killed or discarded)');
+    expect(line('none')).toContain('previous page: none');
   });
 
   it('notes when no runtime errors were recorded', () => {

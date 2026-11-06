@@ -8,10 +8,21 @@ render the page. Maintained by Ben Hutchins, Western Power Pool.
 
 Live: **https://www.wpptx.org/**
 
-**Traffic profile:** all requests are outbound HTTPS (port 443) GETs. No
+**Traffic profile:** all requests are outbound HTTPS (port 443); they are GETs except the
+map chat (OpenRouter) and the line elevation profile (USGS 3DEP `getSamples`), which send
+POSTs. No
 cookies, no authentication, no WebSockets. The only user-entered data that
 leaves the browser is text typed into the place-search box, sent to Esri's
-geocoder.
+geocoder, and — only for a visitor who opens the map chat and enters their own
+OpenRouter key — the chat messages, sent to OpenRouter (HTTPS POST). A visitor
+who adds a map service also sends that service's map requests to its host (see
+[User-selected layers](#user-selected-layers)).
+
+**Content Security Policy:** the published page carries a CSP (a `<meta
+http-equiv>` tag, since GitHub Pages sets no response headers). Its
+`connect-src` and `img-src` name the hosts in the two tables below and also
+admit any other HTTPS host, for the map services a visitor adds; plain HTTP is
+refused. Scripts load only from the page's own host.
 
 ## Required
 
@@ -37,6 +48,9 @@ links — the app runs without these, those features just won't load.
 | `mesonet.agron.iastate.edu` | US radar overlay |
 | `geo.weather.gc.ca` | Canadian radar overlay |
 | `elevation-tiles-prod.s3.amazonaws.com` | 3D Terrain and Hillshade toggles (elevation tiles) |
+| `elevation.nationalmap.gov` | Line elevation profile (USGS 3DEP elevation samples), only after a visitor opens a line's profile; if blocked, the profile uses the elevation tiles above |
+| `s3.us-west-2.amazonaws.com` | Grid Operations layer (EIA-930 hourly data read from the PUDL Project's published tables, path `/pudl.catalyst.coop/`), only while that layer is on |
+| `openrouter.ai` | Map chat, only after a visitor enters their own OpenRouter key; nothing is sent otherwise |
 | `benhutchinswpp.github.io` | Opening a link shared before the move to `www.wpptx.org` — GitHub Pages redirects it, keeping the path and map state |
 
 ## Click-through links (app works without them)
@@ -49,10 +63,41 @@ citations (various `.gov`/`.org` sites, listed in
 [data-sources.md](data-sources.md)). If blocked, only that click fails —
 nothing in the app breaks.
 
+## User-selected layers
+
+A visitor can add a map service to the map — from the built-in library or by
+pasting its URL — and the map chat can add one after the visitor confirms it.
+The browser then contacts that service's host directly over HTTPS (port 443),
+with no request passing through TransmissionMap. These hosts depend on what
+each visitor chooses, so an IT allowlist cannot enumerate them in advance. The
+curated list of library hosts ships with the library. If a host is blocked, only
+the layer from that service stays empty.
+
+## Map chat charts and canvases
+
+Only for a visitor who uses the map chat: the charts and pages the chat draws
+run in their own sandboxed frame (`/canvas.html`), which loads chart and
+drawing libraries and web fonts from these hosts. The frame has its own
+Content Security Policy, which admits these hosts and the basemap tile hosts
+in the Optional table above, and nothing else: it cannot reach the project's
+data host, the geocoder or OpenRouter, and it holds no key.
+
+| Host | Feature |
+|---|---|
+| `cdn.jsdelivr.net` | Chat charts (Vega and Vega-Lite, pinned versions with integrity hashes) and the libraries a chat canvas loads |
+| `cdnjs.cloudflare.com` | Libraries a chat canvas loads |
+| `unpkg.com` | Libraries a chat canvas loads |
+| `fonts.googleapis.com` | Web-font stylesheets a chat canvas loads |
+| `fonts.gstatic.com` | The font files those stylesheets name |
+
+If blocked, chat charts and canvases show an error in their card; the rest of
+the app, the chat included, is unaffected.
+
 ## Checking it from a browser
 
 The app can test these hosts itself: **File ▸ Diagnostics…** probes every
-host in both tables above and reports what the browser observed. Note that a
+host in the Required and Optional tables, and the chart and canvas hosts
+except `fonts.gstatic.com`, and reports what the browser observed. Note that a
 browser cannot distinguish a blocked request from a host being down from a
 CORS rejection, so the panel reports observations, not causes.
 
@@ -62,6 +107,9 @@ source, re-derive the runtime host list and update the tables + date below:
 Most hits are citation links; a host belongs here only if the app fetches
 from it at runtime.
 The same hosts are enumerated a second time in DIAG_CHECKS
-(assets/diagnostics.ts) as probe targets — update both together. -->
-
-*Last verified: 2026-07-17*
+(assets/diagnostics.ts) as probe targets — update both together. The CSP is
+built from CSP_HOSTS (assets/constants.ts), and assets/csp.test.ts fails until
+these two tables and that list name the same hosts. The chat canvas's own
+policy is built by scripts/build_sandbox.mjs from src/registry/canvas-hosts.json,
+which assets/sandbox/canvas.test.ts holds to CSP_HOSTS minus the data host,
+the geocoder and OpenRouter. -->

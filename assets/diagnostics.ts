@@ -10,27 +10,36 @@
 //       detail string here is worded to say what was observed, never to name a
 //       cause. `timeout` and `unexpected body` are hints, not proof.
 // The required/optional host probes below cover the same hosts enumerated in
-//       docs/network-allowlist.md — update both together.
-// Deps: state (live feed caches), constants (DATA, tile URLs, GLYPHS_URL,
-//       ESRI_TOKEN), diag-log.ts (getDiagLog),
+//       docs/network-allowlist.md — update both together. The canvas probes
+//       (CDNs, Google Fonts) are the hosts only the model-written canvas frame
+//       (public/canvas.html) loads from; its CSP is built by scripts/build_sandbox.mjs.
+// Deps: state (live feed caches), layers/layer-data.ts (liveFeed — the same
+//       pull time + subfeed status the legend age chips read), constants (DATA, tile URLs, GLYPHS_URL,
+//       GEOCODER_URL, ESRI_TOKEN, OPENROUTER_ORIGIN, PUDL_BASE_URL — the same constants CSP_HOSTS is built from), diag-log.ts (getDiagLog),
 //       live-staleness.ts (fmtAge, feedIssue, liveAgeMs), wildfire-staleness.ts +
 //       nws-staleness.ts (WILDFIRE_LIVE/NWS_LIVE: the configs the kill-switches run on, so
 //       this panel can never disagree with them), odin-outages.ts +
 //       weather-live.ts (odinFreshness/weatherFreshness — those two feeds keep
-//       their own snapshot and cutoff rather than using state.sourcesData).
+//       their own snapshot and cutoff rather than using state.sourcesData),
+//       session-snapshot.ts (pageLifecycle — the report's "Page load" line:
+//       navigation type, wasDiscarded, dev server, and whether the previous page
+//       in this tab ended with pagehide; recorded at boot, not in diag-log).
 
 import { state } from './state.js';
 import {
-  DATA, GLYPHS_URL, ESRI_TOKEN,
+  DATA, GLYPHS_URL, GEOCODER_URL, ESRI_TOKEN,
   OSM_TILE_URL, AERIAL_TILE_URL, USGS_AERIAL_TILE_URL, OFM_STYLE_URLS,
-  RADAR_TILE_URL, GEOMET_RADAR_TILE_TEMPLATE, TERRAIN_TILE_URL,
+  RADAR_TILE_URL, GEOMET_RADAR_TILE_TEMPLATE, TERRAIN_TILE_URL, ELEVATION_3DEP_URL, OPENROUTER_ORIGIN,
+  PUDL_BASE_URL,
 } from './constants.js';
 import { getDiagLog } from './diag-log.js';
+import { liveFeed } from './layers/layer-data.js';
 import { fmtAge, feedIssue, liveAgeMs } from './live-staleness.js';
 import { WILDFIRE_LIVE } from './wildfire-staleness.js';
 import { NWS_LIVE } from './nws-staleness.js';
 import { odinFreshness } from './odin-outages.js';
 import { weatherFreshness } from './weather-live.js';
+import { pageLifecycle, type PageLifecycle } from './session-snapshot.js';
 
 export type DiagStatus = 'ok' | 'warn' | 'fail' | 'skip';
 export type DiagGroup = 'capability' | 'required' | 'optional' | 'live';
@@ -164,6 +173,14 @@ const GEOMET_PROBE_URL = GEOMET_RADAR_TILE_TEMPLATE
   .replace('{bbox-epsg-3857}', '-12523442.71,2504688.54,-10018754.17,5009377.09')
   .replace('{bust}', 'diag');
 
+// One small pinned file per host the chat's canvas frame loads from.
+const CANVAS_PROBES: [id: string, label: string, url: string][] = [
+  ['cdn-jsdelivr', 'Chat charts and canvases (jsDelivr, optional)', 'https://cdn.jsdelivr.net/npm/vega@6.4.0/package.json'],
+  ['cdn-cdnjs', 'Chat canvases (cdnjs, optional)', 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js'],
+  ['cdn-unpkg', 'Chat canvases (unpkg, optional)', 'https://unpkg.com/vega@6.4.0/package.json'],
+  ['google-fonts', 'Chat canvas fonts (Google Fonts, optional)', 'https://fonts.googleapis.com/css2?family=Roboto'],
+];
+
 // 1×1 WebP.
 const WEBP_DATA_URI =
   'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
@@ -172,17 +189,10 @@ const CLOCK_SKEW_WARN_MS = 2 * 60_000;
 
 // ─── Live-feed freshness ──────────────────────────────────────────────────────
 
-// Same precedence as the legend age chips (ui/ui-legends.ts): per-subfeed
-// status rides on the first feature's properties, with the
-// FeatureCollection-level stash as the fallback. Reading only the stash would
-// let this panel report a healthy feed the legend is already flagging.
 function subfeedIssues(sourceKey: string): string {
-  const meta = state.liveFcMeta[sourceKey];
-  const first = state.sourcesData[sourceKey]?.[0] as GeoJSON.Feature | undefined;
-  const status = (first?.properties?.feed_status as Record<string, string> | undefined)
-    ?? meta?.feed_status;
-  return Object.entries(status ?? {})
-    .map(([feed, s]) => feedIssue(feed, s, meta?.feed_last_ok?.[feed]))
+  const { feedStatus, feedLastOk } = liveFeed(sourceKey);
+  return Object.entries(feedStatus ?? {})
+    .map(([feed, s]) => feedIssue(feed, s, feedLastOk?.[feed]))
     .filter((s): s is string => !!s)
     .join(', ');
 }
@@ -307,7 +317,7 @@ export const DIAG_CHECKS: DiagCheck[] = [
   check('geocoder', 'Place search (ArcGIS geocoder)', 'required', async () => {
     if (!ESRI_TOKEN) return mk('skip', 'place search is turned off in this build, so there is nothing to probe');
     const params = new URLSearchParams({ f: 'json', singleLine: 'Denver', maxLocations: '1', token: ESRI_TOKEN });
-    const url = `https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params}`;
+    const url = `${GEOCODER_URL}?${params}`;
     const p = await fetchProbe(url);
     if (!p.response) { discardBody(p.response); return mk('fail', p.detail); }
     // Any parsed JSON means the service answered — including an error object.
@@ -371,7 +381,7 @@ export const DIAG_CHECKS: DiagCheck[] = [
     }
   }),
 
-  // ── Optional hosts: basemaps and weather imagery. The map works without
+  // ── Optional hosts: basemaps, weather imagery and the map chat. The map works without
   //    them, so a failure here is a warn.
   check('osm-tiles', 'OpenStreetMap tiles (optional basemap)', 'optional', async () => {
     const r = await imgProbe(tileUrl(OSM_TILE_URL));
@@ -402,6 +412,25 @@ export const DIAG_CHECKS: DiagCheck[] = [
     const r = await imgProbe(tileUrl(TERRAIN_TILE_URL));
     return mk(r.ok ? 'ok' : 'warn', r.detail);
   }),
+
+  // The line profile's elevation host: the ImageServer's service description (~11 KB).
+  check('usgs-3dep', 'USGS 3DEP elevation (optional, line profile)', 'optional', () =>
+    hostCheck(`${ELEVATION_3DEP_URL}?f=json`, 'warn')),
+
+  // The Grid Operations layer's host: a HEAD of PUDL's small BA code table.
+  check('pudl', 'EIA-930 hourly data (PUDL, optional, Grid Operations)', 'optional', () =>
+    hostCheck(`${PUDL_BASE_URL}core_eia__codes_balancing_authorities.parquet`, 'warn', { method: 'HEAD' })),
+
+  // The map chat's host. A keyless GET of a 48-byte public count: no
+  // Authorization header and nothing the visitor typed, so the probe works the
+  // same whether or not a key is entered.
+  check('openrouter', 'Map chat (OpenRouter, optional)', 'optional', () =>
+    hostCheck(`${OPENROUTER_ORIGIN}/api/v1/models/count`, 'warn')),
+
+  // The hosts the map chat's charts and canvases load libraries and fonts from,
+  // inside their own sandboxed frame. A HEAD of one small pinned file each.
+  ...CANVAS_PROBES.map(([id, label, url]) =>
+    check(id, label, 'optional', () => hostCheck(url, 'warn', { method: 'HEAD' }))),
 
   // ── Live feed freshness: read from state, no refetch ──
   check('wildfire-live', 'Live wildfire feed', 'live', async () =>
@@ -451,11 +480,13 @@ export const GROUP_TITLES: Record<DiagGroup, string> = {
 
 export const GROUP_ORDER: DiagGroup[] = ['capability', 'required', 'optional', 'live'];
 
-// Strips the value of any token= query parameter. Applied to the whole report,
-// so it covers probe URLs, recorded errors, and the page URL alike — including
-// a `token=undefined` produced by a keyless build.
+// Strips the value of any token= query parameter, and anything shaped like an
+// OpenRouter key (sk-or-…; the chat never puts one in a URL or an error, this
+// is a second guard). Applied to the whole report, so it covers probe URLs,
+// recorded errors, and the page URL alike — including a `token=undefined`
+// produced by a keyless build.
 function redactTokens(text: string): string {
-  return text.replace(/([?&]token=)[^&\s]*/gi, '$1REDACTED');
+  return text.replace(/([?&]token=)[^&\s]*/gi, '$1REDACTED').replace(/sk-or-[\w-]+/g, 'sk-or-REDACTED');
 }
 
 const STATUS_TAG: Record<DiagStatus, string> = {
@@ -465,6 +496,17 @@ const STATUS_TAG: Record<DiagStatus, string> = {
   skip: '[SKIP]',
 };
 
+const PREVIOUS: Record<PageLifecycle['previous'], string> = {
+  pagehide: 'closed normally (pagehide)',
+  'no-pagehide': 'stopped without pagehide (killed or discarded)',
+  none: 'none',
+};
+
+/** How this page load started (recorded at boot, outside the error log, so it lights no badge). */
+export function lifecycleLine(l: PageLifecycle): string {
+  return `Page load: navigation ${l.navigation}, wasDiscarded ${l.wasDiscarded}, dev server ${l.dev}; previous page: ${PREVIOUS[l.previous]}`;
+}
+
 export function buildDiagReport(results: DiagResult[]): string {
   const lines: string[] = [
     'TransmissionMap diagnostics',
@@ -472,6 +514,7 @@ export function buildDiagReport(results: DiagResult[]): string {
     `Build: ${DIAG_ENV}`,
     `Page: ${location.href}`,
     `User agent: ${navigator.userAgent}`,
+    lifecycleLine(pageLifecycle()),
     '',
     `Summary: ${(['fail', 'warn', 'ok', 'skip'] as DiagStatus[])
       .map(s => `${results.filter(r => r.status === s).length} ${s}`)
