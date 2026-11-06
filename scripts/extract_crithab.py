@@ -27,6 +27,9 @@ Output schema (native FWS DBF field names; matches the original hand-built
 crithab.pmtiles so the new tiles are field-for-field equivalent):
   comname, sciname, spcode, status, listing_st, unitname, subunitnam,
   effectdate, entity_id
+
+`entity_id` is the stable feature id; the extract exits non-zero when one is
+missing or repeated.
 """
 from __future__ import annotations
 from pathlib import Path
@@ -54,7 +57,12 @@ def build() -> gpd.GeoDataFrame:
             f"available: {sorted(gdf.columns)}")
     out = gpd.GeoDataFrame(
         {c: gdf[lower[c]] for c in NEEDED}, geometry=gdf.geometry, crs="EPSG:4326")
-    return out[out.geometry.notna() & ~out.geometry.is_empty]
+    out = out[out.geometry.notna() & ~out.geometry.is_empty]
+    ids = out["entity_id"]
+    bad = int(ids.isna().sum() + ids.duplicated().sum())
+    if bad:
+        raise SystemExit(f"ERROR: entity_id is the stable id; {bad} missing or duplicate")
+    return out
 
 
 def summary(gdf):

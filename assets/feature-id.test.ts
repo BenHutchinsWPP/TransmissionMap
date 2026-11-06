@@ -1,5 +1,5 @@
-// feature-id.ts: the stable id a map feature carries (featureId, featureIdExpr)
-// and the OSM fid decoder (osmRef). Then the registry ↔ scripts/tile_manifest.yaml
+// feature-id.ts: the stable id a map feature carries (featureId, featureIdExpr).
+// Then the registry ↔ scripts/tile_manifest.yaml
 // parity: each layer's `data.id` must name the column the tile build puts the
 // id in (`id_field`, `native_id: true` for a tippecanoe feature id).
 // Deps: feature-id.ts, src/registry (LAYERS), constants.ts (DATA).
@@ -7,22 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { LAYERS } from '../src/registry/index.js';
 import { DATA } from './constants.js';
-import { featureId, featureIdExpr, osmRef } from './feature-id.js';
-
-describe('osmRef', () => {
-  it('reads the element type from the last digit and the OSM id from the rest', () => {
-    expect(osmRef(4535892832)).toEqual({ type: 'way', id: 453589283 });
-    expect(osmRef(1)).toBeNull();
-    expect(osmRef(11)).toEqual({ type: 'node', id: 1 });
-    expect(osmRef(142_700_000_003)).toEqual({ type: 'relation', id: 14_270_000_000 });
-    expect(osmRef('1233')).toEqual({ type: 'relation', id: 123 });
-  });
-
-  it('refuses anything that is not an OSM fid', () => {
-    for (const v of [1230, 1234, 129, -12, 12.5, '12a', '', null, undefined, 2 ** 53, {}])
-      expect(osmRef(v), String(v)).toBeNull();
-  });
-});
+import { featureId, featureIdExpr } from './feature-id.js';
 
 describe('featureId', () => {
   it('returns the tile feature id for a native id, never a property', () => {
@@ -37,7 +22,7 @@ describe('featureId', () => {
   });
 
   it('returns nothing for a layer that declares no id, or a feature without one', () => {
-    expect(featureId('padus', { id: 7, properties: {} })).toBeUndefined();
+    expect(featureId('bia-tribal-lands', { id: 7, properties: {} })).toBeUndefined();
     expect(featureId('no-such-layer', { id: 7 })).toBeUndefined();
     expect(featureId('mines', { properties: { name: 'x' } })).toBeUndefined();
   });
@@ -45,7 +30,7 @@ describe('featureId', () => {
   it('reads the id inside a filter the same way', () => {
     expect(featureIdExpr('osm-transmission-lines')).toEqual(['id']);
     expect(featureIdExpr('nerc-regions')).toEqual(['get', 'sub_nm']);
-    expect(featureIdExpr('padus')).toBeUndefined();
+    expect(featureIdExpr('bia-tribal-lands')).toBeUndefined();
   });
 });
 
@@ -80,7 +65,7 @@ describe('registry stable ids match scripts/tile_manifest.yaml', () => {
     expect(declaring.filter(l => !manifest.has(blockOf(l))).map(l => l.id)).toEqual([]);
   });
 
-  // Needs slice A2's id_field/native_id lines in the manifest; skipped, by name,
+  // Needs the id_field/native_id lines in the manifest; skipped, by name,
   // only while the manifest declares no id at all.
   const manifestHasIds = [...manifest.values()].some(b => b.field);
   it.skipIf(!manifestHasIds)('each declaration names the manifest block\'s id_field and native_id (needs the manifest id_field lines)', () => {

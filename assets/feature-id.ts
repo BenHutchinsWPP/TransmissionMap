@@ -2,10 +2,10 @@
 // Role: the one reader of a registry layer's stable-id declaration (`data.id`,
 //       src/types.ts). featureId() returns the id a map feature carries — the
 //       same value for the same real-world feature across rebuilds, and the key
-//       feature-state and id-based calls use. osmRef() decodes an OSM `fid`
-//       (osm_id × 10 + type digit: 1 node, 2 way, 3 relation) into the
-//       openstreetmap.org object it names. Pure; no map access.
-// Imported by: popup-format.ts (osmRef), hover.ts (featureId, featureIdExpr).
+//       feature-state and id-based calls use. Pure; no map access.
+// Imported by: hover.ts (featureId, featureIdExpr),
+//              filters.ts (featureIdExpr), dataset-query.ts, popup.ts and
+//              user-data/user-data.ts (featureId); ui/ui-table.ts (FeatureId type).
 // Deps: src/registry/index.ts (layerById).
 
 import type { ExpressionSpecification } from 'maplibre-gl';
@@ -35,16 +35,4 @@ export function featureIdExpr(layerId: string): ExpressionSpecification | undefi
   const decl = layerById(layerId)?.data?.id;
   if (!decl) return undefined;
   return decl.native ? ['id'] : ['get', decl.field];
-}
-
-const OSM_TYPES = [undefined, 'node', 'way', 'relation'] as const;
-export type OsmRef = { type: 'node' | 'way' | 'relation'; id: number };
-
-/** An OSM `fid` (number or digit string) → its element type and OSM id, or
- *  null when it is not one: last digit 1/2/3, osm id ≥ 1, below 2^53. */
-export function osmRef(fid: unknown): OsmRef | null {
-  const n = typeof fid === 'number' ? fid : typeof fid === 'string' && /^\d+$/.test(fid) ? Number(fid) : NaN;
-  if (!Number.isSafeInteger(n) || n < 11) return null;
-  const type = OSM_TYPES[n % 10];
-  return type ? { type, id: Math.floor(n / 10) } : null;
 }

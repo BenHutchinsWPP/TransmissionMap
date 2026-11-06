@@ -39,6 +39,8 @@ geometry — it's a tabular preview.
 
 ### NERC Regions
 
+The Area picker's NERC list holds all eight region codes. Plants from the EIA layer carry EIA's own `nerc_region` (see [EIA Generators](eia-generators.md)), so an area of SPP or FRCC matches none of them: EIA files those plants under MRO or SERC.
+
 - **Computed:** `code` extracted from the `(ABBR)` parenthetical of `NAME`; `region` =
   `NAME` with trailing parenthetical stripped
 - **Columns kept:** `code`, `sub_nm`, `region`, `state`, `website`

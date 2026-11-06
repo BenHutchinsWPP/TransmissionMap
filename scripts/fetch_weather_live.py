@@ -124,7 +124,7 @@ TEMP_RAMP = [
     (45,  (128, 0, 38)),
 ]
 
-# Wind & gust share this ramp — 0..30 m/s, matching Ventusky's wind scale:
+# Wind & gust share this ramp — 0..30 m/s:
 # dark gray (calm) -> deep purple -> dark blue -> blue -> blue-green -> green
 # -> yellow -> orange -> red. Stops anchored at 5-mph steps in m/s.
 WIND_RAMP = [

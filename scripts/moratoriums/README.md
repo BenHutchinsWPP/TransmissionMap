@@ -139,22 +139,54 @@ not carried over. Because carried-over rows are re-synced each run, their
 
 ### Secrets and settings
 
-| Name | Where | Needed for |
-|---|---|---|
-| `BRAVE_API_KEY` | Actions secret | Search (`research`) |
-| `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` | Actions secret | Model extraction; Anthropic is used when both are set |
-| `DCM_CONTACT` | Actions secret, optional | E-mail added to the fetcher's User-Agent on SEC requests only (every request names the repo URL). SEC EDGAR's full-text search requires an e-mail address, so set one for the SEC seed pages to be read |
-| Allow GitHub Actions to create and approve pull requests | Settings > Actions > General > Workflow permissions | Opening the PR (a 403 from `gh` names this setting) |
+The workflow has three jobs. `plan` (no token) decides the mode from the
+dispatch inputs, the schedule and whether each key is set, and the UTC run
+date. `research` (read-only token: `contents: read`, `pull-requests: read`)
+holds the search, model and contact secrets, runs the carry-over and
+`run.py`, and uploads only what `run.py` wrote: `run_report.json`,
+`inputs/refresh_state.json`, `inputs/refresh_ledger.json` and
+`inputs/research/weekly/<run date>/`. `publish` (`contents: write`,
+`pull-requests: write`, environment `moratoriums-publish`) runs on a fresh VM
+with fresh checkouts, none of the research secrets and no research job
+output: it works the mode out again, requires the run date to be today or
+yesterday (UTC), and checks the artifact as untrusted input
+(`refresh/artifact.py`, whose header lists every rule) before copying it in:
+exact paths and file types under size caps, no links; rows in the shape
+`run.py` writes (schema headers, dates, states, levels, http(s) source URLs,
+its notes cell, no invisible characters) with ids not used before; updates
+rows that set only `status`, `date_adopted`, `date_expires` or append a source
+on a tracked row; the run report's exact shape; state and ledger entries
+either unchanged from the published copy or this run's own, no more of them
+than the report accounts for; and `notes.md` without raw HTML, reference-style
+links or non-http(s) links. A retry on a moved tip checks the hand-off again
+against the new tip. The hand-off is named for the run attempt, so re-running
+publish alone needs research re-run too. It downloads Census itself rather than restoring a cache, then
+rebuilds, checks and publishes. Report and row text in the PR body and commit
+message is defanged (`pr.py`: no mentions, entities, issue references, autolinks,
+links other than the source links, images, HTML, code spans or table-cell breaks). `rebuild_only` runs `publish`
+alone; `dry_run` ends in `research`.
+
+| Name | Where | Job | Needed for |
+|---|---|---|---|
+| `BRAVE_API_KEY` | Actions secret | `research` (`plan`, `publish`: set or not) | Search (`research`) |
+| `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` | Actions secret | `research` (`plan`, `publish`: set or not) | Model extraction; Anthropic is used when both are set |
+| `DCM_CONTACT` | Actions secret, optional | `research` | E-mail added to the fetcher's User-Agent on SEC requests only (every request names the repo URL). SEC EDGAR's full-text search requires an e-mail address, so set one for the SEC seed pages to be read |
+| `moratoriums-publish` | Settings > Environments, deployment branches: `main` only | `publish` | The job that holds the write token; a run dispatched from another branch cannot publish |
+| Allow GitHub Actions to create and approve pull requests | Settings > Actions > General > Workflow permissions | `publish` | Opening the PR (a 403 from `gh` names this setting) |
+
+Set a spend cap on each provider key (Brave, OpenRouter, Anthropic) in the
+provider's console; the run's own caps (below) bound one run, the provider
+cap bounds a leaked key.
 
 Python is 3.12 with exact pins in `requirements-refresh.txt`, installed with
 `--require-hashes`, so dependencies are pinned too; the file's header says how
 to regenerate the hashes. Bump the pins together, then dispatch `rebuild_only`
 and confirm no diff. The unit tests stay stdlib-only.
 
-The workflow's third-party actions are pinned to commit SHAs. Neither checkout
-keeps the job token: only the two steps that push `refresh/weekly` receive it,
-in their own environment, so the steps that fetch and parse web pages are
-never given a credential that can write to the repo.
+The workflow's third-party actions are pinned to commit SHAs. No checkout
+keeps the job token: only the steps that push `data-moratoriums` or
+`refresh/weekly` receive it, in their own environment, and those steps are in
+the `publish` job, which never fetches or parses web pages.
 
 ### Caps and cost
 

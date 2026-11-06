@@ -1,6 +1,7 @@
 // Layer registry entries — natural gas and OSM pipeline layers.
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_EIA_CREDIT, OSM_NATIVE_FID, OSM_FID } from './sources.js';
+import { OSM_CREDIT, HIFLD_EIA_CREDIT } from './sources.js';
+import { OSM_NATIVE_FID, OSM_FID } from './osm-fid.js';
 
 export const pipelineLayers: LayerDef[] = [
   {
@@ -123,6 +124,7 @@ export const pipelineLayers: LayerDef[] = [
     titleKey:      "layer.pipelineEquipment",
     group:         "pipelines",
     sourceId:      "osm",
+    dataset:       "osm_pipelines_points",
     data:          { kind: "geojson", key: "osm_pipelines_points", credit: OSM_CREDIT, id: OSM_FID },
     swatch:        "#64748b",
     defaultOn:     false,

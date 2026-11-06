@@ -28,7 +28,7 @@ nine fields carried by the original hand-built tiles, reprojects to EPSG:4326, a
 writes `data/build/crithab.gpkg`. `build_tiles.py` then tiles it to
 `data/layers/crithab.pmtiles` (vector, zoom 4–13, simplification 4) per
 `scripts/tile_manifest.yaml` — these settings reproduce the original tippecanoe
-build. Linear critical habitat (CRITHAB_LINE) is dropped — polygons only.
+build. The map layer is polygons only. The routing cube additionally burns linear critical habitat (CRITHAB_LINE, Final status) into pd flags bit 3 (see `docs/routing.md`).
 
 Pre-baked rather than streamed live: a local PMTiles file keeps the layer
 independent of live service availability and browser CORS support.
@@ -45,7 +45,7 @@ independent of live service availability and browser CORS support.
 | `unitname` | Critical habitat unit name | "Northern Unit" |
 | `subunitnam` | Subunit name | |
 | `effectdate` | Effective date of designation | "2019-01-15" |
-| `entity_id` | FWS unique habitat entity id | |
+| `entity_id` | FWS listing-entity id, one polygon each; the layer's stable feature id | `6827` |
 
 ## Caveats
 

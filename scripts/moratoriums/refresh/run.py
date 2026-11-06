@@ -27,6 +27,8 @@ Writes, under WORK:
     whose pages were all read or failed for good (no cap, transient fetch failure, extraction
     error or refusal left one unread); ids no longer in the dataset or the research files are pruned
   run_report.json (--report; default BUILD/run_report.json, BUILD = --build or WORK/build)
+Every text value written passes clean_text after the page checks: no control, bidi or zero-width characters,
+and `<`, `>`, `&` fullwidth outside URLs in notes.md, run_report.json and the ledger's rejection reasons.
 Reads D/moratoriums.csv (never writes D), WORK/inputs/{county_names.csv, research/**/*.csv,
 additions.csv, refresh_state.json, refresh_ledger.json, upstream.sha}. A research row an
 updates.csv `field=DROP` line removed stays known: the same measure found again is a lead
@@ -122,7 +124,7 @@ def _enum(values) -> dict:
 
 
 _S = {"type": "string"}
-# D14: additionalProperties false on every object; no length/range keywords (the quote and
+# additionalProperties false on every object; no length/range keywords (the quote and
 # summary limits and the confidence range are enforced in code).
 EXTRACT_SCHEMA = _obj({"items": {"type": "array", "items": _obj({
     "kind": _enum(EXTRACT_KINDS), "measure_type": _enum(TYPES), "jurisdiction_name": _S,
@@ -138,6 +140,34 @@ SEED_SCHEMA = _obj({"candidates": {"type": "array", "items": _obj({
 def _read_csv(path) -> list[dict]:
     with open(path, encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
+
+
+# Control, bidi and zero-width characters (page text carries U+200B and the like); never written out.
+_INVISIBLE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]")
+_MARKUP = str.maketrans({"<": "＜", ">": "＞", "&": "＆"})
+_URL_TOKEN = re.compile(r"(https?://[^\s<>\"]+)")
+
+
+def clean_text(s: str, markup: bool = True) -> str:
+    """Text as run.py writes it out, after every check against the page: no control, bidi or zero-width
+    characters, and with `markup`, `<`, `>` and `&` in their fullwidth forms outside URLs (notes.md and
+    run_report.json, which GitHub renders). CSV cells take markup=False: jurisdiction names there are
+    matched by jn(), which reads `&` as "and"."""
+    s = _INVISIBLE.sub("", str(s))
+    if not markup:
+        return s
+    return "".join(part if i % 2 else part.translate(_MARKUP) for i, part in enumerate(_URL_TOKEN.split(s)))
+
+
+def _clean_obj(v):
+    """clean_text over every string (keys too) in a JSON value."""
+    if isinstance(v, str):
+        return clean_text(v)
+    if isinstance(v, dict):
+        return {clean_text(k): _clean_obj(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_clean_obj(x) for x in v]
+    return v
 
 
 def _one_line(s: str, n: int | None = None) -> str:
@@ -841,7 +871,7 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
             llm_out["errors"] += 1
         return obj, err
 
-    # 1. Seeds (D15): tracker pages fetched directly; the model lists cited URLs only. A seed that gave no
+    # 1. Seeds: tracker pages fetched directly; the model lists cited URLs only. A seed that gave no
     #    cited URL ledger.SEED_ZERO_RUNS runs running is paused (ledger.seed_paused), then tried again.
     seeds = seed_urls(cfg, run_date, inp.last_run)
     seed_cutoff = since_last_run(run_date, inp.last_run, cfg.stale_days)
@@ -1088,13 +1118,16 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
     for k in OUT_FILES:
         (out / f"{k}.csv").unlink(missing_ok=True)
         if v.rows[k]:
-            write_rows(out / f"{k}.csv", k, v.rows[k])
+            write_rows(out / f"{k}.csv", k, [{c: clean_text(x, markup=False) for c, x in r.items()} for r in v.rows[k]])
     live = set(inp.by_id) | inp.research_ids
     state = {k: d for k, d in inp.refresh_state.items() if k in live}  # rows since dropped or renamed
     for rid in queried:
         if rid not in unread:  # a row with a page left unread stays due for next run
             state[rid] = run_date.isoformat()
     (work / "inputs" / "refresh_state.json").write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    for e in inp.ledger["claims"].values():  # this run's rejections carry the review model's reason
+        if isinstance(e, dict) and e.get("date") == run_date.isoformat() and isinstance(e.get("reason"), str):
+            e["reason"] = clean_text(e["reason"])
     ledger_mod.save(work / "inputs" / ledger_mod.NAME, inp.ledger, run_date)
 
     prices = dict(PRICES)
@@ -1134,7 +1167,8 @@ def research(work: Path, dataset: Path, run_date: date, cfg: Config, search, fet
         "refresh_state_updated": len(set(queried) - unread),
         "out_dir": out.relative_to(work).as_posix(),
     }
-    (out / "notes.md").write_text(_notes(report, v, seed_report), encoding="utf-8")
+    report = _clean_obj(report)
+    (out / "notes.md").write_text(clean_text(_notes(report, v, seed_report)), encoding="utf-8")
     return report
 
 

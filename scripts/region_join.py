@@ -580,7 +580,7 @@ def tag_file(src, scope, out=None, prefer=None, fields=None):
     except gpkg) with the scope's region fields; print and return REGION_STATS.
 
     out=None rewrites src; a gpkg is copied to `out` first and tagged there in
-    place. prefer: {source column: field} (D8). fields: a subset of the scope's.
+    place. prefer: {source column: field}. fields: a subset of the scope's.
     """
     src = Path(src)
     dst = Path(out) if out else src

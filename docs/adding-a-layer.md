@@ -131,7 +131,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   id:          "my-layer",          // unique; matches MapLibre source/layer IDs
   urlCode:     "MYL",               // 3-char URL hash code (must be unique across all layers)
   label:       "My Layer",          // shown in the layers panel
-  group:       "load",              // panel group — see the `groups` array in assets/ui/ui-layer-rows.ts for the current list
+  group:       "load",              // panel group — see `PANEL_GROUPS` in assets/ui/ui-layer-rows.ts for the current list
   sourceId:    "my-source",         // key into LAYER_SOURCES (src/registry/sources.ts)
   // Where the map source's data lives and who it credits — see §6.
   // kind: "pmtiles" (vector tiles) | "raster" (raster tiles) | "geojson" (fetched on first enable)
@@ -140,6 +140,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
   swatch:      "#6366f1",           // color dot shown in panel row
   defaultOn:   false,               // visible on page load?
   mapLayerIds: ["my-layer-circles"],// all MapLibre layer IDs this entry controls
+  dataset:     "my_layer",          // asset layers only: the FIELD_SCHEMA dataset id (tile_manifest.yaml id)
   downloads: {
     // Format-named packs built by build_releases.py. Set the fields for this
     // layer's geometry (the dropdown label follows the field name):
@@ -149,7 +150,7 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
     //   raster  → tif
     // Point at the un-suffixed path even for an OSM-derived layer built per
     // continent (`continental: true` in release_manifest.yaml) — the panel
-    // inserts the continent code into every format it lists.
+    // (assets/download-packs.ts) inserts the continent code into every format it lists.
     // point example:
     csv: "data/releases/my-layer.zip",
     // line/polygon example:
@@ -157,7 +158,6 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
     //   shp:     "data/releases/my-layer-shp.zip",
     // raster example:
     //   tif: "data/releases/my-layer.zip",
-    url: null,                         // optional external "source data" link
   },
 }
 ```
@@ -177,6 +177,25 @@ Every visible layer needs an entry in the right registry file. Add it to the arr
 | `exclusiveGroup: "county-choropleth"` | Optional. Layers sharing a group show one at a time — switching one on switches the others off and unticks their checkboxes (`setLayerVisibility()` in `assets/visibility.ts`). Give it to any new layer that paints the same shapes as an existing one, e.g. another county-keyed choropleth on `county_boundaries`. |
 | `fromZoom: 3` | Optional. Withholds this layer's data fetch until the map reaches this zoom — for a heavy point dataset whose icons don't render below it anyway. Gated inside `ensureLayerData()` (`assets/layers/layer-data.ts`), which also gates any layer sharing the source and retries a held layer on zoom settle. Omit for anything fetched at its default visibility. |
 
+### Reaching the Area filter
+
+An asset layer sets `dataset` and gives its `FIELD_SCHEMA` entry
+(`src/registry/field-schema.ts`) the region fields it carries: one
+`field: DEF,` line each, from the shared `STATES_FIELD`, `COUNTIES_FIELD`,
+`BA_FIELD`, `NERC_FIELD`, `RETAIL_FIELD`, `COUNTRIES_FIELD`, `ADMIN1_FIELD`.
+
+| kind | region fields |
+|---|---|
+| US points and footprints | `states, counties, ba, nerc, retail` |
+| US lines | `states, counties, ba, nerc` |
+| world points and footprints | `countries, admin1, counties, ba, nerc, retail` |
+| world lines | `countries, admin1, counties, ba, nerc` |
+
+The Area filter (`areaCondition` in `src/registry/area-filter.ts`) then reaches
+the layer with no other code, and `where` conditions can use the fields too. A
+context layer sets no `dataset`; its panel row carries the "Not filtered by
+area" note while an area is active.
+
 ### Declaring the stable id
 
 An asset layer (anything region-tagged or in `FIELD_SCHEMA`) declares the column
@@ -190,7 +209,7 @@ id-based calls use, so pick the publisher's key, never a row number.
 - `id: { field: "fid", native: true }`: the tile build turned an integer column
   into the MVT feature id (`--use-attribute-for-id`), so the tiles carry no such
   property and the source needs no `promoteId`. The large OSM archives use this.
-  The OSM layers share `OSM_NATIVE_FID` / `OSM_FID` from `src/registry/sources.ts`.
+  The OSM layers share `OSM_NATIVE_FID` / `OSM_FID` from `src/registry/osm-fid.ts`.
 
 The declaration must match the layer's `id_field` (and `native_id: true`) in
 `scripts/tile_manifest.yaml`; `assets/feature-id.test.ts` fails when they drift.
@@ -389,7 +408,7 @@ If this is the first layer in a new group, add a collapsible section:
 </div>
 ```
 
-Also add `"mygroup"` to the `groups` array in `buildLayersPanel()` in `assets/ui/ui-layer-rows.ts`.
+Also add `"mygroup"` to `PANEL_GROUPS` in `assets/ui/ui-layer-rows.ts` (`ui-layer-rows.test.ts` fails on a registry group missing from it).
 
 ### Source credit
 
@@ -459,7 +478,7 @@ Update `docs/data-sources.md`:
 [ ] assets/popup-format.ts                — renderer tuple in the _defs table (clickable layers)
 [ ] assets/filters.ts                     — bus subscription (if new filter type)
 [ ] assets/ui/ui-filters.ts              — emit events (if new filter type)
-[ ] index.html                            — layer-rows-* div (if new group: full section + the `groups` array in ui/ui-layer-rows.ts)
+[ ] index.html                            — layer-rows-* div (if new group: full section + `PANEL_GROUPS` in ui/ui-layer-rows.ts)
 [ ] assets/ui/panel-mirror.ts             — a value line in syncPanel() (only if the row gets a new control whose value is view state; the template renders it neutral)
 [ ] index.html                            — source credit <li data-source-credit="...">
 [ ] docs/layers/my-layer.md               — layer documentation

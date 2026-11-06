@@ -75,6 +75,8 @@ _Counts approximate, from the EIA-860 2025 final edition (`eia8602025.zip`, rele
 
 ## Caveats
 
+- **NERC regions.** `nerc_region` carries the codes EIA reports (TRE, SERC, RFC, WECC, MRO, NPCC), so plants in SPP or FRCC territory are filed under MRO or SERC. The Area picker offers all eight NERC codes; with SPP or FRCC chosen, the EIA Plants row notes this, because the filter matches EIA's own assignment.
+
 - **`gen_status` is the lifecycle key.** Filter on it to separate operating, planned, and
   retired units — the layer is no longer operating-only. This is what makes the
   planned playback/year-filter feature feasible (`op_year` = `year_in`,

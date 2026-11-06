@@ -10,11 +10,12 @@
 // id — experiences.test.ts checks all three against the live registry, so a
 // renamed layer fails the suite instead of silently drawing an empty map.
 //
-// Deps: none at runtime; types from condition-compile.ts (Condition) and
-// src/types.ts (StyleOverride).
+// Deps: none at runtime; types from condition-compile.ts (Condition),
+// area-filter.ts (AreaFilter) and src/types.ts (StyleOverride, Selection).
 
 import type { Condition } from './condition-compile.js';
-import type { StyleOverride } from '../types.js';
+import type { AreaFilter } from './area-filter.js';
+import type { Selection, StyleOverride } from '../types.js';
 
 export type ExperienceCategory =
   | 'generation'
@@ -72,6 +73,8 @@ export interface MapExperience {
     hillshade?: boolean;
     where?: Record<string, Condition[]>;      // registry id → field conditions (the link's vx)
     style?: Record<string, StyleOverride>;    // registry id → opacity/size/colour (the link's vx)
+    area?: AreaFilter;          // map-wide Area filter (the link's af)
+    sel?: Selection;            // selected features, isolated or kept (the link's vx)
   };
   highlights?: ExperienceHighlight[];
 }
@@ -80,33 +83,77 @@ export interface MapExperience {
 // USGS NAIP fallback returns blank tiles, so aerial stories stop here.
 export const AERIAL_MAX_ZOOM = 15.5;
 
+// The kV buckets of the bulk backbone (300 kV and up): a story that needs the
+// network as context draws only these, so the subject stays in front.
+const BACKBONE_KV = ['550+', '500-549', '300-499'];
+// One quiet ink for context lines over a coloured wash.
+const CONTEXT_LINE = { color: '#334155', opacity: 0.85, size: 1.4 };
+
+// Transmission siting reads the routing constraints layer, which exists on the
+// dev server only (src/registry/land.ts), so this story is dev-only with it.
+const TRANSMISSION_SITING: MapExperience = {
+  id: 'transmission-siting-puzzle',
+  title: 'The Transmission Siting Puzzle',
+  category: 'land',
+  summary: 'Several kinds of siting constraints, overlaid, leave a long line only a few ways through.',
+  narrative:
+    'A new high-voltage line has to cross hundreds of miles of land with its own rules and owners. The ' +
+    'coloured areas overlay several kinds of siting constraints, and the black lines are today\'s 300 kV and ' +
+    'higher network. Across southern New Mexico and Arizona the open ground between constrained areas is ' +
+    'narrow, which is why new lines tend to follow the old ones.',
+  takeaways: [
+    'SunZia, a ±525 kV DC line carrying New Mexico wind to Arizona, spent more than a decade in permitting.',
+    'Following an existing line or corridor is usually the easiest way through: the land use is already settled.',
+    'Pick one concern at a time in the Constraints layer, in the Land group, to see each on its own.',
+  ],
+  keywords: ['siting', 'routing', 'constraints', 'sunzia', 'permitting'],
+  camera: { center: [-108.6, 33.4], zoom: 6.3 },
+  state: {
+    layersOn: ['route-constraints'],
+    basemap: 'light',
+    legendFilters: { kv: BACKBONE_KV },
+    style: {
+      'route-constraints': { opacity: 0.8 },
+      'osm-transmission-lines': { color: '#0f172a', opacity: 0.95, size: 1.4 },
+    },
+  },
+  highlights: [
+    { label: 'SunZia (west end)', coordinates: [-111.5600, 32.7500], description: 'The Pinal Central end of the SunZia DC line, near Casa Grande.' },
+  ],
+};
+
 export const EXPERIENCES: MapExperience[] = [
   // ── Generation & fuel supply ───────────────────────────────────────────────
   {
     id: 'columbia-hydro',
     title: 'Columbia & Snake River Hydro System',
     category: 'generation',
-    summary: 'Cascading federal dams turn one river basin into the largest dispatchable renewable engine in North America.',
+    summary: "Cascading federal dams turn one river basin into North America's largest dispatchable renewable engine.",
     narrative:
-      'The Pacific Northwest hydro system is the most powerful renewable energy engine on the continent. ' +
-      'Cascading federal dams along the Columbia and Snake rivers deliver massive dispatchable energy and grid ' +
-      'stability, gathered onto 500 kV transmission that reaches from the Canadian border to Southern California. ' +
-      'Tilt the view to see how elevation head — the drop between one reservoir and the next — sets where each ' +
-      'powerhouse sits.',
+      'Each blue drop is a hydro plant with units of 20 MW or more; the red lines are the 500 kV network they ' +
+      'feed. Follow the Columbia from Grand Coulee down to Bonneville, and the Snake from Lower Granite to Ice ' +
+      'Harbor: the dams sit one after another, each using the drop to the next reservoir to run the same water ' +
+      'through its turbines again. Bonneville Power Administration markets the output of 31 federal dams in the' +
+      ' basin, and the 500 kV lines carry it to the coast and south toward California.',
     takeaways: [
-      'Cascading elevation drops let the same water volume generate power again and again on its way downriver.',
-      'Grand Coulee and Chief Joseph supply frequency response and black-start capability for the whole Western Interconnection.',
-      'Reservoir storage makes the basin a seasonal battery: spring runoff is shaped to meet summer and winter peaks.',
+      'Cascading head lets the same water generate power again and again on its way downriver.',
+      "Large hydro units respond within seconds, which makes them the West's main source of frequency response.",
+      'Upstream storage, much of it in Canada under the Columbia River Treaty, shapes spring runoff toward the summer and winter peaks.',
+      'Tilt and rotate the 3D terrain (right-drag, or two fingers) to see the head each dam works with.',
     ],
     keywords: ['hydro', 'dam', 'columbia', 'snake', 'bpa', 'bonneville', 'grand coulee'],
-    camera: { center: [-119.3277, 46.8716], zoom: 6.9, pitch: 45 },
+    camera: { center: [-120.2, 46.6], zoom: 6.7, pitch: 45, bearing: -10 },
     state: {
-      layersOn: ['eia-generators', 'osm-plants-points'],
-      // Transmission is on by default; the story is about the dams themselves,
-      // so the network is cleared to leave the river basin legible.
-      layersOff: ['osm-transmission-lines', 'hifld-substations'],
+      layersOn: ['eia-generators'],
       basemap: 'hydro',
-      legendFilters: { fuel: ['hydro', 'pumped_storage'] },
+      // Only the 500 kV lines the dams feed, faint, so the river basin stays legible.
+      legendFilters: { fuel: ['hydro', 'pumped_storage'], kv: ['550+', '500-549'] },
+      // Run-of-river units under 20 MW crowd the main-stem dams.
+      where: { 'eia-generators': [{ field: 'nameplate_mw', op: '>=', value: 20 }] },
+      style: {
+        'eia-generators': { size: 1.4 },
+        'osm-transmission-lines': { color: '#b91c1c', opacity: 0.9, size: 1.6 },
+      },
       terrain3d: true,
       hillshade: true,
     },
@@ -120,23 +167,31 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'geothermal-heat-flux',
     title: 'Geothermal Heat Flux & Generation',
     category: 'generation',
-    summary: 'Crustal heat flow explains why geothermal plants cluster where they do — and nowhere else.',
+    summary: 'Crustal heat flow explains why geothermal plants cluster where they do, and almost nowhere else.',
     narrative:
-      'Geothermal power is geologically constrained. Comparing crustal heat-flow measurements with operating ' +
-      'generation shows the plants tracking active extensional faulting through the Nevada Basin and Range, ' +
-      "California's Imperial Valley, and The Geysers north of San Francisco. Where the heat is shallow, the " +
-      'resource is drillable; a few hundred kilometres east, the same technology has nothing to work with.',
+      "The red shading is heat flow out of the Earth's crust: the deeper the red, the hotter the rock near the " +
+      'surface. The grey dots are identified hydrothermal systems, and the red plant icons are the geothermal ' +
+      'generators running today. The plants follow the heat: The Geysers north of San Francisco, the Basin and ' +
+      'Range faults across Nevada, and the Imperial Valley by the Salton Sea, because a conventional plant ' +
+      'needs hot water within drilling depth. East of the Rockies the same technology has little to work with.',
     takeaways: [
-      'The Geysers in Northern California is the largest geothermal complex in the world.',
-      'Baseload 24/7 clean generation needs colocation with a shallow high-temperature crustal anomaly.',
-      'Identified hydrothermal systems mark the near-term drilling frontier; the heat-flow wash marks the long-term one.',
+      'The Geysers is the largest geothermal field in the world.',
+      'Geothermal runs around the clock, which makes it one of the few clean sources that is firm without storage.',
+      'The grey dots mark the near-term drilling frontier; enhanced geothermal aims to reach the wider red areas by fracturing hot, dry rock.',
     ],
     keywords: ['geothermal', 'heat flow', 'geysers', 'imperial valley', 'basin and range'],
-    camera: { center: [-117.5, 39.5], zoom: 5.5 },
+    camera: { center: [-119.4, 36.9], zoom: 5.5 },
     state: {
-      layersOn: ['ihfc-geo-heatflow', 'nrel-hydrothermal-points', 'eia-generators', 'osm-plants-points'],
-      basemap: 'topo',
+      layersOn: ['ihfc-geo-heatflow', 'nrel-hydrothermal-points', 'eia-generators'],
+      layersOff: ['osm-transmission-lines'],
+      basemap: 'light',
       legendFilters: { fuel: ['geo'] },
+      // The heat-flow wash and the hydrothermal systems sit behind the plants.
+      style: {
+        'ihfc-geo-heatflow': { opacity: 0.4 },
+        'nrel-hydrothermal-points': { size: 0.5, opacity: 0.7, color: '#334155' },
+        'eia-generators': { size: 1.6 },
+      },
     },
     highlights: [
       { label: 'The Geysers', coordinates: [-122.7550, 38.7900], description: 'About 1.5 GW of installed steam capacity.' },
@@ -147,41 +202,50 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'great-plains-wind',
     title: "Where's the Wind? The Great Plains Corridor",
     category: 'generation',
-    summary: 'The richest onshore wind resource in North America sits a thousand miles from the load it could serve.',
+    summary: 'The richest onshore wind in North America sits far from the cities it could serve.',
     narrative:
-      "North America's richest onshore wind corridor runs from the Texas Panhandle to North Dakota. The wind " +
-      'resource wash shows where the fuel is; the plants and lines show how little transmission reaches it. ' +
-      'That gap between resource and load centre is the single largest transmission expansion challenge in the ' +
-      'country.',
+      'The blue wash is average wind speed at 100 m, the hub height of a modern turbine: the darker the blue, ' +
+      'the stronger the wind. Each blue icon is a wind plant, and the white lines are the 300 kV and higher ' +
+      'backbone. The plants crowd where wind and wires meet, across Iowa and the Texas and Oklahoma plains, ' +
+      'while some of the windiest ground, in Wyoming and the Dakotas, has few lines to export from. That gap ' +
+      'between resource and transmission is one of the largest expansion challenges on the grid.',
     takeaways: [
-      'Nighttime wind abundance in the central corridor drives localized negative pricing when export capacity runs out.',
-      'The wind belt needs thousands of miles of new high-voltage line to reach coastal and Midwestern demand.',
-      'Capacity factors above 45% make these sites competitive even after paying for long-distance delivery.',
+      'Iowa now gets more than half of its electricity from wind.',
+      'When the export lines fill on windy nights, prices at nearby grid nodes can fall below zero.',
+      'New Plains projects reach capacity factors above 40%, competitive even after paying for long-distance delivery.',
     ],
     keywords: ['wind', 'plains', 'texas', 'oklahoma', 'kansas', 'resource'],
-    camera: { center: [-99.0, 41.0], zoom: 4.5 },
+    camera: { center: [-100.8, 40.2], zoom: 4.6 },
     state: {
-      layersOn: ['nlr-wind-100m', 'eia-generators', 'osm-plants-points', 'hifld-transmission-lines'],
-      basemap: 'light',
-      legendFilters: { fuel: ['wind'] },
+      layersOn: ['nlr-wind-100m', 'eia-generators'],
+      // The turbine icons are pale blue: a dark base keeps them readable over the wash.
+      basemap: 'dark',
+      // The 300 kV+ backbone only: the gap between the wind and the lines is the story.
+      legendFilters: { fuel: ['wind'], kv: BACKBONE_KV },
+      style: {
+        'nlr-wind-100m': { opacity: 0.85 },
+        'eia-generators': { size: 0.8 },
+        'osm-transmission-lines': { color: '#f8fafc', opacity: 0.8, size: 1.2 },
+      },
     },
   },
   {
     id: 'thermal-plant-anatomy',
     title: 'Thermal Plant Anatomy: Fuel, Turbine, Switchyard',
     category: 'generation',
-    summary: 'A close aerial read of one combined-cycle plant — gas metering, turbine hall, cooling, and the switchyard.',
+    summary: 'Port Westward on the Columbia River, from the air: gas in, power out, and everything in between.',
     narrative:
-      'This is the physical infrastructure chain of a combined-cycle natural gas facility at aerial resolution: ' +
-      'the high-pressure gas metering station where the pipeline arrives, the turbine hall, the cooling equipment, ' +
-      'the step-up transformers, and the switchyard that hands the output to the bulk grid. Every layer on screen ' +
-      'is a link in that chain.',
+      'This is Port Westward near Clatskanie, Oregon, where Portland General Electric runs two gas plants side ' +
+      'by side. Port Westward 1 is a combined-cycle plant: a gas turbine, then a steam turbine driven by the ' +
+      "gas turbine's exhaust heat. Port Westward 2 is a row of reciprocating engines, labelled about 19 MW " +
+      'each, that start within minutes to follow wind and load. The dashed orange line is the gas pipeline that' +
+      ' feeds the site; the blue lines leave the 230 kV switchyard for the bulk grid.',
     takeaways: [
-      'The gas pipeline and the transmission line are two halves of one fuel-to-electricity conversion.',
-      'Step-up transformers lift generator voltage (13.8–24 kV) to bulk transmission voltage (230–500 kV) to cut losses.',
-      'Substation footprint, not turbine count, is usually what limits how much a site can export.',
+      'Combined cycle reuses exhaust heat in a second turbine, reaching roughly 50 to 60% efficiency against 35 to 40% for a gas turbine alone.',
+      'Reciprocating engines trade some efficiency for fast starts, which makes them a common partner for wind and solar.',
+      'Step-up transformers lift generator voltage (13.8 to 24 kV) to the 230 kV of the switchyard, cutting losses on the way out.',
     ],
-    keywords: ['gas', 'combined cycle', 'switchyard', 'transformer', 'aerial', 'pipeline'],
+    keywords: ['gas', 'combined cycle', 'switchyard', 'transformer', 'aerial', 'pipeline', 'port westward', 'reciprocating'],
     camera: { center: [-123.1729, 46.1790], zoom: 15.4 },
     state: {
       layersOn: [
@@ -196,23 +260,31 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'coal-supply-chain',
     title: 'Coal Supply Chain: Mine, Rail, Power Plant',
     category: 'generation',
-    summary: 'Craig Station and the Trapper Mine, the classic mine-mouth arrangement, seen end to end.',
+    summary: 'Craig Station and its mines in northwest Colorado: the mine-mouth arrangement, seen from the air.',
     narrative:
-      'Craig Station in northwest Colorado is a textbook mine-mouth coal ecosystem. Surface coal comes out of the ' +
-      'adjacent Trapper Mine, moves a short distance by conveyor and rail to the boilers, and leaves as electricity ' +
-      'on high-voltage circuits crossing the Rockies. Coal economics are mass economics — the shorter the fuel haul, ' +
-      'the better the plant competes.',
+      'Craig Station, the dark icon on the right, burns coal mined a few miles away. Trapper Mine lies just to ' +
+      'the south-west, and the rail line in yellow brings in coal from mines farther out. Coal is heavy and ' +
+      'cheap per ton, so the shortest haul wins: plants like Craig were built at the mine, and the power ' +
+      'travels instead of the fuel, on the high-voltage lines leaving the switchyard across the Rockies.',
     takeaways: [
-      'Rail access or a direct conveyor is what makes bulk coal economics work, because the fuel is heavy.',
-      'Retiring coal plants leave behind high-capacity interconnection rights that solar, storage, and advanced nuclear can reuse.',
-      'The mine, the plant, and the switchyard were permitted as one project — which is why they sit within a few miles of each other.',
+      'Rail or a conveyor makes bulk coal economics work; trucking it any distance does not.',
+      'Mine, plant and switchyard were planned as one system, which is why they sit within a few miles of each other.',
+      'A retiring coal plant leaves behind a high-capacity grid connection that solar, storage or new firm generation can reuse.',
     ],
     keywords: ['coal', 'mine', 'rail', 'craig', 'trapper', 'mine-mouth'],
-    camera: { center: [-107.6014, 40.4589], zoom: 11.5 },
+    camera: { center: [-107.64, 40.455], zoom: 12.2 },
     state: {
       layersOn: ['eia-generators', 'railroads', 'mines', 'hifld-transmission-lines'],
-      basemap: 'light',
+      // HIFLD names the circuits leaving the plant; the OSM copy would double them.
+      layersOff: ['osm-transmission-lines'],
+      // The open pits and the plant read best from the air.
+      basemap: 'aerial',
       legendFilters: { fuel: ['coal'] },
+      style: {
+        'eia-generators': { size: 1.6 },
+        mines: { size: 1.6 },
+        railroads: { color: '#facc15', size: 1.5 },
+      },
     },
     highlights: [
       { label: 'Craig Station', coordinates: [-107.5878, 40.4736], description: 'Three coal units, ~1.3 GW, retiring through 2028.' },
@@ -225,43 +297,54 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'industrial-load-centers',
     title: 'Data Center Alley',
     category: 'load',
-    summary: 'Northern Virginia concentrates gigawatts of continuous digital load into a handful of counties.',
+    summary: 'Northern Virginia packs gigawatts of round-the-clock digital load into a few counties.',
     narrative:
-      'Loudoun County and its neighbours host the densest concentration of data centers on earth. That digital ' +
-      'infrastructure needs gigawatts of continuous power, and it has pulled a matching build-out of transmission ' +
-      'substations and 500 kV upgrades in behind it. Watch how tightly the substations track the campuses.',
+      'Each purple circle is a data center, sized by floor area where it is known. The cluster around Ashburn ' +
+      'in Loudoun County is the densest concentration of data centers in the world, and a second one has grown ' +
+      'around Manassas and Gainesville in Prince William County. The dots are substations and the coloured ' +
+      'lines are transmission, red for 500 kV. Follow them and you can see how closely new substations have ' +
+      'followed the campuses.',
     takeaways: [
-      'A single large campus can demand 500 MW to more than 1 GW — the load of a medium-sized city.',
-      'Dual-fed high-voltage supply and redundant substations are table stakes for mission-critical sites.',
-      'Interconnection queue position, not construction time, is now the binding constraint on new campuses.',
+      'A single campus can draw from 300 MW to more than 1 GW, the load of a mid-sized city.',
+      'Most campuses are fed from two directions, so they ride through the loss of one line.',
+      'In Northern Virginia, the wait for a grid connection, not construction, now sets when a new campus can open.',
     ],
     keywords: ['data center', 'load', 'virginia', 'loudoun', 'ashburn'],
-    camera: { center: [-77.48, 39.02], zoom: 9.5 },
+    camera: { center: [-77.58, 38.92], zoom: 9.9 },
     state: {
       layersOn: ['osm-datacenters', 'hifld-substations', 'osm-substations-polygons', 'hifld-transmission-lines'],
-      basemap: 'light',
+      layersOff: ['osm-transmission-lines'],
+      basemap: 'dark',
     },
   },
   {
     id: 'population-load-density',
     title: 'Continental Load Topography',
     category: 'load',
-    summary: 'Where power is consumed, against where it is produced — the case for long-distance transfer in one view.',
+    summary: 'Where Americans live, against the mines and data centers that draw power far from them.',
     narrative:
-      'Population density is the first-order map of electricity demand. Overlaying it with heavy extraction sites ' +
-      'and computing hubs shows the mismatch that bulk transmission exists to solve: the load is concentrated on ' +
-      'the coasts and around the Great Lakes, while the cheapest new generation is in the interior.',
+      'The orange glow is population density: the brighter the glow, the more people per square mile. It is the' +
+      ' first-order map of electricity demand, concentrated on the coasts, around the Great Lakes and across ' +
+      'the Southeast. The cyan dots are data centers and the small icons are active energy and battery-mineral ' +
+      'mines, large loads that often sit far from where people live. The faint white lines are the 300 kV and ' +
+      'higher backbone that ties the two together.',
     takeaways: [
-      'Roughly half of US electricity demand sits east of the Mississippi in a fraction of the land area.',
-      'Industrial extraction and data centers add large point loads far from the population centres.',
-      'Every long-distance transmission proposal is an argument about closing this gap more cheaply than building locally.',
+      'More than half of Americans live east of the Mississippi, on about a third of the land.',
+      'Data centers and mines add large, steady loads that do not follow the population.',
+      'Every long-distance transmission plan is a case for moving cheap interior power to these population centres.',
     ],
     keywords: ['population', 'demand', 'density', 'load', 'national'],
-    camera: { center: [-93.577, 39.0406], zoom: 4.0 },
+    camera: { center: [-97.5, 38.6], zoom: 4.1 },
     state: {
-      layersOn: ['worldpop-pop-density', 'mines', 'osm-datacenters', 'hifld-transmission-lines'],
-      basemap: 'light',
-      genMode: { 'osm-datacenters': 'clusters' },
+      layersOn: ['worldpop-pop-density', 'mines', 'osm-datacenters'],
+      basemap: 'dark',
+      // Active energy and battery-metal mines only; sand-and-gravel pits are everywhere.
+      legendFilters: { kv: BACKBONE_KV, mines: ['energy', 'battery'], minesStatus: ['active'] },
+      style: {
+        'osm-transmission-lines': { color: '#e2e8f0', opacity: 0.6 },
+        'osm-datacenters': { color: '#38bdf8', size: 0.8 },
+        mines: { size: 0.55 },
+      },
     },
   },
 
@@ -270,23 +353,27 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'wecc-paths-and-plans',
     title: 'WECC Paths & Planned Regional Transmission',
     category: 'transmission',
-    summary: 'Rated transfer corridors across the West, with the projects proposed to widen them.',
+    summary: 'Rated transfer paths across the West, with the lines planned to widen them.',
     narrative:
-      'The Western Interconnection moves power along established corridors with formally rated transfer limits — ' +
-      'the WECC Paths. Laying the planned-project datasets over them shows where utilities intend to add capacity: ' +
-      'SunZia, TransWest Express, Boardman-to-Hemingway and the rest are all attempts to relieve a specific rated ' +
-      'path.',
+      'The numbered yellow badges are WECC Paths: corridors with a formally rated transfer limit, set by ' +
+      'thermal, voltage and stability studies. The dashed lines are the Western Transmission Expansion ' +
+      "Coalition's 10-year plan, coloured by dataset (planned projects or identified upgrades), and the grey " +
+      "lines are today's 300 kV and higher network. Most planned lines run alongside an existing path: each one" +
+      ' raises a specific limit, such as the paths out of Wyoming or into the Desert Southwest.',
     takeaways: [
-      'Path ratings encode physical and stability limits across mountain ranges and desert basins, not just conductor size.',
-      'New 500 kV AC and ±500 kV DC projects are engineered to move remote Wyoming wind and desert solar to coastal load.',
-      'Colouring the planned lines by dataset separates what is under construction from what is still a study.',
+      'A path rating reflects stability limits across mountains and deserts, not only the size of the conductor.',
+      'New 500 kV AC and HVDC lines are designed to carry Wyoming wind and desert solar to coastal load.',
+      'Click a badge or a dashed line for its details.',
     ],
     keywords: ['wecc', 'paths', 'westtec', 'planned', 'transwest', 'sunzia'],
-    camera: { center: [-107.4519, 41.5105], zoom: 4.5 },
+    camera: { center: [-115.5, 40.3], zoom: 4.8 },
     state: {
-      layersOn: ['wecc-paths', 'westtec-10yr', 'hifld-transmission-lines'],
+      layersOn: ['wecc-paths', 'westtec-10yr'],
       basemap: 'light',
       westtecColorBy: 'dataset',
+      // Today's 300 kV+ network as a quiet base under the planned lines.
+      legendFilters: { kv: BACKBONE_KV },
+      style: { 'osm-transmission-lines': { color: '#475569', opacity: 0.85, size: 1.3 } },
     },
   },
 
@@ -295,22 +382,33 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'interconnections-dc-seams',
     title: 'The Interconnections & the Great DC Seams',
     category: 'interconnections',
-    summary: 'Three asynchronous grids, joined only by a handful of back-to-back HVDC converter stations.',
+    summary: 'Three grids that run out of step, and the few DC links that join them.',
     narrative:
-      'North America is electrically split into three asynchronous grids: the Western Interconnection, the Eastern ' +
-      'Interconnection, and ERCOT, plus separate systems in Quebec and Alaska. Because they run out of phase with ' +
-      'one another, power crosses between them only through back-to-back HVDC converter stations. Trace the line ' +
-      'network and the seam appears as an absence — a north-south band where almost nothing connects.',
+      'North America runs as three separate AC grids, the Western Interconnection, the Eastern Interconnection ' +
+      'and ERCOT, plus Quebec and Alaska. The tinted areas are NERC regions, which follow those boundaries ' +
+      'closely: WECC in the West, Texas RE for ERCOT, and the rest Eastern. Because the grids are not ' +
+      'synchronised, power crosses between them only through DC converters. The orange lines are long-distance ' +
+      'DC lines inside each grid; the seam ties themselves are back-to-back converters with no line at all, ' +
+      'listed below.',
     takeaways: [
-      'Only about 1,300 MW of transfer capacity exists across the entire East-West seam.',
-      'That limit is why a wind surplus in the Plains cannot follow the evening peak eastward.',
-      'Proposed HVDC inter-ties are pitched as national-scale arbitrage between Western solar and Plains wind.',
+      'Only about 1,300 MW of tie capacity crosses the whole East-West seam.',
+      'That limit is why a Plains wind surplus cannot follow the evening peak east or west.',
+      'In the grey network the seam shows as a gap: a north-south band through the Plains where the backbones barely meet.',
     ],
     keywords: ['interconnection', 'seam', 'hvdc', 'ercot', 'eastern', 'western', 'asynchronous'],
-    camera: { center: [-102.5, 38.0], zoom: 4.2 },
+    camera: { center: [-100.5, 38.3], zoom: 4.2 },
     state: {
-      layersOn: ['hifld-transmission-lines', 'wecc-paths', 'hifld-substations'],
+      // NERC regions sketch the three interconnections (WECC, Texas RE, the rest Eastern).
+      layersOn: ['nerc-regions', 'hifld-transmission-lines'],
       basemap: 'light',
+      legendFilters: { kv: BACKBONE_KV },
+      style: {
+        'nerc-regions': { opacity: 0.45 },
+        'osm-transmission-lines': { color: '#64748b', opacity: 0.7, size: 1.1 },
+        // The DC lines in front, in one strong colour.
+        'hifld-transmission-lines': { color: '#f97316', size: 4 },
+      },
+      where: { 'hifld-transmission-lines': [{ field: 'VOLT_CLASS', op: '=', value: 'DC' }] },
     },
     highlights: [
       { label: 'Stegall (Nebraska)', coordinates: [-103.6300, 41.8300], description: 'Back-to-back HVDC tie across the East-West seam.' },
@@ -322,71 +420,97 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'pacific-hvdc-intertie',
     title: 'The Pacific DC Intertie (Path 65)',
     category: 'interconnections',
-    summary: '846 miles of ±500 kV DC moving Northwest hydro to Los Angeles, and heat-season power back north.',
+    summary: '846 miles of ±500 kV DC moving Northwest hydro to Los Angeles, and power back north in winter.',
     narrative:
-      'The Pacific DC Intertie is an 846-mile ±500 kV direct-current corridor from the Celilo converter station on ' +
-      'the Columbia River to Sylmar in Los Angeles. It carries up to 3,100 MW of surplus Northwest hydro south for ' +
-      'the California summer peak, and reverses to send power north during winter heating peaks. It is the single ' +
-      'most consequential seasonal exchange on the Western grid.',
+      'The orange line is the Pacific DC Intertie (Path 65): 846 miles of ±500 kV direct current from the ' +
+      'Celilo converter station on the Columbia River to Sylmar in Los Angeles, rated at about 3,100 MW. In ' +
+      'spring and summer it carries surplus Northwest hydro south for the California peak; in winter the flow ' +
+      'often reverses. Path 66, the AC California-Oregon Intertie, runs to its west, and together the two carry' +
+      ' most of the seasonal exchange in the West.',
     takeaways: [
-      'Long-distance HVDC has far lower line losses than AC beyond roughly 400 miles.',
-      'Bidirectional seasonal exchange between a hydro-heavy region and a thermal-heavy one raises the efficiency of both.',
-      'A DC line also decouples the two ends electrically — a disturbance on one side does not propagate through the tie.',
+      'Beyond roughly 400 miles, DC loses less power than AC and needs fewer conductors.',
+      'A DC link decouples its two ends: a disturbance on one side does not travel through it as it would on an AC line.',
+      'Exchange between a hydro-heavy region and a heat-driven one lets both build less for their own peaks.',
     ],
     keywords: ['hvdc', 'pacific intertie', 'path 65', 'celilo', 'sylmar', 'dc'],
-    camera: { center: [-119.5, 40.0], zoom: 4.9 },
+    camera: { center: [-123.0, 39.6], zoom: 5.0 },
     state: {
-      layersOn: ['hifld-transmission-lines', 'hifld-substations', 'wecc-paths'],
+      layersOn: ['hifld-transmission-lines', 'wecc-paths'],
       basemap: 'light',
+      legendFilters: { kv: BACKBONE_KV },
+      style: {
+        'osm-transmission-lines': CONTEXT_LINE,
+        'hifld-transmission-lines': { color: '#f97316', size: 3.5 },
+      },
+      // The DC intertie in front of the AC network it parallels.
+      where: { 'hifld-transmission-lines': [{ field: 'VOLT_CLASS', op: '=', value: 'DC' }] },
     },
     highlights: [
       { label: 'Celilo Converter Station', coordinates: [-121.1000, 45.6300], description: 'Northern terminal, near The Dalles, Oregon.' },
       { label: 'Sylmar Converter Station', coordinates: [-118.4800, 34.3100], description: 'Southern terminal, Los Angeles.' },
     ],
   },
-
-  // ── Land, siting & jurisdictions ───────────────────────────────────────────
   {
-    id: 'clean-energy-siting-puzzle',
-    title: 'The Clean Energy Siting Puzzle',
-    category: 'land',
-    summary: 'Protected land, tribal jurisdiction and critical habitat over the best solar resource in the country.',
+    id: 'ercot-island-grid',
+    title: 'ERCOT: The Texas Island Grid',
+    category: 'interconnections',
+    summary: 'Most of Texas runs on its own interconnection, tied to its neighbours only through a few DC links.',
     narrative:
-      'Building transmission and utility-scale solar in the American West means threading a jurisdictional ' +
-      'patchwork: BLM land, Forest Service wilderness, Department of Defense ranges, tribal reservations, and ' +
-      'designated critical habitat for species such as the desert tortoise. The solar resource wash underneath ' +
-      'shows what is at stake — this is where the sun is best, and where the constraints are densest.',
+      'ERCOT runs the grid for most of Texas as an interconnection of its own, tied to the Eastern grid and to ' +
+      'Mexico only through a few DC links. Here the Area filter keeps the plants and lines inside the ERCOT ' +
+      'balancing authority, and a voltage condition keeps only lines of 345 kV and above, the top voltage of ' +
+      'the ERCOT backbone. The soft colours around it are the neighbouring balancing authorities, which the ' +
+      'Area filter leaves drawn.',
     takeaways: [
-      'NEPA review and multi-agency permitting commonly run 8–12 years, far longer than the construction itself.',
-      'Routing along already-disturbed rights-of-way — highway medians, existing easements — is the usual way through.',
-      'Tribal consultation is a sovereign-to-sovereign process, not a permit line item.',
+      'Parts of Texas sit outside ERCOT: El Paso is in the Western Interconnection, and the Panhandle and parts of East Texas are in the Eastern.',
+      'Because ERCOT stays within one state, its wholesale market and transmission rates are regulated by the Public Utility Commission of Texas rather than FERC.',
+      '345 kV is the top voltage of the ERCOT backbone, which reaches from the load centres to the wind and solar of West Texas.',
+      'The Area filter in the layer panel sets the region; clear it there to bring the neighbouring grids back.',
     ],
-    keywords: ['siting', 'padus', 'tribal', 'habitat', 'permitting', 'solar', 'blm'],
-    camera: { center: [-115.0, 37.0], zoom: 5.0 },
+    keywords: ['ercot', 'texas', 'island', 'dc tie', 'balancing authority', '345 kv', 'area'],
+    camera: { center: [-101.3, 31.2], zoom: 5.5 },
     state: {
-      layersOn: ['padus', 'crithab', 'tribal-lands', 'bia-tribal-lands', 'gsa-solar-pvout'],
+      layersOn: ['hifld-transmission-lines', 'eia-generators', 'eia-ba'],
+      // The OSM network draws every voltage; HIFLD carries the 345 kV condition.
+      layersOff: ['osm-transmission-lines'],
       basemap: 'light',
+      where: { 'hifld-transmission-lines': [{ field: 'VOLTAGE', op: '>=', value: 345 }] },
+      area: { kind: 'ba', codes: ['ERCO'] },
+      // Smaller, fainter plant markers leave the 345 kV lines in front.
+      style: {
+        'eia-generators': { opacity: 0.5, size: 0.5 },
+        // The neighbours stay as soft context around the island.
+        'eia-ba': { opacity: 0.35 },
+        'hifld-transmission-lines': { size: 1.4 },
+      },
     },
   },
+
+  // ── Land, siting & jurisdictions ───────────────────────────────────────────
+  ...(import.meta.env.DEV ? [TRANSMISSION_SITING] : []),
   {
     id: 'retail-utility-jurisdictions',
     title: 'Public Power, Co-ops & Investor-Owned Utilities',
     category: 'land',
-    summary: 'Who sells you electricity, drawn as territory — and why the rate you pay depends on the line you live behind.',
+    summary: 'Who sells you electricity, drawn as territory, and why the rate you pay depends on the line you live behind.',
     narrative:
-      'The US retail grid is a fragmented mix of investor-owned utilities, municipal systems, rural electric ' +
-      'cooperatives, and federal power marketing administrations such as BPA, TVA and WAPA. Service boundaries ' +
-      'are the map of who sets rates, who plans distribution investment, and which regulator hears the case.',
+      'Each colour is a kind of utility: blue investor-owned, green cooperative, orange municipal and purple ' +
+      'public or government. The patchwork shows who sells power at retail in each place, who sets the rates ' +
+      'and who oversees them: state commissions for investor-owned utilities, members and local boards for most' +
+      ' co-ops and municipals. The dark lines are the 300 kV and higher backbone, which crosses all of them ' +
+      'regardless of who serves the customers underneath.',
     takeaways: [
-      'Cooperatives cover the majority of US land area while serving a small share of customers.',
-      'Municipal utilities and PMAs are governed locally or federally, outside state rate-of-return regulation.',
-      'Territory boundaries, not physical wires, determine which planning process a new interconnection enters.',
+      "Cooperatives serve about one American in eight but cover more than half of the country's land.",
+      'Municipal utilities and federal power marketing administrations are governed locally or federally, outside state rate-of-return regulation.',
+      "A new generator's grid connection is studied by the transmission owner and its planning region, not by the retail utility.",
     ],
     keywords: ['retail', 'utility', 'coop', 'municipal', 'iou', 'territory', 'rates'],
-    camera: { center: [-94.4334, 39.3193], zoom: 4.14 },
+    camera: { center: [-97.5, 38.8], zoom: 4.2 },
     state: {
-      layersOn: ['retail-territories', 'hifld-transmission-lines'],
+      layersOn: ['retail-territories'],
       basemap: 'light',
+      legendFilters: { kv: BACKBONE_KV },
+      style: { 'osm-transmission-lines': { color: '#1e293b', opacity: 0.7, size: 1.2 } },
     },
   },
 
@@ -395,23 +519,29 @@ export const EXPERIENCES: MapExperience[] = [
     id: 'wildfires-and-smoke',
     title: 'Wildfire Threat: Active Perimeters & Smoke',
     category: 'hazards',
-    summary: 'Live fire perimeters and smoke plumes against the high-voltage corridors they threaten.',
+    summary: 'Live fires and smoke against the high-voltage corridors they threaten.',
     narrative:
-      'Transmission lines through forested corridors are exposed to direct fire damage, to flashover across ' +
-      'ionized smoke, and to the Public Safety Power Shutoffs utilities call to avoid starting fires in the first ' +
-      'place. This view pairs the live satellite fire feed and the smoke forecast with the bulk power corridors ' +
-      'underneath them.',
+      'Fire icons are active incidents, coloured by containment from red (little contained) to green (mostly ' +
+      'contained); outlines are fire perimeters, and the orange glow is satellite-detected heat from the last ' +
+      "24 hours. Smoke from NOAA's daily analysis shades the areas downwind. The light grey lines are the 300 " +
+      'kV and higher corridors: a fire need not reach a line to threaten it, since heavy smoke can cause ' +
+      'flashover and utilities may switch lines off ahead of a fire.',
     takeaways: [
-      'Smoke can trigger flashover on an energized line without the fire ever reaching the right-of-way.',
-      'PSPS de-energization is a planned outage: the grid trades reliability for ignition risk.',
-      'Perimeters update roughly daily; the hotspot feed is closer to real time.',
+      'Dense smoke and ash can make an energized line flash over without the fire reaching the right-of-way.',
+      'A Public Safety Power Shutoff is a planned outage: the utility trades service for a lower chance of starting a fire.',
+      'Hotspots update several times a day from satellite passes; perimeters and incidents update as fire agencies report them.',
     ],
     keywords: ['wildfire', 'fire', 'smoke', 'psps', 'live'],
-    camera: { center: [-120.5, 42.0], zoom: 5.5 },
+    camera: { center: [-122.3, 41.5], zoom: 5.5 },
     state: {
-      layersOn: ['wildfire-live', 'wildfire-smoke', 'wildfire-incidents', 'hifld-transmission-lines'],
-      basemap: 'light',
-      smokeOpacity: 0.7,
+      layersOn: ['wildfire-live', 'wildfire-smoke', 'wildfire-incidents'],
+      basemap: 'dark',
+      smokeOpacity: 0.6,
+      legendFilters: { kv: BACKBONE_KV },
+      style: {
+        'osm-transmission-lines': { color: '#cbd5e1', opacity: 0.85, size: 1.3 },
+        'wildfire-incidents': { size: 0.7 },
+      },
     },
   },
   {
@@ -420,65 +550,79 @@ export const EXPERIENCES: MapExperience[] = [
     category: 'hazards',
     summary: "The Forest Service's long-run fire hazard model, read against the rights-of-way that cross it.",
     narrative:
-      'Wildfire Hazard Potential is a long-term model of catastrophic fire likelihood, independent of what is ' +
-      'burning today. Correlating high-hazard terrain with high-voltage rights-of-way is how utilities decide ' +
-      'where undergrounding, covered conductor, vegetation management and camera detection are worth their cost.',
+      "This is the US Forest Service's Wildfire Hazard Potential: a long-run estimate of where a fire would be " +
+      'hardest to contain, from green (very low) through yellow to red (very high). It says nothing about what ' +
+      'is burning today. The dark lines are transmission at 200 kV and above. Where a right-of-way crosses long' +
+      " runs of red, in the Sierra foothills, the coast ranges and Southern California's mountains, utilities " +
+      'weigh undergrounding, covered conductor, vegetation clearing and camera detection.',
     takeaways: [
       'Undergrounding removes ignition risk but costs several million dollars per mile in mountainous terrain.',
-      'Covered conductor and fast-trip settings are the cheaper mitigations applied across far more line-miles.',
-      'The hazard model is static; pairing it with the live feeds shows model against outcome.',
+      'Covered conductor and fast-trip settings are cheaper and applied across far more miles of line.',
+      "Pair this view with the live wildfire story to set the model against today's fires.",
     ],
     keywords: ['whp', 'hazard', 'wildfire', 'hardening', 'undergrounding', 'sierra'],
-    camera: { center: [-119.5, 37.5], zoom: 5.2 },
+    camera: { center: [-121.0, 37.6], zoom: 5.6 },
     state: {
-      layersOn: ['usfs-wildfire-potential', 'hifld-transmission-lines'],
-      basemap: 'topo',
+      layersOn: ['usfs-wildfire-potential'],
+      basemap: 'light',
       hillshade: true,
+      // Dark backbone lines over the hazard wash, so a right-of-way reads across red.
+      legendFilters: { kv: ['550+', '500-549', '300-499', '200-299'] },
+      style: {
+        'usfs-wildfire-potential': { opacity: 0.65 },
+        'osm-transmission-lines': { color: '#0f172a', opacity: 0.85, size: 1.2 },
+      },
     },
   },
   {
     id: 'live-outages-and-radar',
     title: 'Extreme Storm Response: Live Outages & Radar',
     category: 'hazards',
-    summary: 'Radar, active weather warnings and reported customer outages, county by county, right now.',
+    summary: 'Radar, active weather warnings and customers without power, county by county, right now.',
     narrative:
-      'This is grid resilience as it happens. As convective storms track across the Southeast, radar ' +
-      'precipitation and active National Weather Service warning polygons line up with sudden rises in reported ' +
-      'customer outages. The outage counts are joined onto county boundaries, so the damage footprint and the ' +
-      'storm footprint can be read against each other directly.',
+      'Radar shows precipitation now, from light green to red in the heaviest cells. The outlined areas are ' +
+      'active National Weather Service warnings, and counties are shaded by customers without power, from ' +
+      'yellow (under 100) to dark red (5,000 or more). Read them together: where a storm line has passed, ' +
+      'outage counts climb behind it. The faint lines are the 300 kV and higher backbone, which storms rarely ' +
+      'take down; most outages start on local distribution lines.',
     takeaways: [
       'Distribution damage, not transmission damage, causes the overwhelming majority of customer-minutes lost.',
       'Outage reporting lags the storm by tens of minutes — the radar leads, the counties follow.',
       'Warning polygons are issued per hazard type, so a county can carry several at once.',
     ],
     keywords: ['outage', 'odin', 'radar', 'nexrad', 'storm', 'nws', 'alerts', 'live'],
-    camera: { center: [-90.0, 33.0], zoom: 4.5 },
+    camera: { center: [-93.0, 35.5], zoom: 4.6 },
     state: {
-      layersOn: ['odin-outages', 'nexrad-radar', 'nws-alerts', 'hifld-transmission-lines'],
-      basemap: 'light',
+      layersOn: ['odin-outages', 'nexrad-radar', 'nws-alerts'],
+      basemap: 'dark',
+      legendFilters: { kv: BACKBONE_KV },
+      style: { 'osm-transmission-lines': { color: '#94a3b8', opacity: 0.8, size: 1.2 } },
     },
   },
   {
     id: 'live-temperature-grid-load',
     title: 'Live Temperature & Grid Peak Demand',
     category: 'hazards',
-    summary: 'The forecast temperature field, which is the closest thing there is to a forecast of peak demand.',
+    summary: 'The forecast temperature field, the closest thing there is to a forecast of peak demand.',
     narrative:
-      'Peak electricity demand tracks temperature extremes almost directly — summer heat domes driving air ' +
-      'conditioning, winter cold snaps driving resistive heating and gas system stress. Scrub the forecast ' +
-      'and you are watching the demand curve build. Heat also derates the lines themselves, so the hours of ' +
-      'greatest need are the hours of least capacity.',
+      'The wash is the latest GFS forecast of air temperature near the ground: the warmer the colour, the ' +
+      'hotter the air. Drag the time bar to step through the forecast. Electricity demand follows temperature ' +
+      'closely, with air conditioning in summer heat and electric heating in winter cold, so this is close to a' +
+      " map of tomorrow's peak. The dark lines are the 300 kV and higher backbone: lines carry less in hot " +
+      'weather, so the hours of greatest need are the hours of least capacity.',
     takeaways: [
       'Air conditioning load rises non-linearly above about 25 °C, so the last few degrees add the most megawatts.',
       'Thermal line ratings fall as ambient temperature rises — capacity shrinks exactly when demand peaks.',
       'Winter peaks stress the gas system and the grid at the same time, since both draw on the same fuel.',
     ],
     keywords: ['temperature', 'weather', 'peak', 'demand', 'forecast', 'heat', 'live'],
-    camera: { center: [-95.9661, 39.053], zoom: 4.08 },
+    camera: { center: [-99.0, 38.6], zoom: 4.1 },
     state: {
-      layersOn: ['weather-live', 'hifld-transmission-lines'],
+      layersOn: ['weather-live'],
       basemap: 'light',
       weatherVar: 'temp',
+      legendFilters: { kv: BACKBONE_KV },
+      style: { 'osm-transmission-lines': CONTEXT_LINE },
     },
   },
 ];

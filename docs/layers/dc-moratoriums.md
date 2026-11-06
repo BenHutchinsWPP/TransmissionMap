@@ -119,6 +119,7 @@ GeoJSON properties, one feature per jurisdiction:
 
 | Field | % filled | Example values |
 |---|---|---|
+| `fid` | 100 | stable id, the jurisdiction: `state:TX`, `county:48201`, `utility:10610`, `ba:ERCO`, `place:OH:3900198` (a Census place or county subdivision GEOID), `point:MI:a2b0fa36ab` (no Census place) |
 | `kind` | 100 | `state`, `county`, `utility`, `point` |
 | `name` | 100 | `Mesa County, CO`, `Ada, OH`, `Texas`, `Grant County PUD, WA`, `ERCOT grid region, TX` |
 | `state` | 100 | `CO` |

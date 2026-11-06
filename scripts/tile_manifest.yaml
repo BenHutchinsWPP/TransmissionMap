@@ -82,8 +82,7 @@ layers:
     native_id: true
     select: [fid, name, source, gen_method, gen_type, output_mw, operator]
     min_zoom: 7
-    # z14 alone was 48% of the archive. z13 takes the world file from 120 MB to
-    # 63 MB, under the 100 MiB publishing ceiling, with no features dropped.
+    # max_zoom 13 keeps the archive under the 100 MiB publishing ceiling with no features dropped.
     max_zoom: 13
     max_tile_bytes: 2000000
     flags: [--drop-densest-as-needed, --extend-zooms-if-still-dropping]
@@ -259,23 +258,29 @@ layers:
     precision: 5
     select: [LARNAME, AGENCY]
 
+  # `fid` is a content id (extract_padus.py): PAD-US has no key on every record.
+  # max_tile_bytes 600000: z3–z7 keep their polygons; z8+ stay under the cap.
   - id: padus
     src: data/build/padus.gpkg
     format: pmtiles
+    id_field: fid
+    native_id: true
+    select: [fid, name, desig, mng_agency, mng_type, own_agency, own_type, gap, access, state, acres, yr_est]
     precision: 5
     min_zoom: 3
     max_zoom: 10
     simplification: 10
-    max_tile_bytes: 400000
+    max_tile_bytes: 600000
     flags: [--detect-shared-borders, --drop-densest-as-needed, --coalesce-densest-as-needed]
 
 
-  # Originally zoom 4-13 (matching the hand-built crithab.pmtiles), lowered to
-  # min_zoom 3 so crithab appears at the same zoom as tribal_lands. Simplification
-  # 4, no precision/border flags.
+  # min_zoom 3: appears with tribal_lands.
+  # entity_id is the FWS ECOS listing-entity id, one polygon each.
   - id: crithab
     src: data/build/crithab.gpkg
     format: pmtiles
+    id_field: entity_id
+    select: [entity_id, comname, sciname, spcode, status, listing_st, unitname, subunitnam, effectdate]
     min_zoom: 3
     max_zoom: 13
     simplification: 4
@@ -368,6 +373,12 @@ layers:
     src: data/build/ogf_planned_transmission.gpkg
     format: geojson
     id_field: RecordID
+    # Every column of the OGF export, listed so FIELD_SCHEMA can name them.
+    select: [RecordID, ProjectID, Project, Segment, Owner, Status, InfoDate, Type, LineType,
+             MinVolt, MaxVolt, ACDC, CapacityMW, EstYear, FedPerm, StatePerm, Perm_Updat,
+             FP_Filter, SP_Filter, AltName, FromSub, ToSub, AllSub, StatesFull, StatesAbbr,
+             ISO_RTO, PlanAuth, PlanProc, Portfolio, Length_mi, LengthSrc, Link, Link2,
+             Region, Work, states, counties, ba, nerc]
 
   - id: boem_wind_leases
     src: data/build/boem_wind_leases.geojson
@@ -388,13 +399,23 @@ layers:
     format: geojson
     precision: 6
     id_field: fid
+    select: [fid, name, dataset, scenario, upgrade_type, voltage_kv, line_type, length_mi, ogf_ids,
+             states, counties, ba, nerc]
 
 # Layers built by their own script rather than this manifest, listed only to
-# declare their stable feature id (same meaning as a layer's `id_field`).
-# build_tiles.py ignores this list; stable_ids.py checks the served
-# data/layers/<id>.geojson.gz.
+# declare their stable feature id (same meaning as a layer's `id_field`) and,
+# as `select`, the properties the script writes (scripts/test_field_schema.py
+# checks it against the script). build_tiles.py ignores this list;
+# stable_ids.py checks the served data/layers/<id>.geojson[.gz] (`--layers-dir`
+# for a file served from elsewhere).
 built_elsewhere:
   - id: mines                     # scripts/extract_mines.py (`make mines`)
     id_field: mine_id
+    select: [mine_id, name, status, cat, commodity, operator, employees, state]
+  # scripts/moratoriums/build_layer.py; served from the data-moratoriums branch
+  # root (dev: _private/moratoriums/dataset/), so check it with --layers-dir.
+  - id: dc_moratoriums
+    id_field: fid
+    select: [fid, kind, name, state, level, cls, n, last_event, items, history]
   - id: nrel_hydrothermal_points  # scripts/build_hydrothermal_pts.sh (`make hydro-pts`)
     id_field: UID

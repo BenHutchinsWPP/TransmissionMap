@@ -1,5 +1,30 @@
-// Layer registry entries — protected lands, tribal lands, critical habitat.
+// Layer registry entries — protected lands, tribal lands, critical habitat, and
+// (dev server only, until its rasters are published) the Routing constraints layer.
 import type { LayerDef } from '../types.js';
+import { CONSTRAINT_PALETTE } from '../colors/route-constraints.js';
+
+// Routing constraints: what the route cube says about the land, one concern at a
+// time (src/colors/route-constraints.ts CONCERNS; the row's picker sets
+// state.routeConcern and assets/route-constraints.ts swaps the raster's url).
+// Registered only on the dev server: its rasters sit beside the route cube in
+// data/route/constraints/ and are not published (assets/constants.ts).
+export const routeConstraintsLayer: LayerDef = {
+  id:          "route-constraints",
+  urlCode:     "RCN",
+  label:       "Constraints",
+  titleKey:    "layer.routeConstraints",
+  group:       "land",
+  sourceId:    "route-constraints",
+  data:        { kind: "raster", key: "route_constraints",
+                 credit: 'Route cube: <a href="https://www.usgs.gov/programs/gap-analysis-project">USGS PAD-US</a>, USFWS, EPA, NPS, BLM, USFS, FAA, USACE, USGS NLCD (land cover), DOE/ANL Section 368 energy corridors · PoPWest (Wu et al. 2023, PNAS 120(4) e2204098120, data <a href="https://doi.org/10.5281/zenodo.7460026">Zenodo 7460026</a>, CC BY 4.0; TNC categories) · <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors (ODbL)</a>, for the OpenStreetMap entries · <a href="https://source.coop/repositories/seerai/hifld/description/">HIFLD</a> (SeerAI, CC BY 4.0) · <a href="https://www.worldpop.org/">WorldPop</a> (CC BY 4.0) · <a href="https://gis-fema.hub.arcgis.com/pages/usa-structures">USA Structures</a> (ORNL, FEMA Geospatial Response Office, CC BY 4.0)' },
+  swatch:      CONSTRAINT_PALETTE.find(c => c.id === 'other-federal')!.colour,
+  defaultOn:   false,
+  // No static ramp: index.html #routeConstraintsLegend, drawn per concern.
+  routeConcernLayer: true,
+  mapLayerIds: ["route-constraints"],
+  regions:     ["usa"],
+  downloads:   {},
+};
 
 export const landLayers: LayerDef[] = [
   {
@@ -9,7 +34,9 @@ export const landLayers: LayerDef[] = [
     titleKey:      "layer.padus",
     group:         "land",
     sourceId:      "usgs-padus",
-    data:          { kind: "pmtiles", key: "padus", credit: '<a href="https://www.usgs.gov/programs/gap-analysis-project">USGS PAD-US</a>' },
+    dataset:       "padus",
+    // A content id (scripts/extract_padus.py): PAD-US has no key on every record.
+    data:          { kind: "pmtiles", key: "padus", credit: '<a href="https://www.usgs.gov/programs/gap-analysis-project">USGS PAD-US</a>', id: { field: "fid", native: true } },
     swatch:        "#15803d",
     defaultOn:     false,
     hoverField:    "name",
@@ -60,6 +87,7 @@ export const landLayers: LayerDef[] = [
     titleKey:      "layer.mines",
     group:         "load",
     sourceId:      "msha-mines",
+    dataset:       "mines",
     data:          { kind: "geojson", key: "mines", credit: '<a href="https://arlweb.msha.gov/opengovernmentdata/ogimsha.asp">MSHA</a>', id: { field: "mine_id" } },
     swatch:        "#b45309",
     defaultOn:     false,
@@ -75,7 +103,8 @@ export const landLayers: LayerDef[] = [
     titleKey:    "layer.crithab",
     group:       "land",
     sourceId:    "fws-crithab",
-    data:        { kind: "pmtiles", key: "crithab", credit: '<a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html">USFWS</a>' },
+    dataset:     "crithab",
+    data:        { kind: "pmtiles", key: "crithab", credit: '<a href="https://ecos.fws.gov/ecp/report/table/critical-habitat.html">USFWS</a>', id: { field: "entity_id" } },
     swatch:      "#f59e0b",
     defaultOn:   false,
     mapLayerIds: ["crithab-fill", "crithab-outline"],
@@ -83,4 +112,5 @@ export const landLayers: LayerDef[] = [
     regions:     ["usa"],
     downloads: {},
   },
+  ...(import.meta.env.DEV ? [routeConstraintsLayer] : []),
 ];

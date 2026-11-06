@@ -2,7 +2,8 @@
 import { POP_RAMP_STOPS, POP_LOG_MAX } from '../colors/ramps.js';
 import { DCM_CLASSES } from '../colors/buckets.js';
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_CREDIT, CENSUS_CARTO_CREDIT, GEOBOUNDARIES_CREDIT, OSM_FID } from './sources.js';
+import { OSM_CREDIT, HIFLD_CREDIT, CENSUS_CARTO_CREDIT, GEOBOUNDARIES_CREDIT } from './sources.js';
+import { OSM_FID } from './osm-fid.js';
 import { convDensity, densityLabel } from '../units.js';
 
 export const regionLayers: LayerDef[] = [
@@ -14,6 +15,7 @@ export const regionLayers: LayerDef[] = [
     titleKey:      "layer.osmDatacenters",
     group:         "load",
     sourceId:      "osm",
+    dataset:       "osm_datacenters",
     data:          { kind: "geojson", key: "osm_datacenters", credit: OSM_CREDIT + " · <a href='https://github.com/IMMM-SFA/datacenter-atlas'>IM3 Data Center Atlas (PNNL/DOE)</a>", id: OSM_FID },
     swatch:        "#6366f1",
     defaultOn:     false,
@@ -44,7 +46,8 @@ export const regionLayers: LayerDef[] = [
     titleKey:      "layer.dcMoratoriums",
     group:         "load",
     sourceId:      "moratorium-nation",
-    data:          { kind: "geojson", key: "dc_moratoriums", credit: "<a href='https://mjbommar.github.io/moratorium-data-2026/'>Moratorium Nation</a> (CC BY 4.0)" },
+    dataset:       "dc_moratoriums",
+    data:          { kind: "geojson", key: "dc_moratoriums", credit: "<a href='https://mjbommar.github.io/moratorium-data-2026/'>Moratorium Nation</a> (CC BY 4.0)", id: { field: "fid" } },
     swatch:        DCM_CLASSES[1].color,
     defaultOn:     false,
     mapLayerIds:   ["dcm-state-fill", "dcm-state-line", "dcm-utility-fill", "dcm-utility-line",

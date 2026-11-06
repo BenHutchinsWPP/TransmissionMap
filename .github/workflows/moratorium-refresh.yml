@@ -11,16 +11,32 @@ name: Moratorium refresh
 # `publish: pull_request` it instead opens or updates ONE pull request from the
 # rolling `refresh/weekly` branch, and merging it is the publishing step.
 #
+# Three jobs, so the step that reads web pages and model output never shares a VM
+# with a write credential, and nothing it writes decides what is published:
+#   plan      no token, no secret values: the mode (from the inputs, the schedule and
+#             whether each key is set) and the UTC run date.
+#   research  read-only token; holds the Brave, model and contact secrets. Carries
+#             over the open refresh PR, runs run.py, and uploads only what it wrote
+#             (run_report.json, inputs/refresh_{state,ledger}.json and the run
+#             date's weekly folder) as the `moratorium-research-<run id>-<attempt>` artifact.
+#   publish   fresh VM in the `moratoriums-publish` environment; contents and
+#             pull-requests write, no research secrets, no cache, no research job
+#             output. Works the mode out again and requires the run date to be today
+#             or yesterday (UTC), checks the artifact as untrusted input
+#             (refresh/artifact.py) against its own fresh checkout before copying it
+#             in, then rebuilds, checks and publishes.
+#
 # Modes (workflow_dispatch `mode`; the schedule always asks for `research`):
-#   research      live Brave search + model extraction, rebuild, publish.
-#   dry_run       fixtures + stub model in a temporary copy, PR body printed, no push.
-#                 Chosen automatically (with a ::notice::) when BRAVE_API_KEY or both
-#                 ANTHROPIC_API_KEY and OPENROUTER_API_KEY are unset.
-#   rebuild_only  no search, no model: rebuild from inputs/. With no refresh PR open
-#                 it rebuilds as of the geojson's own date and must produce no diff
-#                 (the reproducibility check); with one open it rebuilds as of today and
-#                 force-pushes `refresh/weekly` (e.g. after a reviewer adds a DROP
-#                 row to updates.csv).
+#   research      live Brave search + model extraction (research job), rebuild and
+#                 publish (publish job).
+#   dry_run       fixtures + stub model in a temporary copy, PR body printed, no push;
+#                 the research job only. Chosen automatically (with a ::notice::) when
+#                 BRAVE_API_KEY or both ANTHROPIC_API_KEY and OPENROUTER_API_KEY are unset.
+#   rebuild_only  no search, no model: the publish job alone rebuilds from inputs/. With
+#                 no refresh PR open it rebuilds as of the geojson's own date and must
+#                 produce no diff (the reproducibility check); with one open it rebuilds as
+#                 of today and force-pushes `refresh/weekly` (e.g. after a reviewer adds a
+#                 DROP row to updates.csv).
 #
 # To stop it: disable the workflow (Actions > Moratorium refresh >
 # Disable workflow). In pull_request mode, closing the open refresh PR discards
@@ -53,21 +69,58 @@ on:
         default: ''
 
 # Two runs editing the same refresh branch would race its force-push; queue
-# instead. Deliberately NOT the `data-branch` group: that one serialises the
-# force-pushed live-feed `data` branch, and a 2-hour refresh in it would stall
-# the hourly feeds.
+# instead. Workflow-level, so it holds every job. Deliberately NOT the
+# `data-branch` group: that one serialises the force-pushed live-feed `data`
+# branch, and a 2-hour refresh in it would stall the hourly feeds.
 concurrency:
   group: data-moratoriums
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
+# Each job names its own permissions.
+permissions: {}
 
 jobs:
-  refresh:
+  plan:
+    # Mode and run date from trusted context only (inputs, the schedule, whether each key is set),
+    # decided before any research code runs; both later jobs read them from here.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      run_date: ${{ steps.mode.outputs.run_date }}
+      max_requests: ${{ steps.mode.outputs.max_requests }}
+    steps:
+      - name: Decide mode
+        id: mode
+        env:
+          ASKED: ${{ inputs.mode || 'research' }}
+          MAX_REQUESTS: ${{ inputs.max_requests || '220' }}
+          # Booleans only: the expression tests whether a secret is set without exposing it.
+          HAS_BRAVE: ${{ secrets.BRAVE_API_KEY != '' }}
+          HAS_LLM: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.OPENROUTER_API_KEY != '' }}
+        run: |
+          case "$ASKED" in research|dry_run|rebuild_only) ;; *) echo "::error::unknown mode"; exit 1 ;; esac
+          mode="$ASKED"
+          if [ "$mode" = research ] && { [ "$HAS_BRAVE" != true ] || [ "$HAS_LLM" != true ]; }; then
+            echo "::notice::Search or model key not set: running dry_run on fixtures, no PR."
+            mode=dry_run
+          fi
+          [[ "$MAX_REQUESTS" =~ ^[0-9]+$ ]] || { echo "::error::max_requests must be a whole number"; exit 1; }
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "max_requests=$MAX_REQUESTS" >> "$GITHUB_OUTPUT"
+          echo "run_date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode (asked: $ASKED), run date $(date -u +%F), max requests $MAX_REQUESTS"
+
+  research:
+    needs: plan
+    # rebuild_only needs no research output; the publish job runs alone then.
+    if: ${{ needs.plan.outputs.mode != 'rebuild_only' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: read   # carry-over lists the open refresh PR
     env:
       W: ${{ github.workspace }}/work
       PYTHONPATH: ${{ github.workspace }}/scripts
@@ -89,8 +142,7 @@ jobs:
           # below, for these two branches only.
           ref: refs/heads/data-moratoriums
           path: work/site
-          # The repo is public, so fetching needs no token; the two push steps get
-          # one in their own environment.
+          # The repo is public, so fetching needs no token.
           persist-credentials: false
 
       - name: Fetch data-moratoriums history and the refresh branch
@@ -103,8 +155,6 @@ jobs:
           git fetch --no-tags --unshallow origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
           git fetch --no-tags origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
             || echo "No $BRANCH branch yet."
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Force IPv4 for network stability
         # Mitigates common GitHub Actions problem where broken IPv6 routes cause network failures.
@@ -120,29 +170,21 @@ jobs:
         # hash-checked so only those exact wheels install.
         run: pip install --quiet --require-hashes -r scripts/moratoriums/requirements-refresh.txt
 
-      - name: Decide mode
+      - name: Mode and run date from the plan job
         id: mode
         env:
-          ASKED: ${{ inputs.mode || 'research' }}
-          MAX_REQUESTS: ${{ inputs.max_requests || '220' }}
-          HAS_BRAVE: ${{ secrets.BRAVE_API_KEY != '' }}
-          HAS_LLM: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.OPENROUTER_API_KEY != '' }}
+          MODE: ${{ needs.plan.outputs.mode }}
+          RUN_DATE: ${{ needs.plan.outputs.run_date }}
+          MAX_REQUESTS: ${{ needs.plan.outputs.max_requests }}
         run: |
-          mode="$ASKED"
-          if [ "$mode" = research ] && { [ "$HAS_BRAVE" != true ] || [ "$HAS_LLM" != true ]; }; then
-            echo "::notice::Search or model key not set: running dry_run on fixtures, no PR."
-            mode=dry_run
-          fi
-          [[ "$MAX_REQUESTS" =~ ^[0-9]+$ ]] || { echo "::error::max_requests must be a whole number"; exit 1; }
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          echo "max_requests=$MAX_REQUESTS" >> "$GITHUB_OUTPUT"
-          echo "run_date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-          echo "Mode: $mode (asked: $ASKED), run date $(date -u +%F), max requests $MAX_REQUESTS"
+          { echo "mode=$MODE"; echo "run_date=$RUN_DATE"; echo "max_requests=$MAX_REQUESTS"; } >> "$GITHUB_OUTPUT"
+          echo "Mode: $MODE, run date $RUN_DATE, max requests $MAX_REQUESTS"
 
       - name: One research run per published date
         # A run writes inputs/research/weekly/<run date>/ and replaces what is there, so a second
         # research run on a date data-moratoriums already has would undo that day's published rows.
         # (The checkout is the published tip here; an open refresh PR's folders are carried over later.)
+        # The publish job checks again on its own checkout.
         if: steps.mode.outputs.mode == 'research'
         env:
           RUN_DATE: ${{ steps.mode.outputs.run_date }}
@@ -154,7 +196,8 @@ jobs:
 
       - name: Stdlib tests
         # PRs opened with GITHUB_TOKEN don't trigger pipeline-tests.yml, so the
-        # gate runs here, before anything is searched or pushed.
+        # gate runs here, before anything is searched (and again in publish,
+        # before anything is pushed).
         run: python3 -m unittest discover -s scripts -p "test_*.py"
 
       - name: Work layout
@@ -169,31 +212,29 @@ jobs:
           ln -sfn site/inputs "$W/inputs"
           mkdir -p "$W/build/logs" "$W/census"
 
+      # Census and the upstream clone are not read by run.py; they are fetched here so the run
+      # fails before any search request is spent when either is unreachable. The publish job
+      # downloads its own copies and never restores this cache.
       - name: Restore Census cartographic boundaries
         id: census
+        if: steps.mode.outputs.mode == 'research'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:
           path: work/census
           key: census-genz2023-cb_2023_us_county_500k-cb_2023_us_place_500k-cb_2023_us_cousub_500k
 
       - name: Download Census cartographic boundaries
-        # Fails here, before any search request is spent, if Census is down.
-        if: steps.census.outputs.cache-hit != 'true'
+        if: steps.mode.outputs.mode == 'research' && steps.census.outputs.cache-hit != 'true'
         run: |
           for n in cb_2023_us_county_500k cb_2023_us_place_500k cb_2023_us_cousub_500k; do
             curl -sS --fail --retry 3 --retry-delay 20 --connect-timeout 30 \
               -o "$W/census/$n.zip" "https://www2.census.gov/geo/tiger/GENZ2023/shp/$n.zip"
           done
 
-      - name: Check Census files
-        run: |
-          for n in cb_2023_us_county_500k cb_2023_us_place_500k cb_2023_us_cousub_500k; do
-            [ -s "$W/census/$n.zip" ] || { echo "::error::missing work/census/$n.zip"; exit 1; }
-          done
-
       - name: Clone Moratorium Nation at the pinned sha
         # Pinned in inputs/upstream.sha so an upstream change arrives only as a
         # deliberate bump in its own PR.
+        if: steps.mode.outputs.mode == 'research'
         run: |
           sha="$(tr -d '[:space:]' < "$W/site/inputs/upstream.sha")"
           git init -q "$W/upstream"
@@ -209,7 +250,6 @@ jobs:
         run: python3 -m moratoriums.refresh.pr carry-over --checkout "$W/site"
 
       - name: Search, fetch, extract, verify
-        if: steps.mode.outputs.mode != 'rebuild_only'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
           RUN_DATE: ${{ steps.mode.outputs.run_date }}
@@ -229,6 +269,238 @@ jobs:
           python3 -m moratoriums.refresh.run --mode "$MODE" --work "$W" --dataset "$W/site" \
             --build "$W/build" --run-date "$RUN_DATE" --max-requests "$MAX_REQUESTS" \
             --report "$W/build/run_report.json"
+
+      - name: Print the PR body (dry_run)
+        # No push credentials: in dry_run pr.py prints every mutating git and gh call.
+        if: steps.mode.outputs.mode == 'dry_run'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+          PUBLISH: ${{ inputs.publish || 'direct' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          direct=(); [ "$PUBLISH" = direct ] && direct=(--direct)
+          python3 -m moratoriums.refresh.pr publish --checkout "$W/site" --build "$W/build" \
+            --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode dry_run "${direct[@]}"
+
+      - name: Stage the hand-off for the publish job
+        # Only what run.py wrote; the publish job checks it again before using it.
+        if: steps.mode.outputs.mode == 'research'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: |
+          h="$W/handoff"
+          rm -rf "$h"
+          mkdir -p "$h/inputs/research/weekly"
+          cp "$W/build/run_report.json" "$h/"
+          cp "$W/site/inputs/refresh_state.json" "$W/site/inputs/refresh_ledger.json" "$h/inputs/"
+          cp -R "$W/site/inputs/research/weekly/$RUN_DATE" "$h/inputs/research/weekly/"
+
+      - name: Upload the hand-off
+        if: steps.mode.outputs.mode == 'research'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: moratorium-research-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: work/handoff/
+
+      - name: Job summary
+        if: always()
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          python3 - "$W/build/run_report.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, os, sys
+          print(f"### Moratorium refresh — {os.environ.get('MODE') or 'not started'}\n")
+          try:
+              r = json.load(open(sys.argv[1], encoding="utf-8"))
+          except (OSError, ValueError):
+              print("No run report (the run stopped before run.py finished).")
+              sys.exit(0)
+          rows = r.get("rows", {})
+          llm = r.get("llm", {})
+          print("| measure | value |\n|---|---|")
+          for k in ("moratoriums", "bans", "utilities", "updates"):
+              print(f"| {k} rows | {rows.get(k, 0)} |")
+          print(f"| leads | {r.get('leads', {}).get('total', 0)} |")
+          print(f"| search requests | {r.get('search_requests', 0)} |")
+          print(f"| pages fetched (rate) | {r.get('fetch', {}).get('pages', 0)} ({r.get('fetch', {}).get('rate', 0)}) |")
+          seeds = r.get("seeds", {})
+          print(f"| seed pages read / failed / paused | {seeds.get('read', 0)} / {seeds.get('failed', 0)} / {seeds.get('paused', 0)} |")
+          print(f"| model calls (escalated, refusals) | {llm.get('calls', 0)} ({llm.get('escalated', 0)}, {llm.get('refusals', 0)}) |")
+          print(f"| est. model cost (USD) | {llm.get('est_cost_usd', 0)} |")
+          print(f"| caps hit | {', '.join(r.get('caps_hit') or []) or 'none'} |")
+          PY
+
+      - name: Upload run report, logs and weekly notes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: moratorium-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            work/build/run_report.json
+            work/build/pr_body.md
+            work/build/logs/
+            work/site/inputs/research/weekly/
+
+  publish:
+    needs: [plan, research]
+    # After a successful research run, or alone for rebuild_only (research skipped).
+    # dry_run ends in the research job. Nothing here reads a research job output.
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success' && (
+      (needs.plan.outputs.mode == 'research' && needs.research.result == 'success') ||
+      (needs.plan.outputs.mode == 'rebuild_only' && needs.research.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Deployment branches: main only. Phase Z adds the R2 token here.
+    environment: moratoriums-publish
+    permissions:
+      contents: write        # push data-moratoriums / refresh/weekly
+      pull-requests: write   # open or edit the refresh PR
+    env:
+      W: ${{ github.workspace }}/work
+      PYTHONPATH: ${{ github.workspace }}/scripts
+      BASE: data-moratoriums
+      BRANCH: refresh/weekly
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0, the workflow's commit: the scripts
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0
+        with:
+          # Fully qualified, and not fetch-depth 0: see the research job.
+          ref: refs/heads/data-moratoriums
+          path: work/site
+          # The repo is public, so fetching needs no token; the push steps get
+          # one in their own environment.
+          persist-credentials: false
+
+      - name: Fetch data-moratoriums history and the refresh branch
+        working-directory: work/site
+        run: |
+          git remote get-url origin > /dev/null
+          git fetch --no-tags --unshallow origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          git fetch --no-tags origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
+            || echo "No $BRANCH branch yet."
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Force IPv4 for network stability
+        # See the research job.
+        run: sudo sed -i 's/^#precedence ::ffff:0:0\/96  100/precedence ::ffff:0:0\/96  100/' /etc/gai.conf
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065   # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Python deps
+        # Pinned so the runner rebuild matches the local one byte for byte, and
+        # hash-checked so only those exact wheels install.
+        run: pip install --quiet --require-hashes -r scripts/moratoriums/requirements-refresh.txt
+
+      - name: Mode and run date
+        # Worked out again here from trusted context and held equal to the plan job's; the run
+        # date must be today or yesterday UTC (a research run may cross midnight).
+        id: mode
+        env:
+          ASKED: ${{ inputs.mode || 'research' }}
+          HAS_BRAVE: ${{ secrets.BRAVE_API_KEY != '' }}
+          HAS_LLM: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.OPENROUTER_API_KEY != '' }}
+          PLAN_MODE: ${{ needs.plan.outputs.mode }}
+          PLAN_DATE: ${{ needs.plan.outputs.run_date }}
+        run: |
+          mode="$ASKED"
+          if [ "$mode" = research ] && { [ "$HAS_BRAVE" != true ] || [ "$HAS_LLM" != true ]; }; then
+            mode=dry_run
+          fi
+          [ "$mode" = "$PLAN_MODE" ] || { echo "::error::mode $mode differs from the plan job's"; exit 1; }
+          case "$mode" in research|rebuild_only) ;; *) echo "::error::nothing to publish in $mode"; exit 1 ;; esac
+          today="$(date -u +%F)"; yesterday="$(date -u -d yesterday +%F)"
+          run_date="$today"
+          if [ "$mode" = research ]; then
+            case "$PLAN_DATE" in "$today"|"$yesterday") run_date="$PLAN_DATE" ;;
+              *) echo "::error::run date is neither today nor yesterday (UTC)"; exit 1 ;; esac
+          fi
+          { echo "mode=$mode"; echo "run_date=$run_date"; } >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode, run date $run_date"
+
+      - name: One research run per published date
+        # As in the research job, on this job's own checkout of the tip.
+        if: steps.mode.outputs.mode == 'research'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: |
+          if [ -e "$W/site/inputs/research/weekly/$RUN_DATE" ]; then
+            echo "::error::data-moratoriums already has a research run for $RUN_DATE; a second one would replace that day's rows. Run it again tomorrow (UTC)."
+            exit 1
+          fi
+
+      - name: Stdlib tests
+        # The gate again, on this job's own checkout, before anything is pushed.
+        run: python3 -m unittest discover -s scripts -p "test_*.py"
+
+      - name: Work layout
+        # As in the research job.
+        run: |
+          [ -f "$W/site/inputs/upstream.sha" ] || {
+            echo "::error::$BASE has no inputs/upstream.sha: the branch needs its inputs/ folder (see scripts/moratoriums/README.md)."
+            exit 1
+          }
+          ln -sfn site/inputs "$W/inputs"
+          mkdir -p "$W/build/logs" "$W/census"
+
+      - name: Download Census cartographic boundaries
+        # Downloaded fresh: no cache is restored in this job, so nothing the research job
+        # wrote reaches it.
+        run: |
+          for n in cb_2023_us_county_500k cb_2023_us_place_500k cb_2023_us_cousub_500k; do
+            curl -sS --fail --retry 3 --retry-delay 20 --connect-timeout 30 \
+              -o "$W/census/$n.zip" "https://www2.census.gov/geo/tiger/GENZ2023/shp/$n.zip"
+            [ -s "$W/census/$n.zip" ] || { echo "::error::missing work/census/$n.zip"; exit 1; }
+          done
+
+      - name: Clone Moratorium Nation at the pinned sha
+        # Pinned in inputs/upstream.sha so an upstream change arrives only as a
+        # deliberate bump in its own PR.
+        run: |
+          sha="$(tr -d '[:space:]' < "$W/site/inputs/upstream.sha")"
+          git init -q "$W/upstream"
+          git -C "$W/upstream" remote add origin https://github.com/mjbommar/moratorium-data-2026
+          git -C "$W/upstream" fetch -q --depth 1 origin "$sha"
+          git -C "$W/upstream" checkout -q --detach FETCH_HEAD
+          echo "upstream at $(git -C "$W/upstream" rev-parse HEAD)"
+
+      - name: Carry over the open refresh PR's weekly folders
+        # Before the hand-off is applied, so its refresh_state.json and ledger (which run.py
+        # started from the carried-over copies) replace the carried-over ones.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m moratoriums.refresh.pr carry-over --checkout "$W/site"
+
+      - name: Download the research hand-off
+        # Named for this run attempt, so another attempt's hand-off is never used (re-run all jobs, not
+        # publish alone). Publish cannot tell which process in the research VM uploaded it, since any of
+        # them holds the artifact token, so the next step treats it as untrusted whoever wrote it.
+        if: steps.mode.outputs.mode == 'research'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        with:
+          name: moratorium-research-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/research-handoff
+
+      - name: Check the hand-off and copy it into the checkout
+        # Untrusted input: only run.py's files for this run date, in their exact formats
+        # (refresh/artifact.py lists every rule). Nothing is copied unless all of it passes.
+        if: steps.mode.outputs.mode == 'research'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: |
+          python3 -m moratoriums.refresh.artifact validate --artifact "$RUNNER_TEMP/research-handoff" \
+            --run-date "$RUN_DATE" --dest "$W/site" --report-out "$W/build/run_report.json"
 
       - name: As-of date
         id: asof
@@ -251,7 +523,6 @@ jobs:
           echo "Rebuilding as of $as_of"
 
       - name: Rebuild the layer
-        if: steps.mode.outputs.mode != 'dry_run'
         env:
           AS_OF: ${{ steps.asof.outputs.as_of }}
         run: |
@@ -264,12 +535,11 @@ jobs:
         # one must never reach a PR. events.csv is append-only, and a rebuild
         # that loses more than 2% of the rows or features, or any upstream
         # (nm-) row, stops here (pr.py check).
-        if: steps.mode.outputs.mode != 'dry_run'
         run: python3 -m moratoriums.refresh.pr check --checkout "$W/site"
 
       - name: Publish to data-moratoriums, or open or update the refresh PR
         id: publish
-        if: steps.mode.outputs.mode != 'rebuild_only'
+        if: steps.mode.outputs.mode == 'research'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
           RUN_DATE: ${{ steps.mode.outputs.run_date }}
@@ -299,6 +569,20 @@ jobs:
         env:
           RUN_DATE: ${{ steps.mode.outputs.run_date }}
         run: python3 -m moratoriums.refresh.pr rebase --checkout "$W/site" --run-date "$RUN_DATE"
+
+      - name: Check the hand-off again on the new tip
+        # The new tip's state, ledger and research ids are what the hand-off is now laid over, so it
+        # is checked again against them (rebase put this run's copies back; take the tip's first).
+        if: steps.publish.outputs.retry == 'true'
+        env:
+          RUN_DATE: ${{ steps.mode.outputs.run_date }}
+        run: |
+          for f in inputs/refresh_state.json inputs/refresh_ledger.json; do
+            git -C "$W/site" show "origin/$BASE:$f" > "$W/site/$f" 2>/dev/null || rm -f "$W/site/$f"
+          done
+          rm -rf "$W/site/inputs/research/weekly/$RUN_DATE"
+          python3 -m moratoriums.refresh.artifact validate --artifact "$RUNNER_TEMP/research-handoff" \
+            --run-date "$RUN_DATE" --dest "$W/site" --report-out "$W/build/run_report.json"
 
       - name: Rebuild and check on the new tip
         if: steps.publish.outputs.retry == 'true'
@@ -345,43 +629,18 @@ jobs:
               --report "$W/build/run_report.json" --run-date "$RUN_DATE" --mode rebuild_only
           fi
 
-      - name: Job summary
-        if: always()
-        env:
-          MODE: ${{ steps.mode.outputs.mode }}
-        run: |
-          python3 - "$W/build/run_report.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
-          import json, os, sys
-          print(f"### Moratorium refresh — {os.environ.get('MODE') or 'not started'}\n")
-          try:
-              r = json.load(open(sys.argv[1], encoding="utf-8"))
-          except (OSError, ValueError):
-              print("No run report (rebuild_only, or the run stopped before run.py finished).")
-              sys.exit(0)
-          rows = r.get("rows", {})
-          llm = r.get("llm", {})
-          print("| measure | value |\n|---|---|")
-          for k in ("moratoriums", "bans", "utilities", "updates"):
-              print(f"| {k} rows | {rows.get(k, 0)} |")
-          print(f"| leads | {r.get('leads', {}).get('total', 0)} |")
-          print(f"| search requests | {r.get('search_requests', 0)} |")
-          print(f"| pages fetched (rate) | {r.get('fetch', {}).get('pages', 0)} ({r.get('fetch', {}).get('rate', 0)}) |")
-          seeds = r.get("seeds", {})
-          print(f"| seed pages read / failed / paused | {seeds.get('read', 0)} / {seeds.get('failed', 0)} / {seeds.get('paused', 0)} |")
-          print(f"| model calls (escalated, refusals) | {llm.get('calls', 0)} ({llm.get('escalated', 0)}, {llm.get('refusals', 0)}) |")
-          print(f"| est. model cost (USD) | {llm.get('est_cost_usd', 0)} |")
-          print(f"| caps hit | {', '.join(r.get('caps_hit') or []) or 'none'} |")
-          PY
+      # Phase Z: the R2 upload of the published files goes here (the environment's R2 token).
 
-      - name: Upload run report, logs and weekly notes
+      - name: Upload the PR body and rebuild log
         if: always()
+        # The research job holds the same artifact token and could take this name first; that only
+        # costs this diagnostic upload, never the publish.
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
-          name: moratorium-refresh-${{ github.run_id }}
+          name: moratorium-publish-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 30
           if-no-files-found: ignore
           path: |
-            work/build/run_report.json
             work/build/pr_body.md
             work/build/logs/
-            work/site/inputs/research/weekly/

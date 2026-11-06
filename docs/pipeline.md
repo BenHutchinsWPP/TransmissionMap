@@ -10,7 +10,8 @@ in `data/` against fresher upstream sources. For the per-layer processing detail
 
 ```bash
 # 1. System tools + Python venv (one-time)
-#    tippecanoe must be built from source — see https://github.com/felt/tippecanoe
+#    tippecanoe ≥ 2.55.0 must be built from source — see https://github.com/felt/tippecanoe
+#    (`make check` prints the version on PATH)
 make install
 
 # 2. Fetch the eight continental PBFs into data/raw/osm/
@@ -129,6 +130,18 @@ and its code is never reused. `make world-boundaries` stops when CGAZ brings a
   input before tippecanoe (`GLOBAL_FIELDS` / `LINE_FIELDS` in
   `build_global_tiles.py`).
 
+**The frontend side.** `src/registry/field-schema.ts` (`FIELD_SCHEMA`) lists each
+dataset's region fields, and `scripts/test_field_schema.py` checks them both ways
+against what the pipeline writes. `make region-domains`
+(`scripts/build_region_domains.py`) rebuilds the two generated files the Area
+filter reads, `src/registry/region-codes.ts` (the closed code lists) and
+`src/registry/region-labels.json` (names for the picker); both are committed, so
+the frontend build never needs `data/`. Run it after a boundary refresh.
+
+**World `osm_*` layers carry region columns only from `make global-tiles`.** A
+single-region `osm_*` build from `build_tiles.py` has none, so an Area filter
+shows nothing for those layers in that dev build.
+
 **Never run a bare `make tiles` after `make global-tiles`.** It also rebuilds the
 world `osm_*` ids from one region's intermediates, replacing the world archives
 with untagged regional ones. Use `build_tiles.py --only <id>` for US layers.
@@ -213,14 +226,17 @@ together.
 | WestTEC 10 Yr | `fid` | 12-hex content id (sha1 of attributes + part endpoints on a 0.01° grid; `scripts/westtec_ogf.py`) — the publisher has no key, so a content edit yields a new id | `promoteId` |
 | Mines / NREL hydrothermal | `mine_id` / `UID` | MSHA mine ID / publisher UID | `promoteId` (`built_elsewhere` in the manifest) |
 | Retail territories, NERC regions | `id` / `sub_nm` | HIFLD ID / region name | `promoteId` |
+| PAD-US | `fid` | integer content id: 13 hex digits of a sha1 over the source attributes, source-CRS bounds (1 m grid) and vertex count (`scripts/extract_padus.py`) — no key is set on every record, so an edited record yields a new id | native tile id (`native_id`) |
+| Critical habitat | `entity_id` | FWS ECOS listing-entity id, one polygon each | `promoteId` |
+| Data center moratoriums | `fid` | the jurisdiction: `state:TX`, `county:48201`, `utility:<EIA-861 no.>`, `ba:ERCO`, `place:<state>:<place GEOID>`, `point:<state>:<hash>` (`scripts/moratoriums/build_layer.py`) | `promoteId` (`built_elsewhere`; served from the `data-moratoriums` branch, so `make stable-ids ARGS="--only dc_moratoriums --layers-dir <checkout>"`) |
 | US states, ZCTA, tribal lands, EIA BAs, countries, admin-1 | `stusps`, `zcta5`, `geoid`, `abbrev`, `iso_a3`, `code` | the region-tag code | `promoteId` |
 
 **Where ids are built.** In the extract scripts, so the `data/build/` intermediates
 (continental OSM CSV/GeoPackages and the US CSVs) and the merged world inputs already
-carry the id column. Later copies of the data, such as a GeoParquet analysis export,
-read it from there instead of recomputing. `osm_common.osm_fid()` builds the OSM id
+carry the id column. Later copies of the data, such as the line geometry files
+(§ *Line geometry*), read it from there instead of recomputing. `osm_common.osm_fid()` builds the OSM id
 and keeps `osm_type` beside it; the last digit makes the type readable
-(`4535892832` is way `453589283`), and `assets/feature-id.ts` `osmRef()` decodes it
+(`4535892832` is way `453589283`), and `src/registry/osm-fid.ts` `osmRef()` decodes it
 for popup links.
 
 **World merge.** `build_global_tiles.py` dedupes the seam copies of each OSM layer on
@@ -246,6 +262,85 @@ missing id or true duplicate. A duplicate is the same id twice within one tile, 
 shared between the archives of a split layer (the transmission bands). A line cut
 across tiles repeats its id in several tiles and counts once. Run it after every tile
 or extract rebuild.
+
+**Attributes.** `make stable-ids ARGS="--attrs"` holds what the tiles say about each
+feature to the row it was built from. It decodes every pmtiles archive at every zoom,
+keeps a uniform sample of 500 tiles per zoom (`--max-tiles N`, `--all-tiles`,
+`--zooms 9,10,11`), and looks each sampled feature up by its stable id in the build
+input, read as the build reads it: the manifest `src` through ogr2ogr with its
+`select`/`where`, or for a world layer the continental intermediates in
+`build_global_tiles.py`'s dedupe order (transmission: the kept merged input). Every
+tile attribute must equal the row's value, compared by value (`345.0` = `345`); an id
+no input row has, or an attribute the row lacks, is a mismatch too. The region fields
+a world build adds after the merge are not compared, and an input field the tiles
+leave out (a null, `minz`) is not counted. It exits non-zero on any mismatch; memory
+grows with the sample, not the input. `--only <id>` checks one layer; a layer with no
+`id_field` (railroads) is not checked.
+
+The tile builds need tippecanoe ≥ 2.55.0, the release from which every feature keeps
+its own attribute strings at every zoom; `make check` prints the version on PATH, and
+`build_tiles.py`, `build_global_tiles.py` and `process_continental_osm.py` refuse an
+older one (`scripts/toolchain.py`). Every build calls `tippecanoe` by name, so the copy
+first on PATH is the one that runs.
+
+### Line geometry (`make line-parquet`)
+
+The copy, fault-locator and elevation-profile tools need each transmission line's
+full geometry and exact length, which the tiles cannot give: a tile carries a line cut
+into pieces and snapped to its grid. `scripts/build_line_parquet.py` writes them as
+GeoParquet into `data/analysis/`, one directory per dataset. **Dev-only:** nothing
+under `data/analysis/` is published (`publish_data.sh` ships only the `data/layers/`
+paths `assets/constants.ts` names), and publishing it is a separate decision.
+
+| dataset | input |
+|---|---|
+| `osm_transmission_lines` | `data/build/world/transmission_world.geojsonl.gz` — the merged, deduped, untagged world input `build_global_tiles.py` keeps (`keep_merged`) |
+| `hifld_transmission_lines` | `data/build/transmission_hifld.gpkg`, through the tile build's own `ogr2ogr -lco COORDINATE_PRECISION=6` |
+
+Reading the kept merge, not the continental GeoPackages, is what makes the ids and the
+1e-6° coordinates exactly the ones the tiles were built from. So run
+`make global-tiles LAYER=osm_transmission_lines` before `make line-parquet` whenever the
+continental inputs change; the builder warns when one is newer than the kept file.
+
+Files per dataset (`<ds>/`; the layout rules live in `scripts/geoparquet_common.py`):
+
+| file | sort | columns |
+|---|---|---|
+| `<ds>.idx.<sha8>.parquet` | `fid` | `fid`, `row` (the line's global row in GEO), `length_km` (sphere, R = 6371.0088 km, haversine per part); OSM also `chain` (−1 none) and `circuits` (−1 unknown) |
+| `<ds>.geo.p<N>.<sha8>.parquet` | Hilbert on the centroid | `fid`, `bbox` (float32, rounded outward; the GeoParquet 1.1 bbox covering), `geometry` (WKB) |
+| `<ds>.chains.<sha8>.parquet` (OSM) | `chain`, `seq` | `chain`, `seq`, `fid`, `row`, `rev`, `length_km`, `start_sub`, `end_sub` |
+| `_manifest.json` | | per file: bytes, sha256, footer length, rows (GEO: part and row offset); `build_id`, snapshot date, provenance from `data_manifest.yaml` |
+
+`data/analysis/index.json` holds every dataset's manifest, so a reader learns each
+file's length and footer length without a `HEAD`. Every file carries the run's
+`build_id` in its key-value metadata; a file is named by its content hash, so each
+build writes new names and removes the old files.
+
+- **Layout.** IDX and CHAINS: 4k-row groups, statistics on the sort key only. GEO:
+  64k-row groups, 256-row pages (`max_rows_per_page` and `write_batch_size`), page
+  index on, statistics on `fid` and `bbox`. ZSTD 9. GEO is cut on row-group boundaries
+  into parts of about 64 MiB (95 MiB is a hard stop). No dictionary on `fid`, `row`,
+  measures, `bbox` or `geometry`: `write_parquet` asserts it.
+- **HIFLD `fid`** is the publisher `ID` as a string, the type the tiles carry.
+- **Chains (OSM).** Ways joined end to end where exactly two way ends meet on the same
+  1e-6° coordinate, both ways carry the same `nominal_kv` and no substation is there.
+  A substation is an OSM substation polygon containing the node, else a substation
+  point within 150 m. `start_sub`/`end_sub` name the substation at a way's start/end
+  in chain order (null mid-chain), so a chain's ends are the first row's `start_sub`
+  and the last row's `end_sub`. CHAINS holds multi-way chains and single ways that end
+  at a substation; every other way has `chain = −1`. Ways that meet at an interior
+  vertex (a tee onto the middle of another way) are not joined.
+
+Run `make line-parquet` (`ARGS="--only <ds>"`; memory-capped at 14 GB; log in
+`tmp/logs/line-parquet.log`), then check:
+
+- `make stable-ids ARGS="--lines"` — every id the served archives carry at max zoom
+  is in IDX (0 missing), IDX has no duplicate, IDX `row` and CHAINS `row` point at
+  their fid's GEO row on a 1,000-row sample, and 1,000 sampled tile pieces lie within
+  1.5 grid units of their GEO line. IDX ids no z11 tile carries are counted, not
+  failed: tippecanoe drops ways shorter than about one grid unit.
+- `make validate` — each manifest matches its files (bytes, sha256, footer length,
+  `build_id`, ≤ 95 MiB, no orphans).
 
 ## Windows
 

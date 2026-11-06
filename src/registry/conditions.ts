@@ -257,4 +257,23 @@ export const conditionLayers: LayerDef[] = [
     regions:      ["usa"],
     downloads: {},
   },
+  {
+    // Hourly balancing-authority operations (EIA-930), read live from PUDL's
+    // Parquet by assets/grid-ops/ for the hour the bar below the map picks.
+    // No `data`: its two GeoJSON sources are filled by grid-ops.ts, credited in
+    // planGridOps(). Raw MW only; no download pack (PUDL publishes the tables).
+    id:            "ba-interchange",
+    urlCode:       "BAI",
+    label:         "Grid Operations (EIA-930)",
+    titleKey:      "layer.baInterchange",
+    group:         "conditions",
+    sourceId:      "pudl-eia930",
+    swatch:        "#1e293b",
+    defaultOn:     false,
+    gridOpsLayer:  true,
+    mapLayerIds:   ["bai-edges", "bai-arrows", "bai-bubbles", "bai-discs", "bai-rings", "bai-labels"],
+    clickPriority: { "bai-bubbles": 598, "bai-arrows": 597 },
+    regions:       ["usa"],
+    downloads: {},
+  },
 ];

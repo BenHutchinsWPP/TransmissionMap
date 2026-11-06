@@ -12,13 +12,18 @@ Three independent nets:
   2. OUTPUT completeness — every "data/layers/<f>" path the frontend expects
      (assets/constants.ts DATA{}) must exist and be non-empty, and there must be
      NO orphan files in data/layers/ that the frontend doesn't reference.
-     The orphan check is the A1 fingerprint: a double-prefixed tile name
+     The orphan check is the fingerprint of this bug: a double-prefixed tile name
      (gsa_gsa_solar_pvout.pmtiles) shows up as an orphan + a missing expected file.
   3. CROSS-MANIFEST consistency — every vector source release_manifest.yaml pulls
      from data/build/ must also be a tile_manifest.yaml `src` (the two consume the
      same build artifact). A path renamed in one manifest but not the other is the
-     A1 bug class: silent drift between the two sources of truth. (Rasters are
+     same bug class: silent drift between the two sources of truth. (Rasters are
      excluded — built by build_*_resource.sh, not the tile manifest.)
+
+Plus, when data/analysis/ exists (build_line_parquet.py, dev-only): every file
+its manifests name has the stated bytes, sha256, footer length and build_id,
+stays under 95 MiB, and nothing else sits beside them (check_analysis in
+geoparquet_common.py).
 
 Severity:
   FAIL  present-but-broken (empty shp, wrong CRS, orphan layer file)  -> exit 1
@@ -38,12 +43,15 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 MANIFEST  = Path("scripts/release_manifest.yaml")
 TILE_MANIFEST = Path("scripts/tile_manifest.yaml")
 ADMIN_STYLE = Path("assets/layers/map-layers-admin.ts")
 CONSTANTS = Path("assets/constants.ts")
 LAYERS    = Path("data/build")  # input shapefiles live here
 OUT_DIR   = Path("data/layers")
+ANALYSIS_DIR = Path("data/analysis")  # build_line_parquet.py; never published
 
 VECTOR_KEYS = ("shp", "geojson", "geojson_gz", "csv", "tif")
 
@@ -68,8 +76,9 @@ def tile_sources(doc: dict) -> set[str]:
 
 
 def expected_layers(text: str) -> set[str]:
-    """Pull every "data/layers/..." path out of constants.ts DATA{}."""
-    # assets/constants.test.ts runs this regex over DATA to keep the two in step.
+    """Pull every "data/layers/..." literal out of the whole constants.ts text."""
+    # assets/constants.test.ts holds this regex's matches equal to DATA, so a
+    # literal outside DATA (or a DATA path written another way) fails there.
     return set(re.findall(r'"(data/layers/[^"]+)"', text))
 
 
@@ -227,6 +236,15 @@ def run(strict: bool) -> int:
             if _has_column(src, field):
                 record(FAIL, f"{blk['id']}: build has `{field}` but select drops it "
                              f"(styles read it — polygons would render one flat colour)")
+
+    # 5. line geometry files (data/analysis/, dev-only) ------------------------
+    from geoparquet_common import check_analysis
+    if ANALYSIS_DIR.exists():
+        problems = check_analysis(ANALYSIS_DIR)
+        for msg in problems:
+            record(FAIL, f"data/analysis: {msg}")
+        if not problems:
+            record(PASS, "data/analysis manifests match their files")
 
     # report ------------------------------------------------------------------
     for sev, msg in results:

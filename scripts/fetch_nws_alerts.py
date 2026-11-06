@@ -145,7 +145,7 @@ KEPT_PROPS = [
     "onset", "ends", "expires", "areaDesc", "senderName", "id",
 ]
 
-# Marine area codes (R6): marine UGCs are served under /zones/forecast/ too,
+# Marine area codes: marine UGCs are served under /zones/forecast/ too,
 # but need a distinct type ("marine") since they join a separate marine-zone
 # tileset (key prefix "m"), not the land-only forecast-zone tileset.
 MARINE_UGC_PREFIXES = {
@@ -153,7 +153,7 @@ MARINE_UGC_PREFIXES = {
     "LE", "LH", "LM", "LO", "LC", "LS", "SL",
 }
 
-# State/territory abbrev → FIPS (R5): lets county UGCs (SSC###) derive a
+# State/territory abbrev → FIPS: lets county UGCs (SSC###) derive a
 # county FIPS when geocode.SAME is absent (SAME is not a required CAP field).
 STATE_FIPS = {
     "AL": "01", "AK": "02", "AZ": "04", "AR": "05", "CA": "06", "CO": "08",
@@ -238,10 +238,10 @@ def _round_coords(coords):
 def _parse_zone_url(url: str) -> tuple[str, str] | None:
     """`/zones/forecast/<UGC>` -> ("forecast", UGC); `/zones/fire/<UGC>` ->
     ("fire", UGC); `/zones/county/<UGC>` -> ("county", UGC) — used only as a
-    FIPS fallback when geocode.SAME is absent (R5). Marine UGCs (observed on
+    FIPS fallback when geocode.SAME is absent. Marine UGCs (observed on
     the /zones/forecast/ path, but /zones/marine/ is accepted too) ->
     ("marine", UGC), a distinct type joined onto the separate marine-zone
-    tileset (R6). Anything else -> None."""
+    tileset. Anything else -> None."""
     path = urllib.parse.urlparse(url).path
     parts = [p for p in path.split("/") if p]
     if len(parts) >= 3 and parts[0] == "zones" and parts[1] in ("forecast", "fire", "county", "marine"):
@@ -254,8 +254,8 @@ def _parse_zone_url(url: str) -> tuple[str, str] | None:
 
 def _load_zone_keys() -> set[str] | None:
     """Load the committed nws_zone_keys.txt sitting next to this script
-    (data-feed.yml copies both to /tmp) for zone-vintage drift detection
-    (R7). Fail-open: missing file -> None -> validation skipped."""
+    (data-feed.yml copies both to /tmp) for zone-vintage drift detection.
+    Fail-open: missing file -> None -> validation skipped."""
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nws_zone_keys.txt")
     try:
         with open(path) as f:
@@ -322,7 +322,7 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
             if ztype == "county":
                 county_ugcs.append(ugc)
             else:
-                # R7 drift check: key format mirrors assets/nws-zone-join.ts
+                # Drift check: key format mirrors assets/nws-zone-join.ts
                 # tileKey() — an alert naming a UGC absent from the tileset
                 # vintage would silently no-paint.
                 prefix = {"forecast": "z", "fire": "f", "marine": "m"}[ztype]
@@ -356,7 +356,7 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
                 stats["malformed_same"] += 1
                 continue
 
-        # R5: SAME is not a required CAP field — when absent, derive county
+        # SAME is not a required CAP field — when absent, derive county
         # FIPS from the county UGCs instead of dropping the alert.
         if not fips and county_ugcs:
             for ugc in county_ugcs:
@@ -417,7 +417,7 @@ def eccc_to_feature(f: dict, generated_utc: str) -> tuple[dict | None, str | Non
     """Map one ECCC weather-alerts item to a curated Feature. Returns
     (feature_or_None, exclusion_reason_or_None) — reason is the lowercase
     alert name for deliberate/unmatched exclusions, or "(geometry null)" for
-    an allowlisted alert missing geometry (R8: counted separately from
+    an allowlisted alert missing geometry (counted separately from
     parity exclusions)."""
     from shapely.geometry import mapping, shape
 
@@ -558,7 +558,7 @@ def main():
         fc["zone_alerts"] = zone_alerts
     if all_features:
         all_features[0]["properties"]["feed_status"] = feed_status
-    # Top-level mirrors of generated_utc/feed_status (R3) — always present, even
+    # Top-level mirrors of generated_utc/feed_status — always present, even
     # when features is empty, unlike the features[0] write above.
     fc["generated_utc"] = generated_utc
     fc["feed_status"] = feed_status

@@ -38,6 +38,8 @@ def check_deps():
     for cmd in ("ogr2ogr", "tippecanoe"):
         if not shutil.which(cmd):
             sys.exit(f"ERROR: {cmd} not found. See docs/pipeline.md prerequisites.")
+    from toolchain import require_tippecanoe
+    require_tippecanoe()
 
 
 def _src_opts(src: Path):

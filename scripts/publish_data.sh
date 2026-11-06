@@ -34,6 +34,8 @@ cd "$(git rev-parse --show-toplevel)"
 test -n "$(ls -A data/layers 2>/dev/null)"   || { echo "ERROR: data/layers empty — run 'make tiles' first."; exit 1; }
 test -n "$(ls -A data/releases 2>/dev/null)" || { echo "ERROR: data/releases empty — run 'make releases' first."; exit 1; }
 
+# The deployed bundle links packs under data-latest (RELEASES_ORIGIN), so another
+# tag publishes packs the map does not link to.
 RELEASE_TAG="${RELEASE_TAG:-data-latest}"
 # 4.5 GiB, under GitHub's 5 GB soft limit — see headroom_preflight.
 SIZE_CEILING_KB="${SIZE_CEILING_KB:-4718592}"
@@ -109,6 +111,8 @@ python3 scripts/validate_build.py --list-expected | while IFS= read -r f; do
   [ -f "$f" ] && echo "$f"
 done | xargs -r git add -f --
 drop_oversized
+# An empty tree here would force-push a blank production data host.
+[ -n "$(git ls-files)" ] || { echo "ERROR: nothing staged for data-static — check validate_build.py --list-expected."; exit 1; }
 headroom_preflight
 tree="$(git write-tree)"
 commit="$(git commit-tree "$tree" -m "data-static: layers — $stamp")"

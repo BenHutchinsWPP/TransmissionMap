@@ -566,6 +566,9 @@ def main():
             sys.exit(1)
         regions_to_process = [resolved]
 
+    if args.stage in ("tiles", "all") and not args.dry_run:
+        from toolchain import require_tippecanoe
+        require_tippecanoe()
     for reg in regions_to_process:
         success = process_region(reg, stage=args.stage, code_style=args.code_style, dry_run=args.dry_run)
         if not success:

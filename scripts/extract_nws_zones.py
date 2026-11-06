@@ -49,7 +49,7 @@ Output (data/build/):
   ~8370 output features.
 The tile_manifest builds this into data/layers/nws_zones.pmtiles (PMTiles).
 Also writes scripts/nws_zone_keys.txt (committed) — the sorted key list
-fetch_nws_alerts.py uses to detect zone-vintage drift (R7).
+fetch_nws_alerts.py uses to detect zone-vintage drift.
 
 Usage:
   venv/bin/python scripts/extract_nws_zones.py
@@ -189,7 +189,7 @@ def main():
 
     print(f"  ✓ {out} ({len(dissolved)} features)")
 
-    # Committed key list (R7): fetch_nws_alerts.py validates alert zone keys
+    # Committed key list: fetch_nws_alerts.py validates alert zone keys
     # against this to detect zone-shapefile vintage drift (NWS revises zones
     # ~annually; an alert naming a newer UGC would otherwise silently
     # no-paint). Lives in scripts/ so data-feed.yml can copy it next to the

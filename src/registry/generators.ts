@@ -1,6 +1,7 @@
 // Layer registry entries — generators group (OSM plants/generators, EIA plants).
 import type { LayerDef } from '../types.js';
-import { OSM_CREDIT, OSM_NATIVE_FID, OSM_FID } from './sources.js';
+import { OSM_CREDIT } from './sources.js';
+import { OSM_NATIVE_FID, OSM_FID } from './osm-fid.js';
 
 export const generatorLayers: LayerDef[] = [
   {

@@ -12,7 +12,7 @@ USGS protected and managed land polygons.
 | **Version** | PAD-US 4.1 |
 | **Acquired** | 2026-06-02 |
 | **License** | Public domain — US federal work, [17 U.S.C. § 105](https://www.law.cornell.edu/uscode/text/17/105) |
-| **Served** | `data/layers/padus.pmtiles` — PMTiles (806 MB SHP → 62 MB tiles) |
+| **Served** | `data/layers/padus.pmtiles` — PMTiles (806 MB SHP → 80 MB tiles; z3–10, `max_tile_bytes` 600000 in `tile_manifest.yaml`) |
 | **Built by** | `extract_padus.py` → `data/build/padus.{shp,csv}` |
 | **Raw input** | `PADUS4_1Geodatabase.gdb` — **not committed** (~596 MB) |
 
@@ -40,6 +40,7 @@ Users download the complete original from the [USGS ScienceBase item](https://ww
 
 | Field | % filled | Example values |
 |---|---:|---|
+| `fid` | 100% | stable content id (integer, served as the tile feature id): a sha1 over the source attributes, source-CRS bounds (to 1 m) and vertex count, built in `extract_padus.py`; an edited record gets a new id |
 | `name` | 100% | "Jornada Experimental Range", "Pike National Forest" |
 | `desig` | 100% | National Forest, Wilderness Area, State Park, Conservation Area, … (decoded `Des_Tp`) |
 | `mng_agency` | 100% | Bureau of Land Management, Forest Service, National Park Service, … |

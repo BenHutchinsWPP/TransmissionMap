@@ -120,7 +120,7 @@ class TestGlobalTileConfig(unittest.TestCase):
 
     def test_pipelines_fit_the_ceiling_with_ids(self):
         # A unique id per line limits coalescing; z11 with simplification kept
-        # off maxzoom is what fits the 100 MiB ceiling (stable-ids plan D7).
+        # off maxzoom is what fits the 100 MiB ceiling.
         pipes = RETILE_BY_BASE["osm_pipelines_lines"]
         self.assertEqual(pipes["max_zoom"], 11)
         self.assertIn("--simplify-only-low-zooms", pipes["flags"])
@@ -255,6 +255,44 @@ class TestSeamDedupe(unittest.TestCase):
         for f in features:
             self.assertEqual(list(f["properties"]), ["fid", "name"])
             self.assertIsInstance(f["properties"]["fid"], int)
+
+
+class TestKeepMergedTransmission(unittest.TestCase):
+    """build_line_parquet.py reads the merged world input, so it is kept gzipped
+    and untagged: copied before region tagging rewrites the file in place."""
+
+    def test_keep_merged_writes_an_identical_gzip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            seq = Path(tmp) / "merged.geojsonl"
+            seq.write_text('{"type":"Feature","properties":{"fid":12},"geometry":null}\n')
+            dest = Path(tmp) / "world" / "transmission_world.geojsonl.gz"
+            with self.assertLogs("global_tiles", "INFO"):
+                build_global_tiles.keep_merged(seq, dest)
+            with gzip.open(dest, "rt") as f:
+                self.assertEqual(f.read(), seq.read_text())
+            self.assertEqual([p.name for p in dest.parent.iterdir()], [dest.name])
+
+    def test_kept_before_tagging(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(build_global_tiles, "BUILD_DIR", Path(tmp)), \
+                mock.patch.object(build_global_tiles, "LAYERS_DIR", Path(tmp)), \
+                mock.patch.object(build_global_tiles, "_merge_deduped", return_value=(1, 1)), \
+                mock.patch.object(build_global_tiles, "keep_merged",
+                                  side_effect=lambda *a: calls.append("keep")), \
+                mock.patch.object(build_global_tiles, "_tag_regions",
+                                  side_effect=lambda *a: calls.append("tag")), \
+                mock.patch.object(build_global_tiles, "run_cmd",
+                                  side_effect=lambda *a, **k: calls.append("tile")
+                                  or (_ for _ in ()).throw(StopIteration)):
+            (Path(tmp) / "transmission_lines_na.gpkg").touch()
+            with self.assertLogs("global_tiles", "INFO"), self.assertRaises(StopIteration):
+                build_global_tiles.retile_transmission()
+        self.assertEqual(calls, ["keep", "tag", "tile"])
+
+    def test_kept_file_is_under_data_build(self):
+        self.assertEqual(build_global_tiles.TRANSMISSION_KEPT.relative_to(build_global_tiles.ROOT),
+                         Path("data/build/world/transmission_world.geojsonl.gz"))
 
 
 class TestConcatDedupe(unittest.TestCase):

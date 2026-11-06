@@ -88,6 +88,8 @@ Northern Virginia (Ashburn) and Silicon Valley have the densest and best-tagged 
 
 ## Caveats
 
+- **Clusters under an Area filter.** In Clusters mode the circles are computed from the whole source, so cluster counts include every data center; the layer's panel row says so. Points and Heat modes filter by area like any other layer.
+
 - **Coverage is incomplete.** OSM data centers represent facilities that volunteers have mapped. Many real data centers are not in OSM, particularly smaller colocation facilities and enterprise-owned sites.
 - **No MW / power draw data.** OSM does not have a widely-used tag for data center power capacity. The `capacity` tag exists but typically refers to rack count or IT load in non-standard units when present — it is not extracted.
 - **No construction / planned status.** OSM primarily reflects existing built facilities. Under-construction sites may be tagged but are indistinguishable from operational ones without manual review.

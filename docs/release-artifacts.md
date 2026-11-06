@@ -80,10 +80,27 @@ built by `make tiles`; they're listed here because they still ship as app data.
 
 ---
 
+## Line geometry files — dev-only, not published
+
+Built by `make line-parquet` into `data/analysis/` for the line tools (copy, fault
+locator, elevation profile); see [pipeline.md](pipeline.md) § *Line geometry*. Nothing
+here reaches `data-static` until publishing them is decided.
+
+| File | Size | Description |
+|---|--:|---|
+| `data/analysis/index.json` | 5 KB | Every dataset's manifest: bytes, sha256, footer length, rows, `build_id` |
+| `data/analysis/osm_transmission_lines/*.geo.p{0..5}.*.parquet` | 47.8–61.4 MiB each, 326.9 MiB in all | OSM world lines, `fid` + `bbox` + WKB geometry on the 1e-6° grid, Hilbert order |
+| `data/analysis/osm_transmission_lines/*.idx.*.parquet` | 11.7 MiB | `fid` → GEO `row`, `length_km`, `chain`, `circuits` |
+| `data/analysis/osm_transmission_lines/*.chains.*.parquet` | 8.4 MiB | Ways in chain order with the end substations |
+| `data/analysis/hifld_transmission_lines/*.geo.p0.*.parquet` | 32.2 MiB | HIFLD lines, same layout |
+| `data/analysis/hifld_transmission_lines/*.idx.*.parquet` | 0.6 MiB | `fid` (publisher `ID`) → GEO `row`, `length_km` |
+
+---
+
 ## User download packs — offered as downloads from the app UI
 
 These live under `data/releases/`, served as download links in the layer panel
-(`downloads` in the registry → `assets/ui/ui-layer-rows.ts`). In prod they are
+(`downloads` in the registry → `assets/download-packs.ts` → the row's Download menu). In prod they are
 served as assets of the rolling `data-latest` GitHub Release (uploaded by
 `make publish-data`), not from the `data-static` branch, `main`, or Pages — a
 download is a plain navigation, so it needs no CORS header and gets 2 GB per file
@@ -96,7 +113,7 @@ continental split — one per code (`na eu as sa af oc ca an`). Layers marked
 `continental: true` in `release_manifest.yaml` take a `{code}` placeholder, and
 **every format that layer offers is built for every continent**: the SHP pack lands
 as `<layer-id>-<code>-shp.zip`, the code ahead of the format suffix.
-`getRegionalDownloadPath` in `assets/ui/ui-layer-rows.ts` inserts it.
+`assets/download-packs.ts` inserts it.
 
 **Convention (one pack per map layer, format-named):** every download link maps
 to exactly one map layer — packs never bundle two layers together. The download

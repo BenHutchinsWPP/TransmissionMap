@@ -1,6 +1,7 @@
 // Layer registry entries — substations and transmission lines.
 import type { DataKey, LayerDef } from '../types.js';
-import { OSM_CREDIT, HIFLD_CREDIT, OSM_NATIVE_FID } from './sources.js';
+import { OSM_CREDIT, HIFLD_CREDIT } from './sources.js';
+import { OSM_NATIVE_FID } from './osm-fid.js';
 
 // OSM transmission ships as six planet-wide archives split by voltage class —
 // one world file is past the host's 100 MiB per-file ceiling. This table is the
@@ -140,7 +141,8 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.osmLines",
     group:               "transmission",
     sourceId:            "osm",
-    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT, id: OSM_NATIVE_FID },
+    data:                { kind: "pmtiles", key: "osm_transmission_lines_kv0", credit: OSM_CREDIT, id: OSM_NATIVE_FID,
+                           analysis: "osm_transmission_lines" },
     dataset:             "osm_transmission_lines",
     swatch:              "#3b82f6",
     defaultOn:           true,
@@ -163,7 +165,8 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:            "layer.hifldLines",
     group:               "transmission",
     sourceId:            "hifld-power",
-    data:                { kind: "pmtiles", key: "hifld_transmission_lines", credit: HIFLD_CREDIT, id: { field: "ID" } },
+    data:                { kind: "pmtiles", key: "hifld_transmission_lines", credit: HIFLD_CREDIT, id: { field: "ID" },
+                           analysis: "hifld_transmission_lines" },
     dataset:             "hifld_transmission_lines",
     swatch:              "#ef4444",
     defaultOn:           false,
@@ -189,6 +192,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:          "layer.westtec10yr",
     group:             "transmission",
     sourceId:          "westtec",
+    dataset:           "westtec_10yr",
     data:              { kind: "geojson", key: "westtec_10yr", credit: '<a href="https://www.westernpowerpool.org/">WestTEC (Western Power Pool)</a>', id: { field: "fid" } },
     swatch:            "#0891b2",
     defaultOn:         false,
@@ -206,6 +210,7 @@ export const transmissionLayers: LayerDef[] = [
     titleKey:       "layer.ogfPlanned",
     group:          "transmission",
     sourceId:       "ogf",
+    dataset:        "ogf_planned_transmission",
     data:           { kind: "geojson", key: "ogf_planned_transmission", credit: '<a href="https://ourgridfuture.org">Our Grid Future</a>', id: { field: "RecordID" } },
     swatch:         "#06b6d4",
     defaultOn:      false,

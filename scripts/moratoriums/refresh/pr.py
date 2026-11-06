@@ -1,7 +1,7 @@
 """Publish step of the moratorium refresh: the run's report, carry-over and publish.
 
 Role: turns one refresh run into one commit on `data-moratoriums` (--direct), or one rolling pull
-request (`refresh/weekly` -> `data-moratoriums`, plan D8). Subcommands:
+request (`refresh/weekly` -> `data-moratoriums`). Subcommands:
   check       the rebuilt published files against the base branch tip, before anything is pushed:
               well-formed headers, events.csv append-only, and no silent loss (moratoriums.csv
               rows or geojson features down more than MAX_SHRINK, or an nm- row gone); exits 1
@@ -25,6 +25,9 @@ BUILD/logs/rebuild.log (else build_layer.log) for build_layer.py territory WARNI
 The title and tables come from the events the rebuild appended to events.csv (`added` = new on
 the map, `expired`, every other event = an updated row), so they say what was published, and the
 report's review section lists every change the review rejected, with its reasons.
+Report and row text (research output) is defanged in the body (`_esc`, `_cell`, `_link`, `_n`): no
+@mention (entities included), issue reference, image, HTML, code span, autolink, table-cell break or link other
+than a percent-encoded source link.
 Every git and gh call is an argument list through `Runner`; with --mode dry_run or PR_DRY_RUN=1
 the mutating calls are printed, not run. GH_TOKEN comes from the environment and is never printed.
 Dependencies: stdlib, and the git and gh CLIs.
@@ -46,6 +49,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 MAX_BODY = 60_000
@@ -102,14 +106,35 @@ def first_url(text: str) -> str:
     return m.group(0) if m else ""
 
 
+# Report and row text comes from the research job (page and model text), so it is defanged before it
+# reaches the PR body or commit message: no @mention, issue reference, link, image, HTML or code span.
+_DEFANG = str.maketrans({"@": "＠", "#": "＃", "[": "［", "]": "］", "<": "‹", ">": "›", "`": "ʹ", "&": "＆"})
+_AUTOLINK = re.compile(r"(?i)\b(www|gh)([.-])")  # GFM's www. autolink, GH-123 issue links
+_URL_SAFE = ":/?&=%#+,;~._!$'*@-"
+
+
+def _esc(text: object) -> str:
+    s = str(text if text is not None else "").translate(_DEFANG).replace("://", ":/\u2060/")
+    return _AUTOLINK.sub("\\1\u2060\\2", s)
+
+
+def _n(v):
+    """A report number, or 0 for anything else."""
+    return v if type(v) in (int, float) and v == v and abs(v) != float("inf") else 0
+
+
+def _d(v) -> dict:
+    return v if isinstance(v, dict) else {}
+
+
 def _cell(text: object, width: int = 140) -> str:
-    s = " ".join(str(text if text is not None else "").split()).replace("|", "\\|")
+    s = _esc(" ".join(str(text if text is not None else "").split())).replace("\\", "⧵").replace("|", "\\|")
     return s if len(s) <= width else s[: width - 1] + "…"
 
 
 def _link(row: dict) -> str:
     u = first_url(row.get("source_urls", "") or row.get("new", ""))
-    return f"[source]({u})" if u else ""
+    return f"[source]({urllib.parse.quote(u, safe=_URL_SAFE)})" if u else ""
 
 
 def published_changes(checkout: Path, events: list[dict]) -> tuple[list[dict], list[dict], int]:
@@ -140,20 +165,20 @@ def _table(headers: list[str], rows: list[list[str]], limit: int) -> list[str]:
 def _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, run_date, mode,
             events_added, expired, limit) -> str:
     updated = len({c.get("id") for c in changes})
-    llm = report.get("llm", {})
-    fetch = report.get("fetch", {})
-    leads = report.get("leads", {})
-    rv = report.get("review") or {}
-    rejected = rv.get("rejected", [])
-    written = sum(int(n) for n in (report.get("rows") or {}).values())
+    llm = _d(report.get("llm"))
+    fetch = _d(report.get("fetch"))
+    leads = _d(report.get("leads"))
+    rv = _d(report.get("review"))
+    rejected = [_d(x) for x in rv.get("rejected") or [] if isinstance(rv.get("rejected"), list)]
+    written = sum(_n(n) for n in _d(report.get("rows")).values())
     L = [f"# {make_title(run_date, len(new_rows), updated, expired)}", "",
          f"Run mode: `{mode}`. Rows are AI-extracted from public pages, checked against a quote on the page and"
          " reviewed before publishing; new rows are marked unconfirmed until a person confirms them.", "",
          "## Summary", "", "| item | count |", "|---|---|",
          f"| new on the map | {len(new_rows)} |", f"| rows updated | {updated} |", f"| expired | {expired} |",
-         f"| changes reviewed | {rv.get('claims', 0)}: {rv.get('accepted', 0)} accepted, {len(rejected)} rejected |",
+         f"| changes reviewed | {_n(rv.get('claims'))}: {_n(rv.get('accepted'))} accepted, {len(rejected)} rejected |",
          f"| input rows written | {written} |", f"| events added | {events_added} |",
-         f"| leads | {leads.get('total', 0)} |", ""]
+         f"| leads | {_n(leads.get('total'))} |", ""]
     if diff_stat.strip():
         L += ["```", diff_stat.strip(), "```", ""]
     L += ["## New rows", ""]
@@ -166,31 +191,31 @@ def _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, r
                   _cell(c.get("old"), 60), _cell(c.get("new"), 60)] for c in changes], limit)
     L += ["## Rejected in review", ""]
     L += _table(["state", "name", "change", "problems", "reason", "source"],
-                [[_cell(x.get("state")), _cell(x.get("name")), _cell(x.get("kind")), _cell(", ".join(x.get("problems", []))),
+                [[_cell(x.get("state")), _cell(x.get("name")), _cell(x.get("kind")), _cell(", ".join(map(str, x.get("problems") or []))),
                   _cell(x.get("reason"), 200), _link({"source_urls": x.get("url", "")})] for x in rejected], limit)
-    by_model = llm.get("by_model", {})
+    by_model = _d(llm.get("by_model"))
     L += ["## Cost and usage", "",
-          f"- Search requests: {report.get('search_requests', 0)}",
-          f"- Model calls: {llm.get('calls', 0)} ({llm.get('errors', 0)} errors, {llm.get('refusals', 0)} refusals,"
-          f" {llm.get('escalated', 0)} escalated, {rv.get('model_calls', 0)} reviews)",
-          f"- Estimated cost: ${float(llm.get('est_cost_usd', 0)):.2f}"]
+          f"- Search requests: {_n(report.get('search_requests'))}",
+          f"- Model calls: {_n(llm.get('calls'))} ({_n(llm.get('errors'))} errors, {_n(llm.get('refusals'))} refusals,"
+          f" {_n(llm.get('escalated'))} escalated, {_n(rv.get('model_calls'))} reviews)",
+          f"- Estimated cost: ${float(_n(llm.get('est_cost_usd'))):.2f}"]
     for name in sorted(by_model):
-        m = by_model[name]
-        L.append(f"- `{name}`: {m.get('calls', 0)} calls, {m.get('input', 0)} input, {m.get('output', 0)} output,"
-                 f" cache read {m.get('cache_read', 0)}, cache write {m.get('cache_write', 0)} tokens")
-    for name, how in sorted(llm.get("price_assumed", {}).items()):
-        L.append(f"- `{name}`: " + ("no price known, not in the estimate" if how == "unpriced" else f"price assumed ({how} family)"))
+        m = _d(by_model[name])
+        L.append(f"- `{_esc(name)}`: {_n(m.get('calls'))} calls, {_n(m.get('input'))} input, {_n(m.get('output'))} output,"
+                 f" cache read {_n(m.get('cache_read'))}, cache write {_n(m.get('cache_write'))} tokens")
+    for name, how in sorted(_d(llm.get("price_assumed")).items()):
+        L.append(f"- `{_esc(name)}`: " + ("no price known, not in the estimate" if how == "unpriced" else f"price assumed ({_esc(how)} family)"))
     L.append("")
-    caps = report.get("caps_hit", [])
-    L += ["## Caps hit", "", ", ".join(f"`{c}`" for c in caps) if caps else "_none_", ""]
-    outcomes = fetch.get("outcomes", {})
-    L += ["## Fetch outcomes", "", f"{fetch.get('pages', 0)} pages" + (f", success rate {fetch['rate']}" if "rate" in fetch else "")
-          + (": " + ", ".join(f"{k} {outcomes[k]}" for k in sorted(outcomes)) if outcomes else ""), ""]
-    seeds = report.get("seeds") or {}
+    caps = report.get("caps_hit") if isinstance(report.get("caps_hit"), list) else []
+    L += ["## Caps hit", "", ", ".join(f"`{_esc(c)}`" for c in caps) if caps else "_none_", ""]
+    outcomes = _d(fetch.get("outcomes"))
+    L += ["## Fetch outcomes", "", f"{_n(fetch.get('pages'))} pages" + (f", success rate {_n(fetch['rate'])}" if "rate" in fetch else "")
+          + (": " + ", ".join(f"{_esc(k)} {_n(outcomes[k])}" for k in sorted(outcomes)) if outcomes else ""), ""]
+    seeds = _d(report.get("seeds"))
     if seeds:
         L += ["## Seed pages", "",
-              f"{seeds.get('read', 0)} read, {seeds.get('failed', 0)} failed to fetch, {seeds.get('paused', 0)} paused"
-              f" (no cited URL three runs running), {seeds.get('cited_urls_kept', 0)} cited URLs kept;"
+              f"{_n(seeds.get('read'))} read, {_n(seeds.get('failed'))} failed to fetch, {_n(seeds.get('paused'))} paused"
+              f" (no cited URL three runs running), {_n(seeds.get('cited_urls_kept'))} cited URLs kept;"
               f" each page's result is in `inputs/research/weekly/{run_date}/notes.md`.", ""]
     L += ["## QA flags for this run's rows", ""]
     L += _table(["id", "issue", "detail"], [[_cell(r.get("id")), _cell(r.get("issue")), _cell(r.get("detail"))] for r in qa_rows], limit)
@@ -203,7 +228,7 @@ def _render(report, diff_stat, new_rows, changes, qa_rows, territory_warnings, r
     else:
         L += ["_none_", ""]
     L += ["## Leads", "",
-          f"{leads.get('total', 0)} candidates did not pass verification or review; see `inputs/research/weekly/{run_date}/notes.md`.", "",
+          f"{_n(leads.get('total'))} candidates did not pass verification or review; see `inputs/research/weekly/{run_date}/notes.md`.", "",
           "## Correcting a row", "",
           "Add an `updates.csv` line (`field=DROP` removes a row) under `inputs/research/weekly/` and rebuild:"
           " locally with `rebuild.sh`, or for a pull request by dispatching the workflow with `mode=rebuild_only`."

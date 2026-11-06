@@ -15,13 +15,14 @@ Writes  DATASET/dc_moratoriums.geojson — one feature per jurisdiction, one
           kind=point    point    city/town/township/village/tribal, and a utility with no
                                  eia_id or none that matches a territory (water authorities)
         Each feature carries `items` (JSON list of its measures) and `history`
-        (JSON list of its most recent events), which the popup renders.
+        (JSON list of its most recent events), which the popup renders, and
+        `fid`, its stable id: the jurisdiction it groups by (feature_id below).
 
 Status is computed as of --as-of: an active/extended row whose date_expires has
 passed is shown expired. `cls` is the feature's strongest class:
 ban > active > pending > ended.
 """
-import argparse, csv, datetime as dt, gzip, json, os
+import argparse, csv, datetime as dt, gzip, hashlib, json, os
 from collections import defaultdict
 import geopandas as gpd
 from shapely.ops import unary_union
@@ -34,6 +35,22 @@ GRID = {"nm-state-tx-abbott-2026-08-03-data-center-audit-directive": ("ERCO", "E
 def read(p):
     with open(p, newline="") as f:
         return list(csv.DictReader(f))
+
+
+def feature_id(kind, key):
+    """The stable id of the feature grouped under (kind, key): `state:TX`,
+    `county:48201`, `utility:<EIA-861 number>`, `ba:ERCO`, `place:<state>:<GEOID
+    of the Census place or county subdivision>`, or for a point with neither
+    `point:<state>:<10 hex>` (sha1 of its name and location). One per key, at
+    most 64 characters."""
+    if kind == "utility":
+        return key if key.startswith("ba:") else f"utility:{key}"
+    if kind != "point":
+        return f"{kind}:{key}"
+    parts = key.split("|")
+    if len(parts) == 2:
+        return f"place:{parts[0]}:{parts[1]}"
+    return f"point:{parts[0]}:{hashlib.sha1(key.encode()).hexdigest()[:10]}"
 
 
 def effective_status(r, as_of):
@@ -179,7 +196,7 @@ def main():
         g = geom(kind, key, rs)
         g = {"type": g["type"], "coordinates": rnd(g["coordinates"])}
         feats.append({"type": "Feature", "geometry": g, "properties": {
-            "kind": kind, "name": name, "state": r0["state"], "level": r0["level"],
+            "fid": feature_id(kind, key), "kind": kind, "name": name, "state": r0["state"], "level": r0["level"],
             "cls": best, "n": len(rs), "last_event": last,
             "items": json.dumps(items, separators=(",", ":")),
             "history": json.dumps(hist[:8], separators=(",", ":")),

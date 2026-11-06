@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LAYERS, LAYER_SOURCES, layerById } from './index.js';
 import { FIELD_SCHEMA } from './field-schema.js';
 import { CLICKABLE_LAYERS, UNOWNED_CLICKABLE } from '../../assets/popup.js';
@@ -98,7 +98,7 @@ describe('CLICKABLE_LAYERS click hit-test priority', () => {
     "eia-crude-pipelines", "eia-product-pipelines",
     "railroads",
     "nws-alerts-fill",
-    "nws-zone-fill", "nws-county-fill",
+    "nws-zone-fill", "bai-bubbles", "bai-arrows", "nws-county-fill",
     "wildfire-smoke-fill",
     "wildfire-incidents-circle",
     "wildfire-hotspots-circle",
@@ -169,7 +169,7 @@ describe('Data Credits dialog fallback markup consistency', () => {
 
   it('contains no obsolete or unrecognized data-source-credit entries', () => {
     const creditsHtml = creditsDialogMatch![1];
-    const allowedExtras = new Set(['im3', 'usgs-terrain']);
+    const allowedExtras = new Set(['im3', 'usgs-terrain', 'usgs-3dep']);
     const creditMatches = creditsHtml.matchAll(/data-source-credit="([^"]+)"/g);
     for (const match of creditMatches) {
       const id = match[1];
@@ -191,6 +191,29 @@ describe('LayerDef.dataset', () => {
     const named = new Set(LAYERS.map(l => l.dataset));
     for (const key of Object.keys(FIELD_SCHEMA)) {
       expect(named.has(key), `no registry layer carries dataset "${key}"`).toBe(true);
+    }
+  });
+});
+
+describe('Routing constraints layer (dev server only)', () => {
+  it('is registered on the dev server as a raster concern layer', () => {
+    expect(import.meta.env.DEV).toBe(true);
+    const l = layerById('route-constraints');
+    expect(l?.routeConcernLayer).toBe(true);
+    expect(l?.group).toBe('land');
+    expect(l?.data).toMatchObject({ kind: 'raster', key: 'route_constraints' });
+  });
+
+  it('is left out of a production registry', async () => {
+    vi.resetModules();
+    vi.stubEnv('DEV', false);
+    try {
+      const { LAYERS: prod } = await import('./index.js');
+      expect(prod.length).toBe(LAYERS.length - 1);
+      expect(prod.some(l => l.id === 'route-constraints')).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
     }
   });
 });

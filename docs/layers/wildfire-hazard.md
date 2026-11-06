@@ -37,8 +37,10 @@ original USFS RMRS Fire Lab data publication above.
 - **Color tiles:** `gdaldem color-relief` applies `scripts/whp_color_ramp.txt` (discrete official symbology) → baked RGBA → web-mercator reproject → MBTiles (WEBP) → PMTiles, via `rc_bake_tiles` in `scripts/raster_common.sh`
 - **No hover LUT:** categorical raster — the seven distinct colors + the static legend (`#whpLegend` in `index.html`) convey the class. Rendered with `raster-resampling: nearest` to keep class edges crisp.
 
-The **continuous** WHP index (`whp2023_cnt_conus.tif`, Int32 0–204) is in the same archive but
-not built — the classified product is the canonical, interpretable map layer.
+The **continuous** WHP index (`whp2023_cnt_conus.tif`) is in the same archive but
+not built — the classified product is the canonical, interpretable map layer. It is
+Int32 with values from 0 to 107,890 and NoData 2147483647 (`gdalinfo -mm` on the source
+raster; the RDS-2015-0047-4 metadata notes continuous values above 100,000 occur).
 
 ## Raster values
 

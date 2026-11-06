@@ -34,6 +34,7 @@ import gzip
 import json
 import logging
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -154,9 +155,8 @@ RETILE = [
 #
 #  1. **Dedupe.** Geofabrik's continental extracts overlap — europe-latest and
 #     asia-latest both cover western Russia, Türkiye and the Caucasus. Merging
-#     the sources first and keeping the first feature per fid removes 23,833
-#     redundant copies
-#     (1.7% of 1,366,072) before tippecanoe runs.
+#     the sources first and keeping the first feature per fid removes the
+#     redundant copies before tippecanoe runs.
 #  2. **One maxzoom by construction.** A PMTiles archive carries a single
 #     maxzoom, so joining continents built to different depths makes the archive
 #     advertise the deepest one and the shallower regions draw blank above their
@@ -166,11 +166,13 @@ RETILE = [
 #     Douglas-Peucker pass on z2-z10 and lets z11 carry every vertex the tile
 #     grid can hold. See TRANSMISSION_TIPPECANOE_FLAGS.
 #
-# The output is six planet-wide archives, one per voltage class, because a single
-# world archive is 266 MiB against the host's 100 MiB per-file ceiling. See
-# docs/hosting-plan.md for the measured sizes and why the cuts sit where they do.
+# The output is six planet-wide archives, one per voltage class, because one world
+# archive would exceed the host's 100 MiB per-file ceiling (docs/hosting-plan.md).
 TRANSMISSION_BASE = "osm_transmission_lines"
 TRANSMISSION_SRC_STEM = "transmission_lines"
+# The merged world input, kept for build_line_parquet.py (docs/pipeline.md
+# § Line geometry). Untagged: the line geometry files carry no region fields.
+TRANSMISSION_KEPT = BUILD_DIR / "world" / "transmission_world.geojsonl.gz"
 TRANSMISSION_MIN_ZOOM = 2
 TRANSMISSION_MAX_ZOOM = 11
 
@@ -205,18 +207,12 @@ TRANSMISSION_ZOOM_LADDER = json.dumps(
 # grid at zoom z equals screen pixels at z+4, that is ~5 px of error at z15 —
 # visible where a line meets a substation bus. Restricting it to the low zooms
 # leaves z11 grid-limited: one screen pixel at z15, the floor for this maxzoom.
-# Measured cost: z2-z10 are byte-identical, z11 grows 84.7 -> 123.3 MiB.
 #
 # `--maximum-tile-bytes` is raised to 1 MB for headroom, so that the zoom ladder
 # rather than a byte budget decides what a tile holds: tippecanoe still thins a
 # tile that reaches the cap even with no `--drop-*` flag, and it does it
-# silently. The densest tile in the world is central Europe at z4 (4/8/5, the
-# >=100 kV mesh) at 533 KiB — per-feature identity, id/name/operator, not
-# vertices, so simplification does not move it. At this ceiling every tile is
-# byte-identical to one built with a 20 MB ceiling, i.e. nothing is dropped
-# anywhere; at tippecanoe's 500 KB default, 4/8/5 quietly lost 95 ways. The
-# largest z11 tile is 47.5 KiB, so lifting simplification off maxzoom does not
-# approach it either.
+# silently. 1 MB is above the densest tile, so nothing is dropped;
+# tippecanoe's 500 KB default thins the densest z4 tile.
 TRANSMISSION_TIPPECANOE_FLAGS = [
     "--simplification=5",
     "--simplify-only-low-zooms",
@@ -230,10 +226,8 @@ TRANSMISSION_TIPPECANOE_FLAGS = [
 # `nominal_kv = -1` encodes unknown (not NULL, not 0), which sorts below
 # everything and so falls into the bottom band for free.
 #
-# Every cut lands in an empty stretch of the voltage distribution — measured
-# over 27.5 M vertices, no mass at all sits between the neighbouring real values
-# at 50, 100, 125, 200 or 300 kV — so no dense class is split across two files.
-# See docs/hosting-plan.md for the per-band sizes.
+# Every cut lands in an empty stretch of the voltage distribution, so no dense
+# class is split across two files (docs/hosting-plan.md).
 TRANSMISSION_BANDS = [
     {"suffix": "kv0",   "filter": ["<", "nominal_kv", 50]},
     {"suffix": "kv50",  "filter": ["all", [">=", "nominal_kv", 50],  ["<", "nominal_kv", 100]]},
@@ -431,6 +425,22 @@ def _log_merge(read: int, kept: int):
              read, kept, read - kept, (read - kept) / read * 100 if read else 0, SEAM_KEY)
 
 
+def keep_merged(seq: Path, dest: Path):
+    """Keep a gzipped copy of the merged, deduped, untagged input.
+
+    build_line_parquet.py reads it, so the line geometry files carry exactly the
+    ids and the 1e-6° coordinates the tiles were built from. Written beside the
+    destination and renamed, so a reader never sees half a file.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    part = dest.with_name(dest.name + ".part")
+    with open(seq, "rb") as src, gzip.open(part, "wb", compresslevel=6) as out:
+        shutil.copyfileobj(src, out, 1 << 20)
+    part.replace(dest)
+    log.info("  kept %s (%.1f MiB)", dest.relative_to(ROOT) if dest.is_relative_to(ROOT) else dest,
+             dest.stat().st_size / 2**20)
+
+
 def split_transmission_bands(world: Path, out_dir: Path, base: str = TRANSMISSION_BASE):
     """Cut one finished world archive into the per-voltage-class archives.
 
@@ -467,6 +477,7 @@ def retile_transmission(dry_run: bool = False):
 
     if dry_run:
         log.info("  $ merge + dedupe %d GeoPackages", len(srcs))
+        log.info("  $ keep the merged input -> %s", TRANSMISSION_KEPT.relative_to(ROOT))
         log.info("  $ tippecanoe z%d-%d %s", TRANSMISSION_MIN_ZOOM, TRANSMISSION_MAX_ZOOM,
                  " ".join(TRANSMISSION_TIPPECANOE_FLAGS + NATIVE_ID_FLAGS))
         for band in TRANSMISSION_BANDS:
@@ -477,6 +488,7 @@ def retile_transmission(dry_run: bool = False):
         merged = Path(tmp) / "transmission_world.geojsonl"
         read, kept = _merge_deduped(srcs, merged, TRANSMISSION_SELECT)
         _log_merge(read, kept)
+        keep_merged(merged, TRANSMISSION_KEPT)
         _tag_regions(merged, LINE_FIELDS)
 
         world = Path(tmp) / "transmission_world.pmtiles"
@@ -626,6 +638,9 @@ def main(argv=None):
     if wanted and (unknown := wanted - set(everything)):
         raise SystemExit(f"unknown layer(s): {', '.join(sorted(unknown))}")
 
+    if not args.dry_run:
+        from toolchain import require_tippecanoe
+        require_tippecanoe()
     LAYERS_DIR.mkdir(parents=True, exist_ok=True)
     log_staleness("before build")
     started = time.time()

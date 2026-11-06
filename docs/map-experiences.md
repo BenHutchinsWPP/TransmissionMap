@@ -50,8 +50,17 @@ and a pasted link restore a view identically:
 
 A preset may also carry `where` (field conditions) and `style` (opacity / size /
 colour overrides), both keyed by registry layer id — the link's `vx` param (see
-[url-state.md](url-state.md)). Like every other field they are replaced
-wholesale, so the next story or Reset clears them.
+[url-state.md](url-state.md)) — and `area`, the map-wide Area filter
+(`{ kind: 'ba', codes: ['ERCO'] }`, the link's `af` param; kinds and codes in
+`src/registry/area-filter.ts`) — and `sel`, a selection of features
+(`{ mode: 'isolate' | 'keep', ids: { 'eia-generators': ['1:1'] } }`, the link's
+`vx` `sel` section). `isolate` draws only the listed features of each listed
+layer; `keep` draws them on top of what the filters show. The ids are each
+layer's stable ids (`data.id`, read with `featureId()` in
+`assets/feature-id.ts`): a number on an OSM or native-id layer, at most 500 in
+all. Like every other field they are replaced wholesale, so the next story or
+Reset clears them. A layer an area cannot reach (a boundary or raster layer)
+draws whole and its panel row says so.
 
 `applyView(data, camera)`, in order:
 
@@ -124,6 +133,12 @@ subscription in `url-state.ts`, and the region dropdown's click handler in
     (parseUrlState/formatUrlState) — a field the codec doesn't know reaches the
     map from the catalogue but never reaches a shared link; experiences.test.ts
     round-trips every preset through the codec and fails when one appears
+[ ] An area (state.area) names a kind and codes from src/registry/area-filter.ts;
+    its layers are in layersOn, and a layer the area cannot reach is expected to
+    draw whole
+[ ] A selection (state.sel) uses each layer's stable ids as featureId() returns
+    them (numbers on OSM and native-id layers), ≤ 500 in all, on dataset layers
+    that are in layersOn
 [ ] npm test — experiences.test.ts checks the above against the live registry
 ```
 

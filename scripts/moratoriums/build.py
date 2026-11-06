@@ -6,10 +6,13 @@ Role: first step of rebuild.sh; the published moratoriums.csv comes later from s
 Reads   WORK/upstream/ (Moratorium Nation clone), WORK/census/*.zip,
         WORK/inputs/upstream_as_of (YYYY-MM-DD, the pinned snapshot's date; falls back to UPSTREAM_AS_OF)
 Writes  BUILD/moratoriums.csv
-Dependencies: moratoriums/refresh/textnorm.py (norm, jn). TODAY is the pinned upstream
-snapshot's date, read from inputs/upstream_as_of; bump it together with inputs/upstream.sha.
+Dependencies: moratoriums/refresh/textnorm.py (norm, jn). The pure helpers (map_status,
+expiry_from_duration, county_lookup, county_override) are exercised by scripts/test_moratorium_build.py,
+which loads them from this file's source because the script itself runs at import.
+TODAY is the pinned upstream snapshot's date, read from inputs/upstream_as_of; bump it together with inputs/upstream.sha.
 """
 import glob, json, re
+from datetime import timedelta
 from collections import defaultdict
 import pandas as pd, geopandas as gpd
 
@@ -116,6 +119,19 @@ def level(r):
 STATUS = {"active": "active", "extended": "extended", "pending": "pending", "expired": "expired",
           "rescinded": "lifted", "replaced": "replaced"}
 
+def map_status(raw, row_id):
+    """Upstream enacted_status -> published status; an unknown value is kept as given and named on stderr."""
+    if raw in STATUS: return STATUS[raw]
+    print(f"WARNING: {row_id}: unknown enacted_status {raw!r}, kept as given", file=sys.stderr)
+    return raw
+
+def expiry_from_duration(end, exp_src, anchor, days, extended):
+    """Fill a missing end date from adopted + duration. An extended row's original term says nothing
+    about its current end, so it keeps only an explicit upstream date."""
+    if end is None and anchor is not None and not extended:
+        return anchor + timedelta(days=days), "computed_adopted_plus_duration"
+    return end, exp_src
+
 def mtype(r):
     lb = r.legal_basis.lower(); allt = " ".join([r.legal_basis, r.duration, r.outcome]).lower()
     if "executive order" in lb: return "executive order"
@@ -150,18 +166,14 @@ for r in dc.itertuples():
     adopted = parse_date(r.date_enacted_iso)
     end = parse_date(r.current_end_date_iso)
     exp_src = "upstream_end_date" if end is not None else ""
-    if end is None and adopted is not None and r.duration_kind == "fixed_days" and r.duration_days:
-        dd = float(r.duration_days)
-        a = adopted if r.date_enacted_uncertainty == "exact" else (adopted + pd.offsets.MonthEnd(0) if r.date_enacted_uncertainty == "month_only" else None)
-        if a is not None:
-            end = a + pd.Timedelta(days=dd); exp_src = "computed_adopted_plus_duration"
-    status = STATUS[r.enacted_status]
     extended = r.enacted_status == "extended" or bool(re.search(r"\bextended\b", r.current_status, re.I) and "not extended" not in r.current_status.lower())
+    if end is None and adopted is not None and r.duration_kind == "fixed_days" and r.duration_days:
+        a = adopted if r.date_enacted_uncertainty == "exact" else (adopted + pd.offsets.MonthEnd(0) if r.date_enacted_uncertainty == "month_only" else None)
+        end, exp_src = expiry_from_duration(end, exp_src, a, float(r.duration_days), extended)
+    status = map_status(r.enacted_status, f"nm-{r.moratorium_id}")
     inferred = False
     if status in ("active", "extended") and end is not None and end < TODAY:
-        # an extended row's computed date reflects only the original term; trust only the upstream end date there
-        if not extended or exp_src == "upstream_end_date":
-            status, inferred = "expired", True
+        status, inferred = "expired", True
     urls_md = md_by_id.get(r.moratorium_id) or md_by_name.get((r.state, norm(r.jurisdiction))) or []
     urls_ans = ans_by_id.get(r.moratorium_id, []) + ans_by_name.get((r.state, norm(r.jurisdiction)), [])
     urls = dedupe_urls([(0, u) for u in urls_md] + urls_ans)
@@ -186,6 +198,31 @@ PIN_GEOID = {  # county subdivision GEOIDs for rows whose name matches several C
     "nm-mi-big-rapids-charter-township-2026": "2610708320",  # Big Rapids charter township, Mecosta County
 }
 
+def county_lookup(rows):
+    """(state, norm(NAME)) -> GEOID over (STUSPS, NAME, NAMELSAD, GEOID). norm() drops 'county' and 'city',
+    so a county and an independent city of one name share a key: the county wins, the city answers
+    only where no county has the name (Carson City). Every city is also kept under (state, key, "city"),
+    for a jurisdiction that names itself a city."""
+    out, is_city = {}, {}
+    for st, name, lsad, geoid in rows:
+        k, city = (st, norm(name)), lsad.endswith(" city") and not lsad.endswith(" County")
+        if city: out[k + ("city",)] = geoid
+        if k not in out or (is_city[k] and not city): out[k], is_city[k] = geoid, city
+    return out
+
+def county_override(state, joined_state, joined_fips, base, lookup):
+    """The county GEOID a county-level row should carry when its joined polygon is not the county its
+    name says (other state, other name, or the same-named independent city); None keeps the join.
+    A name that says city ("City of St. Louis", "Baltimore City") takes the independent city over the county."""
+    cands = {norm(base)} | {norm(p) for p in base.split("-")}
+    if base == "Louisville Metro": cands = {norm("Jefferson")}
+    city = bool(re.search(r"\bcity\b", base, re.I)) and "county" not in base.lower()
+    get = lambda c: lookup.get((state, c, "city")) if city and (state, c, "city") in lookup else lookup.get((state, c))
+    hits = {get(c) for c in sorted(cands) if get(c)}
+    if joined_state == state and joined_fips in hits: return None
+    n = next((c for c in sorted(cands) if get(c)), norm(base))
+    return get(n)
+
 def spatial(df):
     df = df.copy()
     cty = gpd.read_file(f"zip://{CENSUS}/cb_2023_us_county_500k.zip")[["GEOID", "NAME", "NAMELSAD", "STUSPS", "geometry"]].to_crs(4326)
@@ -201,7 +238,7 @@ def spatial(df):
         return j[~j.index.duplicated()]
     jp = join(pl, ["GEOID", "key"]); jc = join(cs, ["GEOID", "key", "cfips"]); jk = join(cty, ["GEOID"])
     df["geo_qa"] = ""
-    cty_key = {(r.STUSPS, norm(r.NAME)): r.GEOID for r in cty.itertuples()}
+    cty_key = county_lookup((r.STUSPS, r.NAME, r.NAMELSAD, r.GEOID) for r in cty.itertuples())
     for i, r in df.iterrows():
         k = jn(r.jurisdiction_name); lvl = r.jurisdiction_level
         if r.id in PIN_GEOID:  # name alone is ambiguous; the county comes from the row's own text
@@ -243,18 +280,14 @@ def spatial(df):
 
 df, cty = spatial(df)
 df["fips_method"] = df.county_fips.map(lambda x: "point_in_polygon" if x else "")
-name_lookup = {(r.STUSPS, norm(r.NAME)): (r.GEOID, r.NAME) for r in cty.itertuples()}
+name_lookup = county_lookup((r.STUSPS, r.NAME, r.NAMELSAD, r.GEOID) for r in cty.itertuples())
 mism = 0
 for i, r in df[df.jurisdiction_level == "county"].iterrows():
     base = re.sub(r"\(.*?\)|Fiscal Court|Unincorporated", "", r.jurisdiction_name).strip()
-    cands = {norm(base)} | {norm(p) for p in base.split("-")}
-    if r.jurisdiction_name == "Louisville Metro": cands = {norm("Jefferson")}
-    n = next((c for c in cands if (r.state, c) in name_lookup), norm(base))
-    if norm(r.joined_county) not in cands or r.joined_state != r.state:
-        hit = name_lookup.get((r.state, n))
+    g = county_override(r.state, r.joined_state, r.county_fips, base, name_lookup)
+    if g and g != r.county_fips:
         mism += 1
-        if hit:
-            df.at[i, "county_fips"] = hit[0]; df.at[i, "fips_method"] = "name_match_override"
+        df.at[i, "county_fips"] = g; df.at[i, "fips_method"] = "name_match_override"
 
 # ---------- outputs ----------
 COLS = ["id", "jurisdiction_name", "jurisdiction_level", "state", "county_fips", "place_geoid", "lat", "lon", "type", "scope",

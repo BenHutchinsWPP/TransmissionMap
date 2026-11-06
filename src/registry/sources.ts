@@ -1,15 +1,8 @@
-import type { LayerSourceDef, DownloadRegion, FeatureIdDecl } from '../types.js';
+// Provenance: the map credits several LayerDef `data` declarations share (and
+// the basemap), and LAYER_SOURCES — each source group's panel label, tooltip
+// and Data Credits heading. Pure data.
 
-export const REGION_CODE_MAP: Record<DownloadRegion, string> = {
-  'north-america': 'na',
-  'europe': 'eu',
-  'asia': 'as',
-  'south-america': 'sa',
-  'africa': 'af',
-  'oceania': 'oc',
-  'central-america': 'ca',
-  'antarctica': 'an',
-};
+import type { LayerSourceDef } from '../types.js';
 
 // Map credits shared by several LayerDef `data` declarations (and the basemap).
 // MapLibre drops an attribution that is a substring of a longer one, so every
@@ -21,12 +14,6 @@ export const HIFLD_EIA_CREDIT = '<a href="https://source.coop/repositories/seera
 export const EIA_ATLAS_CREDIT = '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>';
 export const CENSUS_CARTO_CREDIT = '<a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">Census Cartographic Boundaries</a>';
 export const GEOBOUNDARIES_CREDIT = '<a href="https://www.geoboundaries.org/">geoBoundaries</a>';
-
-// Stable ids shared by the OSM layers (`data.id`, src/types.ts): `fid` =
-// osm_id × 10 + type digit. The vector archives carry it as the native MVT
-// feature id; the GeoJSON files carry it as a property MapLibre promotes.
-export const OSM_NATIVE_FID: FeatureIdDecl = { field: "fid", native: true };
-export const OSM_FID: FeatureIdDecl = { field: "fid" };
 
 // >>> ADD-LAYER: layer-sources — see docs/adding-a-layer.md §5 (a credit two or
 // more layers share goes above, beside OSM_CREDIT)
@@ -160,6 +147,10 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
     label: "NOAA/NCEP GFS",
     tooltip: "Source: NOAA/NCEP GFS 0.25° operational forecasts via AWS Open Data — temperature, wind, humidity, pressure (public domain)",
   },
+  "pudl-eia930": {
+    label: "EIA-930 via PUDL",
+    tooltip: "Source: EIA Form 930 hourly balancing-authority operations, published by the PUDL Project (Catalyst Cooperative, CC-BY-4.0)",
+  },
   "iem-nexrad": {
     label: "Iowa Environmental Mesonet",
     tooltip: "Source: Iowa Environmental Mesonet — NEXRAD composite reflectivity tiles (public NWS data); Canada via ECCC GeoMet WMS",
@@ -191,6 +182,10 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
   "census-counties": {
     label: "Census Cartographic Boundaries",
     tooltip: "Source: U.S. Census Bureau — cartographic boundary files, county boundaries",
+  },
+  "route-constraints": {
+    label: "Routing constraints (route cube)",
+    tooltip: "Source: the route cube's bands: USGS PAD-US, USFWS, EPA, NPS, BLM, USDA Forest Service, FAA, USACE, USGS 3DEP, USGS NLCD (land cover), DOE/ANL Section 368 energy corridors; PoPWest (Wu et al. 2023, CC BY 4.0; TNC categories); HIFLD via SeerAI source.coop (CC BY 4.0); WorldPop (CC BY 4.0); USA Structures, ORNL and FEMA Geospatial Response Office (CC BY 4.0); © OpenStreetMap contributors (ODbL), for the OpenStreetMap entries",
   },
   "census-zcta": {
     label: "Census Cartographic Boundaries",

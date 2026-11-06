@@ -145,7 +145,10 @@ extract script so `data/build/` carries it.
 - Declare it in the manifest block: `id_field: <column>` (must be in `select:`), plus
   `native_id: true` for an integer id on a large pmtiles layer (served as the tile
   feature id, tiled with `-T fid:int`). A layer built outside the manifest goes under
-  `built_elsewhere:`. A layer with no natural key leaves it out (context layers).
+  `built_elsewhere:`, with a `select:` of the properties its script writes once
+  `FIELD_SCHEMA` names any (`scripts/test_field_schema.py` checks it against the script).
+  No key on every record: build a content id (a sha1 over attributes and geometry, as
+  `extract_padus.py` and `westtec_ogf.py` do), knowing an edited record gets a new id.
 
 ### Region tags — asset or context layer?
 
@@ -170,7 +173,16 @@ To tag a US asset:
 2. Add the fields to the block's `select:` in `tile_manifest.yaml` — tippecanoe
    drops any column `select:` leaves out.
 
-A world OSM layer is tagged in `build_global_tiles.py`: give its spec
+3. Add the region fields to the dataset's `FIELD_SCHEMA` entry in
+   `src/registry/field-schema.ts` (see
+   [adding-a-layer.md § Reaching the Area filter](adding-a-layer.md#reaching-the-area-filter)).
+   `scripts/test_field_schema.py` checks the fields both ways against what the
+   pipeline writes, so it fails until the entry matches. After a boundary
+   refresh run `make region-domains` and commit the two generated files
+   (`src/registry/region-codes.ts`, `src/registry/region-labels.json`).
+
+A world OSM layer is tagged in `build_global_tiles.py` (its `FIELD_SCHEMA` entry
+lists the same fields; `select:` is not involved): give its spec
 `"fields": GLOBAL_FIELDS` (points, footprints) or `LINE_FIELDS` (lines). See
 [pipeline.md § Region tags](pipeline.md#region-tags-scriptsregion_joinpy) for
 the values, the join rules and what each log line reports.

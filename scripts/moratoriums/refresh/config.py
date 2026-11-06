@@ -121,7 +121,7 @@ class Config:
     openrouter_review: str = OPENROUTER_REVIEW
     seed_pages: tuple[str, ...] = SEED_PAGES
     discovery_queries: tuple[str, ...] = DISCOVERY_QUERIES
-    # Per-priority request shares (D10); an unused share flows down to the next group.
+    # Per-priority request shares; an unused share flows down to the next group.
     shares: tuple[tuple[str, int], ...] = (("pending", 80), ("expiring", 50), ("utility", 20), ("rotating", 30))
 
     @property
