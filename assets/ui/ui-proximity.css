@@ -1,0 +1,32 @@
+/* ── Proximity check (ui-proximity.ts; lazy) ──────────────────────────────────
+   The Proximity tab of the bottom drawer: the privacy line, the file and
+   threshold controls, the status line and its own grid. */
+.px { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px 0; font: var(--text-sm) var(--font); color: var(--text); }
+.px-privacy { margin: 0 0 6px; color: var(--text-mid); font-size: var(--text-xs); }
+.px-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 6px; }
+.px-filename { color: var(--text-mid); overflow-wrap: anywhere; }
+.px-th { display: flex; align-items: center; gap: 6px; }
+.px-th-input { width: 7rem; }
+.px-views { display: inline-flex; gap: 4px; }
+.px-view[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.px-msg { min-height: 0; color: #92400e; }
+.px-msg:empty { display: none; }
+.px-legend { margin: 0 0 6px; color: var(--text-mid); font-size: var(--text-xs); }
+.px-status { color: var(--text-mid); margin-bottom: 6px; }
+.px-prog { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.px-prog[hidden] { display: none; }
+.px-grid { flex: 1 1 auto; min-width: 0; min-height: 0; }
+.px-grid[hidden] { display: none; }
+.px-grid .tabulator-row.px-focus { background: #fef3c7; }
+.px-credit { margin: 0 0 6px; color: var(--text-mid); font-size: var(--text-xs); }
+.px-credit[hidden] { display: none; }
+.px-fly { margin: 0; padding: 0 4px; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; line-height: 1; }
+.px-fly:hover, .px-fly:focus-visible { background: var(--panel-border); border-radius: 3px; }
+.px-status-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 6px; }
+.px-status-row .px-status { margin-bottom: 0; }
+.px-clear[hidden] { display: none; }
+.px-csv-note { color: var(--text-mid); font-size: var(--text-xs); }
+.px-head-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.px-head { margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; text-align: inherit; cursor: pointer; white-space: nowrap; }
+.px-head:hover, .px-head:focus-visible { text-decoration: underline; }
+.px-filter { box-sizing: border-box; width: 100%; min-width: 0; padding: 1px 3px; font: var(--text-xs) var(--font); }
