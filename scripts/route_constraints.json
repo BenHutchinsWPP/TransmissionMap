@@ -1,0 +1,2621 @@
+{
+  "default": "what-constrains",
+  "overview": [
+    {
+      "id": "tribal",
+      "code": 9,
+      "colour": "#7c3aed",
+      "rules": [
+        {
+          "band": "flags",
+          "bit": 0
+        }
+      ]
+    },
+    {
+      "id": "military",
+      "code": 8,
+      "colour": "#dc2626",
+      "rules": [
+        {
+          "band": "flags",
+          "bit": 1
+        }
+      ]
+    },
+    {
+      "id": "wsa",
+      "code": 7,
+      "colour": "#2b4595",
+      "rules": [
+        {
+          "band": "desig",
+          "bit": 0
+        }
+      ]
+    },
+    {
+      "id": "gap-1-2",
+      "code": 6,
+      "colour": "#5bbe71",
+      "rules": [
+        {
+          "band": "protect",
+          "values": [
+            1,
+            2
+          ],
+          "mask": 7
+        }
+      ]
+    },
+    {
+      "id": "critical-habitat",
+      "code": 5,
+      "colour": "#f38038",
+      "rules": [
+        {
+          "band": "flags",
+          "bit": 3
+        }
+      ]
+    },
+    {
+      "id": "phma",
+      "code": 4,
+      "colour": "#f362dd",
+      "rules": [
+        {
+          "band": "flags2",
+          "bit": 0
+        }
+      ]
+    },
+    {
+      "id": "sites",
+      "code": 3,
+      "colour": "#7f2502",
+      "rules": [
+        {
+          "band": "flags2",
+          "bit": 3
+        },
+        {
+          "band": "flags2",
+          "bit": 4
+        }
+      ]
+    },
+    {
+      "id": "floodplain",
+      "code": 2,
+      "colour": "#a6cee3",
+      "rules": [
+        {
+          "band": "nfhl",
+          "values": [
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "other-federal",
+      "code": 1,
+      "colour": "#758595",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            2,
+            3,
+            4,
+            5,
+            7,
+            8,
+            9
+          ]
+        }
+      ]
+    }
+  ],
+  "landManager": [
+    {
+      "id": "tribal",
+      "code": 10,
+      "colour": "#7c3aed",
+      "rules": [
+        {
+          "band": "flags",
+          "bit": 0
+        },
+        {
+          "band": "agency",
+          "values": [
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dod",
+      "code": 9,
+      "colour": "#dc2626",
+      "rules": [
+        {
+          "band": "flags",
+          "bit": 1
+        },
+        {
+          "band": "agency",
+          "values": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blm",
+      "code": 8,
+      "colour": "#ca8a04",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usfs",
+      "code": 7,
+      "colour": "#15803d",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nps",
+      "code": 6,
+      "colour": "#b45309",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fws",
+      "code": 5,
+      "colour": "#0891b2",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "code": 4,
+      "colour": "#ea580c",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "local",
+      "code": 3,
+      "colour": "#eab308",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "other-federal",
+      "code": 2,
+      "colour": "#64748b",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            7,
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ngo",
+      "code": 1,
+      "colour": "#84cc16",
+      "rules": [
+        {
+          "band": "agency",
+          "values": [
+            13
+          ]
+        }
+      ]
+    }
+  ],
+  "concerns": [
+    {
+      "id": "what-constrains",
+      "group": "overview",
+      "kind": "overview"
+    },
+    {
+      "id": "land-manager",
+      "group": "land",
+      "kind": "categorical"
+    },
+    {
+      "id": "tribal",
+      "group": "land",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 0
+      },
+      "colour": "#7c3aed"
+    },
+    {
+      "id": "landcover",
+      "group": "land",
+      "kind": "classes",
+      "resampling": "mode",
+      "classes": [
+        {
+          "id": "water",
+          "code": 9,
+          "colour": "#466b9f",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                11
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ice-snow",
+          "code": 8,
+          "colour": "#d1def8",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                12
+              ]
+            }
+          ]
+        },
+        {
+          "id": "developed-high",
+          "code": 7,
+          "colour": "#ab0000",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "id": "developed-low-med",
+          "code": 6,
+          "colour": "#d99282",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                22,
+                23
+              ]
+            }
+          ]
+        },
+        {
+          "id": "forest",
+          "code": 5,
+          "colour": "#38814e",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                41,
+                42,
+                43
+              ]
+            }
+          ]
+        },
+        {
+          "id": "wetland",
+          "code": 4,
+          "colour": "#6c9fb8",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                90,
+                95
+              ]
+            }
+          ]
+        },
+        {
+          "id": "barren",
+          "code": 3,
+          "colour": "#b3ac9f",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                31
+              ]
+            }
+          ]
+        },
+        {
+          "id": "crops",
+          "code": 2,
+          "colour": "#ab6c28",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                82
+              ]
+            }
+          ]
+        },
+        {
+          "id": "other",
+          "code": 1,
+          "colour": "#dfdfc2",
+          "rules": [
+            {
+              "band": "landcover",
+              "values": [
+                21,
+                52,
+                71,
+                81
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "osm-lake",
+      "group": "land",
+      "kind": "mask",
+      "rule": {
+        "band": "osm_flags",
+        "bit": 0
+      },
+      "colour": "#2563eb"
+    },
+    {
+      "id": "isoreg",
+      "group": "land",
+      "kind": "classes",
+      "resampling": "mode",
+      "classes": [
+        {
+          "id": "teppc",
+          "code": 9,
+          "colour": "#16a34a",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "caiso",
+          "code": 8,
+          "colour": "#f59e0b",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "miso",
+          "code": 7,
+          "colour": "#2563eb",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "spp",
+          "code": 6,
+          "colour": "#dc2626",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ercot",
+          "code": 5,
+          "colour": "#7c3aed",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pjm",
+          "code": 4,
+          "colour": "#0891b2",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nyiso",
+          "code": 3,
+          "colour": "#db2777",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                7
+              ]
+            }
+          ]
+        },
+        {
+          "id": "isone",
+          "code": 2,
+          "colour": "#84cc16",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                8
+              ]
+            }
+          ]
+        },
+        {
+          "id": "southeast",
+          "code": 1,
+          "colour": "#a16207",
+          "rules": [
+            {
+              "band": "isoreg",
+              "values": [
+                9
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "landval",
+      "group": "land",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "4",
+          "code": 4,
+          "colour": "#78350f",
+          "rules": [
+            {
+              "band": "landval",
+              "values": [
+                128,
+                129,
+                130,
+                131,
+                132,
+                133,
+                134,
+                135,
+                136,
+                137,
+                138,
+                139,
+                140,
+                141,
+                142,
+                143,
+                144,
+                145,
+                146,
+                147,
+                148,
+                149,
+                150,
+                151,
+                152,
+                153,
+                154,
+                155,
+                156,
+                157,
+                158,
+                159,
+                160,
+                161,
+                162,
+                163,
+                164,
+                165,
+                166,
+                167,
+                168,
+                169,
+                170,
+                171,
+                172,
+                173,
+                174,
+                175,
+                176,
+                177,
+                178,
+                179,
+                180,
+                181,
+                182,
+                183,
+                184,
+                185,
+                186,
+                187,
+                188,
+                189,
+                190,
+                191,
+                192,
+                193,
+                194,
+                195,
+                196,
+                197,
+                198,
+                199,
+                200,
+                201,
+                202,
+                203,
+                204,
+                205,
+                206,
+                207,
+                208,
+                209,
+                210,
+                211,
+                212,
+                213,
+                214,
+                215,
+                216,
+                217,
+                218,
+                219,
+                220,
+                221,
+                222,
+                223,
+                224,
+                225,
+                226,
+                227,
+                228,
+                229,
+                230,
+                231,
+                232,
+                233,
+                234,
+                235,
+                236,
+                237,
+                238,
+                239,
+                240,
+                241,
+                242,
+                243,
+                244,
+                245,
+                246,
+                247,
+                248,
+                249,
+                250,
+                251,
+                252,
+                253,
+                254,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "code": 3,
+          "colour": "#d97706",
+          "rules": [
+            {
+              "band": "landval",
+              "values": [
+                91,
+                92,
+                93,
+                94,
+                95,
+                96,
+                97,
+                98,
+                99,
+                100,
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+                120,
+                121,
+                122,
+                123,
+                124,
+                125,
+                126,
+                127
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2",
+          "code": 2,
+          "colour": "#fcd34d",
+          "rules": [
+            {
+              "band": "landval",
+              "values": [
+                54,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61,
+                62,
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74,
+                75,
+                76,
+                77,
+                78,
+                79,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86,
+                87,
+                88,
+                89,
+                90
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1",
+          "code": 1,
+          "colour": "#fef3c7",
+          "rules": [
+            {
+              "band": "landval",
+              "values": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-1-2",
+      "group": "protection",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "gap-1",
+          "code": 2,
+          "colour": "#1b7837",
+          "rules": [
+            {
+              "band": "protect",
+              "values": [
+                1
+              ],
+              "mask": 7
+            }
+          ]
+        },
+        {
+          "id": "gap-2",
+          "code": 1,
+          "colour": "#5bbe71",
+          "rules": [
+            {
+              "band": "protect",
+              "values": [
+                2
+              ],
+              "mask": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-3",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "protect",
+        "values": [
+          3
+        ],
+        "mask": 7
+      },
+      "colour": "#84cc16"
+    },
+    {
+      "id": "tnc",
+      "group": "protection",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "cat-1",
+          "code": 3,
+          "colour": "#7f1d1d",
+          "rules": [
+            {
+              "band": "protect",
+              "values": [
+                16
+              ],
+              "mask": 48
+            }
+          ]
+        },
+        {
+          "id": "cat-2",
+          "code": 2,
+          "colour": "#d9622b",
+          "rules": [
+            {
+              "band": "protect",
+              "values": [
+                32
+              ],
+              "mask": 48
+            }
+          ]
+        },
+        {
+          "id": "cat-3",
+          "code": 1,
+          "colour": "#f2c14e",
+          "rules": [
+            {
+              "band": "protect",
+              "values": [
+                48
+              ],
+              "mask": 48
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wsa",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 0
+      },
+      "colour": "#2b4595"
+    },
+    {
+      "id": "wilderness-np",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 7
+      },
+      "colour": "#166534"
+    },
+    {
+      "id": "nps-preserve",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "protect",
+        "values": [
+          128
+        ],
+        "mask": 128
+      },
+      "colour": "#5f8f2b"
+    },
+    {
+      "id": "acec",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 3
+      },
+      "colour": "#ca8a04"
+    },
+    {
+      "id": "ira",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 2
+      },
+      "colour": "#15803d"
+    },
+    {
+      "id": "nm-nca",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 1
+      },
+      "colour": "#b45309"
+    },
+    {
+      "id": "wsr",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 4
+      },
+      "colour": "#0891b2"
+    },
+    {
+      "id": "nht-nst",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 5
+      },
+      "colour": "#a16207"
+    },
+    {
+      "id": "other-special",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "desig",
+        "bit": 6
+      },
+      "colour": "#758595"
+    },
+    {
+      "id": "park",
+      "group": "protection",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 6
+      },
+      "colour": "#eab308"
+    },
+    {
+      "id": "critical-habitat",
+      "group": "wildlife",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 3
+      },
+      "colour": "#f38038"
+    },
+    {
+      "id": "phma",
+      "group": "wildlife",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 0
+      },
+      "colour": "#f362dd"
+    },
+    {
+      "id": "ghma",
+      "group": "wildlife",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 1
+      },
+      "colour": "#c026d3"
+    },
+    {
+      "id": "floodplain",
+      "group": "hazards",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 2
+      },
+      "colour": "#a6cee3"
+    },
+    {
+      "id": "fema-flood",
+      "group": "hazards",
+      "kind": "classes",
+      "resampling": "mode",
+      "classes": [
+        {
+          "id": "sfha",
+          "code": 2,
+          "colour": "#1d4ed8",
+          "rules": [
+            {
+              "band": "nfhl",
+              "values": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "id": "no-map",
+          "code": 1,
+          "colour": "#9ca3af",
+          "rules": [
+            {
+              "band": "nfhl",
+              "values": [
+                3
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fema-flood-map",
+      "group": "hazards",
+      "kind": "mask",
+      "rule": {
+        "band": "nfhl",
+        "values": [
+          1,
+          2
+        ]
+      },
+      "colour": "#bfdbfe"
+    },
+    {
+      "id": "wildfire-high",
+      "group": "hazards",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "very-high",
+          "code": 2,
+          "colour": "#b91c1c",
+          "rules": [
+            {
+              "band": "whpclass",
+              "values": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "high",
+          "code": 1,
+          "colour": "#f97316",
+          "rules": [
+            {
+              "band": "whpclass",
+              "values": [
+                4
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wildfire-potential",
+      "group": "hazards",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "q4",
+          "code": 4,
+          "colour": "#7f0000",
+          "rules": [
+            {
+              "band": "wildfire",
+              "values": [
+                192,
+                193,
+                194,
+                195,
+                196,
+                197,
+                198,
+                199,
+                200,
+                201,
+                202,
+                203,
+                204,
+                205,
+                206,
+                207,
+                208,
+                209,
+                210,
+                211,
+                212,
+                213,
+                214,
+                215,
+                216,
+                217,
+                218,
+                219,
+                220,
+                221,
+                222,
+                223,
+                224,
+                225,
+                226,
+                227,
+                228,
+                229,
+                230,
+                231,
+                232,
+                233,
+                234,
+                235,
+                236,
+                237,
+                238,
+                239,
+                240,
+                241,
+                242,
+                243,
+                244,
+                245,
+                246,
+                247,
+                248,
+                249,
+                250,
+                251,
+                252,
+                253,
+                254,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "id": "q3",
+          "code": 3,
+          "colour": "#e34a33",
+          "rules": [
+            {
+              "band": "wildfire",
+              "values": [
+                129,
+                130,
+                131,
+                132,
+                133,
+                134,
+                135,
+                136,
+                137,
+                138,
+                139,
+                140,
+                141,
+                142,
+                143,
+                144,
+                145,
+                146,
+                147,
+                148,
+                149,
+                150,
+                151,
+                152,
+                153,
+                154,
+                155,
+                156,
+                157,
+                158,
+                159,
+                160,
+                161,
+                162,
+                163,
+                164,
+                165,
+                166,
+                167,
+                168,
+                169,
+                170,
+                171,
+                172,
+                173,
+                174,
+                175,
+                176,
+                177,
+                178,
+                179,
+                180,
+                181,
+                182,
+                183,
+                184,
+                185,
+                186,
+                187,
+                188,
+                189,
+                190,
+                191
+              ]
+            }
+          ]
+        },
+        {
+          "id": "q2",
+          "code": 2,
+          "colour": "#fdbb84",
+          "rules": [
+            {
+              "band": "wildfire",
+              "values": [
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74,
+                75,
+                76,
+                77,
+                78,
+                79,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86,
+                87,
+                88,
+                89,
+                90,
+                91,
+                92,
+                93,
+                94,
+                95,
+                96,
+                97,
+                98,
+                99,
+                100,
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+                120,
+                121,
+                122,
+                123,
+                124,
+                125,
+                126,
+                127,
+                128
+              ]
+            }
+          ]
+        },
+        {
+          "id": "q1",
+          "code": 1,
+          "colour": "#fee8c8",
+          "rules": [
+            {
+              "band": "wildfire",
+              "values": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61,
+                62,
+                63,
+                64
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slope-15",
+      "group": "hazards",
+      "kind": "mask",
+      "rule": {
+        "band": "slope",
+        "values": [
+          6,
+          7,
+          8
+        ]
+      },
+      "colour": "#78716c"
+    },
+    {
+      "id": "slope",
+      "group": "hazards",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "mountain",
+          "code": 2,
+          "colour": "#8c6d46",
+          "rules": [
+            {
+              "band": "slope",
+              "values": [
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rolling",
+          "code": 1,
+          "colour": "#d6c6a0",
+          "rules": [
+            {
+              "band": "slope",
+              "values": [
+                2,
+                3
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wetland",
+      "group": "hazards",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "over-half",
+          "code": 2,
+          "colour": "#0e7490",
+          "rules": [
+            {
+              "band": "wetland",
+              "values": [
+                52,
+                53,
+                54,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61,
+                62,
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74,
+                75,
+                76,
+                77,
+                78,
+                79,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86,
+                87,
+                88,
+                89,
+                90,
+                91,
+                92,
+                93,
+                94,
+                95,
+                96,
+                97,
+                98,
+                99,
+                100,
+                101
+              ]
+            }
+          ]
+        },
+        {
+          "id": "quarter-half",
+          "code": 1,
+          "colour": "#67c5d6",
+          "rules": [
+            {
+              "band": "wetland",
+              "values": [
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "occupied-facilities",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 3
+      },
+      "colour": "#7f2502"
+    },
+    {
+      "id": "nrhp",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 4
+      },
+      "colour": "#7f2502"
+    },
+    {
+      "id": "superfund",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 5
+      },
+      "colour": "#9333ea"
+    },
+    {
+      "id": "fuds",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 7
+      },
+      "colour": "#be123c"
+    },
+    {
+      "id": "cbrs",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags2",
+        "bit": 6
+      },
+      "colour": "#0d9488"
+    },
+    {
+      "id": "tall-structures",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 7
+      },
+      "colour": "#475569"
+    },
+    {
+      "id": "airfields",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 2
+      },
+      "colour": "#0284c7"
+    },
+    {
+      "id": "aviation",
+      "group": "sites",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "primary",
+          "code": 5,
+          "colour": "#0c4a6e",
+          "rules": [
+            {
+              "band": "aviation",
+              "values": [
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "id": "under-30",
+          "code": 4,
+          "colour": "#0369a1",
+          "rules": [
+            {
+              "band": "aviation",
+              "values": [
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "id": "30-46",
+          "code": 3,
+          "colour": "#0ea5e9",
+          "rules": [
+            {
+              "band": "aviation",
+              "values": [
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "id": "46-61",
+          "code": 2,
+          "colour": "#7dd3fc",
+          "rules": [
+            {
+              "band": "aviation",
+              "values": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "id": "notice",
+          "code": 1,
+          "colour": "#e0f2fe",
+          "rules": [
+            {
+              "band": "aviation",
+              "values": [
+                2
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "military",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 1
+      },
+      "colour": "#dc2626"
+    },
+    {
+      "id": "osm-military",
+      "group": "sites",
+      "kind": "mask",
+      "rule": {
+        "band": "osm_flags",
+        "bit": 7
+      },
+      "colour": "#991b1b"
+    },
+    {
+      "id": "pop-100",
+      "group": "population",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 5
+      },
+      "colour": "#db2777"
+    },
+    {
+      "id": "homes",
+      "group": "population",
+      "kind": "classes",
+      "resampling": "max",
+      "classes": [
+        {
+          "id": "ten-plus",
+          "code": 3,
+          "colour": "#b45309",
+          "rules": [
+            {
+              "band": "bldg",
+              "values": [
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61,
+                62,
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74,
+                75,
+                76,
+                77,
+                78,
+                79,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86,
+                87,
+                88,
+                89,
+                90,
+                91,
+                92,
+                93,
+                94,
+                95,
+                96,
+                97,
+                98,
+                99,
+                100,
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+                120,
+                121,
+                122,
+                123,
+                124,
+                125,
+                126,
+                127,
+                128,
+                129,
+                130,
+                131,
+                132,
+                133,
+                134,
+                135,
+                136,
+                137,
+                138,
+                139,
+                140,
+                141,
+                142,
+                143,
+                144,
+                145,
+                146,
+                147,
+                148,
+                149,
+                150,
+                151,
+                152,
+                153,
+                154,
+                155,
+                156,
+                157,
+                158,
+                159,
+                160,
+                161,
+                162,
+                163,
+                164,
+                165,
+                166,
+                167,
+                168,
+                169,
+                170,
+                171,
+                172,
+                173,
+                174,
+                175,
+                176,
+                177,
+                178,
+                179,
+                180,
+                181,
+                182,
+                183,
+                184,
+                185,
+                186,
+                187,
+                188,
+                189,
+                190,
+                191,
+                192,
+                193,
+                194,
+                195,
+                196,
+                197,
+                198,
+                199,
+                200,
+                201,
+                202,
+                203,
+                204,
+                205,
+                206,
+                207,
+                208,
+                209,
+                210,
+                211,
+                212,
+                213,
+                214,
+                215,
+                216,
+                217,
+                218,
+                219,
+                220,
+                221,
+                222,
+                223,
+                224,
+                225,
+                226,
+                227,
+                228,
+                229,
+                230,
+                231,
+                232,
+                233,
+                234,
+                235,
+                236,
+                237,
+                238,
+                239,
+                240,
+                241,
+                242,
+                243,
+                244,
+                245,
+                246,
+                247,
+                248,
+                249,
+                250,
+                251,
+                252,
+                253,
+                254,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "id": "three-nine",
+          "code": 2,
+          "colour": "#f59e0b",
+          "rules": [
+            {
+              "band": "bldg",
+              "values": [
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10
+              ]
+            }
+          ]
+        },
+        {
+          "id": "one-two",
+          "code": 1,
+          "colour": "#fde68a",
+          "rules": [
+            {
+              "band": "bldg",
+              "values": [
+                2,
+                3
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "buildings",
+      "group": "population",
+      "kind": "mask",
+      "rule": {
+        "band": "built",
+        "values": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101
+        ]
+      },
+      "colour": "#7c3aed"
+    },
+    {
+      "id": "nonresidential",
+      "group": "population",
+      "kind": "mask",
+      "rule": {
+        "band": "nonres",
+        "values": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101
+        ]
+      },
+      "colour": "#be185d"
+    },
+    {
+      "id": "building-unknown",
+      "group": "population",
+      "kind": "mask",
+      "rule": {
+        "band": "bldgunk",
+        "values": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101
+        ]
+      },
+      "colour": "#64748b"
+    },
+    {
+      "id": "building-coverage",
+      "group": "population",
+      "kind": "mask",
+      "rule": {
+        "band": "built",
+        "values": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101
+        ]
+      },
+      "colour": "#0891b2"
+    },
+    {
+      "id": "section-368",
+      "group": "corridors",
+      "kind": "mask",
+      "rule": {
+        "band": "flags",
+        "bit": 4
+      },
+      "colour": "#0f766e"
+    },
+    {
+      "id": "existing-line-230",
+      "group": "corridors",
+      "kind": "mask",
+      "rule": {
+        "band": "osm_flags",
+        "bit": 2
+      },
+      "colour": "#4338ca"
+    },
+    {
+      "id": "parallel-230",
+      "group": "corridors",
+      "kind": "mask",
+      "rule": {
+        "band": "adj",
+        "values": [
+          1,
+          2
+        ],
+        "mask": 3
+      },
+      "colour": "#1e3a8a"
+    },
+    {
+      "id": "parallel-100",
+      "group": "corridors",
+      "kind": "mask",
+      "rule": {
+        "band": "adj",
+        "values": [
+          32,
+          64
+        ],
+        "mask": 96
+      },
+      "colour": "#60a5fa"
+    }
+  ]
+}

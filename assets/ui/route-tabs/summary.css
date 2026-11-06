@@ -1,0 +1,19 @@
+/* ── Route panel: Summary sub-tab (summary.ts; lazy) ──────────────────────────
+   Two columns on a wide pane (headline + colour control | waterfall), one below
+   the other on a narrow one. .rs and .rs-h are scoped to .rp-main. */
+.rp-main .rs { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.1fr); gap: 14px 28px; align-items: start; }
+.rs-left, .rs-right { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.rp-main .rs-h { margin: 0; font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.rs-colour { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rs-colour-lab { font-size: var(--text-xs); color: var(--text-light); }
+.rs-seg { display: inline-flex; border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; }
+.rs-seg-btn { border: 0; border-right: 1px solid var(--panel-border); background: none; padding: 4px 10px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
+.rs-seg-btn:last-child { border-right: 0; }
+.rs-seg-btn[aria-checked="true"] { background: rgba(59, 130, 246, 0.1); color: var(--accent-hover); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.rs-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@container rp-main (max-width: 700px) {
+  .rp-main .rs { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .rp-main .rs { grid-template-columns: 1fr; }
+}

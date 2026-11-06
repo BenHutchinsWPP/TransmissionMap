@@ -1,0 +1,37 @@
+/* Route report: hidden on screen; while printing, every other body child is hidden. */
+#route-report { display: none; }
+
+#route-report {
+  --text: #111; --text-mid: #333; --text-light: #555; --panel-bg: #fff; --panel-border: #bbb; --navy: #1f3a5f;
+  color: #111; background: #fff; font: 11px/1.4 system-ui, sans-serif;
+}
+#route-report h1 { font-size: 18px; margin: 0 0 2px; }
+#route-report h2 { font-size: 12px; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #999; }
+/* The title band: the app's navy header look, sized to its content and wrapped (title, then subtitle and badge). */
+#route-report > header { height: auto; flex-wrap: wrap; gap: 2px 12px; padding: 8px 12px; color: #fff; }
+#route-report > header h1 { flex: 1 0 100%; color: #fff; }
+#route-report .rr-sub { flex: 1 1 auto; color: #dbe4f0; margin: 0; }
+#route-report .rr-snap { display: block; width: 100%; max-height: 3.6in; object-fit: contain; border: 1px solid #999; margin: 8px 0; }
+#route-report .rr-snap-na { border: 1px dashed #999; padding: 24px; text-align: center; color: #555; margin: 8px 0; }
+#route-report table { width: 100%; border-collapse: collapse; }
+#route-report th, #route-report td { text-align: left; padding: 2px 6px; border-bottom: 1px solid #ddd; }
+#route-report td.rr-n, #route-report th.rr-n { text-align: right; font-variant-numeric: tabular-nums; }
+#route-report .rr-strip { width: 100%; height: auto; display: block; }
+#route-report .rr-legend { font-size: 10px; color: #444; margin: 2px 0; }
+#route-report .rr-small { font-size: 10px; color: #444; }
+
+#route-report .rr-edits { margin: 2px 0 6px; padding-left: 18px; }
+
+/* A named page: Letter and its margins apply only to the report's pages, never to a print of the map. */
+@page route-report { size: Letter; margin: 0.5in; }
+
+@media print {
+  body.printing-route-report > *:not(#route-report) { display: none !important; }
+  body.printing-route-report { background: #fff !important; overflow: visible !important; height: auto !important; }
+  body.printing-route-report #route-report { display: block; page: route-report; }
+  #route-report, #route-report * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  #route-report h2 { break-after: avoid; }
+  #route-report .rr-keep { break-inside: avoid; }
+  #route-report table, #route-report svg, #route-report img, #route-report .rp-wf, #route-report .rp-range { break-inside: avoid; }
+  #route-report tr { break-inside: avoid; }
+}

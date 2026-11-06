@@ -1,0 +1,241 @@
+/* ── Route panel (ui-route.ts, route-inputs.ts; lazy) ─────────────────────────
+   The input column: endpoint comboboxes, line-type segmented control, method
+   select, Find button, and the folded one-line strip. Pick mode adds a toast and
+   a snap-preview callout over the map, and the A/B pins are map markers. */
+.ri {
+  --ri-surface: var(--panel-bg, #fff);
+  --ri-tint: rgba(59, 130, 246, 0.1);
+  --ri-tint-text: var(--accent-hover);
+  box-sizing: border-box;
+  width: 268px;
+  flex: none;
+  padding: 10px 12px;
+  border-right: 1px solid var(--panel-border);
+  font: var(--text-sm) var(--font);
+  color: var(--text);
+  overflow-y: auto;
+}
+.ri--folded { width: auto; padding: 6px 12px; border-right: 0; border-bottom: 1px solid var(--panel-border); overflow: hidden; }
+.ri-body[hidden], .ri-strip[hidden], .ri-list[hidden], .ri-errors[hidden] { display: none; }
+.ri-h { font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); margin: 0 0 6px; }
+.ri-label { display: block; font-size: var(--text-xs); color: var(--text-light); margin-bottom: 3px; }
+.ri-field { margin-top: 10px; }
+.ri-link { color: var(--accent-hover); background: none; border: 0; padding: 0; font: var(--text-sm) var(--font); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.ri-note { color: var(--text-light); font-size: var(--text-xs); }
+.ri-method-row { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; margin-top: 6px; }
+
+/* kV badges: ≥ 345 red, 161–344 blue, below green — the voltage legend's hues */
+.ri-kv { display: inline-block; padding: 0 5px; border-radius: 3px; background: rgba(239, 68, 68, 0.15); color: #b91c1c; font: 600 10px/16px var(--font); vertical-align: 1px; white-space: nowrap; }
+.ri-kv--mid { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+.ri-kv--low { background: rgba(34, 197, 94, 0.15); color: #15803d; }
+.ri-kv--unknown { background: rgba(107, 114, 128, 0.15); color: var(--text-mid); font-weight: 500; }
+
+/* endpoint fields */
+.ri-ep-wrap { position: relative; }
+.ri-ep-wrap + .ri-ep-wrap { margin-top: 6px; }
+.ri-ep { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 3px 6px 3px 4px; border: 1px solid var(--panel-border); border-radius: 6px; background: var(--ri-surface); }
+.ri-ep:focus-within, .ri-ep--active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18); }
+.ri-ep-pin { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font: 700 11px var(--font); }
+.ri-ep-in { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: inherit; font: var(--text-sm) var(--font); }
+.ri-ep-txt { flex: 1; min-width: 0; line-height: 1.25; overflow: hidden; }
+.ri-ep-txt small { display: block; color: var(--text-light); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-ep-x, .ri-ep-pick { flex: none; border: 0; background: none; color: var(--text-light); font-size: 15px; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
+.ri-ep-x:hover, .ri-ep-pick:hover { background: var(--ri-tint); color: var(--text); }
+
+.ri-list { position: absolute; z-index: 2; left: 0; right: 0; list-style: none; margin: 4px 0 0; padding: 4px 0; max-height: 260px; overflow-y: auto; border: 1px solid var(--panel-border); border-radius: 6px; background: var(--ri-surface); box-shadow: var(--panel-shadow); }
+.ri-list li { padding: 5px 10px; line-height: 1.3; }
+.ri-list small { display: block; color: var(--text-light); font-size: var(--text-xs); }
+.ri-opt { cursor: pointer; }
+.ri-opt.on, .ri-opt:hover { background: var(--ri-tint); }
+.ri-opt-raw { border-top: 1px solid var(--panel-border); color: var(--text-mid); }
+.ri-list-status { color: var(--text-light); }
+
+/* line type */
+.ri-seg { display: inline-flex; border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; background: var(--ri-surface); }
+.ri-seg-btn { border: 0; border-right: 1px solid var(--panel-border); background: none; padding: 5px 9px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
+.ri-seg-btn:last-child { border-right: 0; }
+.ri-seg-btn.on { background: var(--ri-tint); color: var(--ri-tint-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+
+.ri-select { width: 100%; padding: 5px 6px; border: 1px solid var(--panel-border); border-radius: 6px; font: var(--text-sm) var(--font); background: var(--ri-surface); color: var(--text); }
+
+.ri-primary { display: block; width: 100%; margin-top: 12px; background: var(--accent); color: #fff; border: 1px solid var(--accent-hover); border-radius: var(--radius-sm); padding: 7px 14px; font: 600 var(--text-sm) var(--font); cursor: pointer; }
+.ri-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.ri-primary:disabled { background: rgba(148, 163, 184, 0.55); border-color: transparent; cursor: default; }
+.ri-errors { margin: 6px 0 0; color: #b91c1c; font-size: var(--text-xs); }
+
+/* folded strip */
+.ri-strip { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; font-size: 13px; }
+.ri-strip-end { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ri-strip-pin { margin-right: 4px; }
+.ri-strip-arrow { color: var(--text-light); }
+.ri-strip-extra { color: var(--text-mid); }
+.ri-strip-extra:empty { display: none; }
+.ri-strip-extra::before { content: "· "; }
+.ri-strip-edit { margin-left: auto; font-size: 13px; }
+
+/* pick mode, over the map */
+.ri-toast { position: absolute; z-index: 12; left: 50%; top: 12px; transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--navy); color: #fff; border-radius: 999px; padding: 7px 14px; font: var(--text-sm) var(--font); box-shadow: var(--panel-shadow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.ri-callout { position: absolute; z-index: 12; pointer-events: none; background: var(--panel-bg, #fff); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; box-shadow: var(--panel-shadow); padding: 5px 9px; line-height: 1.3; white-space: nowrap; font: var(--text-sm) var(--font); }
+.ri-callout small { display: block; color: var(--text-light); font-size: var(--text-xs); }
+
+/* A/B pins: a navy teardrop with a white rim, readable on light and dark basemaps.
+   MapLibre owns the marker element's transform, so the shape is on a child. */
+.ri-pin { width: 30px; height: 32px; cursor: grab; }
+.ri-pin-head { position: absolute; left: 2px; top: 0; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--navy); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+.ri-pin-head > span { display: block; transform: rotate(45deg); color: #fff; font: 700 12px/22px var(--font); text-align: center; }
+.ri-pin:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
+
+/* ── Route pane shell (ui-route.ts) ───────────────────────────────────────────
+   Inputs column left, .rp-main right; the inputs fold to a strip above .rp-main
+   on a narrow drawer or a phone, and the pane then stacks. */
+.rp { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; }
+.rp:has(> .ri--folded) { flex-direction: column; }
+.rp-main { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 10px 14px 14px; box-sizing: border-box;
+  container: rp-main / inline-size; font: var(--text-sm) var(--font); color: var(--text); }
+.rp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.rp-hint { margin: 6px 0; color: var(--text-mid); max-width: 60ch; line-height: 1.45; }
+.rp-error { display: flex; flex-direction: column; gap: 4px; max-width: 70ch; padding: 10px 12px; border: 1px solid rgba(185, 28, 28, 0.35); border-radius: 6px; background: rgba(239, 68, 68, 0.07); color: var(--text); line-height: 1.4; }
+.rp-error b { color: #b91c1c; }
+.rp-btn { border: 1px solid var(--panel-border); background: var(--panel-bg, #fff); color: var(--text); border-radius: var(--radius-sm); padding: 5px 12px; font: var(--text-sm) var(--font); cursor: pointer; }
+.rp-btn:hover { border-color: var(--accent); }
+.rp-stub-h { margin: 4px 0; font: 600 var(--text-sm) var(--font); }
+.rp-stub { margin: 0; color: var(--text-light); }
+
+/* solving: five steps, elapsed, Cancel */
+.rp-solve { max-width: 460px; }
+.rp-solve-h { margin: 0 0 8px; font: 600 var(--text-sm) var(--font); }
+.rp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rp-step { display: flex; align-items: center; gap: 10px; color: var(--text-light); }
+.rp-step-mark { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--panel-border); display: grid; place-items: center; font: 600 11px var(--font); }
+.rp-step--done { color: var(--text-mid); }
+.rp-step--done .rp-step-mark { border-color: #16a34a; color: #16a34a; }
+.rp-step--active { color: var(--text); font-weight: 600; }
+.rp-step--active .rp-step-mark { background: var(--accent); border-color: var(--accent); color: #fff; animation: rp-pulse 1.2s ease-in-out infinite; }
+@keyframes rp-pulse { 50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25); } }
+@media (prefers-reduced-motion: reduce) { .rp-step--active .rp-step-mark { animation: none; } }
+.rp-solve-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.rp-elapsed { margin: 0; color: var(--text-mid); font-variant-numeric: tabular-nums; }
+.rp-solve-note { margin: 10px 0 0; color: var(--text-light); font-size: var(--text-xs); line-height: 1.4; }
+
+/* result: sub-tabs + badge + settings, then the tab panel */
+.rp-head { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--panel-border); margin: -4px 0 10px; }
+/* sticky over the scrolled tab (top = minus .rp-main's top padding), so the sub-tabs and the re-solve chip stay in view */
+.rp-head { position: sticky; top: -10px; z-index: 3; background: var(--panel-bg, #fff); }
+.rp-tabs { display: flex; flex: 1 1 auto; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding-inline-end: 24px; box-sizing: border-box; }
+.rp-tab { flex: none; border: 0; background: none; padding: 7px 11px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.rp-tab[aria-selected="true"] { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.rp-tab[aria-disabled="true"] { color: var(--text-light); opacity: 0.6; cursor: default; }
+.rp-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rp-head .rp-badge { flex: none; }
+.rp-badge--alt { background: color-mix(in srgb, #0d9488 12%, var(--panel-bg)); border-color: #2dd4bf; color: #0f766e; }   /* an alternative made the result */
+/* refine solve (live tuning, Re-solve): a chip in the header instead of the progress view */
+.rp-head { flex-wrap: wrap; }   /* the re-solve chip takes a row of its own rather than squeezing the sub-tabs */
+.rp-head > .rp-tabs { flex-basis: 0; min-width: 0; }
+.rp-resolving { order: 10; flex: 1 0 100%; justify-content: flex-start; margin-bottom: 4px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; font: var(--text-xs) var(--font); color: var(--text-mid); white-space: nowrap; }
+.rp-resolving--err { color: #b91c1c; background: color-mix(in srgb, #dc2626 10%, var(--panel-bg)); white-space: normal; }
+.rp-resolving-spin { width: 10px; height: 10px; border: 2px solid var(--panel-border); border-top-color: var(--accent); border-radius: 50%; animation: rp-spin 0.8s linear infinite; }
+.rp-resolving-cancel { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; }
+@keyframes rp-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rp-resolving-spin { animation: none; } }
+.rp-icon { flex: none; border: 0; background: none; color: var(--text-mid); font-size: 16px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+.rp-icon:hover { background: rgba(59, 130, 246, 0.1); color: var(--text); }
+
+/* Export ▾ menu (fixed, over the drawer header) */
+.rp-menu { position: fixed; z-index: 1000; display: flex; flex-direction: column; min-width: 220px; padding: 4px 0; background: var(--panel-bg, #fff); border: 1px solid var(--panel-border); border-radius: 6px; box-shadow: var(--panel-shadow); }
+.rp-menu-item { border: 0; background: none; text-align: left; padding: 7px 12px; font: var(--text-sm) var(--font); color: var(--text); cursor: pointer; }
+.rp-menu-item:hover, .rp-menu-item:focus-visible { background: rgba(59, 130, 246, 0.1); outline: none; }
+
+/* legend: a card in the app's #legendContainer (stacks with Voltage etc. above the drawer); hover readout over the map */
+.rp-legend { max-width: 250px; color: var(--text); font: var(--text-xs) var(--font); }
+.rp-lg-title { cursor: pointer; }
+.rp-legend.collapsed .rp-lg-title { margin-bottom: 0; }
+.rp-legend[hidden], .rp-tip[hidden] { display: none; }
+.rp-lg-h { font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-mid); margin-bottom: 5px; }
+.rp-lg-h--sub { margin-top: 8px; }
+.rp-lg-ramp { height: 10px; min-width: 140px; border-radius: 3px; }
+.rp-lg-ticks { display: flex; justify-content: space-between; color: var(--text-light); margin-top: 2px; }
+.rp-lg-note { margin: 5px 0 0; color: var(--text-light); line-height: 1.35; }
+.rp-lg-row { display: flex; align-items: center; gap: 6px; line-height: 1.6; }
+.rp-lg-pct { margin-left: auto; padding-left: 8px; white-space: nowrap; color: var(--text-light); font-variant-numeric: tabular-nums; }
+.rp-lg-sw { flex: none; width: 18px; height: 4px; border-radius: 2px; }
+.rp-lg-sw--thin { height: 2px; }
+.rp-lg-swatches { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.rp-lg-swatches .rp-lg-sw { height: 10px; width: 14px; }
+.rp-lg-area { flex: none; width: 16px; height: 10px; border: 1.5px solid rgba(126, 34, 206, 0.55); background: rgba(126, 34, 206, 0.12); border-radius: 5px; }
+.rp-tip { position: absolute; z-index: 12; pointer-events: none; background: var(--panel-bg, #fff); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; box-shadow: var(--panel-shadow); padding: 5px 9px; font: var(--text-sm) var(--font); white-space: nowrap; }
+
+/* cell inspector: header toggles, tooltip, routing-weight legend */
+.rp-map { position: relative; flex: none; }
+.rp-mapbtn { border: 1px solid var(--panel-border); background: none; color: var(--text-mid); border-radius: 12px; padding: 2px 10px; font: var(--text-xs) var(--font); cursor: pointer; white-space: nowrap; }
+.rp-mapbtn::after { content: " \25BE"; }
+.rp-mapbtn:hover, .rp-mapbtn[aria-expanded="true"] { background: rgba(59, 130, 246, 0.1); color: var(--text); }
+/* Placed by positionColorMenu (ui-menubar.ts): fixed, below the Map button or flipped above it. */
+.rp-mapmenu { min-width: 190px; display: flex; flex-direction: column; padding: 4px 0; background: var(--panel-bg, #fff); border: 1px solid var(--panel-border); border-radius: 6px; box-shadow: var(--panel-shadow); }
+.rp-mapmenu[hidden], .rp-wtmode[hidden] { display: none; }
+.rp-mi { display: flex; align-items: center; gap: 8px; border: 0; background: none; text-align: left; padding: 6px 12px; font: var(--text-sm) var(--font); color: var(--text); white-space: nowrap; cursor: pointer; }
+.rp-mi::before { content: ""; flex: none; width: 12px; height: 12px; border: 1.5px solid var(--text-light); border-radius: 3px; box-sizing: border-box; }
+.rp-mi[role="menuitemradio"]::before { border-radius: 50%; }
+.rp-mi[aria-checked="true"]::before { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--panel-bg, #fff); }
+.rp-mi:hover:not(:disabled), .rp-mi:focus-visible { background: rgba(59, 130, 246, 0.1); outline: none; }
+.rp-mi:disabled { color: var(--text-light); cursor: default; }
+.rp-wtmode { display: flex; flex-direction: column; padding-left: 16px; }
+.rp-wtmode-opt { font-size: var(--text-xs); }
+.rp-itip { width: max-content; max-width: 340px; overflow: hidden; text-overflow: ellipsis; font: var(--text-xs) var(--font); line-height: 1.4; padding: 5px 10px; }
+.rp-itip .rp-it-cause { margin: 0; }
+.rp-it-cause { display: block; font-size: var(--text-sm); margin-bottom: 2px; }
+.rp-it-note { color: #b45309; }
+.rp-it-fx { color: var(--text-mid); }
+.rp-it-h { margin-top: 5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-light); font-size: 10px; }
+.rp-it-rows { margin: 1px 0 0; padding: 0; list-style: none; }
+.rp-it-lose { color: var(--text-light); }
+.rp-it-exempt s { color: var(--text-light); }
+.rp-it-bands { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; margin: 1px 0 0; }
+.rp-it-bands dt { color: var(--text-mid); }
+.rp-it-bands dd { margin: 0; }
+/* pinned inspector card */
+.rp-icard { position: absolute; z-index: 13; pointer-events: auto; width: 320px; max-width: calc(100% - 16px); max-height: 70%; overflow-y: auto; box-sizing: border-box; background: var(--panel-bg, #fff); color: var(--text); border: 1px solid var(--panel-border); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 10px 12px; font: var(--text-xs) var(--font); line-height: 1.4; }
+.rp-icard[hidden] { display: none; }
+.rp-icard:focus { outline: none; }
+.rp-icard--dock { left: 0; right: 0; width: auto; max-width: none; max-height: 60%; border-radius: 10px 10px 0 0; }
+.rp-ic-x { position: absolute; top: 4px; right: 6px; width: 28px; height: 28px; border: 0; background: none; color: var(--text-mid); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px; }
+.rp-ic-x:hover, .rp-ic-x:focus-visible { background: rgba(59, 130, 246, 0.1); color: var(--text); }
+.rp-ic-head { display: block; font-size: var(--text-sm); padding-right: 28px; margin-bottom: 6px; }
+.rp-ic-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.rp-ic-chip { padding: 1px 8px; border-radius: 10px; font-weight: 600; background: rgba(59, 130, 246, 0.12); color: var(--text); }
+.rp-ic-chip--cost { background: rgba(148, 163, 184, 0.2); color: var(--text-mid); }
+.rp-ic-chip--block { background: rgba(185, 28, 28, 0.14); color: #b91c1c; }
+.rp-ic-facts, .rp-ic-rules { margin: 2px 0 0; padding: 0; list-style: none; }
+.rp-ic-facts li { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.rp-ic-sw { flex: none; width: 10px; height: 10px; border-radius: 2px; }
+.rp-ic-sw--none { background: transparent; }
+.rp-ic-none { color: var(--text-light); }
+.rp-ic-rules li { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
+.rp-ic-x2 { flex: none; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rp-ic-raw { margin-top: 8px; }
+.rp-ic-raw summary { cursor: pointer; color: var(--text-mid); }
+.rp-lg-sw--hatch { height: 10px; width: 14px; background: repeating-linear-gradient(45deg, rgb(150, 0, 0) 0 3px, rgba(150, 0, 0, 0.35) 3px 6px); }
+
+@media (max-width: 640px) {
+  .rp { flex-direction: column; }
+  .rp-main { padding: 8px 10px 12px; }
+  .rp-head { top: -8px; }
+  .rp-head { flex-wrap: wrap; row-gap: 4px; }
+  .rp-head > .rp-tabs { order: 2; flex-basis: 100%; }
+  /* more sub-tabs past the right edge: they fade out there (the strip's end padding is what fades once scrolled to the end) */
+  .rp-head > .rp-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .rp-legend { max-width: 200px; padding: 6px 8px; }
+  .rp-lg-note { display: none; }
+  .rp .ri-strip { flex-wrap: wrap; row-gap: 2px; }
+  .rp .ri-strip-extra { order: 5; flex-basis: 100%; }
+  .rp .ri-strip-extra::before { content: none; }   /* on a line of its own: no separator */
+  .rp-more { min-width: 44px; font-size: 18px; line-height: 1; }
+}
+/* In the pane, the fields scroll on their own and Find stays in view below them, covering nothing. */
+.rp > .ri:not(.ri--folded) { align-self: stretch; min-height: 0; padding-bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
+.rp > .ri:not(.ri--folded) > .ri-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.rp .ri-fields { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -12px; padding: 0 12px 4px; }
+.rp .ri-body > .ri-primary { flex: none; margin: 8px 0 10px; }
+.rp .ri-body > .ri-primary:disabled { background: #cbd5e1; color: #475569; }
+.rp .ri-method-row { margin-bottom: 4px; }
+/* The pin's tip sits on its point: the rotated head's corner ends at the marker's foot. */
+.ri-pin .ri-pin-head { top: 5px; }

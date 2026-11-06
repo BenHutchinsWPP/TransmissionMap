@@ -1,0 +1,15 @@
+{
+ "rule": "CAL when the first hex digit of sha256(group id) is even, HOLD when odd; spur group = connected components of \"an end of one within 5 km (haversine) of an end of the other\", id = smallest member id; line groups from holdout-lines.json",
+ "idListSha256": "cb86c13d0ee5894f687af85070cc8d7e524fb47313a410b7be87457f011d4b7c",
+ "total": 535,
+ "counts": {
+  "default-routes|none": 8,
+  "holdout-lines|CAL": 152,
+  "holdout-lines|HOLD": 148,
+  "pnas-corridors|none": 27,
+  "pnas-spurs|CAL": 114,
+  "pnas-spurs|HOLD": 86
+ },
+ "spurGroups": 130,
+ "lineGroups": 300
+}

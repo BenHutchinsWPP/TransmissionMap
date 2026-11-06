@@ -11,7 +11,7 @@
 
 export type NoticeId = 'route' | 'chat';
 /** Bump a version to ask every visitor to accept that notice again. */
-export const ROUTE_NOTICE_VERSION = 1;
+export const ROUTE_NOTICE_VERSION = 2;
 export const CHAT_NOTICE_VERSION = 1;
 
 const memory: Partial<Record<NoticeId, number>> = {};

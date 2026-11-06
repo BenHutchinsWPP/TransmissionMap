@@ -1,0 +1,6656 @@
+{
+ "counts": {
+  "shortfall": {},
+  "split": {
+   "CAL": 152,
+   "HOLD": 148
+  },
+  "strata": {
+   "Central|0": 25,
+   "Central|1": 25,
+   "Central|2": 25,
+   "East|0": 25,
+   "East|1": 25,
+   "East|2": 25,
+   "Texas|0": 25,
+   "Texas|1": 25,
+   "Texas|2": 25,
+   "West|0": 25,
+   "West|1": 25,
+   "West|2": 25
+  },
+  "total": 300
+ },
+ "densityEdges": [
+  0.005111,
+  0.01587
+ ],
+ "geometryFile": "data/build/route/validate/holdout-lines.geojson",
+ "geometrySha256": "7c84c1570749e5dbd62d92667fa11f2257c7c3285504b2983f7585e484c6f829",
+ "idListSha256": "39655d4928038d002b320439ce48a16f7c7de2154e9681b139c0869ea1315ff2",
+ "licence": "Public domain (US federal work); SeerAI redistribution CC BY 4.0, credit SeerAI and source.coop",
+ "lines": [
+  {
+   "density": 0.014634,
+   "ends": [
+    [
+     -84.532098,
+     36.502335
+    ],
+    [
+     -84.51807,
+     36.413895
+    ]
+   ],
+   "geometrySha256": "12d80f555b2167bd474f6c75c0244c5d96cd2b53796897c6e38ae5d59aa605e1",
+   "group": "100142",
+   "id": "100142",
+   "lengthKm": 10.672,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.008947,
+   "ends": [
+    [
+     -92.170954,
+     35.089997
+    ],
+    [
+     -92.048868,
+     34.956918
+    ]
+   ],
+   "geometrySha256": "a1ecebd697dd1ae4ca25a7265de405f14f974283c16b284dece38311ca0d2622",
+   "group": "100157",
+   "id": "100157",
+   "lengthKm": 22.013,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002128,
+   "ends": [
+    [
+     -71.70946,
+     43.596742
+    ],
+    [
+     -71.64555,
+     43.688392
+    ]
+   ],
+   "geometrySha256": "018f9cc57f9fdb349042d86571fd2d6843ff5c2b1984b1809f9a90aa76853299",
+   "group": "100552",
+   "id": "100552",
+   "lengthKm": 13.018,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.061053,
+   "ends": [
+    [
+     -89.658033,
+     40.813632
+    ],
+    [
+     -89.556868,
+     40.843025
+    ]
+   ],
+   "geometrySha256": "b26c15515d4d42d8793ed982bdb4d337286fbc2ea7346c9f1aa502fc913ee793",
+   "group": "100571",
+   "id": "100571",
+   "lengthKm": 14.559,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.02918,
+   "ends": [
+    [
+     -81.54404,
+     35.257138
+    ],
+    [
+     -81.433575,
+     35.157364
+    ]
+   ],
+   "geometrySha256": "b4bbdeee3765a654c16d6de322d585cf3817fdfaa338426c44c654accedc1f2a",
+   "group": "101201",
+   "id": "101201",
+   "lengthKm": 16.14,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.043684,
+   "ends": [
+    [
+     -97.168961,
+     37.791128
+    ],
+    [
+     -97.105219,
+     37.589418
+    ]
+   ],
+   "geometrySha256": "18c4c2b07a08d34c0d063123348c01b3b73e5b80152af5e1379a33edeab47a2a",
+   "group": "101251",
+   "id": "101251",
+   "lengthKm": 25.275,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.011645,
+   "ends": [
+    [
+     -86.05922,
+     34.593984
+    ],
+    [
+     -85.824617,
+     34.871062
+    ]
+   ],
+   "geometrySha256": "3c0007d64cb5f6cf11bccaa7e0461a11b576310cbda6ad286ceb2b8855b06f5d",
+   "group": "102209",
+   "id": "102209",
+   "lengthKm": 51.727,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.00274,
+   "ends": [
+    [
+     -89.965124,
+     36.746556
+    ],
+    [
+     -89.830385,
+     36.864991
+    ]
+   ],
+   "geometrySha256": "40ac44f13c388bce7a7db6b70a6c66f973bbcb74fbdc754e0ce7d0ddd1ab71a2",
+   "group": "102381",
+   "id": "102381",
+   "lengthKm": 19.799,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.0172,
+   "ends": [
+    [
+     -88.354588,
+     44.367662
+    ],
+    [
+     -88.123188,
+     44.383477
+    ]
+   ],
+   "geometrySha256": "f6d86d2caa6a8038ce2741a08b7e8ec7d87b7d370e056147b6b0c13463f6bbf0",
+   "group": "102483",
+   "id": "102483",
+   "lengthKm": 19.697,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018456,
+   "ends": [
+    [
+     -93.967388,
+     38.988898
+    ],
+    [
+     -93.703016,
+     38.766339
+    ]
+   ],
+   "geometrySha256": "8da3d8e2da48a55a09c13f0004a5852e2059d026e12b47d1fa4bf35a6e0da4b3",
+   "group": "102866",
+   "id": "102866",
+   "lengthKm": 41.789,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.009375,
+   "ends": [
+    [
+     -79.516622,
+     40.794714
+    ],
+    [
+     -79.466052,
+     40.928175
+    ]
+   ],
+   "geometrySha256": "d86b4786537a0caf695b86689b2da24558268671a3f24fa59d04e3622b1d69b8",
+   "group": "103649",
+   "id": "103649",
+   "lengthKm": 19.438,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003429,
+   "ends": [
+    [
+     -80.800131,
+     38.399902
+    ],
+    [
+     -80.716825,
+     38.537381
+    ]
+   ],
+   "geometrySha256": "c443566825327ce48b2f96fcb8019ddf2f1c5ed39ebde39e0a6ca2f4c0ace52a",
+   "group": "103979",
+   "id": "103979",
+   "lengthKm": 18.623,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.067105,
+   "ends": [
+    [
+     -83.727352,
+     42.21224
+    ],
+    [
+     -83.642686,
+     42.264368
+    ]
+   ],
+   "geometrySha256": "c5466fc04b8fe4241d7f2f1af870ba3f75e055a5617fb6582260980f80a2f142",
+   "group": "104279",
+   "id": "104279",
+   "lengthKm": 11.283,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 120.0
+  },
+  {
+   "density": 0.018611,
+   "ends": [
+    [
+     -87.69826,
+     39.991904
+    ],
+    [
+     -87.500921,
+     39.942384
+    ]
+   ],
+   "geometrySha256": "8d951a830a9c60194aedc1d4180502680988c2fc3b4b16c1f3ed0d35cce45b51",
+   "group": "105090",
+   "id": "105090",
+   "lengthKm": 18.737,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.000235,
+   "ends": [
+    [
+     -90.924911,
+     32.704399
+    ],
+    [
+     -90.884091,
+     32.888047
+    ]
+   ],
+   "geometrySha256": "6ef6f7d52423d605bb4ea7e28b1953154b466b6435e0a319660029294f058ddc",
+   "group": "105131",
+   "id": "105131",
+   "lengthKm": 21.656,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004154,
+   "ends": [
+    [
+     -88.305301,
+     34.837458
+    ],
+    [
+     -88.204006,
+     34.952661
+    ]
+   ],
+   "geometrySha256": "900e1d823ebf4788658c6b7431d9b208440cbb3f5ea7dcd7546a2fb559514a66",
+   "group": "105470",
+   "id": "105470",
+   "lengthKm": 18.069,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.054651,
+   "ends": [
+    [
+     -97.946737,
+     38.056061
+    ],
+    [
+     -97.921393,
+     38.14558
+    ]
+   ],
+   "geometrySha256": "fc161e985a58e54d09667d0d8f4fe27c63e5da8abcd66150be15fdb24b4c32d1",
+   "group": "105844",
+   "id": "105844",
+   "lengthKm": 11.235,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.127714,
+   "ends": [
+    [
+     -93.275829,
+     45.022676
+    ],
+    [
+     -93.24463,
+     45.094747
+    ]
+   ],
+   "geometrySha256": "37b122c12ec2bbf1ab27b01a9afa0dd6628ad257e0d479121d18b4ba8aa8f98b",
+   "group": "105865",
+   "id": "105865",
+   "lengthKm": 11.373,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002966,
+   "ends": [
+    [
+     -90.451738,
+     34.967286
+    ],
+    [
+     -90.187565,
+     35.118005
+    ]
+   ],
+   "geometrySha256": "1daeda4875f382a46957930ff1031f45814b3eae5200d6d35f5aeecdb0f85348",
+   "group": "105977",
+   "id": "105977",
+   "lengthKm": 30.262,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.030577,
+   "ends": [
+    [
+     -78.931089,
+     39.639171
+    ],
+    [
+     -78.783594,
+     39.630108
+    ]
+   ],
+   "geometrySha256": "ec34cb76e48d769f285fd94f2650b9fa470dddc3ad6d0ee11cb7a00d2b3d3a08",
+   "group": "105991",
+   "id": "105991",
+   "lengthKm": 13.75,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018268,
+   "ends": [
+    [
+     -81.356019,
+     40.780312
+    ],
+    [
+     -81.083398,
+     40.586952
+    ]
+   ],
+   "geometrySha256": "5bfbbb776e05cd8a04993fa3042c1031cfa00ab3dd27a0c3bfe313bf3ec7b142",
+   "group": "106230",
+   "id": "106230",
+   "lengthKm": 31.686,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.002075,
+   "ends": [
+    [
+     -81.764856,
+     29.723056
+    ],
+    [
+     -81.632271,
+     29.729524
+    ]
+   ],
+   "geometrySha256": "8994110254f50c3a72291cbec8ba19c152fd83dc44f34bc1107a4cf9f155b167",
+   "group": "105890",
+   "id": "106276",
+   "lengthKm": 13.294,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.004118,
+   "ends": [
+    [
+     -79.051711,
+     36.481026
+    ],
+    [
+     -78.913811,
+     36.489841
+    ]
+   ],
+   "geometrySha256": "5951961252fb3445575fcac26a9dc641fa93dfdd4166ac413c9be4d709a5f5f4",
+   "group": "106350",
+   "id": "106350",
+   "lengthKm": 13.236,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.008,
+   "ends": [
+    [
+     -79.466052,
+     40.928175
+    ],
+    [
+     -79.346613,
+     41.007829
+    ]
+   ],
+   "geometrySha256": "03971bb8393e763cf103aa043626781b645f4b8841bbf958100aad1055a0444a",
+   "group": "106713",
+   "id": "106713",
+   "lengthKm": 17.09,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.006667,
+   "ends": [
+    [
+     -82.010669,
+     37.205301
+    ],
+    [
+     -81.943081,
+     37.260518
+    ]
+   ],
+   "geometrySha256": "4723394356fcb7e1790a0cffe57d3b96ba445d1bba9dfa2352b48d8e53021989",
+   "group": "106902",
+   "id": "106902",
+   "lengthKm": 11.262,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.065116,
+   "ends": [
+    [
+     -81.252833,
+     32.007156
+    ],
+    [
+     -81.188737,
+     32.083602
+    ]
+   ],
+   "geometrySha256": "f44471615766ad170c673d95dad873051eb338dc4b2acb36d9ae4fe27d855182",
+   "group": "107636",
+   "id": "107636",
+   "lengthKm": 12.958,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.002281,
+   "ends": [
+    [
+     -96.422193,
+     44.281934
+    ],
+    [
+     -96.259301,
+     44.239375
+    ]
+   ],
+   "geometrySha256": "523bacdcdbb93fcb67b6d7fa3dd59f4bdfe8ceea904e5a4e371e6a1539ce348c",
+   "group": "108503",
+   "id": "108503",
+   "lengthKm": 24.402,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.006098,
+   "ends": [
+    [
+     -83.118094,
+     43.811788
+    ],
+    [
+     -82.869143,
+     43.829527
+    ]
+   ],
+   "geometrySha256": "4f0f96bd04bd9585bb5494e6ee35a70571ef6fa401501c1daa44ae820e32b1e7",
+   "group": "109272",
+   "id": "109272",
+   "lengthKm": 23.542,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.043125,
+   "ends": [
+    [
+     -85.699823,
+     30.26995
+    ],
+    [
+     -85.563167,
+     30.194398
+    ]
+   ],
+   "geometrySha256": "0b1de75963e24f677b97386a621ab715f8e324326e7f3d1ff2c8429a977efceb",
+   "group": "109481",
+   "id": "109481",
+   "lengthKm": 27.954,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003491,
+   "ends": [
+    [
+     -86.338037,
+     33.425709
+    ],
+    [
+     -86.094716,
+     33.54679
+    ]
+   ],
+   "geometrySha256": "e52407f6f8fbc4409b2c34b6d81e76085fa87fc7945f2031da80513f5e7cf842",
+   "group": "109971",
+   "id": "109971",
+   "lengthKm": 28.928,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.005455,
+   "ends": [
+    [
+     -82.767222,
+     37.826392
+    ],
+    [
+     -82.675592,
+     37.763167
+    ]
+   ],
+   "geometrySha256": "7052080e16f8e289bc037cb8eeeb0fc606313cc56fb44579815208a28cc10b2f",
+   "group": "110703",
+   "id": "110703",
+   "lengthKm": 10.832,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005891,
+   "ends": [
+    [
+     -88.446415,
+     40.962498
+    ],
+    [
+     -87.949112,
+     41.399389
+    ]
+   ],
+   "geometrySha256": "21bfc85783e574191613d56ae3b7071bfd32cd6cc2845e43cce8e47587025efc",
+   "group": "110723",
+   "id": "110723",
+   "lengthKm": 64.638,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.008359,
+   "ends": [
+    [
+     -91.467186,
+     34.793615
+    ],
+    [
+     -91.144505,
+     34.900954
+    ]
+   ],
+   "geometrySha256": "e26abf245ef9c0cac9b7dce9c363b14153665986df120b417009c41f5406f205",
+   "group": "111211",
+   "id": "111211",
+   "lengthKm": 34.078,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.001781,
+   "ends": [
+    [
+     -89.552252,
+     30.221105
+    ],
+    [
+     -89.42742,
+     30.339749
+    ]
+   ],
+   "geometrySha256": "03efc3aa8b30588222528a5a83d52f830f8363102c42caeea83df7e3f36cad3c",
+   "group": "111332",
+   "id": "111332",
+   "lengthKm": 23.781,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.008167,
+   "ends": [
+    [
+     -97.123269,
+     36.040244
+    ],
+    [
+     -96.990119,
+     36.117195
+    ]
+   ],
+   "geometrySha256": "6d6916ba82a1a1d34a6d9bdc46068cf8c5565c91451c1e49dd23383f2a347992",
+   "group": "112281",
+   "id": "112281",
+   "lengthKm": 20.685,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.014615,
+   "ends": [
+    [
+     -91.114846,
+     30.27838
+    ],
+    [
+     -90.995226,
+     30.229562
+    ]
+   ],
+   "geometrySha256": "8973781c3370fcd68b09d918cee4f103504fd1a73862f7d7eed4408e3fc6c276",
+   "group": "112597",
+   "id": "112597",
+   "lengthKm": 13.968,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.0028,
+   "ends": [
+    [
+     -91.488412,
+     31.58057
+    ],
+    [
+     -91.479591,
+     31.689465
+    ]
+   ],
+   "geometrySha256": "c4cbbc3db3f02328d5f25449bd35484d973abf8e27a324e1d0343c7a5c46b811",
+   "group": "113394",
+   "id": "113394",
+   "lengthKm": 27.636,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.090385,
+   "ends": [
+    [
+     -86.194217,
+     39.710817
+    ],
+    [
+     -86.048681,
+     39.728183
+    ]
+   ],
+   "geometrySha256": "f5985def40f8b891a0ccdc9df6a696c87a1eab0637269ad8cae18c9fba9cb8de",
+   "group": "113648",
+   "id": "113648",
+   "lengthKm": 14.343,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001463,
+   "ends": [
+    [
+     -87.122781,
+     37.364129
+    ],
+    [
+     -87.088567,
+     37.449191
+    ]
+   ],
+   "geometrySha256": "b6cbedb74294a581bae8da5ec90d41fc029c29cf994f30f821a1b4cde5bdaf91",
+   "group": "113882",
+   "id": "113882",
+   "lengthKm": 12.92,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.06614,
+   "ends": [
+    [
+     -87.296659,
+     41.593821
+    ],
+    [
+     -87.129154,
+     41.609898
+    ]
+   ],
+   "geometrySha256": "74122159b7c5ae50839b9c398b3d1265df763dc45815e3bdae6c5865ff5dd4a4",
+   "group": "114500",
+   "id": "114500",
+   "lengthKm": 16.747,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.010326,
+   "ends": [
+    [
+     -87.572771,
+     44.428664
+    ],
+    [
+     -87.329101,
+     44.799579
+    ]
+   ],
+   "geometrySha256": "2ad8f9a613047816221169c56ecfaac9881b530fbbbefd1a01072761153fd301",
+   "group": "114613",
+   "id": "114613",
+   "lengthKm": 47.717,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.059444,
+   "ends": [
+    [
+     -93.338803,
+     37.162216
+    ],
+    [
+     -93.338198,
+     37.044477
+    ]
+   ],
+   "geometrySha256": "6445cf0c73379c4a62ff508bd3bf0a828fa7065405d7d4a5f4be315723433306",
+   "group": "114796",
+   "id": "114796",
+   "lengthKm": 13.33,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.005977,
+   "ends": [
+    [
+     -87.122781,
+     37.364129
+    ],
+    [
+     -86.878706,
+     37.367645
+    ]
+   ],
+   "geometrySha256": "67c3680805624fcb395353d3ea1d0f920adec8d3f375601431513d91e41aa1b5",
+   "group": "115517",
+   "id": "115517",
+   "lengthKm": 22.249,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.013,
+   "ends": [
+    [
+     -84.52896,
+     34.595845
+    ],
+    [
+     -84.446845,
+     34.457918
+    ]
+   ],
+   "geometrySha256": "ecb818a04bdd592bac1558ea1cc929c389ba83f6064953cb17d6f68b3c5e3bc6",
+   "group": "115545",
+   "id": "115545",
+   "lengthKm": 19.235,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.000989,
+   "ends": [
+    [
+     -90.462917,
+     34.481933
+    ],
+    [
+     -90.383973,
+     34.671188
+    ]
+   ],
+   "geometrySha256": "cc2349a0b787d038d3dd315fd8326913914bc2a15f45e119e27ecbf9cd4c0b69",
+   "group": "115576",
+   "id": "115576",
+   "lengthKm": 22.988,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.029737,
+   "ends": [
+    [
+     -83.723417,
+     42.317763
+    ],
+    [
+     -83.623089,
+     42.353148
+    ]
+   ],
+   "geometrySha256": "e8f1dc9b1ef07a0067697e87b226abaabdedbdc3443ef0de86aa4e9eb8b652ee",
+   "group": "104143",
+   "id": "115951",
+   "lengthKm": 13.64,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 120.0
+  },
+  {
+   "density": 0.003973,
+   "ends": [
+    [
+     -97.159375,
+     34.629423
+    ],
+    [
+     -96.989903,
+     34.550771
+    ]
+   ],
+   "geometrySha256": "13ef166265f83c72746ed1b638e6f9dc38c067ad0b6733602b69a5da78491fb0",
+   "group": "116406",
+   "id": "116406",
+   "lengthKm": 20.046,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003372,
+   "ends": [
+    [
+     -77.077064,
+     41.536975
+    ],
+    [
+     -76.844363,
+     41.615507
+    ]
+   ],
+   "geometrySha256": "dd6e7d63ce65300dc4fa0f13df2b61d2984d0872928ea27489517bd03854b882",
+   "group": "117083",
+   "id": "117083",
+   "lengthKm": 21.432,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003654,
+   "ends": [
+    [
+     -92.144217,
+     34.424093
+    ],
+    [
+     -92.048331,
+     34.640572
+    ]
+   ],
+   "geometrySha256": "e4e05a566cf1e29fb77e2adea132704367e10643513f7b7bd9b0377528abf0f8",
+   "group": "117379",
+   "id": "117379",
+   "lengthKm": 28.178,
+   "lineType": "ac500",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.026959,
+   "ends": [
+    [
+     -85.593208,
+     39.991371
+    ],
+    [
+     -85.305672,
+     40.236771
+    ]
+   ],
+   "geometrySha256": "16383f55da9f241855428f56c4e05636888525d54eaa5cc22b038a0208920b9f",
+   "group": "114326",
+   "id": "117961",
+   "lengthKm": 40.855,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.010488,
+   "ends": [
+    [
+     -83.786155,
+     34.348612
+    ],
+    [
+     -83.700688,
+     34.401541
+    ]
+   ],
+   "geometrySha256": "d0003beb9522289299a6401f31d63f91fba4aa13b5f706627c11f79507367ac9",
+   "group": "118058",
+   "id": "118058",
+   "lengthKm": 10.016,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.005075,
+   "ends": [
+    [
+     -88.004897,
+     44.878738
+    ],
+    [
+     -87.995022,
+     45.176718
+    ]
+   ],
+   "geometrySha256": "89a1aa72b2d1fbcd2d2277612b8e72400c060cc4db54bbfb5509c3bb35b3042c",
+   "group": "118135",
+   "id": "118135",
+   "lengthKm": 35.041,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.044,
+   "ends": [
+    [
+     -77.67269,
+     43.053778
+    ],
+    [
+     -77.384203,
+     43.055457
+    ]
+   ],
+   "geometrySha256": "9e5bedf951f61077a0882c8c06934d8d423fe40b851cae7684816eac4801b5c3",
+   "group": "118225",
+   "id": "118225",
+   "lengthKm": 24.791,
+   "lineType": "ac345",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.058,
+   "ends": [
+    [
+     -84.398142,
+     30.453104
+    ],
+    [
+     -84.315038,
+     30.429953
+    ]
+   ],
+   "geometrySha256": "17feefa236cea4c77146fe1c5fd682a275072be322d8346d616383e33084ab80",
+   "group": "118349",
+   "id": "118349",
+   "lengthKm": 10.676,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.110313,
+   "ends": [
+    [
+     -85.518664,
+     38.293715
+    ],
+    [
+     -85.513849,
+     38.226689
+    ]
+   ],
+   "geometrySha256": "fc657fdb4d9aa9f5b1baf9d5c83abbcc167d466a003162de1bd60c01f4d06590",
+   "group": "118567",
+   "id": "118567",
+   "lengthKm": 11.28,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.061667,
+   "ends": [
+    [
+     -86.510055,
+     38.870846
+    ],
+    [
+     -86.413814,
+     38.893186
+    ]
+   ],
+   "geometrySha256": "78e79972a143da7c42f8df7bb9c371bcef85a0e720dde6697222e433c7f2f012",
+   "group": "119620",
+   "id": "119620",
+   "lengthKm": 11.563,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.000682,
+   "ends": [
+    [
+     -78.886858,
+     33.780984
+    ],
+    [
+     -78.779224,
+     33.815032
+    ]
+   ],
+   "geometrySha256": "ef7dc58216d2f508cfc3f7eec90b69d295350de598e05371b47bc6f912fb1552",
+   "group": "119661",
+   "id": "119661",
+   "lengthKm": 10.916,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.020286,
+   "ends": [
+    [
+     -81.768818,
+     26.672947
+    ],
+    [
+     -81.6004,
+     26.7037
+    ]
+   ],
+   "geometrySha256": "5faaa3be1f20987cdab81496f891f9e488a4f68f11a35352835156cad35faf4a",
+   "group": "120039",
+   "id": "120039",
+   "lengthKm": 21.338,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.045075,
+   "ends": [
+    [
+     -79.989605,
+     40.540911
+    ],
+    [
+     -79.793734,
+     40.537351
+    ]
+   ],
+   "geometrySha256": "2631d17496f510eb2e75505994edfa6eac3700d68d5b07a8d52998b71f713dfa",
+   "group": "113969",
+   "id": "120351",
+   "lengthKm": 20.187,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.155366,
+   "ends": [
+    [
+     -80.396582,
+     25.640139
+    ],
+    [
+     -80.298812,
+     25.632998
+    ]
+   ],
+   "geometrySha256": "14a4e7e3984a6a56917cedccdd0aae235244a96296e2906699359173444118e5",
+   "group": "122895",
+   "id": "122895",
+   "lengthKm": 11.469,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.0132,
+   "ends": [
+    [
+     -77.823156,
+     39.433693
+    ],
+    [
+     -77.813299,
+     39.326793
+    ]
+   ],
+   "geometrySha256": "6cf3b97f5f5670fa5b652b22fbc709bd7dfbc7d3d6ff7f61853b8630b57c6a6c",
+   "group": "122983",
+   "id": "122983",
+   "lengthKm": 12.244,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.010513,
+   "ends": [
+    [
+     -86.133892,
+     30.907901
+    ],
+    [
+     -86.113211,
+     30.736005
+    ]
+   ],
+   "geometrySha256": "940ae6a678a65f537ab21e181bedfeb10fa206d5c0a7e6a825c431a8d2be9171",
+   "group": "123072",
+   "id": "123072",
+   "lengthKm": 20.711,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002195,
+   "ends": [
+    [
+     -88.51502,
+     31.022078
+    ],
+    [
+     -88.036298,
+     31.225094
+    ]
+   ],
+   "geometrySha256": "d8d1d6184fc56f594c855ed46b3306dfb9609711b5c12324076b6f732f38a04b",
+   "group": "123228",
+   "id": "123228",
+   "lengthKm": 52.319,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.005098,
+   "ends": [
+    [
+     -81.881137,
+     33.025063
+    ],
+    [
+     -81.758468,
+     32.982837
+    ]
+   ],
+   "geometrySha256": "671912e8089e81341f8fe0e62564b2c1031e147ed32c9240bdad454c6a7009b8",
+   "group": "123242",
+   "id": "123242",
+   "lengthKm": 12.704,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.009079,
+   "ends": [
+    [
+     -92.680842,
+     43.55716
+    ],
+    [
+     -92.377765,
+     44.015321
+    ]
+   ],
+   "geometrySha256": "638be61ce28364f4d29b34a2779f63bf6b6db138f89ba4c007b68030e7938483",
+   "group": "123287",
+   "id": "123287",
+   "lengthKm": 59.025,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.021892,
+   "ends": [
+    [
+     -92.343811,
+     39.064642
+    ],
+    [
+     -92.260232,
+     39.018851
+    ]
+   ],
+   "geometrySha256": "0716fa219fdb16776f88181a866b88c5590c7306d1479e4ff2e0ca0bb7a8964a",
+   "group": "123356",
+   "id": "123356",
+   "lengthKm": 10.328,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.011207,
+   "ends": [
+    [
+     -82.527198,
+     35.845509
+    ],
+    [
+     -82.502986,
+     35.971214
+    ]
+   ],
+   "geometrySha256": "441fb211c5d5292926d41e95b87e8cfab4811ee712559c0afa7684131441809f",
+   "group": "123392",
+   "id": "123392",
+   "lengthKm": 21.08,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.005051,
+   "ends": [
+    [
+     -83.679332,
+     33.673905
+    ],
+    [
+     -83.401898,
+     33.30456
+    ]
+   ],
+   "geometrySha256": "f66076ec1d933107a29d25f5cb428b1c77cdcbb46eb09cc5576f61d403cb59bf",
+   "group": "123522",
+   "id": "123522",
+   "lengthKm": 49.441,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.009057,
+   "ends": [
+    [
+     -90.113653,
+     42.095009
+    ],
+    [
+     -90.094855,
+     41.980664
+    ]
+   ],
+   "geometrySha256": "11eeebff8889debc85d8da6777f04e8761de73f0ea24adba11ba97f58f90de1b",
+   "group": "123976",
+   "id": "123976",
+   "lengthKm": 14.055,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.042788,
+   "ends": [
+    [
+     -92.112873,
+     30.255192
+    ],
+    [
+     -91.853514,
+     30.313246
+    ]
+   ],
+   "geometrySha256": "e0060e8fdf7c7b90ebf6fb0afda118fb1e59640f10a960d5d4d86d5a10864b0a",
+   "group": "118033",
+   "id": "124436",
+   "lengthKm": 26.2,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.015517,
+   "ends": [
+    [
+     -97.016731,
+     35.710555
+    ],
+    [
+     -96.860334,
+     35.707815
+    ]
+   ],
+   "geometrySha256": "36103bdd3f5dc0ffd411dcda2a31fb54d9e6d6164f659a5f25705646b75c6a7b",
+   "group": "124620",
+   "id": "124620",
+   "lengthKm": 17.584,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003721,
+   "ends": [
+    [
+     -97.045002,
+     44.882571
+    ],
+    [
+     -97.01711,
+     44.499699
+    ]
+   ],
+   "geometrySha256": "e2d919d0a47f3e13db0f4c20c89ef66829aac27432080feb93e80d3ffd7f5024",
+   "group": "124663",
+   "id": "124663",
+   "lengthKm": 46.194,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.015545,
+   "ends": [
+    [
+     -75.869486,
+     41.606948
+    ],
+    [
+     -75.609225,
+     41.497118
+    ]
+   ],
+   "geometrySha256": "58eb47773d1e985a4c5c0496a853a0927d667cec69589fe1c4ca4ad4cf01741e",
+   "group": "125266",
+   "id": "125266",
+   "lengthKm": 26.253,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.023009,
+   "ends": [
+    [
+     -81.911796,
+     33.432731
+    ],
+    [
+     -81.72713,
+     33.236069
+    ]
+   ],
+   "geometrySha256": "329730c88ca8701c2af976da3347c981a9717557dffeb86c7c2b3b8b7e5c7ab4",
+   "group": "125496",
+   "id": "125496",
+   "lengthKm": 28.632,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.011062,
+   "ends": [
+    [
+     -88.266663,
+     45.944923
+    ],
+    [
+     -87.973411,
+     45.802185
+    ]
+   ],
+   "geometrySha256": "91f2e20c883d102dc063ad7aacc491232f302c51f0c534de9f49fcd3b8d91941",
+   "group": "127000",
+   "id": "127000",
+   "lengthKm": 31.544,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.010556,
+   "ends": [
+    [
+     -81.077549,
+     40.919934
+    ],
+    [
+     -81.036512,
+     40.807708
+    ]
+   ],
+   "geometrySha256": "3407136724cbbfcd9c292295ca2365138b0f6ba2d96daa99729a2ed31f9a3981",
+   "group": "129057",
+   "id": "129057",
+   "lengthKm": 14.518,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.065429,
+   "ends": [
+    [
+     -89.750344,
+     40.557807
+    ],
+    [
+     -89.665268,
+     40.594854
+    ]
+   ],
+   "geometrySha256": "61c6a2cca356724dfaaf3c604bd1bf10eb834440095220f588d15dc97613e875",
+   "group": "129107",
+   "id": "129107",
+   "lengthKm": 11.274,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.116842,
+   "ends": [
+    [
+     -90.276977,
+     29.977319
+    ],
+    [
+     -90.193176,
+     29.940957
+    ]
+   ],
+   "geometrySha256": "02736a5c3a9f2818d3d966621d90d505287f3e7611e8b03f64fc9857141046fd",
+   "group": "129860",
+   "id": "129860",
+   "lengthKm": 11.634,
+   "lineType": "ac230",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.015663,
+   "ends": [
+    [
+     -90.334908,
+     44.910428
+    ],
+    [
+     -90.07832,
+     44.934789
+    ]
+   ],
+   "geometrySha256": "0b1de452c9767f3db285576efbdc20cbbf935afc5eafe9618d32258dccb3e4de",
+   "group": "130070",
+   "id": "130070",
+   "lengthKm": 23.409,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.027931,
+   "ends": [
+    [
+     -88.948211,
+     38.014648
+    ],
+    [
+     -88.933324,
+     37.889471
+    ]
+   ],
+   "geometrySha256": "6851290ce2a1597d193bb471504bcd8c4f98897895064d56507f8f150790b72d",
+   "group": "130096",
+   "id": "130096",
+   "lengthKm": 16.65,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018293,
+   "ends": [
+    [
+     -91.78114,
+     42.100015
+    ],
+    [
+     -91.671558,
+     42.061988
+    ]
+   ],
+   "geometrySha256": "c5b68261bab6056c7bd9667f77cd2148c59c049f2cf40650e08fd689bf4ae19a",
+   "group": "130406",
+   "id": "130406",
+   "lengthKm": 13.1,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.006434,
+   "ends": [
+    [
+     -97.890402,
+     43.003481
+    ],
+    [
+     -97.477398,
+     42.904213
+    ]
+   ],
+   "geometrySha256": "33fd687411fb0f7a84c6a75e77e4053a24ccffb9dfdab6ab349158d03758b7aa",
+   "group": "130568",
+   "id": "130568",
+   "lengthKm": 44.66,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.013654,
+   "ends": [
+    [
+     -89.495467,
+     41.842363
+    ],
+    [
+     -89.027309,
+     41.825116
+    ]
+   ],
+   "geometrySha256": "de7216318036e06768b2359ed1077173af05216a1343d5b09f601a77fd3e2243",
+   "group": "131998",
+   "id": "131998",
+   "lengthKm": 40.005,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003814,
+   "ends": [
+    [
+     -83.59959,
+     32.565074
+    ],
+    [
+     -83.335351,
+     32.42669
+    ]
+   ],
+   "geometrySha256": "247e565d23f0b21457d49f90e8df8ce645b71713880045d220d0f73f9e9c3833",
+   "group": "132138",
+   "id": "132138",
+   "lengthKm": 37.388,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.014472,
+   "ends": [
+    [
+     -94.407742,
+     43.98411
+    ],
+    [
+     -94.008386,
+     44.198775
+    ]
+   ],
+   "geometrySha256": "a88e29eaab7a426f614686c8d8d06dc051115136bff98914d1fec76b3b3e7cbf",
+   "group": "133294",
+   "id": "133294",
+   "lengthKm": 46.95,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.185714,
+   "ends": [
+    [
+     -82.7728,
+     27.913561
+    ],
+    [
+     -82.764524,
+     28.068958
+    ]
+   ],
+   "geometrySha256": "f89b2b98f655ebaaba401a54ff24238a9a405223ea9810e1d89707e095add67e",
+   "group": "133316",
+   "id": "133316",
+   "lengthKm": 22.414,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.008346,
+   "ends": [
+    [
+     -88.565852,
+     30.648027
+    ],
+    [
+     -88.010681,
+     31.005519
+    ]
+   ],
+   "geometrySha256": "a6be223d093dec02efe0a360475021ae3a2295cbfa33451006d65198b7307612",
+   "group": "133328",
+   "id": "133328",
+   "lengthKm": 67.768,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.0524,
+   "ends": [
+    [
+     -81.680066,
+     30.826116
+    ],
+    [
+     -81.557921,
+     30.797153
+    ]
+   ],
+   "geometrySha256": "3d16f0f3f6a780049e5c2bea2445910f594a1e3fd955c619c130dfbdb5205481",
+   "group": "133586",
+   "id": "133586",
+   "lengthKm": 12.691,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.020698,
+   "ends": [
+    [
+     -95.697563,
+     36.393926
+    ],
+    [
+     -95.606778,
+     36.335727
+    ]
+   ],
+   "geometrySha256": "897cf50bc6699dc6325d0cae54cb1cb766149d9f74b7aa880d67e45850b44542",
+   "group": "133767",
+   "id": "133767",
+   "lengthKm": 10.906,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.006889,
+   "ends": [
+    [
+     -83.778139,
+     34.474219
+    ],
+    [
+     -83.700688,
+     34.401541
+    ]
+   ],
+   "geometrySha256": "ff3b5c32b6bec889f74616d0aab0d5f71b001be38edb66203858dfa0832131bf",
+   "group": "133896",
+   "id": "133896",
+   "lengthKm": 11.206,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.011471,
+   "ends": [
+    [
+     -89.745536,
+     35.174661
+    ],
+    [
+     -89.588398,
+     35.252704
+    ]
+   ],
+   "geometrySha256": "12a0d4fef6e0c9cd64783d3ad6ea9948cee0b55e69dae276854df21842a374b7",
+   "group": "134158",
+   "id": "134158",
+   "lengthKm": 20.521,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.002971,
+   "ends": [
+    [
+     -95.449549,
+     37.156777
+    ],
+    [
+     -95.110751,
+     37.305929
+    ]
+   ],
+   "geometrySha256": "3f47f9f1d7c1d884197cd8757d7955a08a693bf6039a146e48589415b28ff5ec",
+   "group": "134277",
+   "id": "134277",
+   "lengthKm": 36.806,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.007273,
+   "ends": [
+    [
+     -87.013237,
+     39.071939
+    ],
+    [
+     -86.52024,
+     39.296237
+    ]
+   ],
+   "geometrySha256": "f76dea3506d3965e8cec13a19101823bcb2e3c37194d859fca48ef3b03f168fe",
+   "group": "134831",
+   "id": "134831",
+   "lengthKm": 50.968,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.001207,
+   "ends": [
+    [
+     -84.289831,
+     32.570955
+    ],
+    [
+     -83.990494,
+     32.624989
+    ]
+   ],
+   "geometrySha256": "310891bb48eb10489b994a6a2065122077c94a3241e6acf3e6fde855004da614",
+   "group": "135204",
+   "id": "135204",
+   "lengthKm": 31.358,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.002667,
+   "ends": [
+    [
+     -101.488408,
+     40.452406
+    ],
+    [
+     -101.002782,
+     40.291856
+    ]
+   ],
+   "geometrySha256": "90adfce4c141245dc02b4bd0dc113796ba5529096cb76b13a39d9ac54f204a8d",
+   "group": "135368",
+   "id": "135368",
+   "lengthKm": 47.992,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.006579,
+   "ends": [
+    [
+     -87.350122,
+     39.56902
+    ],
+    [
+     -87.315644,
+     39.491112
+    ]
+   ],
+   "geometrySha256": "7279ea795b5c5d5e9a9d7bfe849963ac51f6f176b45cb8a9550a94f2ab47611f",
+   "group": "136155",
+   "id": "136155",
+   "lengthKm": 11.744,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005714,
+   "ends": [
+    [
+     -80.787858,
+     40.3637
+    ],
+    [
+     -80.646742,
+     40.255085
+    ]
+   ],
+   "geometrySha256": "15cfe425e161c3c15adc7d551921e0ee5b986a51e5fa83ac61ddda77135f2b9a",
+   "group": "102349",
+   "id": "136383",
+   "lengthKm": 18.032,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001228,
+   "ends": [
+    [
+     -81.146948,
+     38.260891
+    ],
+    [
+     -80.996109,
+     38.303689
+    ]
+   ],
+   "geometrySha256": "8339eb5ec2678cb3a1225c0acfc1d23cb29d4a29e68ff7c389699a13b748af84",
+   "group": "136591",
+   "id": "136591",
+   "lengthKm": 14.748,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.004203,
+   "ends": [
+    [
+     -90.911997,
+     35.793077
+    ],
+    [
+     -90.738476,
+     35.849169
+    ]
+   ],
+   "geometrySha256": "f8486e992652494cfcaee65d57024d3ae4e2a5962be639bd55f27c15bedc3bce",
+   "group": "137241",
+   "id": "137241",
+   "lengthKm": 17.109,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.003034,
+   "ends": [
+    [
+     -70.127479,
+     44.655015
+    ],
+    [
+     -69.913786,
+     44.781043
+    ]
+   ],
+   "geometrySha256": "6fb64b94e1cecc1b8c1f3932341dfad010727d18c7000f30d9982eeb1aeb7c53",
+   "group": "137987",
+   "id": "137987",
+   "lengthKm": 22.301,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.001818,
+   "ends": [
+    [
+     -94.658273,
+     42.566781
+    ],
+    [
+     -94.299448,
+     42.515531
+    ]
+   ],
+   "geometrySha256": "2a3cffa1b72c7d2f8ac2ab8f8718e9469c83720895c0b5102b1882cf04a9f410",
+   "group": "138490",
+   "id": "138490",
+   "lengthKm": 34.961,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.003798,
+   "ends": [
+    [
+     -90.824316,
+     43.286923
+    ],
+    [
+     -90.459455,
+     43.667271
+    ]
+   ],
+   "geometrySha256": "0b0dfec0b49b5b4a01afe847f55ac70fb10d345f00c0133d1438f74a9fbb9bd8",
+   "group": "138518",
+   "id": "138518",
+   "lengthKm": 53.971,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.008636,
+   "ends": [
+    [
+     -77.774737,
+     42.266355
+    ],
+    [
+     -77.657377,
+     42.307414
+    ]
+   ],
+   "geometrySha256": "7ac7e88ada2818124bb12e25f8eb6a66534fc0b7c6fc03b77a2ee6aa6ffede35",
+   "group": "138619",
+   "id": "138619",
+   "lengthKm": 11.557,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002301,
+   "ends": [
+    [
+     -82.196031,
+     33.660182
+    ],
+    [
+     -82.156163,
+     34.161679
+    ]
+   ],
+   "geometrySha256": "4d67aeb6299063eb536ad33deb0b31bc242f5790da2461d965f9336bdea858ab",
+   "group": "138979",
+   "id": "138979",
+   "lengthKm": 57.933,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.008434,
+   "ends": [
+    [
+     -82.730519,
+     37.387925
+    ],
+    [
+     -82.396448,
+     37.129821
+    ]
+   ],
+   "geometrySha256": "fd802e09cbc5048cee0097b03a50defa41f3526bd0390d9f60a49909f5d3a6b3",
+   "group": "109795",
+   "id": "140054",
+   "lengthKm": 41.66,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.013818,
+   "ends": [
+    [
+     -84.905437,
+     33.45335
+    ],
+    [
+     -84.764425,
+     33.422204
+    ]
+   ],
+   "geometrySha256": "14378bdd5eec04f903efa0886b7215ad54a5974b0c5a658e2cb142fbb15a225a",
+   "group": "140410",
+   "id": "140410",
+   "lengthKm": 14.777,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.001371,
+   "ends": [
+    [
+     -95.998155,
+     47.325525
+    ],
+    [
+     -95.990495,
+     46.933872
+    ]
+   ],
+   "geometrySha256": "e49d6f19bd67366476a118c4a86e51429359a4d8a2acdc66360b475427bcac1a",
+   "group": "140857",
+   "id": "140857",
+   "lengthKm": 44.316,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.030667,
+   "ends": [
+    [
+     -85.535636,
+     36.162276
+    ],
+    [
+     -85.467666,
+     36.282117
+    ]
+   ],
+   "geometrySha256": "ce5b413adf0d5652970130248ce7f52043699171e4718e7e0f4cbd3274098333",
+   "group": "140910",
+   "id": "140910",
+   "lengthKm": 15.798,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.004568,
+   "ends": [
+    [
+     -91.618312,
+     34.041258
+    ],
+    [
+     -91.487515,
+     33.899681
+    ]
+   ],
+   "geometrySha256": "945eee26d1af822e5c14b95dfe3eddea582b75c49a71344b1f122cf7b708c93b",
+   "group": "141201",
+   "id": "141201",
+   "lengthKm": 20.293,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.000442,
+   "ends": [
+    [
+     -90.571362,
+     29.748145
+    ],
+    [
+     -90.473865,
+     29.985809
+    ]
+   ],
+   "geometrySha256": "876e4774e21692f1eb91358a35ce0e2271c181fdc3bb669e69fa44427261424c",
+   "group": "119548",
+   "id": "141821",
+   "lengthKm": 31.639,
+   "lineType": "ac230",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.007526,
+   "ends": [
+    [
+     -97.214122,
+     34.808623
+    ],
+    [
+     -96.732045,
+     34.965972
+    ]
+   ],
+   "geometrySha256": "4077a39c73191c972f9afd31136d4e3ff26bd52248601a193a3830a968859652",
+   "group": "142143",
+   "id": "142143",
+   "lengthKm": 52.363,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001702,
+   "ends": [
+    [
+     -94.606335,
+     41.465283
+    ],
+    [
+     -94.186131,
+     41.476077
+    ]
+   ],
+   "geometrySha256": "6df3e33dacbcc98b9ea4306c688cd89cede1e7e26b4493f31e524a38f9809d59",
+   "group": "142170",
+   "id": "142170",
+   "lengthKm": 35.276,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.033,
+   "ends": [
+    [
+     -92.278902,
+     38.950352
+    ],
+    [
+     -92.255798,
+     38.865381
+    ]
+   ],
+   "geometrySha256": "2483135dbfc412a88ea5462bdaaa0d132b862bdb9d5b6eff038da63da9c57489",
+   "group": "142620",
+   "id": "142620",
+   "lengthKm": 10.384,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.011818,
+   "ends": [
+    [
+     -89.430658,
+     42.98601
+    ],
+    [
+     -89.232218,
+     42.984359
+    ]
+   ],
+   "geometrySha256": "5c63339dbf84ff2168d9af2d6076a1a8ee6e6642982eb04c8c5001569ab1a231",
+   "group": "143799",
+   "id": "143799",
+   "lengthKm": 17.723,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001765,
+   "ends": [
+    [
+     -88.677312,
+     32.781577
+    ],
+    [
+     -88.557122,
+     32.982856
+    ]
+   ],
+   "geometrySha256": "c6a80760334f0c8118299e177cc14a5a2e48101153e711083736da8f6eb0d8d3",
+   "group": "143884",
+   "id": "143884",
+   "lengthKm": 29.135,
+   "lineType": "ac161",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.006173,
+   "ends": [
+    [
+     -98.355591,
+     40.406326
+    ],
+    [
+     -98.35512,
+     40.583227
+    ]
+   ],
+   "geometrySha256": "889f908466689b076cbbc7d45af3177510ea6800c9c76508cec234cbc94921f6",
+   "group": "144312",
+   "id": "144312",
+   "lengthKm": 21.433,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.008721,
+   "ends": [
+    [
+     -77.797216,
+     38.061292
+    ],
+    [
+     -77.782076,
+     38.249726
+    ]
+   ],
+   "geometrySha256": "031bbeb6775f0c2cd8240cbb90ae27e173bec37b3b7e1b61a9911322a7d6cbba",
+   "group": "144506",
+   "id": "144506",
+   "lengthKm": 22.804,
+   "lineType": "ac500",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.102286,
+   "ends": [
+    [
+     -71.242316,
+     42.622785
+    ],
+    [
+     -71.115155,
+     42.744645
+    ]
+   ],
+   "geometrySha256": "9dec5a995192b9200bdaa93da6af5aaf86d912314ad732c54b703a531bc82624",
+   "group": "145066",
+   "id": "145066",
+   "lengthKm": 23.995,
+   "lineType": "ac345",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.004889,
+   "ends": [
+    [
+     -77.91402,
+     35.36845
+    ],
+    [
+     -77.818868,
+     35.309526
+    ]
+   ],
+   "geometrySha256": "a69dd7655951ef283eda3a33ace4970ead9b85597070bb7487c0d32c2ef7762d",
+   "group": "145078",
+   "id": "145078",
+   "lengthKm": 11.055,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.127143,
+   "ends": [
+    [
+     -82.784129,
+     28.184288
+    ],
+    [
+     -82.683018,
+     28.203378
+    ]
+   ],
+   "geometrySha256": "b628498fba0dd6b4ae706b5d22bf7ad7f28b5eb44a6679384d61500576433d26",
+   "group": "145448",
+   "id": "145448",
+   "lengthKm": 12.49,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.01431,
+   "ends": [
+    [
+     -72.53619,
+     42.250198
+    ],
+    [
+     -72.506998,
+     42.373616
+    ]
+   ],
+   "geometrySha256": "8cb93dc84367834cf39b246f5e77756453be9d0a6af2baffdbd4806a0ad0b574",
+   "group": "134193",
+   "id": "145883",
+   "lengthKm": 14.105,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004167,
+   "ends": [
+    [
+     -95.923353,
+     40.364224
+    ],
+    [
+     -95.64265,
+     40.359819
+    ]
+   ],
+   "geometrySha256": "5ab8ca0a5a07a6bf45b11cebf76080d7c33539d2620416910832e341efe0916f",
+   "group": "145986",
+   "id": "145986",
+   "lengthKm": 24.81,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.009072,
+   "ends": [
+    [
+     -71.184803,
+     43.141714
+    ],
+    [
+     -70.998444,
+     43.308804
+    ]
+   ],
+   "geometrySha256": "e91845e9cfc1e49e0aef01a2a1a9313697c009f3b9d7c84432251a42a4488ead",
+   "group": "100723",
+   "id": "146350",
+   "lengthKm": 32.628,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.009149,
+   "ends": [
+    [
+     -92.583824,
+     31.362639
+    ],
+    [
+     -92.481045,
+     31.416999
+    ]
+   ],
+   "geometrySha256": "9ea6b935b757d130fb1b502febf6a5bc1b21005c5bacb904ff5e13968b3db46a",
+   "group": "146422",
+   "id": "146422",
+   "lengthKm": 17.372,
+   "lineType": "ac230",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.026533,
+   "ends": [
+    [
+     -86.928589,
+     41.651013
+    ],
+    [
+     -86.708004,
+     41.637895
+    ]
+   ],
+   "geometrySha256": "85004a3785a6ce3556eb0b90029691321ca5dc468acad3d5524409b8fd3d1514",
+   "group": "147393",
+   "id": "147393",
+   "lengthKm": 19.203,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.011837,
+   "ends": [
+    [
+     -90.633667,
+     33.439155
+    ],
+    [
+     -90.507643,
+     33.458441
+    ]
+   ],
+   "geometrySha256": "32d783c50e7ce70242645226c6e46a155041e79ecd56a607e0176c566a6c0952",
+   "group": "147652",
+   "id": "147652",
+   "lengthKm": 12.724,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.014551,
+   "ends": [
+    [
+     -88.235396,
+     40.131462
+    ],
+    [
+     -87.749015,
+     40.176958
+    ]
+   ],
+   "geometrySha256": "1343fbcf1ab16b1036624290804e6dcd9991430e24db639d77bd964cb018d0ab",
+   "group": "147929",
+   "id": "147929",
+   "lengthKm": 43.34,
+   "lineType": "ac138",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.004127,
+   "ends": [
+    [
+     -93.544377,
+     37.488493
+    ],
+    [
+     -93.380364,
+     37.538967
+    ]
+   ],
+   "geometrySha256": "b427725f10f9910d82c29069e2f9d36f80337ef49c299efdb74a8d9719a101ee",
+   "group": "149858",
+   "id": "149858",
+   "lengthKm": 15.799,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.092778,
+   "ends": [
+    [
+     -80.136167,
+     40.498553
+    ],
+    [
+     -80.045538,
+     40.464197
+    ]
+   ],
+   "geometrySha256": "76cb78d4e1b49ca75605c1069ae05f6c6c5f5b1ac3b1253d1d54feefe4a47874",
+   "group": "105952",
+   "id": "149870",
+   "lengthKm": 10.496,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.012821,
+   "ends": [
+    [
+     -69.854135,
+     44.331399
+    ],
+    [
+     -69.803626,
+     44.254399
+    ]
+   ],
+   "geometrySha256": "5becd78ab19ca8e5ee78ae3fa4cebf33a1f560e6ce8f6408c145720184b9210f",
+   "group": "149899",
+   "id": "149899",
+   "lengthKm": 10.686,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.04875,
+   "ends": [
+    [
+     -76.618546,
+     35.92707
+    ],
+    [
+     -76.601319,
+     36.063488
+    ]
+   ],
+   "geometrySha256": "b31cb1c8ba11a982aab0caa785c6423a354f98f424523a03dfb9d696994840cd",
+   "group": "150136",
+   "id": "150136",
+   "lengthKm": 16.817,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003235,
+   "ends": [
+    [
+     -78.852719,
+     33.930004
+    ],
+    [
+     -78.764858,
+     33.926205
+    ]
+   ],
+   "geometrySha256": "dec4bcc359d29c83a4d5658bfe1c15e8368a9ffeaef52d62dcd669e1db893521",
+   "group": "150599",
+   "id": "150599",
+   "lengthKm": 10.236,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.019388,
+   "ends": [
+    [
+     -79.968964,
+     40.220905
+    ],
+    [
+     -79.908767,
+     40.315904
+    ]
+   ],
+   "geometrySha256": "e083279d25822580306014a0a6e41cd316f21fc2b912d87b1ef900cda436dda4",
+   "group": "150721",
+   "id": "150721",
+   "lengthKm": 14.718,
+   "lineType": "ac138",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001382,
+   "ends": [
+    [
+     -98.182787,
+     38.34737
+    ],
+    [
+     -97.831922,
+     38.369785
+    ]
+   ],
+   "geometrySha256": "d7db78b10d5328a25de785835efdd98da4968a8f8567af759d464e3784fe525b",
+   "group": "150797",
+   "id": "150797",
+   "lengthKm": 31.231,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004706,
+   "ends": [
+    [
+     -90.274965,
+     41.714157
+    ],
+    [
+     -90.269587,
+     41.566199
+    ]
+   ],
+   "geometrySha256": "6058374f702d791d16566a57fe95aac95ae964a7588eb03f688dfabad79bced1",
+   "group": "106656",
+   "id": "150808",
+   "lengthKm": 17.509,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.038163,
+   "ends": [
+    [
+     -85.161097,
+     34.996797
+    ],
+    [
+     -85.137505,
+     34.893243
+    ]
+   ],
+   "geometrySha256": "cfe9f7fd9b44bf8e30f1221af63419528b75a9e70c042a500b4d06049b89dd1c",
+   "group": "119240",
+   "id": "156208",
+   "lengthKm": 18.76,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.000537,
+   "ends": [
+    [
+     -100.339772,
+     37.872842
+    ],
+    [
+     -99.755147,
+     37.864261
+    ]
+   ],
+   "geometrySha256": "a8ac473937ac6ab91a499d51811fc6982746ac0a891c0f992e7b6eda9c99ff0e",
+   "group": "157288",
+   "id": "157288",
+   "lengthKm": 52.923,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.039149,
+   "ends": [
+    [
+     -80.028836,
+     33.08932
+    ],
+    [
+     -80.005749,
+     33.189977
+    ]
+   ],
+   "geometrySha256": "12629e8a88aaa0522246c6f3e99e11560171ca80e7aa132ec0f47c7c5cd978c5",
+   "group": "158230",
+   "id": "158230",
+   "lengthKm": 11.682,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.00087,
+   "ends": [
+    [
+     -96.064746,
+     38.444513
+    ],
+    [
+     -95.895046,
+     38.519713
+    ]
+   ],
+   "geometrySha256": "95af630e7cdf883da77ee88c89f9252fa1d9b757a463c2da764b3337c29e9935",
+   "group": "158383",
+   "id": "158383",
+   "lengthKm": 17.391,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.007959,
+   "ends": [
+    [
+     -93.296015,
+     44.59595
+    ],
+    [
+     -92.996695,
+     44.638434
+    ]
+   ],
+   "geometrySha256": "977ac632926241b4c92a3e8799cc17646a9278e1c22a110068beade109802d5a",
+   "group": "159133",
+   "id": "159133",
+   "lengthKm": 29.18,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.017027,
+   "ends": [
+    [
+     -79.412558,
+     37.799128
+    ],
+    [
+     -79.356737,
+     37.732229
+    ]
+   ],
+   "geometrySha256": "fb388b94a634e1b87cbb85f54a3d9f67c5711d03bf6c113bdb3e2eb01cfe0e24",
+   "group": "159950",
+   "id": "159950",
+   "lengthKm": 10.248,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.001667,
+   "ends": [
+    [
+     -91.266733,
+     40.607372
+    ],
+    [
+     -91.237233,
+     40.69497
+    ]
+   ],
+   "geometrySha256": "c8091e1df99840bdbbf27c264d325b35286d404a9ef262c3ea470d3181183de1",
+   "group": "160841",
+   "id": "160841",
+   "lengthKm": 14.192,
+   "lineType": "ac161",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.003333,
+   "ends": [
+    [
+     -96.667832,
+     43.483214
+    ],
+    [
+     -96.506207,
+     43.49102
+    ]
+   ],
+   "geometrySha256": "588feeb95518eb955c3807c3711656b6f8b68e0262075800565df787e33c1c9c",
+   "group": "161256",
+   "id": "161256",
+   "lengthKm": 17.436,
+   "lineType": "ac115",
+   "region": "Central",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.023673,
+   "ends": [
+    [
+     -85.467286,
+     41.063862
+    ],
+    [
+     -85.347204,
+     41.119365
+    ]
+   ],
+   "geometrySha256": "3742874bbba60712c42f247a2632934cd89d678acb1c6f87ba4a67e8d4564ba5",
+   "group": "163198",
+   "id": "163198",
+   "lengthKm": 12.443,
+   "lineType": "ac345",
+   "region": "Central",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.002292,
+   "ends": [
+    [
+     -80.777915,
+     27.239913
+    ],
+    [
+     -80.541367,
+     27.238016
+    ]
+   ],
+   "geometrySha256": "0cc0a588386c8a5dfe5a78dbddc91de5e8126199dc5726b680c710617226b5ef",
+   "group": "167090",
+   "id": "167090",
+   "lengthKm": 24.122,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.040465,
+   "ends": [
+    [
+     -81.911796,
+     33.432731
+    ],
+    [
+     -81.701828,
+     33.509437
+    ]
+   ],
+   "geometrySha256": "1419eaeb37af061eaa6d4fc6b403c7c86a8f1b7b5e1f5cba519e5e7c75d533b9",
+   "group": "125656",
+   "id": "167557",
+   "lengthKm": 23.181,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.025789,
+   "ends": [
+    [
+     -80.31077,
+     33.71156
+    ],
+    [
+     -80.166378,
+     33.67718
+    ]
+   ],
+   "geometrySha256": "b7cd3094abc9bb908c52eb11efbafe8cd02ee3bcbeb8e70557d4379481517194",
+   "group": "168384",
+   "id": "168384",
+   "lengthKm": 14.146,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.007209,
+   "ends": [
+    [
+     -84.913439,
+     32.608405
+    ],
+    [
+     -84.829577,
+     32.546028
+    ]
+   ],
+   "geometrySha256": "8bde80fd64e46126c9af7248d814296fe4b3d62bfad829e502ce5080eb0e97b4",
+   "group": "170756",
+   "id": "170756",
+   "lengthKm": 20.099,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.025581,
+   "ends": [
+    [
+     -77.099803,
+     40.238291
+    ],
+    [
+     -77.009994,
+     40.175079
+    ]
+   ],
+   "geometrySha256": "8cb0572180e3994a78b00579422b2d46d4203d3972aca4d86f783d7b1b1a0a1a",
+   "group": "104783",
+   "id": "179607",
+   "lengthKm": 12.563,
+   "lineType": "ac230",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.002759,
+   "ends": [
+    [
+     -82.941766,
+     30.509329
+    ],
+    [
+     -82.918557,
+     30.699583
+    ]
+   ],
+   "geometrySha256": "97780693ed7e055addff99c7ae13db8a9644c6ebe5c0037a7f9c8b638218b195",
+   "group": "179925",
+   "id": "179925",
+   "lengthKm": 23.031,
+   "lineType": "ac115",
+   "region": "East",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.006122,
+   "ends": [
+    [
+     -121.813388,
+     42.174001
+    ],
+    [
+     -121.3904,
+     42.080034
+    ]
+   ],
+   "geometrySha256": "f15ade2cfaf80dc521b101148595bd3e5552c17968e64939f8464d3aa14e48c5",
+   "group": "200007",
+   "id": "200007",
+   "lengthKm": 42.252,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.000978,
+   "ends": [
+    [
+     -120.737835,
+     45.67784
+    ],
+    [
+     -120.154256,
+     45.702625
+    ]
+   ],
+   "geometrySha256": "f634901e34ebd54e42a8f5876f84714b8ca5f85bd2aeaa46fb77659d138d0da0",
+   "group": "200038",
+   "id": "200038",
+   "lengthKm": 48.963,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.001014,
+   "ends": [
+    [
+     -120.510221,
+     47.121356
+    ],
+    [
+     -119.939816,
+     46.877615
+    ]
+   ],
+   "geometrySha256": "9554f43e23d21ba499dc88841c378e83a89c9ef2a55a6a31c4dcacfbbeef1c91",
+   "group": "200086",
+   "id": "200086",
+   "lengthKm": 56.084,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.001163,
+   "ends": [
+    [
+     -121.3904,
+     42.080034
+    ],
+    [
+     -121.316581,
+     42.006099
+    ]
+   ],
+   "geometrySha256": "4ba2866dcfc1cc8faacf460e667096ef7d1c38fd368b275d4dfe4f65134685a0",
+   "group": "200001",
+   "id": "200221",
+   "lengthKm": 11.371,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.00531,
+   "ends": [
+    [
+     -122.822298,
+     42.346463
+    ],
+    [
+     -122.361388,
+     41.976855
+    ]
+   ],
+   "geometrySha256": "335fb2f4148f5d9a255dae7e51c06403a08409c25494895f42ec3112612b7cdb",
+   "group": "200230",
+   "id": "200230",
+   "lengthKm": 62.269,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.013519,
+   "ends": [
+    [
+     -123.564966,
+     43.177586
+    ],
+    [
+     -123.236732,
+     43.206008
+    ]
+   ],
+   "geometrySha256": "c50020337359da85174a0e6d4358acf31228ee1f3112e46b8d93939db7deb15c",
+   "group": "200240",
+   "id": "200240",
+   "lengthKm": 27.893,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.011379,
+   "ends": [
+    [
+     -124.396227,
+     43.1067
+    ],
+    [
+     -124.075626,
+     43.213077
+    ]
+   ],
+   "geometrySha256": "1061097a3d03cf9ff03cf0aa267ba6f5041f71c1d8e9901b656920bf88121d92",
+   "group": "200595",
+   "id": "200599",
+   "lengthKm": 31.801,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.01381,
+   "ends": [
+    [
+     -123.823694,
+     45.276426
+    ],
+    [
+     -123.794221,
+     45.414113
+    ]
+   ],
+   "geometrySha256": "89199701b16f11d89f03cbeaf8bb2006a29b1576d2c8cdff54d250018779a093",
+   "group": "200803",
+   "id": "200803",
+   "lengthKm": 16.805,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.025152,
+   "ends": [
+    [
+     -122.573912,
+     48.098552
+    ],
+    [
+     -122.519335,
+     48.008153
+    ]
+   ],
+   "geometrySha256": "515050e89282767e6f825acf880ba7028b0e00a93ddbc0e36a0976d9d66e0e72",
+   "group": "208854",
+   "id": "208854",
+   "lengthKm": 12.408,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.056104,
+   "ends": [
+    [
+     -122.443954,
+     48.454374
+    ],
+    [
+     -122.204053,
+     48.504931
+    ]
+   ],
+   "geometrySha256": "f0bd8151f1542339de193361da8d57a291a46b575e8b0338eb49df8cafbe6804",
+   "group": "209276",
+   "id": "209276",
+   "lengthKm": 26.86,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.00102,
+   "ends": [
+    [
+     -120.203463,
+     44.994966
+    ],
+    [
+     -120.054082,
+     44.982908
+    ]
+   ],
+   "geometrySha256": "a13ca4d4e763f70d7ace00e5e2941a99c3bdd43031f789bc4387de8755d5c325",
+   "group": "210576",
+   "id": "210576",
+   "lengthKm": 13.623,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.162051,
+   "ends": [
+    [
+     -122.203339,
+     47.382921
+    ],
+    [
+     -122.19148,
+     47.468095
+    ]
+   ],
+   "geometrySha256": "76423eff0af2d56d311e345e7cc8521c1b6f8c598f7b562d757b70b822fc05e8",
+   "group": "210789",
+   "id": "210789",
+   "lengthKm": 12.101,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.000638,
+   "ends": [
+    [
+     -102.610015,
+     33.528095
+    ],
+    [
+     -102.488385,
+     33.520753
+    ]
+   ],
+   "geometrySha256": "1304d6e027f7e6e7953663eff329911ed993df5364275e98c3d7fc951eede8cf",
+   "group": "300107",
+   "id": "300107",
+   "lengthKm": 12.065,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00529,
+   "ends": [
+    [
+     -95.424136,
+     33.640414
+    ],
+    [
+     -95.053948,
+     33.617878
+    ]
+   ],
+   "geometrySha256": "784d845bec1273dc3ceaded2d49b33e9cf5c6f132503aeb072cb013b29c7aada",
+   "group": "300311",
+   "id": "300311",
+   "lengthKm": 34.755,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003857,
+   "ends": [
+    [
+     -97.867242,
+     31.952655
+    ],
+    [
+     -97.74783,
+     32.068858
+    ]
+   ],
+   "geometrySha256": "e3652ac6c9ff077122673c21a3ada32c72a7d83e5a2e21c57408d74f5988b4ae",
+   "group": "300553",
+   "id": "300553",
+   "lengthKm": 17.528,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005957,
+   "ends": [
+    [
+     -96.10464,
+     32.357309
+    ],
+    [
+     -96.007773,
+     32.297542
+    ]
+   ],
+   "geometrySha256": "d6fd3951291a7c476a2afb06dc2db70b2f30f4407ff045e6be6757a9e8f120a1",
+   "group": "300654",
+   "id": "300654",
+   "lengthKm": 11.477,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00197,
+   "ends": [
+    [
+     -96.002748,
+     32.266778
+    ],
+    [
+     -95.846644,
+     32.328849
+    ]
+   ],
+   "geometrySha256": "f6fcc5b4ca7db81e2d080bfb553d123172e63b13a238954d6e2f4a8dfb3577b0",
+   "group": "300662",
+   "id": "300662",
+   "lengthKm": 19.107,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001677,
+   "ends": [
+    [
+     -95.488076,
+     31.617993
+    ],
+    [
+     -95.085648,
+     31.671414
+    ]
+   ],
+   "geometrySha256": "064c63e122168f2ea6c99755f1ae6e4d7bdb600d751413d07c6c3459c8c68ee5",
+   "group": "300811",
+   "id": "300811",
+   "lengthKm": 42.189,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.003295,
+   "ends": [
+    [
+     -94.453297,
+     31.866264
+    ],
+    [
+     -94.238231,
+     31.935915
+    ]
+   ],
+   "geometrySha256": "04d9803f9d63204c026c9aa362135b31010a4ab27675093322850b3268d50454",
+   "group": "300823",
+   "id": "300823",
+   "lengthKm": 23.452,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.011494,
+   "ends": [
+    [
+     -94.171056,
+     31.802908
+    ],
+    [
+     -94.038401,
+     31.959767
+    ]
+   ],
+   "geometrySha256": "6750720152bccde40b34bf96f78b053d7a12c6bf056bcecd55729919621aff37",
+   "group": "300824",
+   "id": "300824",
+   "lengthKm": 22.926,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.01125,
+   "ends": [
+    [
+     -97.599657,
+     28.923574
+    ],
+    [
+     -97.480958,
+     28.988039
+    ]
+   ],
+   "geometrySha256": "58a114a09907a0200b1c9d79dc020b051592a68f99d792f157bab52e00b092d7",
+   "group": "300866",
+   "id": "300866",
+   "lengthKm": 14.379,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005349,
+   "ends": [
+    [
+     -96.5477,
+     32.83698
+    ],
+    [
+     -96.486886,
+     32.757878
+    ]
+   ],
+   "geometrySha256": "9b47e0450e321f63d18ad460bcd371eecc1fb5d7a447e96d6acbee725e636342",
+   "group": "301100",
+   "id": "301100",
+   "lengthKm": 12.107,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.040816,
+   "ends": [
+    [
+     -122.033738,
+     38.030929
+    ],
+    [
+     -121.896795,
+     38.036969
+    ]
+   ],
+   "geometrySha256": "07c0e3b1b730f0da3060aa7647322627231365dd15e951fb2423efc9abca63ac",
+   "group": "301565",
+   "id": "301582",
+   "lengthKm": 17.566,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.027586,
+   "ends": [
+    [
+     -121.760101,
+     38.678614
+    ],
+    [
+     -121.755229,
+     38.804079
+    ]
+   ],
+   "geometrySha256": "fd0f87f60596ca48196e5369f9d1970c61d94a8ea628871ac0df9393690ae2d0",
+   "group": "301930",
+   "id": "301930",
+   "lengthKm": 17.38,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.028919,
+   "ends": [
+    [
+     -110.964208,
+     33.394528
+    ],
+    [
+     -110.86739,
+     33.399677
+    ]
+   ],
+   "geometrySha256": "479324b75b6d7c7bf477add157b713c3aa496c7e0a9480f9abffd0dd879a4c05",
+   "group": "302635",
+   "id": "302635",
+   "lengthKm": 12.973,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.000746,
+   "ends": [
+    [
+     -101.452334,
+     32.100302
+    ],
+    [
+     -100.916107,
+     32.334127
+    ]
+   ],
+   "geometrySha256": "cf3d8b5fffb1226fbb92f38043a32eb8c7fcff52b1d200c18e3e4b79ff136f80",
+   "group": "302810",
+   "id": "302810",
+   "lengthKm": 58.542,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.021026,
+   "ends": [
+    [
+     -120.905708,
+     37.489406
+    ],
+    [
+     -120.848868,
+     37.41892
+    ]
+   ],
+   "geometrySha256": "0298b35bdcb80b22b082af003fb293a715712d84054754bd640f565f2d54b2a6",
+   "group": "302973",
+   "id": "302973",
+   "lengthKm": 12.972,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004701,
+   "ends": [
+    [
+     -99.822557,
+     32.524057
+    ],
+    [
+     -99.541144,
+     32.629174
+    ]
+   ],
+   "geometrySha256": "308fe03ff5ffcbe8c1f92fa9e3f90a12d0f3a326269df31a19596ff4c0b2f233",
+   "group": "303240",
+   "id": "303240",
+   "lengthKm": 30.033,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.038723,
+   "ends": [
+    [
+     -97.811501,
+     30.172195
+    ],
+    [
+     -97.782957,
+     30.073851
+    ]
+   ],
+   "geometrySha256": "bfd7f62383a01e93d4e099866cbf5c55515a09ab019c4c2fd1e556b5600e39d1",
+   "group": "303257",
+   "id": "303257",
+   "lengthKm": 15.269,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.015556,
+   "ends": [
+    [
+     -98.207727,
+     29.578187
+    ],
+    [
+     -98.049604,
+     29.588542
+    ]
+   ],
+   "geometrySha256": "c50f5e0450535415a8852bd0e17c3527e1890777c9bb6c6b8395f42dd3141d9b",
+   "group": "303437",
+   "id": "303437",
+   "lengthKm": 17.226,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.014107,
+   "ends": [
+    [
+     -111.060493,
+     31.922123
+    ],
+    [
+     -110.928428,
+     31.971652
+    ]
+   ],
+   "geometrySha256": "3a6b0f8ad10ecca87177015aa8b8a331d4d677d743366f82081a976f9b657cd7",
+   "group": "303428",
+   "id": "303747",
+   "lengthKm": 20.488,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003548,
+   "ends": [
+    [
+     -103.337833,
+     34.302888
+    ],
+    [
+     -103.317631,
+     34.366148
+    ]
+   ],
+   "geometrySha256": "6057abf3e4f4acc6d7a1125db7a8d357193887334ff1e9007bbe8cf9f265a9b8",
+   "group": "304000",
+   "id": "304000",
+   "lengthKm": 11.912,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.00035,
+   "ends": [
+    [
+     -122.611871,
+     39.011915
+    ],
+    [
+     -122.223425,
+     39.120575
+    ]
+   ],
+   "geometrySha256": "2da45e24e768e5d183608a7c6911f01442edc23088cf65f12ecd4a49cdc6bb71",
+   "group": "304076",
+   "id": "304076",
+   "lengthKm": 37.214,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004286,
+   "ends": [
+    [
+     -97.017899,
+     31.897472
+    ],
+    [
+     -96.964473,
+     31.574745
+    ]
+   ],
+   "geometrySha256": "0d17feb8b5e2717aacae4af9d4be4a432f1c060e9e324419fcfc8a9bb7fe0c05",
+   "group": "303118",
+   "id": "304259",
+   "lengthKm": 36.936,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.00371,
+   "ends": [
+    [
+     -120.31677,
+     37.054897
+    ],
+    [
+     -120.273933,
+     37.184937
+    ]
+   ],
+   "geometrySha256": "f0f55f276ec35de3f4a58b65d00c9e8f86c402d8b70db601e5a8d18c4a15e83e",
+   "group": "304302",
+   "id": "304302",
+   "lengthKm": 18.368,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.008278,
+   "ends": [
+    [
+     -100.849173,
+     29.373285
+    ],
+    [
+     -100.393259,
+     29.323858
+    ]
+   ],
+   "geometrySha256": "33071e78bcf2624cbab56da93ccd23167fa31f1e62ce5abdc4b07ad086c5e378",
+   "group": "304327",
+   "id": "304327",
+   "lengthKm": 46.825,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.041189,
+   "ends": [
+    [
+     -106.816963,
+     34.616371
+    ],
+    [
+     -106.724,
+     35.114058
+    ]
+   ],
+   "geometrySha256": "98de053401bd98e0d0101e0bd66598ad22bb53189d6a59153173a9260655b137",
+   "group": "304619",
+   "id": "304619",
+   "lengthKm": 59.65,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.00557,
+   "ends": [
+    [
+     -96.26941,
+     30.687734
+    ],
+    [
+     -96.081802,
+     30.622512
+    ]
+   ],
+   "geometrySha256": "a48e767a2307a3c237960e9cb4dd1b44933c49952f4113811765514014cc461c",
+   "group": "304645",
+   "id": "304645",
+   "lengthKm": 22.554,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.010612,
+   "ends": [
+    [
+     -95.219597,
+     30.13494
+    ],
+    [
+     -95.106333,
+     30.090672
+    ]
+   ],
+   "geometrySha256": "84a8d7d3e87ef90e7246d67cb01500ca0fec1f5f154c0c8241d9c40d4b83d98d",
+   "group": "304807",
+   "id": "304807",
+   "lengthKm": 12.042,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018846,
+   "ends": [
+    [
+     -102.229631,
+     31.935796
+    ],
+    [
+     -102.175253,
+     31.967048
+    ]
+   ],
+   "geometrySha256": "bf2a5dcc575b80501da1ed069f4c937e0418929770737fd99946a97222b58a8e",
+   "group": "304812",
+   "id": "304812",
+   "lengthKm": 11.782,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.002344,
+   "ends": [
+    [
+     -94.049466,
+     30.065176
+    ],
+    [
+     -93.888089,
+     30.077874
+    ]
+   ],
+   "geometrySha256": "b024f91872005de72536683624ab8d179e01763d589125872e88d431b7bf9ad8",
+   "group": "304822",
+   "id": "304822",
+   "lengthKm": 17.198,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.000685,
+   "ends": [
+    [
+     -103.796612,
+     32.652102
+    ],
+    [
+     -103.773028,
+     32.811764
+    ]
+   ],
+   "geometrySha256": "2fc8fa43da67b13a47a3814662ea725db9024c183e45b65c9640cf9b4d70f05d",
+   "group": "304993",
+   "id": "304993",
+   "lengthKm": 18.685,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.017126,
+   "ends": [
+    [
+     -97.722952,
+     31.038984
+    ],
+    [
+     -97.511119,
+     30.972126
+    ]
+   ],
+   "geometrySha256": "8aa71248bac61857e90c69b5f0a97868bc40a235611ac531a2cd433f21c2385e",
+   "group": "305010",
+   "id": "305010",
+   "lengthKm": 24.592,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.003462,
+   "ends": [
+    [
+     -94.815015,
+     30.6461
+    ],
+    [
+     -94.713502,
+     30.718862
+    ]
+   ],
+   "geometrySha256": "3bdf388fa4612c0a162c896701d53ed641beeeda25d59fe25f3d0237c4d1b83a",
+   "group": "305050",
+   "id": "305050",
+   "lengthKm": 13.035,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.004348,
+   "ends": [
+    [
+     -123.01025,
+     38.797122
+    ],
+    [
+     -122.880918,
+     38.80999
+    ]
+   ],
+   "geometrySha256": "28a32f366ab72b5bc46b458d582a4d72a85f6cf45f145dc1daaceeb0f63dfb6a",
+   "group": "305083",
+   "id": "305083",
+   "lengthKm": 12.58,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.000563,
+   "ends": [
+    [
+     -108.154889,
+     36.522
+    ],
+    [
+     -107.98566,
+     36.599445
+    ]
+   ],
+   "geometrySha256": "f0a4cee613d16977d73680f12b4ff88f5d6db0a17597a659ff56fbfda9eeac2d",
+   "group": "305093",
+   "id": "305093",
+   "lengthKm": 22.467,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.014091,
+   "ends": [
+    [
+     -111.590349,
+     32.929873
+    ],
+    [
+     -111.526188,
+     33.008039
+    ]
+   ],
+   "geometrySha256": "49e12d8259416c63ff9a601fe2352d8105460077cb9540768f1f6539dadbe8c2",
+   "group": "305334",
+   "id": "305334",
+   "lengthKm": 15.311,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.006993,
+   "ends": [
+    [
+     -97.910294,
+     33.056149
+    ],
+    [
+     -97.67639,
+     32.806133
+    ]
+   ],
+   "geometrySha256": "77a7e17de42643dcad61cd20791260aaf70f8303210806e1744a1a81431647ee",
+   "group": "303012",
+   "id": "305407",
+   "lengthKm": 35.952,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.006604,
+   "ends": [
+    [
+     -115.573309,
+     33.204957
+    ],
+    [
+     -115.434403,
+     33.192395
+    ]
+   ],
+   "geometrySha256": "a6ac06c53de3c0c8296a91925b8d8468509865b4a3f0e29c5c081a68fbd3e579",
+   "group": "305625",
+   "id": "305625",
+   "lengthKm": 19.699,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.01048,
+   "ends": [
+    [
+     -105.63357,
+     36.394887
+    ],
+    [
+     -105.285584,
+     36.399436
+    ]
+   ],
+   "geometrySha256": "bdcea8b863753e20e606959c56b220040a6344c87f1f9124703a1bbc67ee7108",
+   "group": "305629",
+   "id": "305629",
+   "lengthKm": 34.035,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.016216,
+   "ends": [
+    [
+     -122.667649,
+     38.496994
+    ],
+    [
+     -122.459202,
+     38.499824
+    ]
+   ],
+   "geometrySha256": "e8e21f1a1963e3a8feb7701a090761dc4778b0cad4940511c65df0af900e6184",
+   "group": "305640",
+   "id": "305640",
+   "lengthKm": 18.916,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.009756,
+   "ends": [
+    [
+     -121.57908,
+     37.798883
+    ],
+    [
+     -121.564928,
+     37.712428
+    ]
+   ],
+   "geometrySha256": "2602192a5f89dc6df82f2034eeb4d4311827cd5c96e8e45cbe421b39d2977d74",
+   "group": "304767",
+   "id": "305714",
+   "lengthKm": 14.235,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.008649,
+   "ends": [
+    [
+     -121.813393,
+     39.712154
+    ],
+    [
+     -121.688541,
+     39.486722
+    ]
+   ],
+   "geometrySha256": "d53705cf970b78010a71164bf586e8bd654a9f1de2ca195e3fc04e7decddacf7",
+   "group": "305734",
+   "id": "305734",
+   "lengthKm": 30.788,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.007938,
+   "ends": [
+    [
+     -99.639226,
+     32.434893
+    ],
+    [
+     -99.386646,
+     32.409337
+    ]
+   ],
+   "geometrySha256": "9d85ad734b8179ccb0305dde51a5c651f77e9da3ca471328b442a9140cf7a24a",
+   "group": "305755",
+   "id": "305755",
+   "lengthKm": 24.619,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018718,
+   "ends": [
+    [
+     -97.191829,
+     33.322343
+    ],
+    [
+     -97.132913,
+     33.25482
+    ]
+   ],
+   "geometrySha256": "c981aa6290a3429b5d7a7d0bdf57c2a8edc34ceababbd4a57e45ffaa3809f8be",
+   "group": "305797",
+   "id": "305797",
+   "lengthKm": 11.14,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001542,
+   "ends": [
+    [
+     -98.884775,
+     29.986267
+    ],
+    [
+     -98.370302,
+     30.229939
+    ]
+   ],
+   "geometrySha256": "645522655026200dcb5a7d6ce3b0cf1234e8046cac33552cf8fbf2f38bae703c",
+   "group": "305810",
+   "id": "305810",
+   "lengthKm": 56.773,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001571,
+   "ends": [
+    [
+     -102.962583,
+     31.584423
+    ],
+    [
+     -102.528233,
+     31.798105
+    ]
+   ],
+   "geometrySha256": "1119045a71f125131de40dc8dec54ef9b289e604f8e6e03a4e10c96442b3ea79",
+   "group": "305903",
+   "id": "305903",
+   "lengthKm": 48.834,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.011961,
+   "ends": [
+    [
+     -121.51786,
+     39.454266
+    ],
+    [
+     -121.491558,
+     39.67735
+    ]
+   ],
+   "geometrySha256": "65787b91c387a0ce7f5439aa1239b861f0d27305eaef08eddf96599ac19f0860",
+   "group": "305945",
+   "id": "305945",
+   "lengthKm": 27.211,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.191852,
+   "ends": [
+    [
+     -97.327242,
+     32.821322
+    ],
+    [
+     -97.307852,
+     32.875692
+    ]
+   ],
+   "geometrySha256": "b7ec9b7617ce0481a220a33e291accf0387cce98a78d24f21fdca0448c097bea",
+   "group": "305968",
+   "id": "305968",
+   "lengthKm": 11.041,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.007179,
+   "ends": [
+    [
+     -112.196449,
+     32.997321
+    ],
+    [
+     -111.995287,
+     32.962507
+    ]
+   ],
+   "geometrySha256": "25908add4c23be55868bb5ff72e7726bd30f5a082d40695f3c6ae3c29e5d2f55",
+   "group": "306096",
+   "id": "306096",
+   "lengthKm": 22.864,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.001722,
+   "ends": [
+    [
+     -100.21693,
+     32.464004
+    ],
+    [
+     -99.822557,
+     32.524057
+    ]
+   ],
+   "geometrySha256": "fcb045c96118cee2c37ec863396c477e37aab50e612c610ea56c5787f010a8fa",
+   "group": "306227",
+   "id": "306227",
+   "lengthKm": 37.671,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.001395,
+   "ends": [
+    [
+     -115.012996,
+     35.803924
+    ],
+    [
+     -114.834742,
+     35.927807
+    ]
+   ],
+   "geometrySha256": "af3b609b2c1090ffaa5dab0cc390c3644978530ea65b0eb6c1d9360cee412dfc",
+   "group": "303996",
+   "id": "306236",
+   "lengthKm": 22.146,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.074091,
+   "ends": [
+    [
+     -95.219344,
+     29.818445
+    ],
+    [
+     -95.21461,
+     29.913288
+    ]
+   ],
+   "geometrySha256": "7c14ad7aae0cd2755be5d7dd538ee0f41a13f2ea0ea5c0a2ce74f1068014d1d2",
+   "group": "306291",
+   "id": "306291",
+   "lengthKm": 11.744,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.021404,
+   "ends": [
+    [
+     -94.210967,
+     30.368302
+    ],
+    [
+     -94.069403,
+     30.341361
+    ]
+   ],
+   "geometrySha256": "fdbcba897e9fb98fa870ddf9c37da1f3ca9e8ed19df69dd86599fa43ea09669e",
+   "group": "306297",
+   "id": "306297",
+   "lengthKm": 15.613,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.002738,
+   "ends": [
+    [
+     -96.421643,
+     28.744685
+    ],
+    [
+     -96.21213,
+     28.757004
+    ]
+   ],
+   "geometrySha256": "a75abbe1c57b5d7d0287e94445e4889632ef91e72e6720ccbecd95375cc52a37",
+   "group": "306541",
+   "id": "306541",
+   "lengthKm": 21.779,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001383,
+   "ends": [
+    [
+     -98.609452,
+     33.138418
+    ],
+    [
+     -98.372434,
+     33.203111
+    ]
+   ],
+   "geometrySha256": "786c7a45f575fb895de9ff9f8db604d7b7dbebf1bf4a30627f152d2a05d0a71f",
+   "group": "306661",
+   "id": "306661",
+   "lengthKm": 29.058,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.031212,
+   "ends": [
+    [
+     -101.925615,
+     35.050904
+    ],
+    [
+     -101.863914,
+     35.099696
+    ]
+   ],
+   "geometrySha256": "8b933ad5e0be7cec67813b32d0297cd385b5a9d666450477c458ec92d77f4925",
+   "group": "306852",
+   "id": "306852",
+   "lengthKm": 12.751,
+   "lineType": "ac115",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.009921,
+   "ends": [
+    [
+     -97.359106,
+     30.417017
+    ],
+    [
+     -97.268802,
+     30.14604
+    ]
+   ],
+   "geometrySha256": "4b11c4704a85a9e53bab120370987e67b1bb87012577ccf86081dfa6bfdb4de3",
+   "group": "306873",
+   "id": "306873",
+   "lengthKm": 46.181,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.111429,
+   "ends": [
+    [
+     -95.220851,
+     29.820097
+    ],
+    [
+     -95.150928,
+     29.775611
+    ]
+   ],
+   "geometrySha256": "cf9f5827bba97cb99fe783f0aed7ac29ca18b8203bbaec85df58ee792674b9c1",
+   "group": "303956",
+   "id": "306981",
+   "lengthKm": 11.65,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.007436,
+   "ends": [
+    [
+     -98.093671,
+     29.946135
+    ],
+    [
+     -97.900096,
+     29.911483
+    ]
+   ],
+   "geometrySha256": "4fa3354cc0b9a4cc5d1ebd11d32f65d0d72454866bac350a45f30d874adf50c6",
+   "group": "307056",
+   "id": "307056",
+   "lengthKm": 19.339,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.007237,
+   "ends": [
+    [
+     -95.193479,
+     32.608795
+    ],
+    [
+     -94.998062,
+     32.573015
+    ]
+   ],
+   "geometrySha256": "780302c3952135b85867855362c27287458a25682c4a590db636d35f750f5be6",
+   "group": "307102",
+   "id": "307102",
+   "lengthKm": 19.623,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.018756,
+   "ends": [
+    [
+     -120.407394,
+     37.292829
+    ],
+    [
+     -119.984503,
+     36.922149
+    ]
+   ],
+   "geometrySha256": "8e7be610509a025d040d72a8692cd9bb1b5cc72bca2bd17c968b57a11eb940ed",
+   "group": "302062",
+   "id": "307140",
+   "lengthKm": 57.189,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003731,
+   "ends": [
+    [
+     -98.413401,
+     29.776787
+    ],
+    [
+     -98.245211,
+     29.758775
+    ]
+   ],
+   "geometrySha256": "0592b1292ff2bd6e27a34b87c03a040ff4e9a71a00ef339b740bd2d4131fecb6",
+   "group": "307371",
+   "id": "307371",
+   "lengthKm": 16.784,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.007323,
+   "ends": [
+    [
+     -100.023056,
+     32.196514
+    ],
+    [
+     -99.751278,
+     32.359385
+    ]
+   ],
+   "geometrySha256": "1b444b384ea161882c2da7db0fa88f8ddc3a2e88457bc54ca858bd359a4f1bac",
+   "group": "307403",
+   "id": "307403",
+   "lengthKm": 31.663,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.011429,
+   "ends": [
+    [
+     -102.409685,
+     34.165048
+    ],
+    [
+     -102.328388,
+     33.879079
+    ]
+   ],
+   "geometrySha256": "9323a25653c59c6c5832343a02f7a57b51199f416c90f6df781dd465e0a133e5",
+   "group": "307568",
+   "id": "307568",
+   "lengthKm": 37.538,
+   "lineType": "ac115",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.000889,
+   "ends": [
+    [
+     -97.455172,
+     33.076245
+    ],
+    [
+     -97.350469,
+     33.030907
+    ]
+   ],
+   "geometrySha256": "f9b61cb990608bb3e3ffa275145b1ddb37509bbe62de5b32314332a41b47ac24",
+   "group": "307641",
+   "id": "307641",
+   "lengthKm": 12.432,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.000956,
+   "ends": [
+    [
+     -114.216931,
+     33.997717
+    ],
+    [
+     -114.141705,
+     34.291048
+    ]
+   ],
+   "geometrySha256": "2af95512fcc99e2607121f7c320e6452d3d65a4c91074b6fa279fb45b9a04563",
+   "group": "307648",
+   "id": "307648",
+   "lengthKm": 36.889,
+   "lineType": "ac161",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 161.0
+  },
+  {
+   "density": 0.000962,
+   "ends": [
+    [
+     -97.329869,
+     27.986748
+    ],
+    [
+     -97.24679,
+     27.90027
+    ]
+   ],
+   "geometrySha256": "48427231866c6bd794f33ba52816370234013e385edfb684120dd84d9d911b90",
+   "group": "307704",
+   "id": "307704",
+   "lengthKm": 17.347,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.008537,
+   "ends": [
+    [
+     -121.137513,
+     38.2356
+    ],
+    [
+     -121.024531,
+     38.226872
+    ]
+   ],
+   "geometrySha256": "f937e70aca2f2e4aceabf307e937590659784b1de845bfb85598f922f96d119e",
+   "group": "307736",
+   "id": "307736",
+   "lengthKm": 10.727,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002895,
+   "ends": [
+    [
+     -119.388511,
+     37.148252
+    ],
+    [
+     -119.337948,
+     37.220411
+    ]
+   ],
+   "geometrySha256": "aada85e9af06523a3ac0dffe3fbb82db97c71ee69066bd1bb024271c5dbf784c",
+   "group": "307794",
+   "id": "307794",
+   "lengthKm": 10.715,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.007712,
+   "ends": [
+    [
+     -121.013773,
+     38.01554
+    ],
+    [
+     -120.908099,
+     37.769128
+    ]
+   ],
+   "geometrySha256": "869e147a319c7ce7c0c12bb485a68989046dae5cce538abb281eeffb9e515ee2",
+   "group": "307811",
+   "id": "307811",
+   "lengthKm": 30.684,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.01125,
+   "ends": [
+    [
+     -94.038616,
+     30.115398
+    ],
+    [
+     -94.023281,
+     30.2203
+    ]
+   ],
+   "geometrySha256": "f8e0c9509ef04ca72791875c25e18583ce539c659b73b31f62181936d5f20d19",
+   "group": "307868",
+   "id": "307868",
+   "lengthKm": 18.081,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00828,
+   "ends": [
+    [
+     -120.4374,
+     34.643208
+    ],
+    [
+     -120.184908,
+     34.647953
+    ]
+   ],
+   "geometrySha256": "5bb153651cf1122acb86a1de8693522d7a50fdb480cb3c785043d82e8248632f",
+   "group": "307907",
+   "id": "307907",
+   "lengthKm": 23.308,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.074043,
+   "ends": [
+    [
+     -95.808543,
+     29.559971
+    ],
+    [
+     -95.750864,
+     29.47116
+    ]
+   ],
+   "geometrySha256": "4f558a8b7c31ce06242772418900bb71065f901013e6a14c6800c52e282ed5bb",
+   "group": "307986",
+   "id": "307986",
+   "lengthKm": 12.383,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.073548,
+   "ends": [
+    [
+     -120.487316,
+     37.273312
+    ],
+    [
+     -120.407394,
+     37.292829
+    ]
+   ],
+   "geometrySha256": "1d5a43e9220db673223325ada4aa60e403e73995e9c889f3381c278bb60ae54a",
+   "group": "308054",
+   "id": "308054",
+   "lengthKm": 10.036,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.002444,
+   "ends": [
+    [
+     -108.697506,
+     32.349521
+    ],
+    [
+     -108.59932,
+     32.40363
+    ]
+   ],
+   "geometrySha256": "fae06b84531de3c5dbba78b6f5a81983e588adc1281099e735bf1dd14495bf55",
+   "group": "303613",
+   "id": "308066",
+   "lengthKm": 12.3,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.149444,
+   "ends": [
+    [
+     -98.681874,
+     29.548171
+    ],
+    [
+     -98.648935,
+     29.47646
+    ]
+   ],
+   "geometrySha256": "f5cdee16f76060bb312f8ba58ff5d910007df20b57828350f7d4fd53abdf8804",
+   "group": "301686",
+   "id": "308196",
+   "lengthKm": 11.344,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.008125,
+   "ends": [
+    [
+     -99.993516,
+     32.826818
+    ],
+    [
+     -99.58059,
+     33.079946
+    ]
+   ],
+   "geometrySha256": "6a570b9293589e770026568c998497c76b8887fc7dc1374ac96c76956ff35c6f",
+   "group": "308240",
+   "id": "308240",
+   "lengthKm": 53.112,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00913,
+   "ends": [
+    [
+     -94.549362,
+     32.848637
+    ],
+    [
+     -94.392085,
+     32.773039
+    ]
+   ],
+   "geometrySha256": "5a461f04a24f0cf03a8ad1d7b7036e0068d8c2fd27ee402ec3cab3539c57685a",
+   "group": "307948",
+   "id": "308345",
+   "lengthKm": 17.716,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.047541,
+   "ends": [
+    [
+     -95.224408,
+     29.719627
+    ],
+    [
+     -95.070164,
+     29.718178
+    ]
+   ],
+   "geometrySha256": "e86cc35cfbd508e790661b14d2cb16ce410252f88ade89e857b40d3961986cc9",
+   "group": "304112",
+   "id": "308347",
+   "lengthKm": 15.58,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.136944,
+   "ends": [
+    [
+     -98.408778,
+     29.580559
+    ],
+    [
+     -98.369271,
+     29.509694
+    ]
+   ],
+   "geometrySha256": "49bc4b7bcf8167e1323d62c35669775d6e977f01e6c1336f793340823805fb1b",
+   "group": "303711",
+   "id": "308588",
+   "lengthKm": 13.226,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.004,
+   "ends": [
+    [
+     -99.205122,
+     28.668792
+    ],
+    [
+     -98.469774,
+     28.700306
+    ]
+   ],
+   "geometrySha256": "f2d7adcdfa595b8786ea62ebf3063ef620fe8f940fdce66ff1e88bcd2064c57f",
+   "group": "308643",
+   "id": "308643",
+   "lengthKm": 74.742,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.01,
+   "ends": [
+    [
+     -96.255901,
+     29.924245
+    ],
+    [
+     -96.08321,
+     30.076622
+    ]
+   ],
+   "geometrySha256": "4af044c2e0c30a1601d30a2ec7220fe02deedf3a1ca8f9a8daabac46426f4700",
+   "group": "308768",
+   "id": "308768",
+   "lengthKm": 25.462,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.032609,
+   "ends": [
+    [
+     -95.252574,
+     29.483245
+    ],
+    [
+     -95.201336,
+     29.499149
+    ]
+   ],
+   "geometrySha256": "4fca4414ed313dbb92367643bb614df563141576e347fc4868d8c52bdb89d3cd",
+   "group": "308794",
+   "id": "308794",
+   "lengthKm": 11.873,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.0328,
+   "ends": [
+    [
+     -95.491257,
+     30.183663
+    ],
+    [
+     -95.455252,
+     30.28902
+    ]
+   ],
+   "geometrySha256": "379095566930cc57734c8a7140e58fecfc7da262ffa42b6e38365f8c4e2944b8",
+   "group": "308888",
+   "id": "308888",
+   "lengthKm": 16.624,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.001122,
+   "ends": [
+    [
+     -110.570441,
+     31.964628
+    ],
+    [
+     -110.308966,
+     31.5661
+    ]
+   ],
+   "geometrySha256": "a83e8a49068f18270d43a9dd076b60cd60ecb2931ce0ee8a3ea02d60711c8493",
+   "group": "308959",
+   "id": "308959",
+   "lengthKm": 59.799,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.016441,
+   "ends": [
+    [
+     -97.886136,
+     27.530644
+    ],
+    [
+     -97.616193,
+     27.845165
+    ]
+   ],
+   "geometrySha256": "879a2a38247ff3919520b85e51f3d3a61b41a961a213f9cec9ac5788e0646a4d",
+   "group": "308968",
+   "id": "308968",
+   "lengthKm": 58.71,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.01072,
+   "ends": [
+    [
+     -121.781666,
+     37.999425
+    ],
+    [
+     -121.590189,
+     38.231565
+    ]
+   ],
+   "geometrySha256": "a68ed1f1578c34c4b5bcaee7aa491a20035ce7bc4d4baa2341655e82a73654bd",
+   "group": "309008",
+   "id": "309008",
+   "lengthKm": 32.904,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.011497,
+   "ends": [
+    [
+     -121.013773,
+     38.01554
+    ],
+    [
+     -120.669107,
+     38.331515
+    ]
+   ],
+   "geometrySha256": "5bc1c31c75869a92337a1bbbed39d688ba344253dd9fbc7ec0dab83fbdf0ec3d",
+   "group": "309022",
+   "id": "309022",
+   "lengthKm": 47.122,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.022323,
+   "ends": [
+    [
+     -115.090928,
+     36.002962
+    ],
+    [
+     -114.834742,
+     35.927807
+    ]
+   ],
+   "geometrySha256": "0cb655696388fdb15f06a1158fa59ea4e84167691ebd49f3d768bdd221a0f486",
+   "group": "305019",
+   "id": "309074",
+   "lengthKm": 27.266,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.008478,
+   "ends": [
+    [
+     -97.682636,
+     32.438318
+    ],
+    [
+     -97.566811,
+     32.419215
+    ]
+   ],
+   "geometrySha256": "6d16e9c4a8f150239c16b162a4ba1295176f8a9c06fd1db19892dc9780aa45a2",
+   "group": "309100",
+   "id": "309100",
+   "lengthKm": 12.994,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005161,
+   "ends": [
+    [
+     -100.087011,
+     34.373777
+    ],
+    [
+     -99.433968,
+     34.233983
+    ]
+   ],
+   "geometrySha256": "dd1a371832552597d669f601af649d8cdcb88dd8dded2bbf5055711e9e3c14da",
+   "group": "309132",
+   "id": "309132",
+   "lengthKm": 69.088,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00359,
+   "ends": [
+    [
+     -94.331179,
+     30.359074
+    ],
+    [
+     -94.257202,
+     30.303634
+    ]
+   ],
+   "geometrySha256": "e68234a041a48fa3f3c854534ee17aba688df5b87cb9b8fe6e904977a16457ce",
+   "group": "307129",
+   "id": "309262",
+   "lengthKm": 10.705,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.012045,
+   "ends": [
+    [
+     -97.614232,
+     30.209567
+    ],
+    [
+     -97.614146,
+     30.304972
+    ]
+   ],
+   "geometrySha256": "89fd899a586dd9d3a991ae8f12f199a761afbbe9cc54865667b12bb38d41d5a4",
+   "group": "304546",
+   "id": "309268",
+   "lengthKm": 11.76,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.024667,
+   "ends": [
+    [
+     -121.830155,
+     38.124705
+    ],
+    [
+     -121.781666,
+     37.999425
+    ]
+   ],
+   "geometrySha256": "0ea38f4063099c321af547ce2f2ad444fe6602f6e4e2debc8eab8937de8e85b0",
+   "group": "303521",
+   "id": "309270",
+   "lengthKm": 15.281,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.010577,
+   "ends": [
+    [
+     -119.98592,
+     38.877106
+    ],
+    [
+     -119.710198,
+     38.963467
+    ]
+   ],
+   "geometrySha256": "80c85151015796fa800b856343de0663b223c34be50c0865885a77f09051b836",
+   "group": "309354",
+   "id": "309354",
+   "lengthKm": 32.013,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 120.0
+  },
+  {
+   "density": 0.027742,
+   "ends": [
+    [
+     -98.337431,
+     30.559652
+    ],
+    [
+     -98.261191,
+     30.552363
+    ]
+   ],
+   "geometrySha256": "204ddf8e56b032b94d4c2ceabd1f1981f28709d79c461150ee7ea992d4f74a08",
+   "group": "308553",
+   "id": "309390",
+   "lengthKm": 10.738,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.074286,
+   "ends": [
+    [
+     -119.167013,
+     34.130769
+    ],
+    [
+     -118.903174,
+     34.280854
+    ]
+   ],
+   "geometrySha256": "c108ac0a7ef61d45670fe518945d6ce3dc6ef5a0861b646271dba70041a23c09",
+   "group": "304734",
+   "id": "309472",
+   "lengthKm": 35.375,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.009877,
+   "ends": [
+    [
+     -122.288746,
+     37.387934
+    ],
+    [
+     -122.075373,
+     37.326511
+    ]
+   ],
+   "geometrySha256": "9a59353ae193d0e584cbe0f58fe487b69bfed39f35a3652946cefc2fc2044d94",
+   "group": "309537",
+   "id": "309537",
+   "lengthKm": 22.995,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.023679,
+   "ends": [
+    [
+     -117.553574,
+     33.369443
+    ],
+    [
+     -117.334457,
+     33.211413
+    ]
+   ],
+   "geometrySha256": "27b016f0b52c299aa86284bf19f7cab1685f5b2cdcb0b4b0bd3f04e77ec854bf",
+   "group": "305652",
+   "id": "309729",
+   "lengthKm": 28.607,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.000149,
+   "ends": [
+    [
+     -109.761458,
+     32.341155
+    ],
+    [
+     -109.623484,
+     32.774233
+    ]
+   ],
+   "geometrySha256": "a11a185c658486a72298846769330df41d2394b513d312b755fd5b73362f9e12",
+   "group": "310118",
+   "id": "310118",
+   "lengthKm": 53.272,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.002258,
+   "ends": [
+    [
+     -99.079324,
+     28.888117
+    ],
+    [
+     -98.950354,
+     29.059716
+    ]
+   ],
+   "geometrySha256": "fe9e8273dabadb139e212e2402239939779cb27b58b6f18dc198917bee48111e",
+   "group": "310172",
+   "id": "310172",
+   "lengthKm": 23.769,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.182051,
+   "ends": [
+    [
+     -117.564285,
+     34.008338
+    ],
+    [
+     -117.533288,
+     34.088071
+    ]
+   ],
+   "geometrySha256": "d139cf1849d57ce8e31a4920b0d4424a96a8d9a6678acf87a62ebb1f5ba3c5ca",
+   "group": "310215",
+   "id": "310215",
+   "lengthKm": 12.789,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.021939,
+   "ends": [
+    [
+     -102.050795,
+     32.020259
+    ],
+    [
+     -101.422895,
+     32.27514
+    ]
+   ],
+   "geometrySha256": "d2af0168617defccc0e0d3be88b14abc9b7726b6968a620ccde2ac916e2de4bb",
+   "group": "310308",
+   "id": "310308",
+   "lengthKm": 77.498,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.001791,
+   "ends": [
+    [
+     -120.217118,
+     38.052914
+    ],
+    [
+     -120.100088,
+     38.168378
+    ]
+   ],
+   "geometrySha256": "8533b92bab65cb9bebf161b060d0d6a8fba89428c6cf909dab1594e46a5114e8",
+   "group": "310311",
+   "id": "310311",
+   "lengthKm": 17.339,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.015625,
+   "ends": [
+    [
+     -121.759821,
+     37.946144
+    ],
+    [
+     -121.733319,
+     37.700765
+    ]
+   ],
+   "geometrySha256": "331f8c5cf6c3a96a3c0ad67f02b913887dcef4f98838dcf922795d79352df2be",
+   "group": "310381",
+   "id": "310381",
+   "lengthKm": 29.344,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.119706,
+   "ends": [
+    [
+     -97.213757,
+     32.6368
+    ],
+    [
+     -97.130853,
+     32.656172
+    ]
+   ],
+   "geometrySha256": "b21bcaca41ad994c6e1d745332b57cdbcf6b13435058101587d37839f15db13e",
+   "group": "309232",
+   "id": "310816",
+   "lengthKm": 12.853,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.006509,
+   "ends": [
+    [
+     -94.396308,
+     32.539036
+    ],
+    [
+     -94.392085,
+     32.773039
+    ]
+   ],
+   "geometrySha256": "92893a1410a2d2770f208500b25892939015ce01d99ebdf446a20da776bbf3ae",
+   "group": "310929",
+   "id": "310929",
+   "lengthKm": 26.946,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.108204,
+   "ends": [
+    [
+     -117.334457,
+     33.211413
+    ],
+    [
+     -117.137183,
+     32.783907
+    ]
+   ],
+   "geometrySha256": "c1b68232318b8a67fcb38a498ad0197631ab7cef7b0fea49b7dfff705cccc1a6",
+   "group": "304397",
+   "id": "311029",
+   "lengthKm": 56.98,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.079627,
+   "ends": [
+    [
+     -117.28794,
+     33.12287
+    ],
+    [
+     -117.030714,
+     32.917632
+    ]
+   ],
+   "geometrySha256": "bd5a87227580cf54ed1205cd36360fa231cb77ca2ab96ccdc020b31695b0f348",
+   "group": "311141",
+   "id": "311141",
+   "lengthKm": 37.137,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.003533,
+   "ends": [
+    [
+     -111.995478,
+     32.960422
+    ],
+    [
+     -111.964657,
+     33.291982
+    ]
+   ],
+   "geometrySha256": "5872ca2225abfdeddc911fcb42ebfd58703215c0e219fdddd674741d4d5dbd63",
+   "group": "311239",
+   "id": "311239",
+   "lengthKm": 41.408,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.004154,
+   "ends": [
+    [
+     -122.625809,
+     40.645796
+    ],
+    [
+     -122.444037,
+     40.610246
+    ]
+   ],
+   "geometrySha256": "e8d1b20ca81e1549f10189a6735573a8313720409479c9b402b8921a11d7717f",
+   "group": "311434",
+   "id": "311434",
+   "lengthKm": 17.925,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.030364,
+   "ends": [
+    [
+     -98.253865,
+     29.224816
+    ],
+    [
+     -98.154236,
+     29.14118
+    ]
+   ],
+   "geometrySha256": "b211701bc49f7357c7f3eac29f7cf94c180d4bbed4134196cb3350737a9b7caf",
+   "group": "311558",
+   "id": "311558",
+   "lengthKm": 14.242,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.046825,
+   "ends": [
+    [
+     -121.466792,
+     38.9352
+    ],
+    [
+     -121.294144,
+     38.900535
+    ]
+   ],
+   "geometrySha256": "2c181e6849fccfcd840b8821185c948d2e38be6a6e468f0233e25c69119f9656",
+   "group": "311735",
+   "id": "311735",
+   "lengthKm": 19.457,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.078966,
+   "ends": [
+    [
+     -117.789372,
+     33.829264
+    ],
+    [
+     -117.678471,
+     33.998021
+    ]
+   ],
+   "geometrySha256": "80ecfe5ceb5601d28a8f968221fca1515e9d2d1bfc8c46482c0b96730f4d745a",
+   "group": "311138",
+   "id": "311760",
+   "lengthKm": 39.804,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.101605,
+   "ends": [
+    [
+     -119.818747,
+     36.718318
+    ],
+    [
+     -119.639091,
+     36.610804
+    ]
+   ],
+   "geometrySha256": "cc3b5d3c55fb6d1b596b17183689798ae42a0e6bb1f39da4d1f07bc530ffb8eb",
+   "group": "302829",
+   "id": "311782",
+   "lengthKm": 31.858,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.016931,
+   "ends": [
+    [
+     -96.558493,
+     33.786366
+    ],
+    [
+     -96.368131,
+     33.628929
+    ]
+   ],
+   "geometrySha256": "76dc9394c2144375e188fdf11b3bea606ba3ff81a4c07146cbc819c6dcf431fe",
+   "group": "306104",
+   "id": "311860",
+   "lengthKm": 27.454,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005,
+   "ends": [
+    [
+     -95.106333,
+     30.090672
+    ],
+    [
+     -95.012917,
+     30.050571
+    ]
+   ],
+   "geometrySha256": "79cdf311b4f1b28c69b2f5fd8bcd373c4254ebf5e942d1372f47e5316033d2aa",
+   "group": "304229",
+   "id": "311910",
+   "lengthKm": 10.118,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.005441,
+   "ends": [
+    [
+     -101.776348,
+     35.148687
+    ],
+    [
+     -101.747258,
+     35.296447
+    ]
+   ],
+   "geometrySha256": "29273a73c9170be00b0902f8b89ee5188c59d42e8bf675cb6f33ce8903769bb4",
+   "group": "303311",
+   "id": "312081",
+   "lengthKm": 18.924,
+   "lineType": "ac115",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.060294,
+   "ends": [
+    [
+     -102.246252,
+     32.037424
+    ],
+    [
+     -102.073078,
+     32.062623
+    ]
+   ],
+   "geometrySha256": "bdceec8e26e64d1cfaebbfd1979307ca6d5418d3146b8854f6b51bbb397e5279",
+   "group": "305658",
+   "id": "312261",
+   "lengthKm": 17.384,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00276,
+   "ends": [
+    [
+     -97.339849,
+     28.253406
+    ],
+    [
+     -97.047463,
+     28.598479
+    ]
+   ],
+   "geometrySha256": "b4be04c0aa0f457f417d5e9ba7dffbffd209e39ebcf1b328b86240322667b1e8",
+   "group": "312266",
+   "id": "312266",
+   "lengthKm": 51.753,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.010488,
+   "ends": [
+    [
+     -120.802415,
+     37.741729
+    ],
+    [
+     -120.407394,
+     37.292829
+    ]
+   ],
+   "geometrySha256": "9f5d86da711927900b4fd76b7cacc1e960e7d19b119c3952b8d0cb63b21b2074",
+   "group": "305785",
+   "id": "312672",
+   "lengthKm": 61.861,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.000875,
+   "ends": [
+    [
+     -120.298746,
+     34.825311
+    ],
+    [
+     -120.151422,
+     34.696726
+    ]
+   ],
+   "geometrySha256": "1b607b9d7c9c9ee3a8eddc3f92e203f624620a3c3d84359c0e6643c9aa9c9037",
+   "group": "312816",
+   "id": "312816",
+   "lengthKm": 21.733,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.004074,
+   "ends": [
+    [
+     -97.799896,
+     28.937945
+    ],
+    [
+     -97.787652,
+     29.056409
+    ]
+   ],
+   "geometrySha256": "ff5a8d90f399f212a99d87b4bd4a4a77f6901f4e3405835c5ada43ec1c553ca7",
+   "group": "312855",
+   "id": "312855",
+   "lengthKm": 14.636,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.022586,
+   "ends": [
+    [
+     -97.789861,
+     32.297773
+    ],
+    [
+     -97.67639,
+     32.806133
+    ]
+   ],
+   "geometrySha256": "7683fc4d9a8a423cb96d808c6490dcdfe51140bbcaafeb2e6494e487c79295b1",
+   "group": "305310",
+   "id": "312947",
+   "lengthKm": 67.359,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.001496,
+   "ends": [
+    [
+     -96.236045,
+     29.029542
+    ],
+    [
+     -96.05056,
+     28.799468
+    ]
+   ],
+   "geometrySha256": "ba69e47e6c7913b81e5a6d50ee6fa7aa33734f5e3c22555eb99df57bdd55cee4",
+   "group": "305061",
+   "id": "312953",
+   "lengthKm": 31.469,
+   "lineType": "ac345",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 345.0
+  },
+  {
+   "density": 0.128704,
+   "ends": [
+    [
+     -117.335471,
+     33.13723
+    ],
+    [
+     -117.219297,
+     32.917046
+    ]
+   ],
+   "geometrySha256": "ecd59f55eaa5c993c06689398d53cd79c27526a3e5e6fe30c8442d8de0904a3d",
+   "group": "312988",
+   "id": "312988",
+   "lengthKm": 29.364,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.034651,
+   "ends": [
+    [
+     -97.978688,
+     30.46057
+    ],
+    [
+     -97.907452,
+     30.390041
+    ]
+   ],
+   "geometrySha256": "30163cf32757a79166b1dacb05d0fee2ed0a30dab247683cd45fd518e37f7231",
+   "group": "313105",
+   "id": "313105",
+   "lengthKm": 10.485,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.088333,
+   "ends": [
+    [
+     -106.728177,
+     35.215349
+    ],
+    [
+     -106.725382,
+     35.124611
+    ]
+   ],
+   "geometrySha256": "bb39eb9b3d32b199c5bed8348fe13d241d7e80f31b8de01b2899ff57705b429b",
+   "group": "313288",
+   "id": "313288",
+   "lengthKm": 10.308,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.013778,
+   "ends": [
+    [
+     -119.084723,
+     35.841746
+    ],
+    [
+     -118.921928,
+     35.361148
+    ]
+   ],
+   "geometrySha256": "6001fbd9f72c7e27f7a1d85c65c70f521614c5b1f57710d63985ee900d81e7f2",
+   "group": "313432",
+   "id": "313436",
+   "lengthKm": 57.572,
+   "lineType": "ac161",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 220.0
+  },
+  {
+   "density": 0.022727,
+   "ends": [
+    [
+     -94.663835,
+     29.443194
+    ],
+    [
+     -94.395571,
+     29.55935
+    ]
+   ],
+   "geometrySha256": "bb46c2a44a364086210e442d3f2e6bb5e98499055288252199f3b85a0529a30f",
+   "group": "313467",
+   "id": "313467",
+   "lengthKm": 30.626,
+   "lineType": "ac138",
+   "region": "Texas",
+   "split": "HOLD",
+   "tercile": 2,
+   "voltage": 138.0
+  },
+  {
+   "density": 0.00186,
+   "ends": [
+    [
+     -118.378108,
+     35.099392
+    ],
+    [
+     -118.292908,
+     35.038631
+    ]
+   ],
+   "geometrySha256": "885c54276e9bcc1917410043cd0e777a4f666dacdd9ddde9ac6beea981d0095e",
+   "group": "313481",
+   "id": "313481",
+   "lengthKm": 14.581,
+   "lineType": "ac161",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 220.0
+  },
+  {
+   "density": 0.004557,
+   "ends": [
+    [
+     -118.298693,
+     34.686411
+    ],
+    [
+     -118.280732,
+     35.035039
+    ]
+   ],
+   "geometrySha256": "a8dbc4d418295e869b65ef81241c66c336a7e228145e83a77211b3d2b0588f1a",
+   "group": "313485",
+   "id": "313485",
+   "lengthKm": 41.523,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 500.0
+  },
+  {
+   "density": 0.001333,
+   "ends": [
+    [
+     -118.176323,
+     35.246981
+    ],
+    [
+     -118.055127,
+     35.236925
+    ]
+   ],
+   "geometrySha256": "a972727e4dd7418e6e142d7871288bf444070961e23b0e6b8bcf97d47f65011e",
+   "group": "313530",
+   "id": "313530",
+   "lengthKm": 13.314,
+   "lineType": "ac230",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 0,
+   "voltage": 230.0
+  },
+  {
+   "density": 0.000274,
+   "ends": [
+    [
+     -117.795841,
+     35.652569
+    ],
+    [
+     -117.398784,
+     35.70004
+    ]
+   ],
+   "geometrySha256": "29938f00c9b3ca73c18b3aa1829b58b890105dfe0bceb5eca3f36d2d9b58f571",
+   "group": "313550",
+   "id": "313550",
+   "lengthKm": 46.073,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.060121,
+   "ends": [
+    [
+     -117.388627,
+     34.504319
+    ],
+    [
+     -116.945818,
+     34.443997
+    ]
+   ],
+   "geometrySha256": "c7fca268f6796dfb4043748bfeda15628e9de1c54435b84ef360aaccd7f79a98",
+   "group": "313635",
+   "id": "313635",
+   "lengthKm": 46.948,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.009565,
+   "ends": [
+    [
+     -116.945818,
+     34.443997
+    ],
+    [
+     -116.861249,
+     34.372503
+    ]
+   ],
+   "geometrySha256": "e61515cbcd51a4a252f5027ec64d41e3b927ed1847416f9055825dc655e1ffd8",
+   "group": "313857",
+   "id": "313857",
+   "lengthKm": 11.39,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.008947,
+   "ends": [
+    [
+     -116.577733,
+     33.939079
+    ],
+    [
+     -116.369723,
+     33.818443
+    ]
+   ],
+   "geometrySha256": "375dd5f17b75d41930ffaa0b947e8100e8207e549e10cdcbe159895977c92cd9",
+   "group": "313872",
+   "id": "313880",
+   "lengthKm": 24.883,
+   "lineType": "ac115",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 1,
+   "voltage": 115.0
+  },
+  {
+   "density": 0.022708,
+   "ends": [
+    [
+     -117.319284,
+     34.041437
+    ],
+    [
+     -116.577733,
+     33.939079
+    ]
+   ],
+   "geometrySha256": "2d6c93855a7b2a39aa7eb058560f0aca63da08562496c20f86e278f7b0c56411",
+   "group": "304311",
+   "id": "313894",
+   "lengthKm": 72.271,
+   "lineType": "ac161",
+   "region": "West",
+   "split": "CAL",
+   "tercile": 2,
+   "voltage": 220.0
+  },
+  {
+   "density": 0.000318,
+   "ends": [
+    [
+     -116.117876,
+     32.627272
+    ],
+    [
+     -115.715533,
+     32.717619
+    ]
+   ],
+   "geometrySha256": "d1c2599a32c3fd14639e487cb8bd4e3fa66ad4310b811e897bfaf211b9ebc1e7",
+   "group": "313955",
+   "id": "313955",
+   "lengthKm": 49.825,
+   "lineType": "ac500",
+   "region": "West",
+   "split": "HOLD",
+   "tercile": 0,
+   "voltage": 500.0
+  }
+ ],
+ "rules": {
+  "crs": "EPSG:5070",
+  "endSubstationM": 1000.0,
+  "groupM": 1000.0,
+  "groupShare": 0.5,
+  "kv": [
+   115,
+   500
+  ],
+  "lengthKm": [
+   10.0,
+   80.0
+  ],
+  "minSinuosity": 1.005,
+  "minVertsPerKm": 0.5,
+  "perStratum": 25,
+  "sampleM": 250.0,
+  "valMethodApplied": true
+ },
+ "seed": "F2L-v1",
+ "set": "holdout-lines",
+ "source": "HIFLD Electric Power Transmission Lines (DHS CISA / ORNL) via SeerAI on source.coop"
+}

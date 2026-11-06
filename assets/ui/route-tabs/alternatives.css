@@ -1,0 +1,36 @@
+/* ── Route panel: Alternatives sub-tab (alternatives.ts; lazy) ───────────────── */
+.ra { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.3fr); gap: 14px 28px; align-items: start; }
+.ra-left, .ra-right { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ra-h { margin: 0; font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.ra-note { margin: 0; font-size: var(--text-xs); color: var(--text-light); }
+.ra-err { color: #b91c1c; }
+.ra-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ra-item { display: flex; align-items: center; gap: 6px; border: 1px solid var(--panel-border); border-radius: 6px; background: var(--panel-bg); }
+.ra-item:has(.ra-row[aria-pressed="true"]) { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.ra-row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; background: none; font: var(--text-sm) var(--font); color: var(--text-mid); text-align: left; cursor: pointer; }
+.ra-row:focus-visible, .ra-btn:focus-visible, .ra-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ra-sw { flex: none; width: 18px; height: 4px; border-radius: 2px; }
+.ra-tribal { color: #b45309; font-weight: 600; }
+.ra-btn { border: 1px solid var(--panel-border); border-radius: 6px; background: var(--panel-bg); padding: 4px 10px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
+.ra-btn:hover { border-color: var(--accent); color: var(--accent-hover); }
+.ra-item .ra-btn { margin-right: 6px; font-size: var(--text-xs); white-space: nowrap; }
+.ra-btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; align-self: flex-start; }
+.ra-btn--primary:hover { color: #fff; filter: brightness(0.95); }
+.ra-spin { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; border: 2px solid var(--panel-border); border-top-color: var(--accent); border-radius: 50%; animation: ra-spin 0.8s linear infinite; }
+@keyframes ra-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ra-spin { animation: none; } }
+.ra-thr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--text-xs); color: var(--text-light); }
+.ra-seg { display: inline-flex; border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; }
+.ra-seg-btn { border: 0; border-right: 1px solid var(--panel-border); background: none; padding: 4px 10px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
+.ra-seg-btn:last-child { border-right: 0; }
+.ra-seg-btn[aria-checked="true"] { background: rgba(59, 130, 246, 0.1); color: var(--accent-hover); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.ra-check { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--text-mid); }
+.ra-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); color: var(--text-mid); }
+.ra-table th, .ra-table td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--panel-border); font-variant-numeric: tabular-nums; }
+.ra-table th:first-child, .ra-table td:first-child { text-align: left; color: var(--text-light); font-weight: 400; }
+.ra-table thead th { font-weight: 700; color: var(--text); }
+.ra-table td.ra-hi { color: #b45309; font-weight: 600; }
+.ra-bar { display: inline-block; width: 48px; height: 6px; margin-left: 6px; border-radius: 3px; overflow: hidden; background: var(--accent); vertical-align: middle; }
+.ra-bar > i { display: block; height: 100%; background: #94a3b8; }
+@container rp-main (max-width: 700px) { .ra { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .ra { grid-template-columns: 1fr; } }

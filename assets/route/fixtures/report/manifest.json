@@ -1,0 +1,146 @@
+{
+ "roads_motorway_trunk.parquet": {
+  "rows": 4,
+  "mib": 0.01,
+  "row_groups": 3,
+  "columns": [
+   "fid",
+   "osm_id",
+   "name",
+   "ref",
+   "bridge",
+   "tunnel",
+   "highway",
+   "waterway"
+  ],
+  "kind": "line",
+  "source": "OpenStreetMap highways (motorway, trunk)",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors"
+ },
+ "roads_primary.parquet": {
+  "rows": 3,
+  "mib": 0.01,
+  "row_groups": 2,
+  "columns": [
+   "fid",
+   "osm_id",
+   "name",
+   "ref",
+   "bridge",
+   "tunnel",
+   "highway",
+   "waterway"
+  ],
+  "kind": "line",
+  "source": "OpenStreetMap highways (primary)",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors"
+ },
+ "rivers.parquet": {
+  "rows": 3,
+  "mib": 0.01,
+  "row_groups": 3,
+  "columns": [
+   "fid",
+   "osm_id",
+   "name",
+   "ref",
+   "bridge",
+   "tunnel",
+   "highway",
+   "waterway"
+  ],
+  "kind": "line",
+  "source": "OpenStreetMap waterway=river",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors"
+ },
+ "railroads.parquet": {
+  "rows": 7,
+  "mib": 0.01,
+  "row_groups": 2,
+  "columns": [
+   "OBJECTID",
+   "RROWNER1",
+   "RROWNER2",
+   "TRKRGHTS1",
+   "DIVISION",
+   "SUBDIV",
+   "BRANCH",
+   "PASSNGR",
+   "STRACNET",
+   "TRACKS",
+   "NET",
+   "STATEAB"
+  ],
+  "kind": "line",
+  "source": "BTS / FRA North American Rail Network (NARN)",
+  "licence": "public domain (US federal work, 17 U.S.C. 105)"
+ },
+ "pipelines_osm.parquet": {
+  "rows": 3,
+  "mib": 0.01,
+  "row_groups": 2,
+  "columns": [
+   "fid",
+   "osm_id",
+   "name",
+   "substance",
+   "operator"
+  ],
+  "kind": "line",
+  "source": "OpenStreetMap pipelines",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors"
+ },
+ "pipelines_hifld_natgas.parquet": {
+  "rows": 2,
+  "mib": 0.01,
+  "row_groups": 2,
+  "columns": [
+   "fid",
+   "pipe_type",
+   "operator",
+   "name",
+   "states"
+  ],
+  "kind": "line",
+  "source": "HIFLD natural gas pipelines (frozen copy)",
+  "licence": "public domain (US federal work, 17 U.S.C. 105)"
+ },
+ "transmission_osm_us.parquet": {
+  "rows": 14,
+  "mib": 0.01,
+  "row_groups": 3,
+  "columns": [
+   "fid",
+   "osm_id",
+   "name",
+   "operator",
+   "nominal_kv",
+   "line_type",
+   "ref",
+   "is_dc",
+   "is_undergrnd"
+  ],
+  "kind": "line",
+  "source": "OpenStreetMap power lines, data/build/transmission_lines.gpkg",
+  "licence": "ODbL 1.0, (c) OpenStreetMap contributors"
+ },
+ "transmission_hifld.parquet": {
+  "rows": 4,
+  "mib": 0.01,
+  "row_groups": 2,
+  "columns": [
+   "ID",
+   "OWNER",
+   "VOLTAGE",
+   "VOLT_CLASS",
+   "TYPE",
+   "STATUS",
+   "SUB_1",
+   "SUB_2",
+   "states"
+  ],
+  "kind": "line",
+  "source": "HIFLD electric power transmission lines (frozen copy)",
+  "licence": "public domain (US federal work, 17 U.S.C. 105)"
+ }
+}

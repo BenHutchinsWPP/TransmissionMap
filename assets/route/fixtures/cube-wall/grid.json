@@ -1,0 +1,328 @@
+{
+ "version": 8,
+ "crs": "EPSG:5070",
+ "origin": [
+  -1000000.0,
+  2000000.0
+ ],
+ "cell": 250.0,
+ "cols": 90,
+ "rows": 60,
+ "super": 64,
+ "block": 32,
+ "pd_bands": {
+  "1": "landcover",
+  "2": "slope",
+  "3": "protect",
+  "4": "agency",
+  "5": "wildfire",
+  "6": "whpclass",
+  "7": "flags",
+  "8": "state",
+  "9": "desig",
+  "10": "flags2",
+  "11": "isoreg",
+  "12": "landval",
+  "13": "bldg",
+  "14": "wetland",
+  "15": "built",
+  "16": "nonres",
+  "17": "bldgunk",
+  "18": "aviation",
+  "19": "nfhl"
+ },
+ "osm_bands": {
+  "1": "flags",
+  "2": "maxkv",
+  "3": "adj"
+ },
+ "slope_bins": {
+  "1": [
+   0,
+   1
+  ],
+  "2": [
+   1,
+   2
+  ],
+  "3": [
+   2,
+   4
+  ],
+  "4": [
+   4,
+   8
+  ],
+  "5": [
+   8,
+   15
+  ],
+  "6": [
+   15,
+   25
+  ],
+  "7": [
+   25,
+   45
+  ],
+  "8": [
+   45,
+   90
+  ]
+ },
+ "protect_bits": {
+  "gap_shift": 0,
+  "gap_mask": 7,
+  "tnc_shift": 4,
+  "tnc_mask": 3,
+  "outside_popwest_bit": 6,
+  "nps_preserve_bit": 7
+ },
+ "agency": {
+  "1": "private/none",
+  "2": "BLM",
+  "3": "USFS",
+  "4": "NPS",
+  "5": "FWS",
+  "6": "DOD",
+  "7": "DOE",
+  "8": "BOR",
+  "9": "other federal",
+  "10": "state",
+  "11": "local",
+  "12": "tribal",
+  "13": "NGO/other"
+ },
+ "whp_classes": {
+  "1": "very low",
+  "2": "low",
+  "3": "moderate",
+  "4": "high",
+  "5": "very high",
+  "6": "non-burnable",
+  "7": "water"
+ },
+ "pd_flags": {
+  "0": "tribal",
+  "1": "military (PAD-US DOD + DoD MIRTA act/semi/care)",
+  "2": "public airfield <= 5 km",
+  "3": "critical habitat",
+  "4": "Section 368 corridor",
+  "5": "pop > 100/mi2",
+  "6": "state or local park, GAP 3-4",
+  "7": "tall structure or dam"
+ },
+ "osm_flags": {
+  "0": "lake",
+  "1": "river",
+  "2": "line >= 230 kV",
+  "3": "line 100-229 kV",
+  "4": "major road",
+  "5": "rail",
+  "6": "pipeline",
+  "7": "military"
+ },
+ "osm_maxkv": {
+  "div": 5,
+  "cap": 255
+ },
+ "desig_bits": {
+  "0": "WSA",
+  "1": "NM/NCA",
+  "2": "IRA",
+  "3": "ACEC",
+  "4": "WSR corridor",
+  "5": "NHT/NST",
+  "6": "other special (RNA/SDA/NSBV/HCA/NRA)",
+  "7": "Wilderness (WA, State Wilderness) or National Park"
+ },
+ "flags2_bits": {
+  "0": "sage-grouse PHMA/IHMA",
+  "1": "GHMA",
+  "2": "100-yr floodplain",
+  "3": "occupied facility",
+  "4": "NRHP listed property",
+  "5": "Superfund NPL",
+  "6": "CBRS unit",
+  "7": "FUDS munitions response site"
+ },
+ "adj": {
+  "computed_bit": 16,
+  "class_mask": 3,
+  "reserved_mask": 12,
+  "class_100_shift": 5,
+  "class_100_mask": 96,
+  "classes": {
+   "0": "beyond 3 cells",
+   "1": "on line",
+   "2": "within 1 cell",
+   "3": "within 3 cells"
+  }
+ },
+ "isoreg": {
+  "codes": {
+   "1": "TEPPC",
+   "2": "CAISO",
+   "3": "MISO",
+   "4": "SPP",
+   "5": "ERCOT",
+   "6": "PJM",
+   "7": "NYISO",
+   "8": "ISONE",
+   "9": "Southeast"
+  },
+  "rto": [
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "ba_to_iso": {
+   "CISO": "CAISO",
+   "MISO": "MISO",
+   "SWPP": "SPP",
+   "ERCO": "ERCOT",
+   "PJM": "PJM",
+   "EKPC": "PJM",
+   "OVEC": "PJM",
+   "NYIS": "NYISO",
+   "ISNE": "ISONE",
+   "AESO": "TEPPC",
+   "AVA": "TEPPC",
+   "AVRN": "TEPPC",
+   "AZPS": "TEPPC",
+   "BANC": "TEPPC",
+   "BCHA": "TEPPC",
+   "BCTC": "TEPPC",
+   "BPAT": "TEPPC",
+   "CFE": "TEPPC",
+   "CHPD": "TEPPC",
+   "DEAA": "TEPPC",
+   "DOPD": "TEPPC",
+   "ELE": "TEPPC",
+   "GCPD": "TEPPC",
+   "GRID": "TEPPC",
+   "GRIF": "TEPPC",
+   "GRMA": "TEPPC",
+   "GWA": "TEPPC",
+   "HGMA": "TEPPC",
+   "IID": "TEPPC",
+   "IPCO": "TEPPC",
+   "LDWP": "TEPPC",
+   "MPCO": "TEPPC",
+   "NEVP": "TEPPC",
+   "PACE": "TEPPC",
+   "PACW": "TEPPC",
+   "PGE": "TEPPC",
+   "PNM": "TEPPC",
+   "POWX": "TEPPC",
+   "PSCO": "TEPPC",
+   "PSEI": "TEPPC",
+   "SCL": "TEPPC",
+   "SRP": "TEPPC",
+   "TEPC": "TEPPC",
+   "TIDC": "TEPPC",
+   "TPWR": "TEPPC",
+   "WACM": "TEPPC",
+   "WALC": "TEPPC",
+   "WAUW": "TEPPC",
+   "WWA": "TEPPC",
+   "AEC": "Southeast",
+   "AECI": "Southeast",
+   "AMPL": "Southeast",
+   "CEA": "Southeast",
+   "CPLE": "Southeast",
+   "CPLW": "Southeast",
+   "DUK": "Southeast",
+   "EEI": "Southeast",
+   "FMPP": "Southeast",
+   "FPC": "Southeast",
+   "FPL": "Southeast",
+   "GLHB": "Southeast",
+   "GVL": "Southeast",
+   "HEC": "Southeast",
+   "HQT": "Southeast",
+   "HST": "Southeast",
+   "IESO": "Southeast",
+   "JEA": "Southeast",
+   "LGEE": "Southeast",
+   "MHEB": "Southeast",
+   "NBSO": "Southeast",
+   "NMISA": "Southeast",
+   "NSB": "Southeast",
+   "NSPI": "Southeast",
+   "RC": "Southeast",
+   "SC": "Southeast",
+   "SCEG": "Southeast",
+   "SEC": "Southeast",
+   "SEPA": "Southeast",
+   "SOCO": "Southeast",
+   "SPA": "Southeast",
+   "SPC": "Southeast",
+   "TAL": "Southeast",
+   "TEC": "Southeast",
+   "TVA": "Southeast",
+   "YAD": "Southeast"
+  }
+ },
+ "landval": {
+  "base": 100.0,
+  "steps": 16,
+  "max_code": 255
+ },
+ "bldg": {
+  "offset": 1,
+  "cap": 254,
+  "occ_cls": "Residential"
+ },
+ "wetland": {
+  "offset": 1,
+  "scale": 100,
+  "types": [
+   "Freshwater Emergent Wetland",
+   "Freshwater Forested/Shrub Wetland",
+   "Estuarine and Marine Wetland"
+  ]
+ },
+ "building_footprints": {
+  "offset": 1,
+  "scale": 100,
+  "rounding": "ceil",
+  "unobserved": 0,
+  "nonresidential_classes": [
+   "Commercial",
+   "Industrial",
+   "Agriculture",
+   "Assembly",
+   "Education",
+   "Government",
+   "Utility and Misc"
+  ]
+ },
+ "aviation": {
+  "1": "evaluated: outside the notice extent, no surface below 61 m AGL",
+  "2": "77.9(b) notice extent: lowest surface >= 61 m AGL, or none",
+  "3": "lowest surface AGL [46, 61) m",
+  "4": "lowest surface AGL [30, 46) m",
+  "5": "lowest surface AGL < 30 m",
+  "6": "primary surface (primary / clear zone)"
+ },
+ "nfhl": {
+  "1": "observed none: effective panels cover >= 50 % of the cell, SFHA < 50 %",
+  "2": "SFHA: panels >= 50 % and SFHA (SFHA_TF = 'T') >= 50 % of the cell's area",
+  "3": "no effective panel: panels < 50 % of the cell (whatever SFHA says)"
+ },
+ "super_tiles_present": [
+  [
+   0,
+   0
+  ],
+  [
+   1,
+   0
+  ]
+ ]
+}

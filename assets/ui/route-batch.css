@@ -1,0 +1,20 @@
+/* ── Route panel: Batch view (route-batch.ts; lazy) ───────────────────────────
+   The batch view in `.rp-main`: file pick, options, progress, the per-row table, Download ZIP. */
+.rb { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 90ch; }
+.rb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rb-title { margin: 0; font: 700 var(--text-sm) var(--font); color: var(--text); flex: 1; }
+.rb-intro, .rb-note, .rb-msg { margin: 0; color: var(--text-mid); line-height: 1.45; font-size: var(--text-sm); }
+.rb-note { font-size: var(--text-xs); color: var(--text-light); }
+.rb-msg[data-tone="bad"] { color: #b91c1c; }
+.rb-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: var(--text-sm); }
+.rb-opts label { display: inline-flex; align-items: center; gap: 6px; }
+.rb-skips { margin: 0; padding-left: 18px; max-height: 120px; overflow: auto; font-size: var(--text-xs); color: var(--text-mid); }
+.rb-go { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rb-go:hover { background: var(--accent-hover); }
+.rb button:disabled { opacity: 0.5; cursor: default; }
+.rb-bar { width: 100%; max-width: 420px; }
+.rb-table { border-collapse: collapse; font-size: var(--text-xs); width: 100%; }
+.rb-table th, .rb-table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--panel-border); vertical-align: top; }
+.rb-table th { color: var(--text-light); font-weight: 700; }
+.rb-st--failed, .rb-st--cancelled, .rb-st--skipped { color: #b91c1c; }
+.rb-table-wrap { max-height: 320px; overflow: auto; }

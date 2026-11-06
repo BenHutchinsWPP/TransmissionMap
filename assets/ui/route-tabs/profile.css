@@ -1,0 +1,25 @@
+/* ── Route panel: Profile sub-tab (profile.ts; lazy) ───────────────────────────
+   Header, one SVG (elevation + aligned tracks), a hover readout box. */
+.rpf { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rpf-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: var(--text-xs); color: var(--text-light); }
+.rpf-title { font-weight: 700; color: var(--text-mid); }
+.rpf-sync { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.rpf-hint { margin-left: auto; }
+.rpf-reset { border: 1px solid var(--panel-border); background: none; border-radius: 6px; padding: 2px 8px; font: var(--text-xs) var(--font); color: var(--text-mid); cursor: pointer; }
+.rpf-reset[hidden] { display: none; }
+.rpf-wrap { position: relative; min-width: 0; }
+.rpf-svg { display: block; width: 100%; height: auto; user-select: none; cursor: crosshair; font: 10px var(--font); }
+.rpf-svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rpf-axis, .rpf-grid { stroke: var(--panel-border); stroke-width: 1; }
+.rpf-tick { fill: var(--text-light); }
+.rpf-track-lab { fill: var(--text-mid); font-size: 10px; }
+.rpf-elev-area { fill: rgba(59, 130, 246, 0.18); stroke: none; }
+.rpf-elev-line { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.rpf-seg { stroke: var(--panel-bg, #fff); stroke-width: 0.5; }
+.rpf-seg-text { fill: #1f2937; font-size: 9px; pointer-events: none; }
+.rpf-cross { stroke: var(--text-mid); stroke-width: 1; pointer-events: none; }
+.rpf-sel { fill: rgba(59, 130, 246, 0.15); pointer-events: none; }
+.rpf-note { fill: var(--text-light); font-size: 11px; }
+.rpf-read { position: absolute; top: 2px; max-width: 460px; padding: 4px 8px; border: 1px solid var(--panel-border); border-radius: 6px; background: var(--panel-bg, #fff); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); font-size: var(--text-xs); color: var(--text-mid); pointer-events: none; z-index: 1; }
+.rpf-read[hidden] { display: none; }
+.rpf-read b { color: var(--text); }

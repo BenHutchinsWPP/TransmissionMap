@@ -1,7 +1,7 @@
 // ─── Usage notices: the modal ────────────────────────────────────────────────
 // Role: `showNotice(id)` builds the route or chat usage notice as a modal
 //       <dialog> (existing disclaimer-dialog styles) from DOM nodes, text only
-//       through t(); the only anchors are the chat notice's two OpenRouter links,
+//       through t(); the only anchors are the chat notice's two OpenRouter links and the route notice's methodology link,
 //       built as nodes. Resolves true on "I understand and accept" (and records
 //       it through notice-gate.ts), false on Cancel or Esc. Not live-translated:
 //       the dialog is open briefly.
@@ -13,13 +13,17 @@ import { el } from './services-dom.js';
 import { t } from '../../src/i18n/index.js';
 
 const OR = 'https://openrouter.ai';
+const ROUTING_DOC = 'https://github.com/BenHutchinsWPP/TransmissionMap/blob/main/docs/routing.md';
 const link = (href: string, key: string) =>
   el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, t(key));
 const para = (...kids: (string | Node)[]) => el('p', { class: 'disclaimer-body' }, ...kids);
 const first = (p: HTMLElement, id: string) => { p.id = id; return p; };
 
 function body(id: NoticeId): Node[] {
-  if (id === 'route') return ['p1', 'p2', 'p3'].map((k, i) => { const p = para(t(`route.notice.${k}`)); return i ? p : first(p, 'route-notice-body'); });
+  if (id === 'route') return [
+    ...['p1', 'p2', 'p3', 'p4'].map((k, i) => { const p = para(t(`route.notice.${k}`)); return i ? p : first(p, 'route-notice-body'); }),
+    para(link(ROUTING_DOC, 'route.notice.method')),
+  ];
   return [
     first(para(t('chat.notice.p1a'), link(`${OR}/privacy`, 'chat.notice.privacy'), t('chat.notice.p1b'),
       link(`${OR}/terms`, 'chat.notice.terms'), t('chat.notice.p1c')), 'chat-notice-body'),

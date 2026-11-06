@@ -1,0 +1,48 @@
+/* ── Method grid (method-grid.ts; Method tab) ──────────────────────────────────
+   Toolbar, a Tabulator grid (.rm-grid) with three frozen columns, the contingency input under it.
+   Edited cells yellow with "was …"; excluded routing weights red; group rows tinted; exemption rows
+   indented and dimmed. */
+.rm-mg { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rm-mg-bar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: var(--text-sm); }
+.rm-mg-q { flex: 1 1 180px; min-width: 0; padding: 5px 8px; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); font: inherit; }
+.rm-mg-chip, .rm-mg-btn { font: 600 var(--text-xs) var(--font); padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--panel-border); background: #f8fafc; color: var(--text); cursor: pointer; }
+.rm-mg-chip:hover, .rm-mg-btn:hover { border-color: var(--accent); }
+.rm-mg-chip[aria-pressed="true"] { background: rgba(59, 130, 246, 0.16); border-color: var(--accent); color: var(--accent-hover); }
+.rm-mg button:focus-visible, .rm-mg input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rm-mg-status { font-size: var(--text-xs); color: var(--text-light); }
+.rm-mg-none { margin: 0; font-size: var(--text-sm); color: var(--text-light); }
+.rm-mg-alert { margin: 0; font-size: var(--text-sm); color: #b91c1c; font-weight: 600; }
+.rm-mg-alert[hidden], .rm-mg-none[hidden] { display: none; }
+.rm-mg-cont { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: var(--text-sm); }
+.rm-mg-cont-lab { display: inline-flex; gap: 6px; align-items: center; }
+.rm-mg-in { width: 7ch; padding: 3px 6px; text-align: right; font: var(--text-sm) var(--font); font-variant-numeric: tabular-nums; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); }
+
+.rm-grid { border: 1px solid var(--panel-border); border-radius: var(--radius-md); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rm-grid .tabulator-header { background: #f8fafc; }
+.rm-grid .tabulator-col { background: #f8fafc; }
+.rm-grid .tabulator-col .tabulator-col-title { overflow: visible; }
+.rm-grid .tabulator-cell { padding: 3px 8px; line-height: 1.3; }
+.rm-grid .rm-head { all: unset; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.rm-grid .rm-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rm-grid .rm-ar { color: var(--text-light); font-weight: 400; }
+.rm-grid .rm-crossed .rm-head { color: var(--accent-hover); text-decoration: underline dotted; }
+.rm-grid .rm-cell { display: inline-flex; flex-direction: column; align-items: flex-end; }
+.rm-grid .tabulator-cell[tabulator-field] .rm-cell { align-items: inherit; }
+.rm-grid .rm-was { display: block; font-size: 10px; font-weight: 400; color: #b45309; }
+.rm-grid .rm-edit { background: #fef3c7; color: #92400e; font-weight: 700; }
+.rm-grid .rm-excl { background: #fef2f2; color: #b91c1c; font-weight: 700; }
+.rm-grid .rm-bar { color: #b91c1c; font-weight: 700; }
+.rm-grid .rm-scale { margin-right: 4px; font-size: 10px; color: var(--text-light); cursor: help; }
+.rm-grid .rm-applies { color: var(--text-light); }
+.rm-grid .rm-dim { color: var(--text-light); }
+.rm-grid .rm-map { all: unset; cursor: pointer; font-size: 15px; line-height: 1; color: var(--text-light); padding: 0 4px; }
+.rm-grid .rm-map[aria-pressed="true"] { font-weight: 700; }
+.rm-grid .rm-map:disabled { opacity: 0.4; cursor: default; }
+.rm-grid .rm-map:focus-visible { outline: 2px solid var(--accent); }
+.rm-grid .rm-group .tabulator-cell { background: #eef2ff; font-weight: 600; color: var(--accent-hover); overflow: visible; }
+.rm-grid .rm-group .rm-grp { white-space: nowrap; }
+.rm-grid .rm-except .tabulator-cell { color: var(--text-light); font-size: 11.5px; }
+.rm-grid .rm-except .rm-ex { padding-left: 18px; }
+.rm-grid .rm-except.rm-off .rm-ex { text-decoration: line-through; }
+.rm-grid .tabulator-cell .tabulator-editing, .rm-grid .tabulator-cell.tabulator-editing { padding: 0; }
+.rm-grid .tabulator-range-selected, .rm-grid .tabulator-cell.tabulator-range-selected { background: rgba(59, 130, 246, 0.16); }

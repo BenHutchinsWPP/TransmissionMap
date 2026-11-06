@@ -1,0 +1,10582 @@
+{
+"sets": {
+"pnas-corridors": {
+"source": "Wu et al. 2022/2023 PNAS, Zenodo 10.5281/zenodo.7460026 (PowerLines_transmission.zip)",
+"licence": "CC BY 4.0"
+},
+"pnas-spurs": {
+"source": "Wu et al. 2023 PNAS 120(4) e2204098120, Zenodo 10.5281/zenodo.7460026 (PowerLines_spurs.zip), sample of 200 by length decile x state",
+"licence": "CC BY 4.0"
+},
+"default-routes": {
+"source": "the 8 default routes of the national-buildings check (Reno, Wyoming, DC, Sacramento, Austin, Vermont)",
+"licence": "project-authored"
+},
+"holdout-lines": {
+"source": "HIFLD Electric Power Transmission Lines (DHS CISA / ORNL) via SeerAI on source.coop",
+"licence": "Public domain (US federal work); SeerAI redistribution CC BY 4.0, credit SeerAI and source.coop",
+"geometrySha256": "7c84c1570749e5dbd62d92667fa11f2257c7c3285504b2983f7585e484c6f829",
+"idListSha256": "39655d4928038d002b320439ce48a16f7c7de2154e9681b139c0869ea1315ff2",
+"note": "group = line group from scripts/route_holdout_lines.py; split from holdout-lines.json"
+}
+},
+"routes": [
+{
+"id": "corridor:oregon->californiaS",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-122.40549,
+45.55905
+]
+},
+{
+"id": "corridor:wyoming->californiaS",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-107.11204,
+41.79048
+]
+},
+{
+"id": "corridor:californiaS->utah",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-111.90366,
+39.82524
+]
+},
+{
+"id": "corridor:californiaS->californiaN",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-121.56521,
+37.71206
+]
+},
+{
+"id": "corridor:new mexico->californiaS",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-108.48437,
+36.68778
+]
+},
+{
+"id": "corridor:californiaS->nevada",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-115.00723,
+35.79752
+]
+},
+{
+"id": "corridor:californiaS->arizona",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-117.36893,
+34.36637
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-112.85234,
+33.34645
+]
+},
+{
+"id": "corridor:montana->wyoming",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-107.1141,
+41.79058
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-108.4813,
+45.77466
+]
+},
+{
+"id": "corridor:idaho->wyoming",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-107.1141,
+41.79058
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-114.42724,
+42.83515
+]
+},
+{
+"id": "corridor:wyoming->utah",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-107.1141,
+41.79058
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-111.90518,
+39.82306
+]
+},
+{
+"id": "corridor:wyoming->colorado",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-107.1141,
+41.79058
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-104.87279,
+40.24243
+]
+},
+{
+"id": "corridor:washington->idaho",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-114.42724,
+42.83515
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-120.07817,
+47.29452
+]
+},
+{
+"id": "corridor:oregon->idaho",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-114.42724,
+42.83515
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-122.40458,
+45.55952
+]
+},
+{
+"id": "corridor:idaho->montana",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-114.42724,
+42.83515
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-108.4813,
+45.77466
+]
+},
+{
+"id": "corridor:idaho->utah",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-114.42724,
+42.83515
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-111.90518,
+39.82306
+]
+},
+{
+"id": "corridor:nevada->idaho",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-114.42724,
+42.83515
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-115.00913,
+35.79749
+]
+},
+{
+"id": "corridor:utah->colorado",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-111.90518,
+39.82306
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-104.87279,
+40.24243
+]
+},
+{
+"id": "corridor:utah->new mexico",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-111.90518,
+39.82306
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-108.48629,
+36.68786
+]
+},
+{
+"id": "corridor:nevada->utah",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-111.90518,
+39.82306
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-115.00913,
+35.79749
+]
+},
+{
+"id": "corridor:washington->oregon",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-122.40458,
+45.55952
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-120.07817,
+47.29452
+]
+},
+{
+"id": "corridor:new mexico->colorado",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-108.48629,
+36.68786
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-104.87279,
+40.24243
+]
+},
+{
+"id": "corridor:oregon->californiaN",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-122.40458,
+45.55952
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-121.56439,
+37.71252
+]
+},
+{
+"id": "corridor:arizona->new mexico",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-108.48629,
+36.68786
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-112.85152,
+33.34686
+]
+},
+{
+"id": "corridor:washington->montana",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-120.07817,
+47.29452
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-108.4813,
+45.77466
+]
+},
+{
+"id": "corridor:californiaN->nevada",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-115.00913,
+35.79749
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-121.56439,
+37.71252
+]
+},
+{
+"id": "corridor:nevada->arizona",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-115.00913,
+35.79749
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-112.85152,
+33.34686
+]
+},
+{
+"id": "corridor:utah->arizona",
+"set": "pnas-corridors",
+"split": "none",
+"group": null,
+"to": [
+-111.90518,
+39.82306
+],
+"presets": [
+"tm-default",
+"pnas-wu2023"
+],
+"lineType": "ac500",
+"from": [
+-112.85152,
+33.34686
+]
+},
+{
+"id": "spur:wind-L1-35277",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L1-35277",
+"to": [
+-114.20475,
+35.31993
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.21373,
+35.35721
+]
+},
+{
+"id": "spur:solar-L2S-51121",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-51121",
+"to": [
+-120.58182,
+36.6544
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.61986,
+36.6372
+]
+},
+{
+"id": "spur:solar-L1S-48709",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-48709",
+"to": [
+-104.54489,
+39.91562
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.54761,
+39.86391
+]
+},
+{
+"id": "spur:solar-L1N-45116",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-45116",
+"to": [
+-116.93937,
+46.72283
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.93988,
+46.6418
+]
+},
+{
+"id": "spur:solar-L1N-58092",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-58092",
+"to": [
+-111.86221,
+48.46718
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.92332,
+48.48091
+]
+},
+{
+"id": "spur:solar-L2S-829",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-829",
+"to": [
+-114.8308,
+36.48199
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.87777,
+36.49727
+]
+},
+{
+"id": "spur:solar-L2S-21732",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-15569",
+"to": [
+-103.85722,
+33.99151
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.81215,
+34.00579
+]
+},
+{
+"id": "spur:solar-L2N-40843",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-40843",
+"to": [
+-122.94706,
+44.77074
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.97047,
+44.76355
+]
+},
+{
+"id": "spur:solar-L3S-15587",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-30804",
+"to": [
+-112.73125,
+39.15036
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.67569,
+39.23039
+]
+},
+{
+"id": "spur:solar-L3N-8502",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3N-8502",
+"to": [
+-119.63553,
+45.93361
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.54208,
+45.99664
+]
+},
+{
+"id": "spur:wind-L1-18186",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-18186",
+"to": [
+-105.36454,
+43.56211
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.36702,
+43.55743
+]
+},
+{
+"id": "spur:solar-L2S-62895",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-62895",
+"to": [
+-113.56335,
+37.03056
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.58114,
+36.99617
+]
+},
+{
+"id": "spur:solar-L1S-41162",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-41162",
+"to": [
+-119.98391,
+36.92295
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.11665,
+36.93509
+]
+},
+{
+"id": "spur:wind-L2-14979",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L2-14979",
+"to": [
+-108.10359,
+39.57879
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-108.22734,
+39.5577
+]
+},
+{
+"id": "spur:solar-L3N-5758",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-39244",
+"to": [
+-112.92923,
+42.75122
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.90626,
+42.70877
+]
+},
+{
+"id": "spur:wind-L1-2399",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-2399",
+"to": [
+-112.20165,
+48.81534
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.17756,
+48.92201
+]
+},
+{
+"id": "spur:wind-L1-28396",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L1-28396",
+"to": [
+-115.97382,
+39.54465
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.02939,
+39.52879
+]
+},
+{
+"id": "spur:solar-L1S-11122",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-11122",
+"to": [
+-106.38381,
+35.35462
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.30922,
+35.40163
+]
+},
+{
+"id": "spur:solar-L1N-50231",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-50231",
+"to": [
+-120.73484,
+45.67511
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.75055,
+45.61162
+]
+},
+{
+"id": "spur:solar-L1S-41983",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-41983",
+"to": [
+-111.76992,
+41.13017
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.77485,
+41.12503
+]
+},
+{
+"id": "spur:solar-L1S-17017",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-17017",
+"to": [
+-111.99523,
+32.95944
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.07615,
+32.86159
+]
+},
+{
+"id": "spur:solar-L1S-64239",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-64239",
+"to": [
+-119.90471,
+36.24085
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.08393,
+36.31936
+]
+},
+{
+"id": "spur:wind-L2-16541",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L2-16541",
+"to": [
+-108.46785,
+37.43018
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-108.44011,
+37.53879
+]
+},
+{
+"id": "spur:wind-L2-7392",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-45116",
+"to": [
+-116.93937,
+46.72283
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.8547,
+46.85391
+]
+},
+{
+"id": "spur:solar-L2N-20642",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-20642",
+"to": [
+-115.30639,
+48.39453
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.51351,
+48.39089
+]
+},
+{
+"id": "spur:solar-L1S-1783",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-1751",
+"to": [
+-115.35055,
+35.64126
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.2462,
+35.72231
+]
+},
+{
+"id": "spur:wind-L2-19175",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-19725",
+"to": [
+-104.45268,
+33.45294
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.47992,
+33.57902
+]
+},
+{
+"id": "spur:solar-L1N-48320",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-48320",
+"to": [
+-118.37885,
+46.06929
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.38951,
+45.91694
+]
+},
+{
+"id": "spur:solar-L2S-64411",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-79463",
+"to": [
+-112.58097,
+39.50138
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.42774,
+39.46974
+]
+},
+{
+"id": "spur:wind-L1-9262",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-9262",
+"to": [
+-122.64361,
+45.93999
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.61822,
+46.04119
+]
+},
+{
+"id": "spur:solar-L2N-42956",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-42956",
+"to": [
+-105.37339,
+44.28677
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.22212,
+44.19597
+]
+},
+{
+"id": "spur:solar-L3S-5697",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L3S-5697",
+"to": [
+-112.75845,
+32.93978
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.81531,
+33.05193
+]
+},
+{
+"id": "spur:solar-L2S-1988",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-1988",
+"to": [
+-119.61389,
+35.60196
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.51639,
+35.5112
+]
+},
+{
+"id": "spur:solar-L2S-45330",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-45330",
+"to": [
+-104.224,
+38.25558
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.10085,
+38.2414
+]
+},
+{
+"id": "spur:solar-L1N-18279",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-18279",
+"to": [
+-111.91403,
+43.68399
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.78591,
+43.58138
+]
+},
+{
+"id": "spur:solar-L1N-72498",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-66671",
+"to": [
+-106.48725,
+46.25929
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.40853,
+46.11118
+]
+},
+{
+"id": "spur:wind-L1-34372",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-1751",
+"to": [
+-115.37434,
+35.67836
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.45517,
+35.79265
+]
+},
+{
+"id": "spur:solar-L1S-11440",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-11440",
+"to": [
+-103.17217,
+34.30294
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.18788,
+34.47239
+]
+},
+{
+"id": "spur:solar-L1N-49900",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-49900",
+"to": [
+-122.78489,
+45.10819
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.52278,
+45.08204
+]
+},
+{
+"id": "spur:solar-L2S-38751",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-38751",
+"to": [
+-111.1088,
+41.5342
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.18842,
+41.43649
+]
+},
+{
+"id": "spur:solar-L1S-64537",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-64537",
+"to": [
+-113.36234,
+35.1916
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.07655,
+35.17253
+]
+},
+{
+"id": "spur:solar-L1S-39271",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-39271",
+"to": [
+-122.76011,
+38.49844
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.84815,
+38.31619
+]
+},
+{
+"id": "spur:wind-L2-14330",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L2-14330",
+"to": [
+-103.68031,
+39.44779
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.67704,
+39.63823
+]
+},
+{
+"id": "spur:solar-L2N-10911",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-10798",
+"to": [
+-111.69801,
+43.85547
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.50274,
+43.76286
+]
+},
+{
+"id": "spur:wind-L1-11115",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-11115",
+"to": [
+-110.66619,
+45.95506
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.79285,
+46.14188
+]
+},
+{
+"id": "spur:solar-L1S-1294",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-1294",
+"to": [
+-115.38228,
+36.38147
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.63324,
+36.57031
+]
+},
+{
+"id": "spur:wind-L2-19641",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L2-19641",
+"to": [
+-103.3096,
+32.73177
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.3149,
+32.52685
+]
+},
+{
+"id": "spur:solar-L1N-6481",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-6404",
+"to": [
+-121.78333,
+42.19868
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.02985,
+42.20616
+]
+},
+{
+"id": "spur:solar-L2S-64179",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-79463",
+"to": [
+-112.58097,
+39.50138
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.63718,
+39.41002
+]
+},
+{
+"id": "spur:solar-L3N-243",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L3N-243",
+"to": [
+-119.65163,
+47.98658
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.78257,
+47.83282
+]
+},
+{
+"id": "spur:wind-L2-12669",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L2-12669",
+"to": [
+-104.64885,
+41.14563
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.41805,
+41.1566
+]
+},
+{
+"id": "spur:solar-L1S-65502",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-65502",
+"to": [
+-111.30234,
+32.55354
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.06911,
+32.49647
+]
+},
+{
+"id": "spur:solar-L1S-29692",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29692",
+"to": [
+-122.36214,
+41.97685
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.58907,
+41.94303
+]
+},
+{
+"id": "spur:solar-L2S-40965",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-40965",
+"to": [
+-104.02156,
+39.68598
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.00371,
+39.49907
+]
+},
+{
+"id": "spur:wind-L1-16186",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-16186",
+"to": [
+-115.73498,
+43.17867
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.9304,
+43.15556
+]
+},
+{
+"id": "spur:wind-L1-11981",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-58749",
+"to": [
+-111.51286,
+45.93551
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.46813,
+45.70338
+]
+},
+{
+"id": "spur:solar-L2S-61784",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-61784",
+"to": [
+-117.1046,
+38.70633
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.11732,
+38.87105
+]
+},
+{
+"id": "spur:solar-L2S-52661",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-52661",
+"to": [
+-108.04332,
+35.79496
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-107.92419,
+36.00282
+]
+},
+{
+"id": "spur:wind-L1-15642",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-7093",
+"to": [
+-121.45399,
+43.66008
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-121.28148,
+43.54543
+]
+},
+{
+"id": "spur:solar-L2S-63494",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-79463",
+"to": [
+-112.58097,
+39.50138
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.81668,
+39.55341
+]
+},
+{
+"id": "spur:solar-L1S-62774",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-62774",
+"to": [
+-113.71722,
+35.25179
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.77427,
+35.5068
+]
+},
+{
+"id": "spur:solar-L1S-3985",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-3985",
+"to": [
+-117.9205,
+34.50798
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.75981,
+34.72451
+]
+},
+{
+"id": "spur:solar-L1S-55385",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-55385",
+"to": [
+-102.52451,
+38.20791
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-102.82844,
+38.21372
+]
+},
+{
+"id": "spur:solar-L1N-34129",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-34129",
+"to": [
+-114.02881,
+44.2943
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.86138,
+44.00213
+]
+},
+{
+"id": "spur:solar-L2N-40751",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-40751",
+"to": [
+-107.50602,
+46.12454
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-107.21489,
+46.21021
+]
+},
+{
+"id": "spur:solar-L2S-35749",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-35749",
+"to": [
+-117.33587,
+38.32278
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.35749,
+38.00551
+]
+},
+{
+"id": "spur:solar-L3S-12065",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-19725",
+"to": [
+-104.45268,
+33.45294
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.76538,
+33.28329
+]
+},
+{
+"id": "spur:solar-L1N-6404",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-6404",
+"to": [
+-121.78333,
+42.19868
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.21933,
+42.26221
+]
+},
+{
+"id": "spur:wind-L1-27853",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-27853",
+"to": [
+-110.86122,
+39.72841
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.48886,
+39.80168
+]
+},
+{
+"id": "spur:solar-L2N-24342",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-24342",
+"to": [
+-117.42792,
+47.16976
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.78136,
+46.99042
+]
+},
+{
+"id": "spur:wind-L1-21636",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L1-21636",
+"to": [
+-106.2295,
+42.34972
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.10582,
+42.61808
+]
+},
+{
+"id": "spur:solar-L1S-62029",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-62029",
+"to": [
+-114.21067,
+34.41755
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.82617,
+34.51639
+]
+},
+{
+"id": "spur:solar-L2S-3137",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-3137",
+"to": [
+-119.16645,
+34.1308
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.1298,
+34.24196
+]
+},
+{
+"id": "spur:wind-L3-6442",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-55000",
+"to": [
+-103.70143,
+39.20478
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.94687,
+39.01025
+]
+},
+{
+"id": "spur:solar-L2N-5191",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.60833,
+42.77493
+]
+},
+{
+"id": "spur:solar-L1N-59172",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-59172",
+"to": [
+-108.4813,
+45.77466
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-108.64597,
+45.72071
+]
+},
+{
+"id": "spur:solar-L1S-1751",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-1751",
+"to": [
+-115.37434,
+35.67836
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.61723,
+35.84545
+]
+},
+{
+"id": "spur:solar-L1S-65835",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-65835",
+"to": [
+-108.2735,
+36.48485
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-107.88644,
+36.47905
+]
+},
+{
+"id": "spur:solar-L2N-1309",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-1309",
+"to": [
+-122.67497,
+44.76592
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.75934,
+44.49626
+]
+},
+{
+"id": "spur:solar-L3S-16759",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L3S-16759",
+"to": [
+-113.15462,
+37.69312
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.33134,
+37.87426
+]
+},
+{
+"id": "spur:solar-L2S-49881",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-62774",
+"to": [
+-113.71722,
+35.25179
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.94919,
+35.67106
+]
+},
+{
+"id": "spur:solar-L3S-1769",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3S-1769",
+"to": [
+-120.66968,
+38.33249
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.75368,
+38.67993
+]
+},
+{
+"id": "spur:solar-L2S-41929",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-41929",
+"to": [
+-102.73909,
+40.26269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.10113,
+40.01682
+]
+},
+{
+"id": "spur:solar-L2N-1775",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-1775",
+"to": [
+-116.6025,
+44.15112
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.93019,
+44.39785
+]
+},
+{
+"id": "spur:solar-L1N-61657",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-61657",
+"to": [
+-109.25869,
+45.85269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.49693,
+45.57215
+]
+},
+{
+"id": "spur:solar-L1S-32517",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-32517",
+"to": [
+-114.80665,
+39.33661
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.1304,
+39.10684
+]
+},
+{
+"id": "spur:solar-L1S-24344",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-24344",
+"to": [
+-106.06005,
+34.61428
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.33793,
+34.39877
+]
+},
+{
+"id": "spur:solar-L1N-327",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-10437",
+"to": [
+-121.23272,
+44.05663
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-121.57887,
+44.02824
+]
+},
+{
+"id": "spur:solar-L3S-18060",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-37015",
+"to": [
+-111.9045,
+40.9186
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.08358,
+40.56074
+]
+},
+{
+"id": "spur:wind-L1-5542",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-5542",
+"to": [
+-120.70373,
+47.13704
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.91457,
+46.88535
+]
+},
+{
+"id": "spur:solar-L2N-43477",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-43477",
+"to": [
+-106.86105,
+44.97294
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.42337,
+44.93093
+]
+},
+{
+"id": "spur:solar-L2S-56088",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-56088",
+"to": [
+-110.92945,
+31.97237
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.34198,
+31.85046
+]
+},
+{
+"id": "spur:solar-L1S-1373",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-1373",
+"to": [
+-119.08531,
+35.84164
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.4335,
+36.21639
+]
+},
+{
+"id": "spur:solar-L1S-49939",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-49939",
+"to": [
+-103.58869,
+40.25468
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.66717,
+39.82237
+]
+},
+{
+"id": "spur:solar-L2N-41574",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.19378,
+42.91158
+]
+},
+{
+"id": "spur:solar-L1N-71023",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-71023",
+"to": [
+-105.79099,
+46.41323
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.37692,
+46.68721
+]
+},
+{
+"id": "spur:solar-L2S-28986",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-75471",
+"to": [
+-114.50036,
+39.09881
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.50405,
+39.5166
+]
+},
+{
+"id": "spur:solar-L2S-21570",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-15569",
+"to": [
+-103.85722,
+33.99151
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.51043,
+33.79912
+]
+},
+{
+"id": "spur:solar-L2N-7093",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-7093",
+"to": [
+-121.45399,
+43.66008
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-121.44739,
+43.38035
+]
+},
+{
+"id": "spur:solar-L1S-79463",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-79463",
+"to": [
+-112.58097,
+39.50138
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.10611,
+39.37623
+]
+},
+{
+"id": "spur:solar-L1S-4879",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-4879",
+"to": [
+-113.53809,
+33.94177
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.8803,
+33.68377
+]
+},
+{
+"id": "spur:solar-L2S-2680",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-2680",
+"to": [
+-120.45214,
+35.00986
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.16782,
+34.6405
+]
+},
+{
+"id": "spur:wind-L1-1884",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L1-1884",
+"to": [
+-105.99276,
+37.69107
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.66667,
+37.55292
+]
+},
+{
+"id": "spur:solar-L2N-963",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-963",
+"to": [
+-114.89894,
+42.83988
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.16343,
+42.47435
+]
+},
+{
+"id": "spur:wind-L1-7783",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L1-7783",
+"to": [
+-109.75272,
+46.57295
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.18156,
+46.41083
+]
+},
+{
+"id": "spur:solar-L3S-15438",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3S-15438",
+"to": [
+-117.08981,
+39.52752
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.57206,
+39.66816
+]
+},
+{
+"id": "spur:solar-L2S-15569",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-15569",
+"to": [
+-103.85722,
+33.99151
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.43904,
+34.28504
+]
+},
+{
+"id": "spur:solar-L1N-15415",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-15415",
+"to": [
+-117.77726,
+44.71825
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.02523,
+44.29187
+]
+},
+{
+"id": "spur:wind-L1-28548",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-79463",
+"to": [
+-112.58097,
+39.50138
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.99089,
+39.45907
+]
+},
+{
+"id": "spur:solar-L1N-43479",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-43479",
+"to": [
+-118.99999,
+47.95546
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.73509,
+47.56846
+]
+},
+{
+"id": "spur:solar-L3N-3777",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3N-11851",
+"to": [
+-105.46403,
+44.39306
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.0456,
+44.70917
+]
+},
+{
+"id": "spur:solar-L1S-66226",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.52402,
+35.07895
+]
+},
+{
+"id": "spur:solar-L2S-50920",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-64239",
+"to": [
+-119.90471,
+36.24085
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.60924,
+36.15225
+]
+},
+{
+"id": "spur:wind-L2-3456",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "wind-L2-3456",
+"to": [
+-106.09303,
+38.50826
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.71564,
+38.29652
+]
+},
+{
+"id": "spur:solar-L1N-34210",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.62691,
+42.90131
+]
+},
+{
+"id": "spur:solar-L2N-36514",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-36514",
+"to": [
+-109.80331,
+46.67272
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.4448,
+47.16946
+]
+},
+{
+"id": "spur:solar-L2S-33602",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.79607,
+39.45163
+]
+},
+{
+"id": "spur:solar-L1S-21989",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-21989",
+"to": [
+-103.98581,
+32.95154
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.57869,
+33.29391
+]
+},
+{
+"id": "spur:solar-L1N-680",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-680",
+"to": [
+-123.42043,
+42.93961
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-123.98203,
+42.82879
+]
+},
+{
+"id": "spur:solar-L2S-37015",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-37015",
+"to": [
+-111.9045,
+40.9186
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.97653,
+40.4748
+]
+},
+{
+"id": "spur:solar-L2S-57674",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.70678,
+35.51884
+]
+},
+{
+"id": "spur:solar-L1S-3513",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-3513",
+"to": [
+-116.85487,
+34.86215
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.66827,
+34.86139
+]
+},
+{
+"id": "spur:wind-L1-24960",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-41929",
+"to": [
+-102.73909,
+40.26269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-102.18571,
+40.42747
+]
+},
+{
+"id": "spur:solar-L2N-25560",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2N-25560",
+"to": [
+-117.02522,
+46.43198
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-116.47846,
+46.81662
+]
+},
+{
+"id": "spur:solar-L1N-71247",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-71247",
+"to": [
+-104.76879,
+47.10636
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.72525,
+46.93976
+]
+},
+{
+"id": "spur:solar-L2S-33091",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.92001,
+39.69499
+]
+},
+{
+"id": "spur:solar-L1S-22054",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-21989",
+"to": [
+-103.98581,
+32.95154
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.56736,
+33.37327
+]
+},
+{
+"id": "spur:solar-L1N-15423",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-15404",
+"to": [
+-116.97935,
+44.05211
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.70471,
+44.27867
+]
+},
+{
+"id": "spur:solar-L3S-1609",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-75471",
+"to": [
+-114.50036,
+39.09881
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.68,
+39.08565
+]
+},
+{
+"id": "spur:solar-L1N-43424",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-43424",
+"to": [
+-117.50347,
+47.72894
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.40438,
+47.51626
+]
+},
+{
+"id": "spur:solar-L3N-11851",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3N-11851",
+"to": [
+-105.46403,
+44.39306
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.73437,
+44.99641
+]
+},
+{
+"id": "spur:solar-L2S-11713",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-11713",
+"to": [
+-111.94182,
+33.70275
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.26015,
+33.75039
+]
+},
+{
+"id": "spur:solar-L2S-33335",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-33335",
+"to": [
+-122.77987,
+38.82375
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-123.22114,
+39.20845
+]
+},
+{
+"id": "spur:solar-L1S-55000",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-55000",
+"to": [
+-103.70143,
+39.20478
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.31097,
+38.82121
+]
+},
+{
+"id": "spur:solar-L2N-10798",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-10798",
+"to": [
+-111.69801,
+43.85547
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.32699,
+44.32643
+]
+},
+{
+"id": "spur:solar-L1N-58749",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-58749",
+"to": [
+-111.51286,
+45.93551
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.54899,
+46.60074
+]
+},
+{
+"id": "spur:solar-L2S-34294",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.28174,
+38.79689
+]
+},
+{
+"id": "spur:solar-L1S-19725",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-19725",
+"to": [
+-104.45268,
+33.45294
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.84909,
+33.88155
+]
+},
+{
+"id": "spur:solar-L1N-15404",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-15404",
+"to": [
+-116.97935,
+44.05211
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.77955,
+44.27083
+]
+},
+{
+"id": "spur:solar-L1S-75471",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-75471",
+"to": [
+-114.50036,
+39.09881
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.58634,
+38.93344
+]
+},
+{
+"id": "spur:wind-L1-35724",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.00573,
+34.93876
+]
+},
+{
+"id": "spur:solar-L1S-4289",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-4289",
+"to": [
+-116.3843,
+34.78151
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.74087,
+34.1805
+]
+},
+{
+"id": "spur:solar-L2S-48549",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-73583",
+"to": [
+-104.79897,
+37.61753
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.98643,
+37.24381
+]
+},
+{
+"id": "spur:solar-L1N-39244",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-39244",
+"to": [
+-112.92923,
+42.75122
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.27791,
+42.14116
+]
+},
+{
+"id": "spur:solar-L3N-767",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-58749",
+"to": [
+-111.51286,
+45.93551
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.03393,
+46.7091
+]
+},
+{
+"id": "spur:solar-L3S-17407",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3S-17025",
+"to": [
+-114.90249,
+36.42503
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.82661,
+37.34973
+]
+},
+{
+"id": "spur:solar-L2S-11394",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-11122",
+"to": [
+-106.38381,
+35.35462
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.86928,
+34.64722
+]
+},
+{
+"id": "spur:solar-L1N-264",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-10437",
+"to": [
+-121.23272,
+44.05663
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.40612,
+44.26801
+]
+},
+{
+"id": "spur:solar-L1S-56484",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-56484",
+"to": [
+-111.92939,
+37.59162
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.48566,
+38.13989
+]
+},
+{
+"id": "spur:solar-L2N-20446",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-39404",
+"to": [
+-117.8508,
+48.35831
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.01054,
+48.90334
+]
+},
+{
+"id": "spur:wind-L3-789",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "wind-L3-789",
+"to": [
+-109.83669,
+42.68167
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.76934,
+43.61635
+]
+},
+{
+"id": "spur:solar-L1S-66067",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-66067",
+"to": [
+-112.02977,
+34.84735
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.48006,
+35.36495
+]
+},
+{
+"id": "spur:solar-L2S-26676",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29692",
+"to": [
+-122.36214,
+41.97685
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.80685,
+41.62925
+]
+},
+{
+"id": "spur:solar-L1S-61331",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-55385",
+"to": [
+-102.52451,
+38.20791
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.46937,
+37.75122
+]
+},
+{
+"id": "spur:solar-L1N-75328",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.81764,
+42.28378
+]
+},
+{
+"id": "spur:wind-L2-4823",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-51329",
+"to": [
+-104.37687,
+48.1582
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.31018,
+48.66919
+]
+},
+{
+"id": "spur:solar-L2S-61563",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L2S-35749",
+"to": [
+-117.33587,
+38.32278
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.05089,
+38.22866
+]
+},
+{
+"id": "spur:solar-L1S-9844",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-11122",
+"to": [
+-106.38381,
+35.35462
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.3554,
+35.13559
+]
+},
+{
+"id": "spur:solar-L1N-633",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-633",
+"to": [
+-121.84192,
+42.58597
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-122.31231,
+43.14052
+]
+},
+{
+"id": "spur:solar-L1S-44913",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-44913",
+"to": [
+-110.03243,
+41.69558
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.46694,
+40.97379
+]
+},
+{
+"id": "spur:solar-L1S-72599",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-112.56696,
+35.90367
+]
+},
+{
+"id": "spur:wind-L2-2813",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-33335",
+"to": [
+-122.77987,
+38.82375
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-123.70821,
+39.68007
+]
+},
+{
+"id": "spur:wind-L1-31774",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-73583",
+"to": [
+-104.79897,
+37.61753
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.59621,
+37.33609
+]
+},
+{
+"id": "spur:solar-L2N-42079",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-80079",
+"to": [
+-112.61418,
+44.09073
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.6016,
+44.81113
+]
+},
+{
+"id": "spur:solar-L1N-51329",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-51329",
+"to": [
+-104.37687,
+48.1582
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-105.51741,
+48.83806
+]
+},
+{
+"id": "spur:solar-L3S-17025",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L3S-17025",
+"to": [
+-114.90249,
+36.42503
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.86791,
+37.70275
+]
+},
+{
+"id": "spur:solar-L2S-6000",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-6000",
+"to": [
+-103.33696,
+34.30386
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.45042,
+35.19788
+]
+},
+{
+"id": "spur:solar-L2N-7410",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-10437",
+"to": [
+-121.23272,
+44.05663
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.68527,
+43.10722
+]
+},
+{
+"id": "spur:solar-L1S-45156",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-41983",
+"to": [
+-111.76992,
+41.13017
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.81297,
+40.90434
+]
+},
+{
+"id": "spur:solar-L1N-39404",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-39404",
+"to": [
+-117.8508,
+48.35831
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.07922,
+48.89187
+]
+},
+{
+"id": "spur:solar-L2N-48231",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2N-48231",
+"to": [
+-105.20263,
+44.30774
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.71609,
+44.86803
+]
+},
+{
+"id": "spur:solar-L2S-54048",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.35987,
+34.29663
+]
+},
+{
+"id": "spur:solar-L2S-31218",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-31218",
+"to": [
+-122.62499,
+40.64567
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-124.07259,
+40.73475
+]
+},
+{
+"id": "spur:solar-L1S-56255",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-56255",
+"to": [
+-108.44102,
+39.08202
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-108.31947,
+38.40366
+]
+},
+{
+"id": "spur:solar-L1N-16504",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.32841,
+42.25097
+]
+},
+{
+"id": "spur:solar-L1N-66671",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-66671",
+"to": [
+-106.48725,
+46.25929
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-107.37189,
+46.89472
+]
+},
+{
+"id": "spur:solar-L2S-59452",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-75471",
+"to": [
+-114.50036,
+39.09881
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.2828,
+38.59512
+]
+},
+{
+"id": "spur:wind-L1-37707",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-27980",
+"to": [
+-109.17307,
+32.96697
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-107.8461,
+32.28415
+]
+},
+{
+"id": "spur:solar-L1N-10437",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-10437",
+"to": [
+-121.23272,
+44.05663
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.6433,
+43.44654
+]
+},
+{
+"id": "spur:solar-L2S-59902",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-27203",
+"to": [
+-112.31031,
+42.15673
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.57935,
+41.58635
+]
+},
+{
+"id": "spur:solar-L1S-69300",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.07641,
+34.73551
+]
+},
+{
+"id": "spur:solar-L1S-36654",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.43864,
+39.84655
+]
+},
+{
+"id": "spur:solar-L1N-10687",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-10687",
+"to": [
+-114.23214,
+42.63269
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-115.9477,
+42.08719
+]
+},
+{
+"id": "spur:solar-L1N-61253",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-61253",
+"to": [
+-112.87507,
+46.10086
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.89508,
+45.70087
+]
+},
+{
+"id": "spur:solar-L1S-29857",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-117.50167,
+41.62517
+]
+},
+{
+"id": "spur:solar-L1S-73583",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-73583",
+"to": [
+-104.79897,
+37.61753
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-103.25202,
+36.38596
+]
+},
+{
+"id": "spur:solar-L3N-1666",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-11624",
+"to": [
+-116.66306,
+43.34986
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.94819,
+43.64114
+]
+},
+{
+"id": "spur:solar-L3S-2169",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-43493",
+"to": [
+-112.36167,
+39.15472
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.34433,
+38.34056
+]
+},
+{
+"id": "spur:solar-L3S-10481",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.96187,
+34.40646
+]
+},
+{
+"id": "spur:wind-L1-28007",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.54854,
+39.67233
+]
+},
+{
+"id": "spur:solar-L1N-80079",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-80079",
+"to": [
+-112.61418,
+44.09073
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-113.82575,
+45.21562
+]
+},
+{
+"id": "spur:wind-L1-12551",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1N-61253",
+"to": [
+-112.87507,
+46.10086
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-111.62857,
+45.07618
+]
+},
+{
+"id": "spur:solar-L1S-30804",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-30804",
+"to": [
+-112.73125,
+39.15036
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.64032,
+40.98862
+]
+},
+{
+"id": "spur:solar-L3S-13151",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-11122",
+"to": [
+-106.38381,
+35.35462
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-106.90557,
+32.87105
+]
+},
+{
+"id": "spur:solar-L1N-11624",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1N-11624",
+"to": [
+-116.66306,
+43.34986
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-118.94053,
+43.9656
+]
+},
+{
+"id": "spur:solar-L1S-43493",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-43493",
+"to": [
+-112.36167,
+39.15472
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-110.66788,
+38.42399
+]
+},
+{
+"id": "spur:solar-L1S-6308",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-6308",
+"to": [
+-111.09453,
+35.30287
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-109.25294,
+33.76254
+]
+},
+{
+"id": "spur:wind-L2-15063",
+"set": "pnas-spurs",
+"split": "HOLD",
+"group": "solar-L1S-29857",
+"to": [
+-119.1345,
+39.12843
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-120.25912,
+39.37029
+]
+},
+{
+"id": "spur:solar-L2S-27203",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L2S-27203",
+"to": [
+-112.31031,
+42.15673
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-114.06549,
+41.19742
+]
+},
+{
+"id": "spur:solar-L1S-27980",
+"set": "pnas-spurs",
+"split": "CAL",
+"group": "solar-L1S-27980",
+"to": [
+-109.17307,
+32.96697
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-108.20894,
+31.84491
+]
+},
+{
+"id": "default:Glendale",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-119.72,
+39.528
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.758,
+39.528
+]
+},
+{
+"id": "default:Downtown",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-119.785,
+39.525
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.825,
+39.525
+]
+},
+{
+"id": "default:Stead",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-119.862,
+39.655
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-119.894,
+39.655
+]
+},
+{
+"id": "default:Wyoming",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-104.75,
+41.1
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-104.8,
+41.1
+]
+},
+{
+"id": "default:Washington DC",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-77.02,
+38.9
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-77.05,
+38.9
+]
+},
+{
+"id": "default:Sacramento",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-121.46,
+38.58
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-121.5,
+38.58
+]
+},
+{
+"id": "default:Austin",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-97.7,
+30.26
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-97.74,
+30.26
+]
+},
+{
+"id": "default:Vermont",
+"set": "default-routes",
+"split": "none",
+"group": null,
+"to": [
+-72.55,
+44.26
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"from": [
+-72.59,
+44.26
+]
+},
+{
+"id": "line:100142",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "100142",
+"to": [
+-84.51807,
+36.413895
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "12d80f555b2167bd474f6c75c0244c5d96cd2b53796897c6e38ae5d59aa605e1",
+"from": [
+-84.532098,
+36.502335
+]
+},
+{
+"id": "line:100157",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "100157",
+"to": [
+-92.048868,
+34.956918
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "a1ecebd697dd1ae4ca25a7265de405f14f974283c16b284dece38311ca0d2622",
+"from": [
+-92.170954,
+35.089997
+]
+},
+{
+"id": "line:100552",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "100552",
+"to": [
+-71.64555,
+43.688392
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "018f9cc57f9fdb349042d86571fd2d6843ff5c2b1984b1809f9a90aa76853299",
+"from": [
+-71.70946,
+43.596742
+]
+},
+{
+"id": "line:100571",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "100571",
+"to": [
+-89.556868,
+40.843025
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "b26c15515d4d42d8793ed982bdb4d337286fbc2ea7346c9f1aa502fc913ee793",
+"from": [
+-89.658033,
+40.813632
+]
+},
+{
+"id": "line:101201",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "101201",
+"to": [
+-81.433575,
+35.157364
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "b4bbdeee3765a654c16d6de322d585cf3817fdfaa338426c44c654accedc1f2a",
+"from": [
+-81.54404,
+35.257138
+]
+},
+{
+"id": "line:101251",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "101251",
+"to": [
+-97.105219,
+37.589418
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "18c4c2b07a08d34c0d063123348c01b3b73e5b80152af5e1379a33edeab47a2a",
+"from": [
+-97.168961,
+37.791128
+]
+},
+{
+"id": "line:102209",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "102209",
+"to": [
+-85.824617,
+34.871062
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "3c0007d64cb5f6cf11bccaa7e0461a11b576310cbda6ad286ceb2b8855b06f5d",
+"from": [
+-86.05922,
+34.593984
+]
+},
+{
+"id": "line:102381",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "102381",
+"to": [
+-89.830385,
+36.864991
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "40ac44f13c388bce7a7db6b70a6c66f973bbcb74fbdc754e0ce7d0ddd1ab71a2",
+"from": [
+-89.965124,
+36.746556
+]
+},
+{
+"id": "line:102483",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "102483",
+"to": [
+-88.123188,
+44.383477
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "f6d86d2caa6a8038ce2741a08b7e8ec7d87b7d370e056147b6b0c13463f6bbf0",
+"from": [
+-88.354588,
+44.367662
+]
+},
+{
+"id": "line:102866",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "102866",
+"to": [
+-93.703016,
+38.766339
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "8da3d8e2da48a55a09c13f0004a5852e2059d026e12b47d1fa4bf35a6e0da4b3",
+"from": [
+-93.967388,
+38.988898
+]
+},
+{
+"id": "line:103649",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "103649",
+"to": [
+-79.466052,
+40.928175
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "d86b4786537a0caf695b86689b2da24558268671a3f24fa59d04e3622b1d69b8",
+"from": [
+-79.516622,
+40.794714
+]
+},
+{
+"id": "line:103979",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "103979",
+"to": [
+-80.716825,
+38.537381
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "c443566825327ce48b2f96fcb8019ddf2f1c5ed39ebde39e0a6ca2f4c0ace52a",
+"from": [
+-80.800131,
+38.399902
+]
+},
+{
+"id": "line:104279",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "104279",
+"to": [
+-83.642686,
+42.264368
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "c5466fc04b8fe4241d7f2f1af870ba3f75e055a5617fb6582260980f80a2f142",
+"from": [
+-83.727352,
+42.21224
+]
+},
+{
+"id": "line:105090",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "105090",
+"to": [
+-87.500921,
+39.942384
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "8d951a830a9c60194aedc1d4180502680988c2fc3b4b16c1f3ed0d35cce45b51",
+"from": [
+-87.69826,
+39.991904
+]
+},
+{
+"id": "line:105131",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "105131",
+"to": [
+-90.884091,
+32.888047
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "6ef6f7d52423d605bb4ea7e28b1953154b466b6435e0a319660029294f058ddc",
+"from": [
+-90.924911,
+32.704399
+]
+},
+{
+"id": "line:105470",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "105470",
+"to": [
+-88.204006,
+34.952661
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "900e1d823ebf4788658c6b7431d9b208440cbb3f5ea7dcd7546a2fb559514a66",
+"from": [
+-88.305301,
+34.837458
+]
+},
+{
+"id": "line:105844",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "105844",
+"to": [
+-97.921393,
+38.14558
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "fc161e985a58e54d09667d0d8f4fe27c63e5da8abcd66150be15fdb24b4c32d1",
+"from": [
+-97.946737,
+38.056061
+]
+},
+{
+"id": "line:105865",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "105865",
+"to": [
+-93.24463,
+45.094747
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "37b122c12ec2bbf1ab27b01a9afa0dd6628ad257e0d479121d18b4ba8aa8f98b",
+"from": [
+-93.275829,
+45.022676
+]
+},
+{
+"id": "line:105977",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "105977",
+"to": [
+-90.187565,
+35.118005
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "1daeda4875f382a46957930ff1031f45814b3eae5200d6d35f5aeecdb0f85348",
+"from": [
+-90.451738,
+34.967286
+]
+},
+{
+"id": "line:105991",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "105991",
+"to": [
+-78.783594,
+39.630108
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "ec34cb76e48d769f285fd94f2650b9fa470dddc3ad6d0ee11cb7a00d2b3d3a08",
+"from": [
+-78.931089,
+39.639171
+]
+},
+{
+"id": "line:106230",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "106230",
+"to": [
+-81.083398,
+40.586952
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "5bfbbb776e05cd8a04993fa3042c1031cfa00ab3dd27a0c3bfe313bf3ec7b142",
+"from": [
+-81.356019,
+40.780312
+]
+},
+{
+"id": "line:106276",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "105890",
+"to": [
+-81.632271,
+29.729524
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "8994110254f50c3a72291cbec8ba19c152fd83dc44f34bc1107a4cf9f155b167",
+"from": [
+-81.764856,
+29.723056
+]
+},
+{
+"id": "line:106350",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "106350",
+"to": [
+-78.913811,
+36.489841
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "5951961252fb3445575fcac26a9dc641fa93dfdd4166ac413c9be4d709a5f5f4",
+"from": [
+-79.051711,
+36.481026
+]
+},
+{
+"id": "line:106713",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "106713",
+"to": [
+-79.346613,
+41.007829
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "03971bb8393e763cf103aa043626781b645f4b8841bbf958100aad1055a0444a",
+"from": [
+-79.466052,
+40.928175
+]
+},
+{
+"id": "line:106902",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "106902",
+"to": [
+-81.943081,
+37.260518
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "4723394356fcb7e1790a0cffe57d3b96ba445d1bba9dfa2352b48d8e53021989",
+"from": [
+-82.010669,
+37.205301
+]
+},
+{
+"id": "line:107636",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "107636",
+"to": [
+-81.188737,
+32.083602
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "f44471615766ad170c673d95dad873051eb338dc4b2acb36d9ae4fe27d855182",
+"from": [
+-81.252833,
+32.007156
+]
+},
+{
+"id": "line:108503",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "108503",
+"to": [
+-96.259301,
+44.239375
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "523bacdcdbb93fcb67b6d7fa3dd59f4bdfe8ceea904e5a4e371e6a1539ce348c",
+"from": [
+-96.422193,
+44.281934
+]
+},
+{
+"id": "line:109272",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "109272",
+"to": [
+-82.869143,
+43.829527
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "4f0f96bd04bd9585bb5494e6ee35a70571ef6fa401501c1daa44ae820e32b1e7",
+"from": [
+-83.118094,
+43.811788
+]
+},
+{
+"id": "line:109481",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "109481",
+"to": [
+-85.563167,
+30.194398
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "0b1de75963e24f677b97386a621ab715f8e324326e7f3d1ff2c8429a977efceb",
+"from": [
+-85.699823,
+30.26995
+]
+},
+{
+"id": "line:109971",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "109971",
+"to": [
+-86.094716,
+33.54679
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "e52407f6f8fbc4409b2c34b6d81e76085fa87fc7945f2031da80513f5e7cf842",
+"from": [
+-86.338037,
+33.425709
+]
+},
+{
+"id": "line:110703",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "110703",
+"to": [
+-82.675592,
+37.763167
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "7052080e16f8e289bc037cb8eeeb0fc606313cc56fb44579815208a28cc10b2f",
+"from": [
+-82.767222,
+37.826392
+]
+},
+{
+"id": "line:110723",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "110723",
+"to": [
+-87.949112,
+41.399389
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "21bfc85783e574191613d56ae3b7071bfd32cd6cc2845e43cce8e47587025efc",
+"from": [
+-88.446415,
+40.962498
+]
+},
+{
+"id": "line:111211",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "111211",
+"to": [
+-91.144505,
+34.900954
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "e26abf245ef9c0cac9b7dce9c363b14153665986df120b417009c41f5406f205",
+"from": [
+-91.467186,
+34.793615
+]
+},
+{
+"id": "line:111332",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "111332",
+"to": [
+-89.42742,
+30.339749
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "03efc3aa8b30588222528a5a83d52f830f8363102c42caeea83df7e3f36cad3c",
+"from": [
+-89.552252,
+30.221105
+]
+},
+{
+"id": "line:112281",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "112281",
+"to": [
+-96.990119,
+36.117195
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "6d6916ba82a1a1d34a6d9bdc46068cf8c5565c91451c1e49dd23383f2a347992",
+"from": [
+-97.123269,
+36.040244
+]
+},
+{
+"id": "line:112597",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "112597",
+"to": [
+-90.995226,
+30.229562
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "8973781c3370fcd68b09d918cee4f103504fd1a73862f7d7eed4408e3fc6c276",
+"from": [
+-91.114846,
+30.27838
+]
+},
+{
+"id": "line:113394",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "113394",
+"to": [
+-91.479591,
+31.689465
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "c4cbbc3db3f02328d5f25449bd35484d973abf8e27a324e1d0343c7a5c46b811",
+"from": [
+-91.488412,
+31.58057
+]
+},
+{
+"id": "line:113648",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "113648",
+"to": [
+-86.048681,
+39.728183
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "f5985def40f8b891a0ccdc9df6a696c87a1eab0637269ad8cae18c9fba9cb8de",
+"from": [
+-86.194217,
+39.710817
+]
+},
+{
+"id": "line:113882",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "113882",
+"to": [
+-87.088567,
+37.449191
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "b6cbedb74294a581bae8da5ec90d41fc029c29cf994f30f821a1b4cde5bdaf91",
+"from": [
+-87.122781,
+37.364129
+]
+},
+{
+"id": "line:114500",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "114500",
+"to": [
+-87.129154,
+41.609898
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "74122159b7c5ae50839b9c398b3d1265df763dc45815e3bdae6c5865ff5dd4a4",
+"from": [
+-87.296659,
+41.593821
+]
+},
+{
+"id": "line:114613",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "114613",
+"to": [
+-87.329101,
+44.799579
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "2ad8f9a613047816221169c56ecfaac9881b530fbbbefd1a01072761153fd301",
+"from": [
+-87.572771,
+44.428664
+]
+},
+{
+"id": "line:114796",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "114796",
+"to": [
+-93.338198,
+37.044477
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "6445cf0c73379c4a62ff508bd3bf0a828fa7065405d7d4a5f4be315723433306",
+"from": [
+-93.338803,
+37.162216
+]
+},
+{
+"id": "line:115517",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "115517",
+"to": [
+-86.878706,
+37.367645
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "67c3680805624fcb395353d3ea1d0f920adec8d3f375601431513d91e41aa1b5",
+"from": [
+-87.122781,
+37.364129
+]
+},
+{
+"id": "line:115545",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "115545",
+"to": [
+-84.446845,
+34.457918
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "ecb818a04bdd592bac1558ea1cc929c389ba83f6064953cb17d6f68b3c5e3bc6",
+"from": [
+-84.52896,
+34.595845
+]
+},
+{
+"id": "line:115576",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "115576",
+"to": [
+-90.383973,
+34.671188
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "cc2349a0b787d038d3dd315fd8326913914bc2a15f45e119e27ecbf9cd4c0b69",
+"from": [
+-90.462917,
+34.481933
+]
+},
+{
+"id": "line:115951",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "104143",
+"to": [
+-83.623089,
+42.353148
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "e8f1dc9b1ef07a0067697e87b226abaabdedbdc3443ef0de86aa4e9eb8b652ee",
+"from": [
+-83.723417,
+42.317763
+]
+},
+{
+"id": "line:116406",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "116406",
+"to": [
+-96.989903,
+34.550771
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "13ef166265f83c72746ed1b638e6f9dc38c067ad0b6733602b69a5da78491fb0",
+"from": [
+-97.159375,
+34.629423
+]
+},
+{
+"id": "line:117083",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "117083",
+"to": [
+-76.844363,
+41.615507
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "dd6e7d63ce65300dc4fa0f13df2b61d2984d0872928ea27489517bd03854b882",
+"from": [
+-77.077064,
+41.536975
+]
+},
+{
+"id": "line:117379",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "117379",
+"to": [
+-92.048331,
+34.640572
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "e4e05a566cf1e29fb77e2adea132704367e10643513f7b7bd9b0377528abf0f8",
+"from": [
+-92.144217,
+34.424093
+]
+},
+{
+"id": "line:117961",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "114326",
+"to": [
+-85.305672,
+40.236771
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "16383f55da9f241855428f56c4e05636888525d54eaa5cc22b038a0208920b9f",
+"from": [
+-85.593208,
+39.991371
+]
+},
+{
+"id": "line:118058",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "118058",
+"to": [
+-83.700688,
+34.401541
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "d0003beb9522289299a6401f31d63f91fba4aa13b5f706627c11f79507367ac9",
+"from": [
+-83.786155,
+34.348612
+]
+},
+{
+"id": "line:118135",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "118135",
+"to": [
+-87.995022,
+45.176718
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "89a1aa72b2d1fbcd2d2277612b8e72400c060cc4db54bbfb5509c3bb35b3042c",
+"from": [
+-88.004897,
+44.878738
+]
+},
+{
+"id": "line:118225",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "118225",
+"to": [
+-77.384203,
+43.055457
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "9e5bedf951f61077a0882c8c06934d8d423fe40b851cae7684816eac4801b5c3",
+"from": [
+-77.67269,
+43.053778
+]
+},
+{
+"id": "line:118349",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "118349",
+"to": [
+-84.315038,
+30.429953
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "17feefa236cea4c77146fe1c5fd682a275072be322d8346d616383e33084ab80",
+"from": [
+-84.398142,
+30.453104
+]
+},
+{
+"id": "line:118567",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "118567",
+"to": [
+-85.513849,
+38.226689
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "fc657fdb4d9aa9f5b1baf9d5c83abbcc167d466a003162de1bd60c01f4d06590",
+"from": [
+-85.518664,
+38.293715
+]
+},
+{
+"id": "line:119620",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "119620",
+"to": [
+-86.413814,
+38.893186
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "78e79972a143da7c42f8df7bb9c371bcef85a0e720dde6697222e433c7f2f012",
+"from": [
+-86.510055,
+38.870846
+]
+},
+{
+"id": "line:119661",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "119661",
+"to": [
+-78.779224,
+33.815032
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "ef7dc58216d2f508cfc3f7eec90b69d295350de598e05371b47bc6f912fb1552",
+"from": [
+-78.886858,
+33.780984
+]
+},
+{
+"id": "line:120039",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "120039",
+"to": [
+-81.6004,
+26.7037
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "5faaa3be1f20987cdab81496f891f9e488a4f68f11a35352835156cad35faf4a",
+"from": [
+-81.768818,
+26.672947
+]
+},
+{
+"id": "line:120351",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "113969",
+"to": [
+-79.793734,
+40.537351
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "2631d17496f510eb2e75505994edfa6eac3700d68d5b07a8d52998b71f713dfa",
+"from": [
+-79.989605,
+40.540911
+]
+},
+{
+"id": "line:122895",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "122895",
+"to": [
+-80.298812,
+25.632998
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "14a4e7e3984a6a56917cedccdd0aae235244a96296e2906699359173444118e5",
+"from": [
+-80.396582,
+25.640139
+]
+},
+{
+"id": "line:122983",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "122983",
+"to": [
+-77.813299,
+39.326793
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "6cf3b97f5f5670fa5b652b22fbc709bd7dfbc7d3d6ff7f61853b8630b57c6a6c",
+"from": [
+-77.823156,
+39.433693
+]
+},
+{
+"id": "line:123072",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "123072",
+"to": [
+-86.113211,
+30.736005
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "940ae6a678a65f537ab21e181bedfeb10fa206d5c0a7e6a825c431a8d2be9171",
+"from": [
+-86.133892,
+30.907901
+]
+},
+{
+"id": "line:123228",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "123228",
+"to": [
+-88.036298,
+31.225094
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "d8d1d6184fc56f594c855ed46b3306dfb9609711b5c12324076b6f732f38a04b",
+"from": [
+-88.51502,
+31.022078
+]
+},
+{
+"id": "line:123242",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "123242",
+"to": [
+-81.758468,
+32.982837
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "671912e8089e81341f8fe0e62564b2c1031e147ed32c9240bdad454c6a7009b8",
+"from": [
+-81.881137,
+33.025063
+]
+},
+{
+"id": "line:123287",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "123287",
+"to": [
+-92.377765,
+44.015321
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "638be61ce28364f4d29b34a2779f63bf6b6db138f89ba4c007b68030e7938483",
+"from": [
+-92.680842,
+43.55716
+]
+},
+{
+"id": "line:123356",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "123356",
+"to": [
+-92.260232,
+39.018851
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "0716fa219fdb16776f88181a866b88c5590c7306d1479e4ff2e0ca0bb7a8964a",
+"from": [
+-92.343811,
+39.064642
+]
+},
+{
+"id": "line:123392",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "123392",
+"to": [
+-82.502986,
+35.971214
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "441fb211c5d5292926d41e95b87e8cfab4811ee712559c0afa7684131441809f",
+"from": [
+-82.527198,
+35.845509
+]
+},
+{
+"id": "line:123522",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "123522",
+"to": [
+-83.401898,
+33.30456
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "f66076ec1d933107a29d25f5cb428b1c77cdcbb46eb09cc5576f61d403cb59bf",
+"from": [
+-83.679332,
+33.673905
+]
+},
+{
+"id": "line:123976",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "123976",
+"to": [
+-90.094855,
+41.980664
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "11eeebff8889debc85d8da6777f04e8761de73f0ea24adba11ba97f58f90de1b",
+"from": [
+-90.113653,
+42.095009
+]
+},
+{
+"id": "line:124436",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "118033",
+"to": [
+-91.853514,
+30.313246
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "e0060e8fdf7c7b90ebf6fb0afda118fb1e59640f10a960d5d4d86d5a10864b0a",
+"from": [
+-92.112873,
+30.255192
+]
+},
+{
+"id": "line:124620",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "124620",
+"to": [
+-96.860334,
+35.707815
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "36103bdd3f5dc0ffd411dcda2a31fb54d9e6d6164f659a5f25705646b75c6a7b",
+"from": [
+-97.016731,
+35.710555
+]
+},
+{
+"id": "line:124663",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "124663",
+"to": [
+-97.01711,
+44.499699
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "e2d919d0a47f3e13db0f4c20c89ef66829aac27432080feb93e80d3ffd7f5024",
+"from": [
+-97.045002,
+44.882571
+]
+},
+{
+"id": "line:125266",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "125266",
+"to": [
+-75.609225,
+41.497118
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "58eb47773d1e985a4c5c0496a853a0927d667cec69589fe1c4ca4ad4cf01741e",
+"from": [
+-75.869486,
+41.606948
+]
+},
+{
+"id": "line:125496",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "125496",
+"to": [
+-81.72713,
+33.236069
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "329730c88ca8701c2af976da3347c981a9717557dffeb86c7c2b3b8b7e5c7ab4",
+"from": [
+-81.911796,
+33.432731
+]
+},
+{
+"id": "line:127000",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "127000",
+"to": [
+-87.973411,
+45.802185
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "91f2e20c883d102dc063ad7aacc491232f302c51f0c534de9f49fcd3b8d91941",
+"from": [
+-88.266663,
+45.944923
+]
+},
+{
+"id": "line:129057",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "129057",
+"to": [
+-81.036512,
+40.807708
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "3407136724cbbfcd9c292295ca2365138b0f6ba2d96daa99729a2ed31f9a3981",
+"from": [
+-81.077549,
+40.919934
+]
+},
+{
+"id": "line:129107",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "129107",
+"to": [
+-89.665268,
+40.594854
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "61c6a2cca356724dfaaf3c604bd1bf10eb834440095220f588d15dc97613e875",
+"from": [
+-89.750344,
+40.557807
+]
+},
+{
+"id": "line:129860",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "129860",
+"to": [
+-90.193176,
+29.940957
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "02736a5c3a9f2818d3d966621d90d505287f3e7611e8b03f64fc9857141046fd",
+"from": [
+-90.276977,
+29.977319
+]
+},
+{
+"id": "line:130070",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "130070",
+"to": [
+-90.07832,
+44.934789
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "0b1de452c9767f3db285576efbdc20cbbf935afc5eafe9618d32258dccb3e4de",
+"from": [
+-90.334908,
+44.910428
+]
+},
+{
+"id": "line:130096",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "130096",
+"to": [
+-88.933324,
+37.889471
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "6851290ce2a1597d193bb471504bcd8c4f98897895064d56507f8f150790b72d",
+"from": [
+-88.948211,
+38.014648
+]
+},
+{
+"id": "line:130406",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "130406",
+"to": [
+-91.671558,
+42.061988
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "c5b68261bab6056c7bd9667f77cd2148c59c049f2cf40650e08fd689bf4ae19a",
+"from": [
+-91.78114,
+42.100015
+]
+},
+{
+"id": "line:130568",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "130568",
+"to": [
+-97.477398,
+42.904213
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "33fd687411fb0f7a84c6a75e77e4053a24ccffb9dfdab6ab349158d03758b7aa",
+"from": [
+-97.890402,
+43.003481
+]
+},
+{
+"id": "line:131998",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "131998",
+"to": [
+-89.027309,
+41.825116
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "de7216318036e06768b2359ed1077173af05216a1343d5b09f601a77fd3e2243",
+"from": [
+-89.495467,
+41.842363
+]
+},
+{
+"id": "line:132138",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "132138",
+"to": [
+-83.335351,
+32.42669
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "247e565d23f0b21457d49f90e8df8ce645b71713880045d220d0f73f9e9c3833",
+"from": [
+-83.59959,
+32.565074
+]
+},
+{
+"id": "line:133294",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "133294",
+"to": [
+-94.008386,
+44.198775
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "a88e29eaab7a426f614686c8d8d06dc051115136bff98914d1fec76b3b3e7cbf",
+"from": [
+-94.407742,
+43.98411
+]
+},
+{
+"id": "line:133316",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "133316",
+"to": [
+-82.764524,
+28.068958
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "f89b2b98f655ebaaba401a54ff24238a9a405223ea9810e1d89707e095add67e",
+"from": [
+-82.7728,
+27.913561
+]
+},
+{
+"id": "line:133328",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "133328",
+"to": [
+-88.010681,
+31.005519
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "a6be223d093dec02efe0a360475021ae3a2295cbfa33451006d65198b7307612",
+"from": [
+-88.565852,
+30.648027
+]
+},
+{
+"id": "line:133586",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "133586",
+"to": [
+-81.557921,
+30.797153
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "3d16f0f3f6a780049e5c2bea2445910f594a1e3fd955c619c130dfbdb5205481",
+"from": [
+-81.680066,
+30.826116
+]
+},
+{
+"id": "line:133767",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "133767",
+"to": [
+-95.606778,
+36.335727
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "897cf50bc6699dc6325d0cae54cb1cb766149d9f74b7aa880d67e45850b44542",
+"from": [
+-95.697563,
+36.393926
+]
+},
+{
+"id": "line:133896",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "133896",
+"to": [
+-83.700688,
+34.401541
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "ff3b5c32b6bec889f74616d0aab0d5f71b001be38edb66203858dfa0832131bf",
+"from": [
+-83.778139,
+34.474219
+]
+},
+{
+"id": "line:134158",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "134158",
+"to": [
+-89.588398,
+35.252704
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "12a0d4fef6e0c9cd64783d3ad6ea9948cee0b55e69dae276854df21842a374b7",
+"from": [
+-89.745536,
+35.174661
+]
+},
+{
+"id": "line:134277",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "134277",
+"to": [
+-95.110751,
+37.305929
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "3f47f9f1d7c1d884197cd8757d7955a08a693bf6039a146e48589415b28ff5ec",
+"from": [
+-95.449549,
+37.156777
+]
+},
+{
+"id": "line:134831",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "134831",
+"to": [
+-86.52024,
+39.296237
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "f76dea3506d3965e8cec13a19101823bcb2e3c37194d859fca48ef3b03f168fe",
+"from": [
+-87.013237,
+39.071939
+]
+},
+{
+"id": "line:135204",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "135204",
+"to": [
+-83.990494,
+32.624989
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "310891bb48eb10489b994a6a2065122077c94a3241e6acf3e6fde855004da614",
+"from": [
+-84.289831,
+32.570955
+]
+},
+{
+"id": "line:135368",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "135368",
+"to": [
+-101.002782,
+40.291856
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "90adfce4c141245dc02b4bd0dc113796ba5529096cb76b13a39d9ac54f204a8d",
+"from": [
+-101.488408,
+40.452406
+]
+},
+{
+"id": "line:136155",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "136155",
+"to": [
+-87.315644,
+39.491112
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "7279ea795b5c5d5e9a9d7bfe849963ac51f6f176b45cb8a9550a94f2ab47611f",
+"from": [
+-87.350122,
+39.56902
+]
+},
+{
+"id": "line:136383",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "102349",
+"to": [
+-80.646742,
+40.255085
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "15cfe425e161c3c15adc7d551921e0ee5b986a51e5fa83ac61ddda77135f2b9a",
+"from": [
+-80.787858,
+40.3637
+]
+},
+{
+"id": "line:136591",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "136591",
+"to": [
+-80.996109,
+38.303689
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "8339eb5ec2678cb3a1225c0acfc1d23cb29d4a29e68ff7c389699a13b748af84",
+"from": [
+-81.146948,
+38.260891
+]
+},
+{
+"id": "line:137241",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "137241",
+"to": [
+-90.738476,
+35.849169
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "f8486e992652494cfcaee65d57024d3ae4e2a5962be639bd55f27c15bedc3bce",
+"from": [
+-90.911997,
+35.793077
+]
+},
+{
+"id": "line:137987",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "137987",
+"to": [
+-69.913786,
+44.781043
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "6fb64b94e1cecc1b8c1f3932341dfad010727d18c7000f30d9982eeb1aeb7c53",
+"from": [
+-70.127479,
+44.655015
+]
+},
+{
+"id": "line:138490",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "138490",
+"to": [
+-94.299448,
+42.515531
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "2a3cffa1b72c7d2f8ac2ab8f8718e9469c83720895c0b5102b1882cf04a9f410",
+"from": [
+-94.658273,
+42.566781
+]
+},
+{
+"id": "line:138518",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "138518",
+"to": [
+-90.459455,
+43.667271
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "0b0dfec0b49b5b4a01afe847f55ac70fb10d345f00c0133d1438f74a9fbb9bd8",
+"from": [
+-90.824316,
+43.286923
+]
+},
+{
+"id": "line:138619",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "138619",
+"to": [
+-77.657377,
+42.307414
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "7ac7e88ada2818124bb12e25f8eb6a66534fc0b7c6fc03b77a2ee6aa6ffede35",
+"from": [
+-77.774737,
+42.266355
+]
+},
+{
+"id": "line:138979",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "138979",
+"to": [
+-82.156163,
+34.161679
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "4d67aeb6299063eb536ad33deb0b31bc242f5790da2461d965f9336bdea858ab",
+"from": [
+-82.196031,
+33.660182
+]
+},
+{
+"id": "line:140054",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "109795",
+"to": [
+-82.396448,
+37.129821
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "fd802e09cbc5048cee0097b03a50defa41f3526bd0390d9f60a49909f5d3a6b3",
+"from": [
+-82.730519,
+37.387925
+]
+},
+{
+"id": "line:140410",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "140410",
+"to": [
+-84.764425,
+33.422204
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "14378bdd5eec04f903efa0886b7215ad54a5974b0c5a658e2cb142fbb15a225a",
+"from": [
+-84.905437,
+33.45335
+]
+},
+{
+"id": "line:140857",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "140857",
+"to": [
+-95.990495,
+46.933872
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "e49d6f19bd67366476a118c4a86e51429359a4d8a2acdc66360b475427bcac1a",
+"from": [
+-95.998155,
+47.325525
+]
+},
+{
+"id": "line:140910",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "140910",
+"to": [
+-85.467666,
+36.282117
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "ce5b413adf0d5652970130248ce7f52043699171e4718e7e0f4cbd3274098333",
+"from": [
+-85.535636,
+36.162276
+]
+},
+{
+"id": "line:141201",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "141201",
+"to": [
+-91.487515,
+33.899681
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "945eee26d1af822e5c14b95dfe3eddea582b75c49a71344b1f122cf7b708c93b",
+"from": [
+-91.618312,
+34.041258
+]
+},
+{
+"id": "line:141821",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "119548",
+"to": [
+-90.473865,
+29.985809
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "876e4774e21692f1eb91358a35ce0e2271c181fdc3bb669e69fa44427261424c",
+"from": [
+-90.571362,
+29.748145
+]
+},
+{
+"id": "line:142143",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "142143",
+"to": [
+-96.732045,
+34.965972
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "4077a39c73191c972f9afd31136d4e3ff26bd52248601a193a3830a968859652",
+"from": [
+-97.214122,
+34.808623
+]
+},
+{
+"id": "line:142170",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "142170",
+"to": [
+-94.186131,
+41.476077
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "6df3e33dacbcc98b9ea4306c688cd89cede1e7e26b4493f31e524a38f9809d59",
+"from": [
+-94.606335,
+41.465283
+]
+},
+{
+"id": "line:142620",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "142620",
+"to": [
+-92.255798,
+38.865381
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "2483135dbfc412a88ea5462bdaaa0d132b862bdb9d5b6eff038da63da9c57489",
+"from": [
+-92.278902,
+38.950352
+]
+},
+{
+"id": "line:143799",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "143799",
+"to": [
+-89.232218,
+42.984359
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "5c63339dbf84ff2168d9af2d6076a1a8ee6e6642982eb04c8c5001569ab1a231",
+"from": [
+-89.430658,
+42.98601
+]
+},
+{
+"id": "line:143884",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "143884",
+"to": [
+-88.557122,
+32.982856
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "c6a80760334f0c8118299e177cc14a5a2e48101153e711083736da8f6eb0d8d3",
+"from": [
+-88.677312,
+32.781577
+]
+},
+{
+"id": "line:144312",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "144312",
+"to": [
+-98.35512,
+40.583227
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "889f908466689b076cbbc7d45af3177510ea6800c9c76508cec234cbc94921f6",
+"from": [
+-98.355591,
+40.406326
+]
+},
+{
+"id": "line:144506",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "144506",
+"to": [
+-77.782076,
+38.249726
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "031bbeb6775f0c2cd8240cbb90ae27e173bec37b3b7e1b61a9911322a7d6cbba",
+"from": [
+-77.797216,
+38.061292
+]
+},
+{
+"id": "line:145066",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "145066",
+"to": [
+-71.115155,
+42.744645
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "9dec5a995192b9200bdaa93da6af5aaf86d912314ad732c54b703a531bc82624",
+"from": [
+-71.242316,
+42.622785
+]
+},
+{
+"id": "line:145078",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "145078",
+"to": [
+-77.818868,
+35.309526
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "a69dd7655951ef283eda3a33ace4970ead9b85597070bb7487c0d32c2ef7762d",
+"from": [
+-77.91402,
+35.36845
+]
+},
+{
+"id": "line:145448",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "145448",
+"to": [
+-82.683018,
+28.203378
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "b628498fba0dd6b4ae706b5d22bf7ad7f28b5eb44a6679384d61500576433d26",
+"from": [
+-82.784129,
+28.184288
+]
+},
+{
+"id": "line:145883",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "134193",
+"to": [
+-72.506998,
+42.373616
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "8cb93dc84367834cf39b246f5e77756453be9d0a6af2baffdbd4806a0ad0b574",
+"from": [
+-72.53619,
+42.250198
+]
+},
+{
+"id": "line:145986",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "145986",
+"to": [
+-95.64265,
+40.359819
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "5ab8ca0a5a07a6bf45b11cebf76080d7c33539d2620416910832e341efe0916f",
+"from": [
+-95.923353,
+40.364224
+]
+},
+{
+"id": "line:146350",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "100723",
+"to": [
+-70.998444,
+43.308804
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "e91845e9cfc1e49e0aef01a2a1a9313697c009f3b9d7c84432251a42a4488ead",
+"from": [
+-71.184803,
+43.141714
+]
+},
+{
+"id": "line:146422",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "146422",
+"to": [
+-92.481045,
+31.416999
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "9ea6b935b757d130fb1b502febf6a5bc1b21005c5bacb904ff5e13968b3db46a",
+"from": [
+-92.583824,
+31.362639
+]
+},
+{
+"id": "line:147393",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "147393",
+"to": [
+-86.708004,
+41.637895
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "85004a3785a6ce3556eb0b90029691321ca5dc468acad3d5524409b8fd3d1514",
+"from": [
+-86.928589,
+41.651013
+]
+},
+{
+"id": "line:147652",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "147652",
+"to": [
+-90.507643,
+33.458441
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "32d783c50e7ce70242645226c6e46a155041e79ecd56a607e0176c566a6c0952",
+"from": [
+-90.633667,
+33.439155
+]
+},
+{
+"id": "line:147929",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "147929",
+"to": [
+-87.749015,
+40.176958
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "1343fbcf1ab16b1036624290804e6dcd9991430e24db639d77bd964cb018d0ab",
+"from": [
+-88.235396,
+40.131462
+]
+},
+{
+"id": "line:149858",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "149858",
+"to": [
+-93.380364,
+37.538967
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "b427725f10f9910d82c29069e2f9d36f80337ef49c299efdb74a8d9719a101ee",
+"from": [
+-93.544377,
+37.488493
+]
+},
+{
+"id": "line:149870",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "105952",
+"to": [
+-80.045538,
+40.464197
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "76cb78d4e1b49ca75605c1069ae05f6c6c5f5b1ac3b1253d1d54feefe4a47874",
+"from": [
+-80.136167,
+40.498553
+]
+},
+{
+"id": "line:149899",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "149899",
+"to": [
+-69.803626,
+44.254399
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "5becd78ab19ca8e5ee78ae3fa4cebf33a1f560e6ce8f6408c145720184b9210f",
+"from": [
+-69.854135,
+44.331399
+]
+},
+{
+"id": "line:150136",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "150136",
+"to": [
+-76.601319,
+36.063488
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "b31cb1c8ba11a982aab0caa785c6423a354f98f424523a03dfb9d696994840cd",
+"from": [
+-76.618546,
+35.92707
+]
+},
+{
+"id": "line:150599",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "150599",
+"to": [
+-78.764858,
+33.926205
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "dec4bcc359d29c83a4d5658bfe1c15e8368a9ffeaef52d62dcd669e1db893521",
+"from": [
+-78.852719,
+33.930004
+]
+},
+{
+"id": "line:150721",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "150721",
+"to": [
+-79.908767,
+40.315904
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "e083279d25822580306014a0a6e41cd316f21fc2b912d87b1ef900cda436dda4",
+"from": [
+-79.968964,
+40.220905
+]
+},
+{
+"id": "line:150797",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "150797",
+"to": [
+-97.831922,
+38.369785
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "d7db78b10d5328a25de785835efdd98da4968a8f8567af759d464e3784fe525b",
+"from": [
+-98.182787,
+38.34737
+]
+},
+{
+"id": "line:150808",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "106656",
+"to": [
+-90.269587,
+41.566199
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "6058374f702d791d16566a57fe95aac95ae964a7588eb03f688dfabad79bced1",
+"from": [
+-90.274965,
+41.714157
+]
+},
+{
+"id": "line:156208",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "119240",
+"to": [
+-85.137505,
+34.893243
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "cfe9f7fd9b44bf8e30f1221af63419528b75a9e70c042a500b4d06049b89dd1c",
+"from": [
+-85.161097,
+34.996797
+]
+},
+{
+"id": "line:157288",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "157288",
+"to": [
+-99.755147,
+37.864261
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "a8ac473937ac6ab91a499d51811fc6982746ac0a891c0f992e7b6eda9c99ff0e",
+"from": [
+-100.339772,
+37.872842
+]
+},
+{
+"id": "line:158230",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "158230",
+"to": [
+-80.005749,
+33.189977
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "12629e8a88aaa0522246c6f3e99e11560171ca80e7aa132ec0f47c7c5cd978c5",
+"from": [
+-80.028836,
+33.08932
+]
+},
+{
+"id": "line:158383",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "158383",
+"to": [
+-95.895046,
+38.519713
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "95af630e7cdf883da77ee88c89f9252fa1d9b757a463c2da764b3337c29e9935",
+"from": [
+-96.064746,
+38.444513
+]
+},
+{
+"id": "line:159133",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "159133",
+"to": [
+-92.996695,
+44.638434
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 1,
+"geometrySha256": "977ac632926241b4c92a3e8799cc17646a9278e1c22a110068beade109802d5a",
+"from": [
+-93.296015,
+44.59595
+]
+},
+{
+"id": "line:159950",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "159950",
+"to": [
+-79.356737,
+37.732229
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "fb388b94a634e1b87cbb85f54a3d9f67c5711d03bf6c113bdb3e2eb01cfe0e24",
+"from": [
+-79.412558,
+37.799128
+]
+},
+{
+"id": "line:160841",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "160841",
+"to": [
+-91.237233,
+40.69497
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "c8091e1df99840bdbbf27c264d325b35286d404a9ef262c3ea470d3181183de1",
+"from": [
+-91.266733,
+40.607372
+]
+},
+{
+"id": "line:161256",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "161256",
+"to": [
+-96.506207,
+43.49102
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Central",
+"tercile": 0,
+"geometrySha256": "588feeb95518eb955c3807c3711656b6f8b68e0262075800565df787e33c1c9c",
+"from": [
+-96.667832,
+43.483214
+]
+},
+{
+"id": "line:163198",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "163198",
+"to": [
+-85.347204,
+41.119365
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Central",
+"tercile": 2,
+"geometrySha256": "3742874bbba60712c42f247a2632934cd89d678acb1c6f87ba4a67e8d4564ba5",
+"from": [
+-85.467286,
+41.063862
+]
+},
+{
+"id": "line:167090",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "167090",
+"to": [
+-80.541367,
+27.238016
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "0cc0a588386c8a5dfe5a78dbddc91de5e8126199dc5726b680c710617226b5ef",
+"from": [
+-80.777915,
+27.239913
+]
+},
+{
+"id": "line:167557",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "125656",
+"to": [
+-81.701828,
+33.509437
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "1419eaeb37af061eaa6d4fc6b403c7c86a8f1b7b5e1f5cba519e5e7c75d533b9",
+"from": [
+-81.911796,
+33.432731
+]
+},
+{
+"id": "line:168384",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "168384",
+"to": [
+-80.166378,
+33.67718
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "b7cd3094abc9bb908c52eb11efbafe8cd02ee3bcbeb8e70557d4379481517194",
+"from": [
+-80.31077,
+33.71156
+]
+},
+{
+"id": "line:170756",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "170756",
+"to": [
+-84.829577,
+32.546028
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 1,
+"geometrySha256": "8bde80fd64e46126c9af7248d814296fe4b3d62bfad829e502ce5080eb0e97b4",
+"from": [
+-84.913439,
+32.608405
+]
+},
+{
+"id": "line:179607",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "104783",
+"to": [
+-77.009994,
+40.175079
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "East",
+"tercile": 2,
+"geometrySha256": "8cb0572180e3994a78b00579422b2d46d4203d3972aca4d86f783d7b1b1a0a1a",
+"from": [
+-77.099803,
+40.238291
+]
+},
+{
+"id": "line:179925",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "179925",
+"to": [
+-82.918557,
+30.699583
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "East",
+"tercile": 0,
+"geometrySha256": "97780693ed7e055addff99c7ae13db8a9644c6ebe5c0037a7f9c8b638218b195",
+"from": [
+-82.941766,
+30.509329
+]
+},
+{
+"id": "line:200007",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "200007",
+"to": [
+-121.3904,
+42.080034
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "f15ade2cfaf80dc521b101148595bd3e5552c17968e64939f8464d3aa14e48c5",
+"from": [
+-121.813388,
+42.174001
+]
+},
+{
+"id": "line:200038",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "200038",
+"to": [
+-120.154256,
+45.702625
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "f634901e34ebd54e42a8f5876f84714b8ca5f85bd2aeaa46fb77659d138d0da0",
+"from": [
+-120.737835,
+45.67784
+]
+},
+{
+"id": "line:200086",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "200086",
+"to": [
+-119.939816,
+46.877615
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "9554f43e23d21ba499dc88841c378e83a89c9ef2a55a6a31c4dcacfbbeef1c91",
+"from": [
+-120.510221,
+47.121356
+]
+},
+{
+"id": "line:200221",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "200001",
+"to": [
+-121.316581,
+42.006099
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "4ba2866dcfc1cc8faacf460e667096ef7d1c38fd368b275d4dfe4f65134685a0",
+"from": [
+-121.3904,
+42.080034
+]
+},
+{
+"id": "line:200230",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "200230",
+"to": [
+-122.361388,
+41.976855
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "335fb2f4148f5d9a255dae7e51c06403a08409c25494895f42ec3112612b7cdb",
+"from": [
+-122.822298,
+42.346463
+]
+},
+{
+"id": "line:200240",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "200240",
+"to": [
+-123.236732,
+43.206008
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "c50020337359da85174a0e6d4358acf31228ee1f3112e46b8d93939db7deb15c",
+"from": [
+-123.564966,
+43.177586
+]
+},
+{
+"id": "line:200599",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "200595",
+"to": [
+-124.075626,
+43.213077
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "1061097a3d03cf9ff03cf0aa267ba6f5041f71c1d8e9901b656920bf88121d92",
+"from": [
+-124.396227,
+43.1067
+]
+},
+{
+"id": "line:200803",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "200803",
+"to": [
+-123.794221,
+45.414113
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "89199701b16f11d89f03cbeaf8bb2006a29b1576d2c8cdff54d250018779a093",
+"from": [
+-123.823694,
+45.276426
+]
+},
+{
+"id": "line:208854",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "208854",
+"to": [
+-122.519335,
+48.008153
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "515050e89282767e6f825acf880ba7028b0e00a93ddbc0e36a0976d9d66e0e72",
+"from": [
+-122.573912,
+48.098552
+]
+},
+{
+"id": "line:209276",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "209276",
+"to": [
+-122.204053,
+48.504931
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "f0bd8151f1542339de193361da8d57a291a46b575e8b0338eb49df8cafbe6804",
+"from": [
+-122.443954,
+48.454374
+]
+},
+{
+"id": "line:210576",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "210576",
+"to": [
+-120.054082,
+44.982908
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "a13ca4d4e763f70d7ace00e5e2941a99c3bdd43031f789bc4387de8755d5c325",
+"from": [
+-120.203463,
+44.994966
+]
+},
+{
+"id": "line:210789",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "210789",
+"to": [
+-122.19148,
+47.468095
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "76423eff0af2d56d311e345e7cc8521c1b6f8c598f7b562d757b70b822fc05e8",
+"from": [
+-122.203339,
+47.382921
+]
+},
+{
+"id": "line:300107",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "300107",
+"to": [
+-102.488385,
+33.520753
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "1304d6e027f7e6e7953663eff329911ed993df5364275e98c3d7fc951eede8cf",
+"from": [
+-102.610015,
+33.528095
+]
+},
+{
+"id": "line:300311",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300311",
+"to": [
+-95.053948,
+33.617878
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "784d845bec1273dc3ceaded2d49b33e9cf5c6f132503aeb072cb013b29c7aada",
+"from": [
+-95.424136,
+33.640414
+]
+},
+{
+"id": "line:300553",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300553",
+"to": [
+-97.74783,
+32.068858
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "e3652ac6c9ff077122673c21a3ada32c72a7d83e5a2e21c57408d74f5988b4ae",
+"from": [
+-97.867242,
+31.952655
+]
+},
+{
+"id": "line:300654",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300654",
+"to": [
+-96.007773,
+32.297542
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "d6fd3951291a7c476a2afb06dc2db70b2f30f4407ff045e6be6757a9e8f120a1",
+"from": [
+-96.10464,
+32.357309
+]
+},
+{
+"id": "line:300662",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "300662",
+"to": [
+-95.846644,
+32.328849
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "f6fcc5b4ca7db81e2d080bfb553d123172e63b13a238954d6e2f4a8dfb3577b0",
+"from": [
+-96.002748,
+32.266778
+]
+},
+{
+"id": "line:300811",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "300811",
+"to": [
+-95.085648,
+31.671414
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "064c63e122168f2ea6c99755f1ae6e4d7bdb600d751413d07c6c3459c8c68ee5",
+"from": [
+-95.488076,
+31.617993
+]
+},
+{
+"id": "line:300823",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300823",
+"to": [
+-94.238231,
+31.935915
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "04d9803f9d63204c026c9aa362135b31010a4ab27675093322850b3268d50454",
+"from": [
+-94.453297,
+31.866264
+]
+},
+{
+"id": "line:300824",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300824",
+"to": [
+-94.038401,
+31.959767
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "6750720152bccde40b34bf96f78b053d7a12c6bf056bcecd55729919621aff37",
+"from": [
+-94.171056,
+31.802908
+]
+},
+{
+"id": "line:300866",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "300866",
+"to": [
+-97.480958,
+28.988039
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "58a114a09907a0200b1c9d79dc020b051592a68f99d792f157bab52e00b092d7",
+"from": [
+-97.599657,
+28.923574
+]
+},
+{
+"id": "line:301100",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "301100",
+"to": [
+-96.486886,
+32.757878
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "9b47e0450e321f63d18ad460bcd371eecc1fb5d7a447e96d6acbee725e636342",
+"from": [
+-96.5477,
+32.83698
+]
+},
+{
+"id": "line:301582",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "301565",
+"to": [
+-121.896795,
+38.036969
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "07c0e3b1b730f0da3060aa7647322627231365dd15e951fb2423efc9abca63ac",
+"from": [
+-122.033738,
+38.030929
+]
+},
+{
+"id": "line:301930",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "301930",
+"to": [
+-121.755229,
+38.804079
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "fd0f87f60596ca48196e5369f9d1970c61d94a8ea628871ac0df9393690ae2d0",
+"from": [
+-121.760101,
+38.678614
+]
+},
+{
+"id": "line:302635",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "302635",
+"to": [
+-110.86739,
+33.399677
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "479324b75b6d7c7bf477add157b713c3aa496c7e0a9480f9abffd0dd879a4c05",
+"from": [
+-110.964208,
+33.394528
+]
+},
+{
+"id": "line:302810",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "302810",
+"to": [
+-100.916107,
+32.334127
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "cf3d8b5fffb1226fbb92f38043a32eb8c7fcff52b1d200c18e3e4b79ff136f80",
+"from": [
+-101.452334,
+32.100302
+]
+},
+{
+"id": "line:302973",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "302973",
+"to": [
+-120.848868,
+37.41892
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "0298b35bdcb80b22b082af003fb293a715712d84054754bd640f565f2d54b2a6",
+"from": [
+-120.905708,
+37.489406
+]
+},
+{
+"id": "line:303240",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "303240",
+"to": [
+-99.541144,
+32.629174
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "308fe03ff5ffcbe8c1f92fa9e3f90a12d0f3a326269df31a19596ff4c0b2f233",
+"from": [
+-99.822557,
+32.524057
+]
+},
+{
+"id": "line:303257",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303257",
+"to": [
+-97.782957,
+30.073851
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "bfd7f62383a01e93d4e099866cbf5c55515a09ab019c4c2fd1e556b5600e39d1",
+"from": [
+-97.811501,
+30.172195
+]
+},
+{
+"id": "line:303437",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303437",
+"to": [
+-98.049604,
+29.588542
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "c50f5e0450535415a8852bd0e17c3527e1890777c9bb6c6b8395f42dd3141d9b",
+"from": [
+-98.207727,
+29.578187
+]
+},
+{
+"id": "line:303747",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303428",
+"to": [
+-110.928428,
+31.971652
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "3a6b0f8ad10ecca87177015aa8b8a331d4d677d743366f82081a976f9b657cd7",
+"from": [
+-111.060493,
+31.922123
+]
+},
+{
+"id": "line:304000",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "304000",
+"to": [
+-103.317631,
+34.366148
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "6057abf3e4f4acc6d7a1125db7a8d357193887334ff1e9007bbe8cf9f265a9b8",
+"from": [
+-103.337833,
+34.302888
+]
+},
+{
+"id": "line:304076",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304076",
+"to": [
+-122.223425,
+39.120575
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "2da45e24e768e5d183608a7c6911f01442edc23088cf65f12ecd4a49cdc6bb71",
+"from": [
+-122.611871,
+39.011915
+]
+},
+{
+"id": "line:304259",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "303118",
+"to": [
+-96.964473,
+31.574745
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "0d17feb8b5e2717aacae4af9d4be4a432f1c060e9e324419fcfc8a9bb7fe0c05",
+"from": [
+-97.017899,
+31.897472
+]
+},
+{
+"id": "line:304302",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "304302",
+"to": [
+-120.273933,
+37.184937
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "f0f55f276ec35de3f4a58b65d00c9e8f86c402d8b70db601e5a8d18c4a15e83e",
+"from": [
+-120.31677,
+37.054897
+]
+},
+{
+"id": "line:304327",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304327",
+"to": [
+-100.393259,
+29.323858
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "33071e78bcf2624cbab56da93ccd23167fa31f1e62ce5abdc4b07ad086c5e378",
+"from": [
+-100.849173,
+29.373285
+]
+},
+{
+"id": "line:304619",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304619",
+"to": [
+-106.724,
+35.114058
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "98de053401bd98e0d0101e0bd66598ad22bb53189d6a59153173a9260655b137",
+"from": [
+-106.816963,
+34.616371
+]
+},
+{
+"id": "line:304645",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304645",
+"to": [
+-96.081802,
+30.622512
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "a48e767a2307a3c237960e9cb4dd1b44933c49952f4113811765514014cc461c",
+"from": [
+-96.26941,
+30.687734
+]
+},
+{
+"id": "line:304807",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304807",
+"to": [
+-95.106333,
+30.090672
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "84a8d7d3e87ef90e7246d67cb01500ca0fec1f5f154c0c8241d9c40d4b83d98d",
+"from": [
+-95.219597,
+30.13494
+]
+},
+{
+"id": "line:304812",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304812",
+"to": [
+-102.175253,
+31.967048
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "bf2a5dcc575b80501da1ed069f4c937e0418929770737fd99946a97222b58a8e",
+"from": [
+-102.229631,
+31.935796
+]
+},
+{
+"id": "line:304822",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "304822",
+"to": [
+-93.888089,
+30.077874
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "b024f91872005de72536683624ab8d179e01763d589125872e88d431b7bf9ad8",
+"from": [
+-94.049466,
+30.065176
+]
+},
+{
+"id": "line:304993",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304993",
+"to": [
+-103.773028,
+32.811764
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "2fc8fa43da67b13a47a3814662ea725db9024c183e45b65c9640cf9b4d70f05d",
+"from": [
+-103.796612,
+32.652102
+]
+},
+{
+"id": "line:305010",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305010",
+"to": [
+-97.511119,
+30.972126
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "8aa71248bac61857e90c69b5f0a97868bc40a235611ac531a2cd433f21c2385e",
+"from": [
+-97.722952,
+31.038984
+]
+},
+{
+"id": "line:305050",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305050",
+"to": [
+-94.713502,
+30.718862
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "3bdf388fa4612c0a162c896701d53ed641beeeda25d59fe25f3d0237c4d1b83a",
+"from": [
+-94.815015,
+30.6461
+]
+},
+{
+"id": "line:305083",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305083",
+"to": [
+-122.880918,
+38.80999
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "28a32f366ab72b5bc46b458d582a4d72a85f6cf45f145dc1daaceeb0f63dfb6a",
+"from": [
+-123.01025,
+38.797122
+]
+},
+{
+"id": "line:305093",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305093",
+"to": [
+-107.98566,
+36.599445
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "f0a4cee613d16977d73680f12b4ff88f5d6db0a17597a659ff56fbfda9eeac2d",
+"from": [
+-108.154889,
+36.522
+]
+},
+{
+"id": "line:305334",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305334",
+"to": [
+-111.526188,
+33.008039
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "49e12d8259416c63ff9a601fe2352d8105460077cb9540768f1f6539dadbe8c2",
+"from": [
+-111.590349,
+32.929873
+]
+},
+{
+"id": "line:305407",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303012",
+"to": [
+-97.67639,
+32.806133
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "77a7e17de42643dcad61cd20791260aaf70f8303210806e1744a1a81431647ee",
+"from": [
+-97.910294,
+33.056149
+]
+},
+{
+"id": "line:305625",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305625",
+"to": [
+-115.434403,
+33.192395
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "a6ac06c53de3c0c8296a91925b8d8468509865b4a3f0e29c5c081a68fbd3e579",
+"from": [
+-115.573309,
+33.204957
+]
+},
+{
+"id": "line:305629",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305629",
+"to": [
+-105.285584,
+36.399436
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "bdcea8b863753e20e606959c56b220040a6344c87f1f9124703a1bbc67ee7108",
+"from": [
+-105.63357,
+36.394887
+]
+},
+{
+"id": "line:305640",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305640",
+"to": [
+-122.459202,
+38.499824
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "e8e21f1a1963e3a8feb7701a090761dc4778b0cad4940511c65df0af900e6184",
+"from": [
+-122.667649,
+38.496994
+]
+},
+{
+"id": "line:305714",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "304767",
+"to": [
+-121.564928,
+37.712428
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "2602192a5f89dc6df82f2034eeb4d4311827cd5c96e8e45cbe421b39d2977d74",
+"from": [
+-121.57908,
+37.798883
+]
+},
+{
+"id": "line:305734",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305734",
+"to": [
+-121.688541,
+39.486722
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "d53705cf970b78010a71164bf586e8bd654a9f1de2ca195e3fc04e7decddacf7",
+"from": [
+-121.813393,
+39.712154
+]
+},
+{
+"id": "line:305755",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305755",
+"to": [
+-99.386646,
+32.409337
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "9d85ad734b8179ccb0305dde51a5c651f77e9da3ca471328b442a9140cf7a24a",
+"from": [
+-99.639226,
+32.434893
+]
+},
+{
+"id": "line:305797",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305797",
+"to": [
+-97.132913,
+33.25482
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "c981aa6290a3429b5d7a7d0bdf57c2a8edc34ceababbd4a57e45ffaa3809f8be",
+"from": [
+-97.191829,
+33.322343
+]
+},
+{
+"id": "line:305810",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305810",
+"to": [
+-98.370302,
+30.229939
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "645522655026200dcb5a7d6ce3b0cf1234e8046cac33552cf8fbf2f38bae703c",
+"from": [
+-98.884775,
+29.986267
+]
+},
+{
+"id": "line:305903",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305903",
+"to": [
+-102.528233,
+31.798105
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "1119045a71f125131de40dc8dec54ef9b289e604f8e6e03a4e10c96442b3ea79",
+"from": [
+-102.962583,
+31.584423
+]
+},
+{
+"id": "line:305945",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305945",
+"to": [
+-121.491558,
+39.67735
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "65787b91c387a0ce7f5439aa1239b861f0d27305eaef08eddf96599ac19f0860",
+"from": [
+-121.51786,
+39.454266
+]
+},
+{
+"id": "line:305968",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305968",
+"to": [
+-97.307852,
+32.875692
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "b7ec9b7617ce0481a220a33e291accf0387cce98a78d24f21fdca0448c097bea",
+"from": [
+-97.327242,
+32.821322
+]
+},
+{
+"id": "line:306096",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "306096",
+"to": [
+-111.995287,
+32.962507
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "25908add4c23be55868bb5ff72e7726bd30f5a082d40695f3c6ae3c29e5d2f55",
+"from": [
+-112.196449,
+32.997321
+]
+},
+{
+"id": "line:306227",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "306227",
+"to": [
+-99.822557,
+32.524057
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "fcb045c96118cee2c37ec863396c477e37aab50e612c610ea56c5787f010a8fa",
+"from": [
+-100.21693,
+32.464004
+]
+},
+{
+"id": "line:306236",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303996",
+"to": [
+-114.834742,
+35.927807
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "af3b609b2c1090ffaa5dab0cc390c3644978530ea65b0eb6c1d9360cee412dfc",
+"from": [
+-115.012996,
+35.803924
+]
+},
+{
+"id": "line:306291",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "306291",
+"to": [
+-95.21461,
+29.913288
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "7c14ad7aae0cd2755be5d7dd538ee0f41a13f2ea0ea5c0a2ce74f1068014d1d2",
+"from": [
+-95.219344,
+29.818445
+]
+},
+{
+"id": "line:306297",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "306297",
+"to": [
+-94.069403,
+30.341361
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "fdbcba897e9fb98fa870ddf9c37da1f3ca9e8ed19df69dd86599fa43ea09669e",
+"from": [
+-94.210967,
+30.368302
+]
+},
+{
+"id": "line:306541",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "306541",
+"to": [
+-96.21213,
+28.757004
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "a75abbe1c57b5d7d0287e94445e4889632ef91e72e6720ccbecd95375cc52a37",
+"from": [
+-96.421643,
+28.744685
+]
+},
+{
+"id": "line:306661",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "306661",
+"to": [
+-98.372434,
+33.203111
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "786c7a45f575fb895de9ff9f8db604d7b7dbebf1bf4a30627f152d2a05d0a71f",
+"from": [
+-98.609452,
+33.138418
+]
+},
+{
+"id": "line:306852",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "306852",
+"to": [
+-101.863914,
+35.099696
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "8b933ad5e0be7cec67813b32d0297cd385b5a9d666450477c458ec92d77f4925",
+"from": [
+-101.925615,
+35.050904
+]
+},
+{
+"id": "line:306873",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "306873",
+"to": [
+-97.268802,
+30.14604
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "4b11c4704a85a9e53bab120370987e67b1bb87012577ccf86081dfa6bfdb4de3",
+"from": [
+-97.359106,
+30.417017
+]
+},
+{
+"id": "line:306981",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303956",
+"to": [
+-95.150928,
+29.775611
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "cf9f5827bba97cb99fe783f0aed7ac29ca18b8203bbaec85df58ee792674b9c1",
+"from": [
+-95.220851,
+29.820097
+]
+},
+{
+"id": "line:307056",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307056",
+"to": [
+-97.900096,
+29.911483
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "4fa3354cc0b9a4cc5d1ebd11d32f65d0d72454866bac350a45f30d874adf50c6",
+"from": [
+-98.093671,
+29.946135
+]
+},
+{
+"id": "line:307102",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307102",
+"to": [
+-94.998062,
+32.573015
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "780302c3952135b85867855362c27287458a25682c4a590db636d35f750f5be6",
+"from": [
+-95.193479,
+32.608795
+]
+},
+{
+"id": "line:307140",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "302062",
+"to": [
+-119.984503,
+36.922149
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "8e7be610509a025d040d72a8692cd9bb1b5cc72bca2bd17c968b57a11eb940ed",
+"from": [
+-120.407394,
+37.292829
+]
+},
+{
+"id": "line:307371",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307371",
+"to": [
+-98.245211,
+29.758775
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "0592b1292ff2bd6e27a34b87c03a040ff4e9a71a00ef339b740bd2d4131fecb6",
+"from": [
+-98.413401,
+29.776787
+]
+},
+{
+"id": "line:307403",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307403",
+"to": [
+-99.751278,
+32.359385
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "1b444b384ea161882c2da7db0fa88f8ddc3a2e88457bc54ca858bd359a4f1bac",
+"from": [
+-100.023056,
+32.196514
+]
+},
+{
+"id": "line:307568",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307568",
+"to": [
+-102.328388,
+33.879079
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "9323a25653c59c6c5832343a02f7a57b51199f416c90f6df781dd465e0a133e5",
+"from": [
+-102.409685,
+34.165048
+]
+},
+{
+"id": "line:307641",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307641",
+"to": [
+-97.350469,
+33.030907
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "f9b61cb990608bb3e3ffa275145b1ddb37509bbe62de5b32314332a41b47ac24",
+"from": [
+-97.455172,
+33.076245
+]
+},
+{
+"id": "line:307648",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307648",
+"to": [
+-114.141705,
+34.291048
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "2af95512fcc99e2607121f7c320e6452d3d65a4c91074b6fa279fb45b9a04563",
+"from": [
+-114.216931,
+33.997717
+]
+},
+{
+"id": "line:307704",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307704",
+"to": [
+-97.24679,
+27.90027
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "48427231866c6bd794f33ba52816370234013e385edfb684120dd84d9d911b90",
+"from": [
+-97.329869,
+27.986748
+]
+},
+{
+"id": "line:307736",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307736",
+"to": [
+-121.024531,
+38.226872
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "f937e70aca2f2e4aceabf307e937590659784b1de845bfb85598f922f96d119e",
+"from": [
+-121.137513,
+38.2356
+]
+},
+{
+"id": "line:307794",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307794",
+"to": [
+-119.337948,
+37.220411
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "aada85e9af06523a3ac0dffe3fbb82db97c71ee69066bd1bb024271c5dbf784c",
+"from": [
+-119.388511,
+37.148252
+]
+},
+{
+"id": "line:307811",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307811",
+"to": [
+-120.908099,
+37.769128
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "869e147a319c7ce7c0c12bb485a68989046dae5cce538abb281eeffb9e515ee2",
+"from": [
+-121.013773,
+38.01554
+]
+},
+{
+"id": "line:307868",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307868",
+"to": [
+-94.023281,
+30.2203
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "f8e0c9509ef04ca72791875c25e18583ce539c659b73b31f62181936d5f20d19",
+"from": [
+-94.038616,
+30.115398
+]
+},
+{
+"id": "line:307907",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307907",
+"to": [
+-120.184908,
+34.647953
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "5bb153651cf1122acb86a1de8693522d7a50fdb480cb3c785043d82e8248632f",
+"from": [
+-120.4374,
+34.643208
+]
+},
+{
+"id": "line:307986",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "307986",
+"to": [
+-95.750864,
+29.47116
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "4f558a8b7c31ce06242772418900bb71065f901013e6a14c6800c52e282ed5bb",
+"from": [
+-95.808543,
+29.559971
+]
+},
+{
+"id": "line:308054",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308054",
+"to": [
+-120.407394,
+37.292829
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "1d5a43e9220db673223325ada4aa60e403e73995e9c889f3381c278bb60ae54a",
+"from": [
+-120.487316,
+37.273312
+]
+},
+{
+"id": "line:308066",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "303613",
+"to": [
+-108.59932,
+32.40363
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "fae06b84531de3c5dbba78b6f5a81983e588adc1281099e735bf1dd14495bf55",
+"from": [
+-108.697506,
+32.349521
+]
+},
+{
+"id": "line:308196",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "301686",
+"to": [
+-98.648935,
+29.47646
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "f5cdee16f76060bb312f8ba58ff5d910007df20b57828350f7d4fd53abdf8804",
+"from": [
+-98.681874,
+29.548171
+]
+},
+{
+"id": "line:308240",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "308240",
+"to": [
+-99.58059,
+33.079946
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "6a570b9293589e770026568c998497c76b8887fc7dc1374ac96c76956ff35c6f",
+"from": [
+-99.993516,
+32.826818
+]
+},
+{
+"id": "line:308345",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307948",
+"to": [
+-94.392085,
+32.773039
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "5a461f04a24f0cf03a8ad1d7b7036e0068d8c2fd27ee402ec3cab3539c57685a",
+"from": [
+-94.549362,
+32.848637
+]
+},
+{
+"id": "line:308347",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304112",
+"to": [
+-95.070164,
+29.718178
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "e86cc35cfbd508e790661b14d2cb16ce410252f88ade89e857b40d3961986cc9",
+"from": [
+-95.224408,
+29.719627
+]
+},
+{
+"id": "line:308588",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "303711",
+"to": [
+-98.369271,
+29.509694
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "49bc4b7bcf8167e1323d62c35669775d6e977f01e6c1336f793340823805fb1b",
+"from": [
+-98.408778,
+29.580559
+]
+},
+{
+"id": "line:308643",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308643",
+"to": [
+-98.469774,
+28.700306
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "f2d7adcdfa595b8786ea62ebf3063ef620fe8f940fdce66ff1e88bcd2064c57f",
+"from": [
+-99.205122,
+28.668792
+]
+},
+{
+"id": "line:308768",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308768",
+"to": [
+-96.08321,
+30.076622
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "4af044c2e0c30a1601d30a2ec7220fe02deedf3a1ca8f9a8daabac46426f4700",
+"from": [
+-96.255901,
+29.924245
+]
+},
+{
+"id": "line:308794",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308794",
+"to": [
+-95.201336,
+29.499149
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "4fca4414ed313dbb92367643bb614df563141576e347fc4868d8c52bdb89d3cd",
+"from": [
+-95.252574,
+29.483245
+]
+},
+{
+"id": "line:308888",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308888",
+"to": [
+-95.455252,
+30.28902
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "379095566930cc57734c8a7140e58fecfc7da262ffa42b6e38365f8c4e2944b8",
+"from": [
+-95.491257,
+30.183663
+]
+},
+{
+"id": "line:308959",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "308959",
+"to": [
+-110.308966,
+31.5661
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "a83e8a49068f18270d43a9dd076b60cd60ecb2931ce0ee8a3ea02d60711c8493",
+"from": [
+-110.570441,
+31.964628
+]
+},
+{
+"id": "line:308968",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "308968",
+"to": [
+-97.616193,
+27.845165
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "879a2a38247ff3919520b85e51f3d3a61b41a961a213f9cec9ac5788e0646a4d",
+"from": [
+-97.886136,
+27.530644
+]
+},
+{
+"id": "line:309008",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "309008",
+"to": [
+-121.590189,
+38.231565
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "a68ed1f1578c34c4b5bcaee7aa491a20035ce7bc4d4baa2341655e82a73654bd",
+"from": [
+-121.781666,
+37.999425
+]
+},
+{
+"id": "line:309022",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "309022",
+"to": [
+-120.669107,
+38.331515
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "5bc1c31c75869a92337a1bbbed39d688ba344253dd9fbc7ec0dab83fbdf0ec3d",
+"from": [
+-121.013773,
+38.01554
+]
+},
+{
+"id": "line:309074",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305019",
+"to": [
+-114.834742,
+35.927807
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "0cb655696388fdb15f06a1158fa59ea4e84167691ebd49f3d768bdd221a0f486",
+"from": [
+-115.090928,
+36.002962
+]
+},
+{
+"id": "line:309100",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "309100",
+"to": [
+-97.566811,
+32.419215
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "6d16e9c4a8f150239c16b162a4ba1295176f8a9c06fd1db19892dc9780aa45a2",
+"from": [
+-97.682636,
+32.438318
+]
+},
+{
+"id": "line:309132",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "309132",
+"to": [
+-99.433968,
+34.233983
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "dd1a371832552597d669f601af649d8cdcb88dd8dded2bbf5055711e9e3c14da",
+"from": [
+-100.087011,
+34.373777
+]
+},
+{
+"id": "line:309262",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "307129",
+"to": [
+-94.257202,
+30.303634
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "e68234a041a48fa3f3c854534ee17aba688df5b87cb9b8fe6e904977a16457ce",
+"from": [
+-94.331179,
+30.359074
+]
+},
+{
+"id": "line:309268",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304546",
+"to": [
+-97.614146,
+30.304972
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "89fd899a586dd9d3a991ae8f12f199a761afbbe9cc54865667b12bb38d41d5a4",
+"from": [
+-97.614232,
+30.209567
+]
+},
+{
+"id": "line:309270",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "303521",
+"to": [
+-121.781666,
+37.999425
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "0ea38f4063099c321af547ce2f2ad444fe6602f6e4e2debc8eab8937de8e85b0",
+"from": [
+-121.830155,
+38.124705
+]
+},
+{
+"id": "line:309354",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "309354",
+"to": [
+-119.710198,
+38.963467
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "80c85151015796fa800b856343de0663b223c34be50c0865885a77f09051b836",
+"from": [
+-119.98592,
+38.877106
+]
+},
+{
+"id": "line:309390",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "308553",
+"to": [
+-98.261191,
+30.552363
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "204ddf8e56b032b94d4c2ceabd1f1981f28709d79c461150ee7ea992d4f74a08",
+"from": [
+-98.337431,
+30.559652
+]
+},
+{
+"id": "line:309472",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304734",
+"to": [
+-118.903174,
+34.280854
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "c108ac0a7ef61d45670fe518945d6ce3dc6ef5a0861b646271dba70041a23c09",
+"from": [
+-119.167013,
+34.130769
+]
+},
+{
+"id": "line:309537",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "309537",
+"to": [
+-122.075373,
+37.326511
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "9a59353ae193d0e584cbe0f58fe487b69bfed39f35a3652946cefc2fc2044d94",
+"from": [
+-122.288746,
+37.387934
+]
+},
+{
+"id": "line:309729",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305652",
+"to": [
+-117.334457,
+33.211413
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "27b016f0b52c299aa86284bf19f7cab1685f5b2cdcb0b4b0bd3f04e77ec854bf",
+"from": [
+-117.553574,
+33.369443
+]
+},
+{
+"id": "line:310118",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310118",
+"to": [
+-109.623484,
+32.774233
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "a11a185c658486a72298846769330df41d2394b513d312b755fd5b73362f9e12",
+"from": [
+-109.761458,
+32.341155
+]
+},
+{
+"id": "line:310172",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310172",
+"to": [
+-98.950354,
+29.059716
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "fe9e8273dabadb139e212e2402239939779cb27b58b6f18dc198917bee48111e",
+"from": [
+-99.079324,
+28.888117
+]
+},
+{
+"id": "line:310215",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310215",
+"to": [
+-117.533288,
+34.088071
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "d139cf1849d57ce8e31a4920b0d4424a96a8d9a6678acf87a62ebb1f5ba3c5ca",
+"from": [
+-117.564285,
+34.008338
+]
+},
+{
+"id": "line:310308",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "310308",
+"to": [
+-101.422895,
+32.27514
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "d2af0168617defccc0e0d3be88b14abc9b7726b6968a620ccde2ac916e2de4bb",
+"from": [
+-102.050795,
+32.020259
+]
+},
+{
+"id": "line:310311",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310311",
+"to": [
+-120.100088,
+38.168378
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "8533b92bab65cb9bebf161b060d0d6a8fba89428c6cf909dab1594e46a5114e8",
+"from": [
+-120.217118,
+38.052914
+]
+},
+{
+"id": "line:310381",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310381",
+"to": [
+-121.733319,
+37.700765
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "331f8c5cf6c3a96a3c0ad67f02b913887dcef4f98838dcf922795d79352df2be",
+"from": [
+-121.759821,
+37.946144
+]
+},
+{
+"id": "line:310816",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "309232",
+"to": [
+-97.130853,
+32.656172
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "b21bcaca41ad994c6e1d745332b57cdbcf6b13435058101587d37839f15db13e",
+"from": [
+-97.213757,
+32.6368
+]
+},
+{
+"id": "line:310929",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "310929",
+"to": [
+-94.392085,
+32.773039
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "92893a1410a2d2770f208500b25892939015ce01d99ebdf446a20da776bbf3ae",
+"from": [
+-94.396308,
+32.539036
+]
+},
+{
+"id": "line:311029",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "304397",
+"to": [
+-117.137183,
+32.783907
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "c1b68232318b8a67fcb38a498ad0197631ab7cef7b0fea49b7dfff705cccc1a6",
+"from": [
+-117.334457,
+33.211413
+]
+},
+{
+"id": "line:311141",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "311141",
+"to": [
+-117.030714,
+32.917632
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "bd5a87227580cf54ed1205cd36360fa231cb77ca2ab96ccdc020b31695b0f348",
+"from": [
+-117.28794,
+33.12287
+]
+},
+{
+"id": "line:311239",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "311239",
+"to": [
+-111.964657,
+33.291982
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "5872ca2225abfdeddc911fcb42ebfd58703215c0e219fdddd674741d4d5dbd63",
+"from": [
+-111.995478,
+32.960422
+]
+},
+{
+"id": "line:311434",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "311434",
+"to": [
+-122.444037,
+40.610246
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "e8d1b20ca81e1549f10189a6735573a8313720409479c9b402b8921a11d7717f",
+"from": [
+-122.625809,
+40.645796
+]
+},
+{
+"id": "line:311558",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "311558",
+"to": [
+-98.154236,
+29.14118
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "b211701bc49f7357c7f3eac29f7cf94c180d4bbed4134196cb3350737a9b7caf",
+"from": [
+-98.253865,
+29.224816
+]
+},
+{
+"id": "line:311735",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "311735",
+"to": [
+-121.294144,
+38.900535
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "2c181e6849fccfcd840b8821185c948d2e38be6a6e468f0233e25c69119f9656",
+"from": [
+-121.466792,
+38.9352
+]
+},
+{
+"id": "line:311760",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "311138",
+"to": [
+-117.678471,
+33.998021
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "80ecfe5ceb5601d28a8f968221fca1515e9d2d1bfc8c46482c0b96730f4d745a",
+"from": [
+-117.789372,
+33.829264
+]
+},
+{
+"id": "line:311782",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "302829",
+"to": [
+-119.639091,
+36.610804
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "cc3b5d3c55fb6d1b596b17183689798ae42a0e6bb1f39da4d1f07bc530ffb8eb",
+"from": [
+-119.818747,
+36.718318
+]
+},
+{
+"id": "line:311860",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "306104",
+"to": [
+-96.368131,
+33.628929
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "76dc9394c2144375e188fdf11b3bea606ba3ff81a4c07146cbc819c6dcf431fe",
+"from": [
+-96.558493,
+33.786366
+]
+},
+{
+"id": "line:311910",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304229",
+"to": [
+-95.012917,
+30.050571
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "79cdf311b4f1b28c69b2f5fd8bcd373c4254ebf5e942d1372f47e5316033d2aa",
+"from": [
+-95.106333,
+30.090672
+]
+},
+{
+"id": "line:312081",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "303311",
+"to": [
+-101.747258,
+35.296447
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "Texas",
+"tercile": 1,
+"geometrySha256": "29273a73c9170be00b0902f8b89ee5188c59d42e8bf675cb6f33ce8903769bb4",
+"from": [
+-101.776348,
+35.148687
+]
+},
+{
+"id": "line:312261",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305658",
+"to": [
+-102.073078,
+32.062623
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "bdceec8e26e64d1cfaebbfd1979307ca6d5418d3146b8854f6b51bbb397e5279",
+"from": [
+-102.246252,
+32.037424
+]
+},
+{
+"id": "line:312266",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "312266",
+"to": [
+-97.047463,
+28.598479
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "b4be04c0aa0f457f417d5e9ba7dffbffd209e39ebcf1b328b86240322667b1e8",
+"from": [
+-97.339849,
+28.253406
+]
+},
+{
+"id": "line:312672",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "305785",
+"to": [
+-120.407394,
+37.292829
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "9f5d86da711927900b4fd76b7cacc1e960e7d19b119c3952b8d0cb63b21b2074",
+"from": [
+-120.802415,
+37.741729
+]
+},
+{
+"id": "line:312816",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "312816",
+"to": [
+-120.151422,
+34.696726
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "1b607b9d7c9c9ee3a8eddc3f92e203f624620a3c3d84359c0e6643c9aa9c9037",
+"from": [
+-120.298746,
+34.825311
+]
+},
+{
+"id": "line:312855",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "312855",
+"to": [
+-97.787652,
+29.056409
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "ff5a8d90f399f212a99d87b4bd4a4a77f6901f4e3405835c5ada43ec1c553ca7",
+"from": [
+-97.799896,
+28.937945
+]
+},
+{
+"id": "line:312947",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305310",
+"to": [
+-97.67639,
+32.806133
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "7683fc4d9a8a423cb96d808c6490dcdfe51140bbcaafeb2e6494e487c79295b1",
+"from": [
+-97.789861,
+32.297773
+]
+},
+{
+"id": "line:312953",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "305061",
+"to": [
+-96.05056,
+28.799468
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac345",
+"region": "Texas",
+"tercile": 0,
+"geometrySha256": "ba69e47e6c7913b81e5a6d50ee6fa7aa33734f5e3c22555eb99df57bdd55cee4",
+"from": [
+-96.236045,
+29.029542
+]
+},
+{
+"id": "line:312988",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "312988",
+"to": [
+-117.219297,
+32.917046
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "ecd59f55eaa5c993c06689398d53cd79c27526a3e5e6fe30c8442d8de0904a3d",
+"from": [
+-117.335471,
+33.13723
+]
+},
+{
+"id": "line:313105",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "313105",
+"to": [
+-97.907452,
+30.390041
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "30163cf32757a79166b1dacb05d0fee2ed0a30dab247683cd45fd518e37f7231",
+"from": [
+-97.978688,
+30.46057
+]
+},
+{
+"id": "line:313288",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313288",
+"to": [
+-106.725382,
+35.124611
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "bb39eb9b3d32b199c5bed8348fe13d241d7e80f31b8de01b2899ff57705b429b",
+"from": [
+-106.728177,
+35.215349
+]
+},
+{
+"id": "line:313436",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "313432",
+"to": [
+-118.921928,
+35.361148
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "6001fbd9f72c7e27f7a1d85c65c70f521614c5b1f57710d63985ee900d81e7f2",
+"from": [
+-119.084723,
+35.841746
+]
+},
+{
+"id": "line:313467",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313467",
+"to": [
+-94.395571,
+29.55935
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac138",
+"region": "Texas",
+"tercile": 2,
+"geometrySha256": "bb46c2a44a364086210e442d3f2e6bb5e98499055288252199f3b85a0529a30f",
+"from": [
+-94.663835,
+29.443194
+]
+},
+{
+"id": "line:313481",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313481",
+"to": [
+-118.292908,
+35.038631
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "885c54276e9bcc1917410043cd0e777a4f666dacdd9ddde9ac6beea981d0095e",
+"from": [
+-118.378108,
+35.099392
+]
+},
+{
+"id": "line:313485",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313485",
+"to": [
+-118.280732,
+35.035039
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "a8dbc4d418295e869b65ef81241c66c336a7e228145e83a77211b3d2b0588f1a",
+"from": [
+-118.298693,
+34.686411
+]
+},
+{
+"id": "line:313530",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "313530",
+"to": [
+-118.055127,
+35.236925
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac230",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "a972727e4dd7418e6e142d7871288bf444070961e23b0e6b8bcf97d47f65011e",
+"from": [
+-118.176323,
+35.246981
+]
+},
+{
+"id": "line:313550",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313550",
+"to": [
+-117.398784,
+35.70004
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "29938f00c9b3ca73c18b3aa1829b58b890105dfe0bceb5eca3f36d2d9b58f571",
+"from": [
+-117.795841,
+35.652569
+]
+},
+{
+"id": "line:313635",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "313635",
+"to": [
+-116.945818,
+34.443997
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "c7fca268f6796dfb4043748bfeda15628e9de1c54435b84ef360aaccd7f79a98",
+"from": [
+-117.388627,
+34.504319
+]
+},
+{
+"id": "line:313857",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313857",
+"to": [
+-116.861249,
+34.372503
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "e61515cbcd51a4a252f5027ec64d41e3b927ed1847416f9055825dc655e1ffd8",
+"from": [
+-116.945818,
+34.443997
+]
+},
+{
+"id": "line:313880",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "313872",
+"to": [
+-116.369723,
+33.818443
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac115",
+"region": "West",
+"tercile": 1,
+"geometrySha256": "375dd5f17b75d41930ffaa0b947e8100e8207e549e10cdcbe159895977c92cd9",
+"from": [
+-116.577733,
+33.939079
+]
+},
+{
+"id": "line:313894",
+"set": "holdout-lines",
+"split": "CAL",
+"group": "304311",
+"to": [
+-116.577733,
+33.939079
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac161",
+"region": "West",
+"tercile": 2,
+"geometrySha256": "2d6c93855a7b2a39aa7eb058560f0aca63da08562496c20f86e278f7b0c56411",
+"from": [
+-117.319284,
+34.041437
+]
+},
+{
+"id": "line:313955",
+"set": "holdout-lines",
+"split": "HOLD",
+"group": "313955",
+"to": [
+-115.715533,
+32.717619
+],
+"presets": [
+"tm-default"
+],
+"lineType": "ac500",
+"region": "West",
+"tercile": 0,
+"geometrySha256": "d1c2599a32c3fd14639e487cb8bd4e3fa66ad4310b811e897bfaf211b9ebc1e7",
+"from": [
+-116.117876,
+32.627272
+]
+}
+]
+}

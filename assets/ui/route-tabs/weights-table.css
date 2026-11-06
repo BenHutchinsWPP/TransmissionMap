@@ -1,0 +1,71 @@
+/* ── Route weights table (weights-table.ts; Method tab) ─────────
+   Edited cells yellow with "was …" under them; invalid cells red with the reason.
+   Under 520 px each row stacks: category + applies to, then routing weight and cost × side by side
+   (each labelled from its data-label), the source as its ⓘ. */
+.wt { display: flex; flex-direction: column; gap: 8px; min-width: 0; container: wt / inline-size; }
+.wt-scroll { overflow: auto; max-height: 52vh; border: 1px solid var(--panel-border); border-radius: var(--radius-md); }
+.wt-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.wt-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; text-align: left; font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--panel-border); white-space: nowrap; }
+.wt-table td { padding: 4px 8px; border-bottom: 1px solid var(--panel-border); vertical-align: top; }
+.wt-table .wt-num { text-align: right; white-space: nowrap; }
+.wt-cat { color: var(--text); white-space: nowrap; }
+.wt-applies { color: var(--text-light); }
+.wt-group { display: inline-block; padding: 0 6px; border-radius: 9px; border: 1px solid rgba(59, 130, 246, 0.35); color: var(--accent-hover); font-size: var(--text-xs); white-space: nowrap; }
+.wt-in { width: 7ch; padding: 3px 6px; text-align: right; font: var(--text-sm) var(--font); font-variant-numeric: tabular-nums; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); background: #fff; color: var(--text); }
+.wt-in[size="10"] { width: 11ch; }
+.wt-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.wt-in:disabled { background: #f1f5f9; color: var(--text-light); }
+.wt-was, .wt-err { display: block; font-size: var(--text-xs); }
+.wt-was:empty, .wt-err:empty { display: none; }
+.wt-was { color: #b45309; }
+.wt-err { color: #b91c1c; font-weight: 600; white-space: normal; max-width: 22ch; margin-left: auto; text-align: right; }
+.wt-scale { margin-right: 4px; font-size: var(--text-xs); color: var(--text-light); cursor: help; }
+.wt-sets { display: block; font-size: var(--text-xs); color: var(--text-light); }
+.wt-sets-row td { padding: 0 8px 4px 24px; }
+.wt-row:has(+ .wt-sets-row) td { border-bottom-color: transparent; }
+.wt-sets:empty { display: none; }
+.wt-sets strong { color: var(--text); }
+.wt-row--edited td, .wt-sets-row.wt-row--edited td { background: #fffbeb; }
+.wt-row--bad td, .wt-sets-row.wt-row--bad td { background: #fef2f2; }
+.wt-cell.wt-edited .wt-in { background: #fef3c7; border-color: #f59e0b; font-weight: 700; }
+.wt-cell.wt-bad .wt-in { border-color: #dc2626; color: #b91c1c; background: #fff; }
+.wt-barrier { color: #b91c1c; font-weight: 600; }
+.wt-srccell { display: flex; gap: 4px; align-items: flex-start; }
+.wt-src { color: var(--text-light); font-size: var(--text-xs); max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-except td { background: #f8fafc; padding: 3px 8px 5px 24px; font-size: var(--text-xs); }
+.wt-except-lab { color: var(--text-light); margin-right: 8px; }
+.wt-check { display: inline-flex; align-items: center; gap: 3px; margin-right: 12px; }
+.wt-check.wt-edited { background: #fef3c7; border-radius: var(--radius-sm); padding: 0 4px; }
+.wt-cont { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: var(--text-sm); }
+.wt-cont-lab { display: inline-flex; gap: 6px; align-items: center; }
+.wt-cont.wt-edited .wt-in { background: #fef3c7; border-color: #f59e0b; font-weight: 700; }
+.wt-cont.wt-bad .wt-in { border-color: #dc2626; }
+.wt-cont .wt-was, .wt-cont .wt-err { display: inline; }
+.wt-cont .wt-was:empty, .wt-cont .wt-err:empty { display: none; }
+.wt-general { margin: 0; color: #b91c1c; font-size: var(--text-sm); }
+@container wt (max-width: 640px) {
+  .wt-src { display: none; }
+  .wt-cat { white-space: normal; }
+  .wt-group { display: inline; white-space: normal; }
+  .wt-in { width: 6ch; }
+  .wt-table th, .wt-table td { padding-inline: 4px; }
+  .wt-sets-row td { padding-inline-start: 12px; }
+}
+@container wt (max-width: 520px) {
+  .wt-table, .wt-table tbody { display: block; }
+  .wt-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .wt-table tr { display: block; }
+  .wt-table .wt-row { display: grid; grid-template-columns: auto auto 1fr; grid-template-areas: "cat app app" "w c src"; align-items: end; column-gap: 12px; border-top: 1px solid var(--panel-border); padding: 6px 4px 4px; }
+  .wt-table tbody > tr:first-child { border-top: 0; }
+  .wt-table .wt-row > td { border: 0; padding: 0; }
+  .wt-row > .wt-cat { grid-area: cat; font-weight: 600; }
+  .wt-row > .wt-applies { grid-area: app; padding-inline-start: 8px; }
+  .wt-row > td:nth-child(3) { grid-area: w; }
+  .wt-row > td:nth-child(4) { grid-area: c; }
+  .wt-row > .wt-srccell { grid-area: src; justify-self: end; }
+  .wt-row > .wt-num { text-align: left; padding-top: 4px; }
+  .wt-row > .wt-num[data-label]::before { content: attr(data-label); display: block; font-size: var(--text-xs); color: var(--text-light); }
+  .wt-err { margin-left: 0; text-align: left; }
+  .wt-sets-row td, .wt-except td { display: block; border: 0; padding: 0 4px 6px 12px; }
+}
+.wt-match { display: block; font-size: 11px; }

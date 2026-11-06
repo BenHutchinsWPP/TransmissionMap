@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+<title id="title">How the line routing cube becomes a route</title>
+<desc id="desc">Six groups of public data are filtered and aligned to a 250 metre grid. The routing cube stores mapped conditions. Published methods and TransmissionMap choices supply separate routing weights and construction cost assumptions. Reference cards link to sources.</desc>
+<rect x="0" y="0" width="1920" height="1080" rx="0" fill="#F5F8FA" stroke="none"/>
+<rect x="0" y="0" width="1920" height="12" rx="0" fill="#007D78" stroke="none"/>
+<text x="60" y="78" font-family="Noto Sans,Arial,sans-serif" font-size="46" font-weight="700" fill="#173344">How the line routing cube becomes a route</text>
+<text x="60" y="123" font-family="Noto Sans,Arial,sans-serif" font-size="25" font-weight="400" fill="#536876">TransmissionMap  /  Public data / A shared 250 m grid / Weighted routing and a separate cost estimate</text>
+<text x="60" y="191" font-family="Noto Sans,Arial,sans-serif" font-size="24" font-weight="700" fill="#007D78">1  Public data sources</text>
+<text x="630" y="191" font-family="Noto Sans,Arial,sans-serif" font-size="24" font-weight="700" fill="#007D78">2  Prepare the data</text>
+<text x="990" y="191" font-family="Noto Sans,Arial,sans-serif" font-size="24" font-weight="700" fill="#007D78">3  Store the cube</text>
+<text x="1340" y="191" font-family="Noto Sans,Arial,sans-serif" font-size="24" font-weight="700" fill="#007D78">4  Apply a method</text>
+<rect x="60" y="220" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="220" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="244" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Land cover &amp; terrain</text>
+<text x="78" y="265" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">USGS / MRLC Annual NLCD; USGS 3DEP</text>
+<rect x="60" y="297" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="297" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="321" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Conservation &amp; wildlife</text>
+<text x="78" y="342" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">USGS PAD-US; USFWS habitat + wetlands;</text>
+<text x="78" y="363" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">BLM; NPS trails; Wild &amp; Scenic Rivers; TNC / PoPWest</text>
+<rect x="60" y="374" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="374" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="398" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Communities &amp; sensitive places</text>
+<text x="78" y="419" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">FEMA / ORNL USA Structures; WorldPop;</text>
+<text x="78" y="440" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">HIFLD facilities; NPS historic properties</text>
+<rect x="60" y="451" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="451" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="475" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Hazards &amp; restricted areas</text>
+<text x="78" y="496" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">USFS wildfire; EPA floodplain + Superfund;</text>
+<text x="78" y="517" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">Census / BIA tribal land; DoD; FAA; USGS / USACE</text>
+<rect x="60" y="528" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="528" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="552" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Networks &amp; existing corridors</text>
+<text x="78" y="573" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">OSM + HIFLD lines, roads, rivers, pipelines;</text>
+<text x="78" y="594" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">BTS rail; DOE / ANL Section 368 corridors</text>
+<rect x="60" y="605" width="520" height="69" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<rect x="60" y="605" width="5" height="69" rx="0" fill="#007D78" stroke="none"/>
+<text x="78" y="629" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#173344">Regional &amp; land-value context</text>
+<text x="78" y="650" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">EIA balancing authorities; Census boundaries;</text>
+<text x="78" y="671" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">USDA NASS county agricultural land values</text>
+<rect x="630" y="220" width="310" height="454" rx="14" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="650" y="258" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#173344">Collect &amp; filter</text>
+<text x="650" y="288" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">Select source classes, status</text>
+<text x="650" y="316" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">and relevant features.</text>
+<text x="650" y="363" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#173344">Align to one grid</text>
+<text x="650" y="393" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">Reproject to CONUS Albers;</text>
+<text x="650" y="421" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">aggregate or rasterize at 250 m.</text>
+<text x="650" y="468" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#173344">Derive cell attributes</text>
+<text x="650" y="498" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">Slope bins, buffers, wetland</text>
+<text x="650" y="526" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">shares, homes, line adjacency.</text>
+<text x="650" y="573" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#173344">Check &amp; package</text>
+<text x="650" y="603" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">Verify grid and band definitions;</text>
+<text x="650" y="631" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">retain sources, dates and licences.</text>
+<polyline points="588,449 619,449" fill="none" stroke="#007D78" stroke-width="3"/>
+<polygon points="619,449 608.3560609266486,454.5413501064978 608.3560609266486,443.4586498935022" fill="#007D78"/>
+<polyline points="948,449 979,449" fill="none" stroke="#007D78" stroke-width="3"/>
+<polygon points="979,449 968.3560609266486,454.5413501064978 968.3560609266486,443.4586498935022" fill="#007D78"/>
+<rect x="1008" y="255" width="280" height="302" rx="12" fill="#D0E5E4" stroke="#79A9A5"/>
+<rect x="999" y="269" width="280" height="302" rx="12" fill="#B9D8D5" stroke="#79A9A5"/>
+<rect x="990" y="283" width="280" height="302" rx="12" fill="#FFFFFF" stroke="#79A9A5"/>
+<text x="1012" y="331" font-family="Noto Sans,Arial,sans-serif" font-size="30" font-weight="700" fill="#007D78">Routing cube</text>
+<text x="1012" y="374" font-family="Noto Sans,Arial,sans-serif" font-size="21" font-weight="400" fill="#173344">250 m × 250 m cells</text>
+<text x="1012" y="405" font-family="Noto Sans,Arial,sans-serif" font-size="21" font-weight="400" fill="#173344">Contiguous United States</text>
+<text x="1012" y="455" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#536876">19 federal / other bands</text>
+<text x="1012" y="484" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#536876">+ 3 OSM-derived bands</text>
+<text x="1012" y="513" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#536876">in separate raster files</text>
+<text x="1009" y="612" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="700" fill="#007D78">Mapped conditions</text>
+<text x="1009" y="642" font-family="Noto Sans,Arial,sans-serif" font-size="21" font-weight="400" fill="#536876">Weights applied later</text>
+<polyline points="1292,449 1310,449 1310,322 1330,322" fill="none" stroke="#007D78" stroke-width="3"/>
+<polygon points="1330,322 1319.3560609266485,327.5413501064978 1319.3560609266485,316.4586498935022" fill="#007D78"/>
+<polyline points="1310,449 1310,565 1330,565" fill="none" stroke="#2865A8" stroke-width="3"/>
+<polygon points="1330,565 1319.3560609266485,570.5413501064978 1319.3560609266485,559.4586498935022" fill="#2865A8"/>
+<rect x="1340" y="220" width="520" height="209" rx="14" fill="#E4F2EF" stroke="#B8D9D3"/>
+<text x="1362" y="258" font-family="Noto Sans,Arial,sans-serif" font-size="28" font-weight="700" fill="#007D78">Routing preferences: path</text>
+<text x="1362" y="297" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">Apply avoidance, barriers and corridor discounts.</text>
+<text x="1362" y="330" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">Dijkstra search minimizes weight × distance.</text>
+<text x="1362" y="363" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">Return a route, alternatives and similar-cost areas.</text>
+<text x="1362" y="407" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#007D78">User choices: endpoints, line type and method</text>
+<rect x="1340" y="452" width="520" height="222" rx="14" fill="#EAF0F9" stroke="#C9D7EB"/>
+<text x="1362" y="491" font-family="Noto Sans,Arial,sans-serif" font-size="26" font-weight="700" fill="#2865A8">Construction assumptions: dollars</text>
+<text x="1362" y="529" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">Price the routed line with base $/mile and factors.</text>
+<text x="1362" y="562" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">Add right-of-way, mitigation and terminals;</text>
+<text x="1362" y="595" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#173344">apply markups, contingency and escalation.</text>
+<text x="1362" y="647" font-family="Noto Sans,Arial,sans-serif" font-size="21" font-weight="700" fill="#2865A8">Rough early estimate in 2025$: -30% / +50%</text>
+<rect x="60" y="702" width="1800" height="53" rx="10" fill="#173344" stroke="none"/>
+<text x="82" y="736" font-family="Noto Sans,Arial,sans-serif" font-size="27" font-weight="700" fill="#FFFFFF">Weights shape the route. Cost multipliers price it. A routing penalty is not a dollar cost.</text>
+<text x="60" y="797" font-family="Noto Sans,Arial,sans-serif" font-size="27" font-weight="700" fill="#173344">Main sources for weights and methodology</text>
+<text x="1178" y="797" font-family="Noto Sans,Arial,sans-serif" font-size="23" font-weight="400" fill="#536876">Published inputs + TransmissionMap adaptations</text>
+<rect x="60" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="74" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#007D78">Wu et al. · PNAS 2023</text>
+<text x="74" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">250 m least-cost framework;</text>
+<text x="74" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">environmental categories,</text>
+<text x="74" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">wildfire and terminal rules.</text>
+<rect x="363" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="377" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#2865A8">B&amp;V / WECC · 2014</text>
+<text x="377" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">Base line and station costs;</text>
+<text x="377" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">terrain / land-cover factors,</text>
+<text x="377" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">markups and short-line rules.</text>
+<rect x="666" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="680" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#2865A8">NREL reVX / Lopez 2025</text>
+<text x="680" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">Regional construction factors</text>
+<text x="680" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">for land cover and slope;</text>
+<text x="680" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">least-cost modelling practice.</text>
+<rect x="969" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="983" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#007D78">EPRI–GTC / utility filings</text>
+<text x="983" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">Siting suitability; preference</text>
+<text x="983" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">for existing corridors; homes</text>
+<text x="983" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">and sensitive-site proximity.</text>
+<rect x="1272" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="1286" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#2865A8">SWCA / WECC · 2013</text>
+<text x="1286" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">Environmental mitigation</text>
+<text x="1286" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">percentages by risk class</text>
+<text x="1286" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">and California / other areas.</text>
+<rect x="1575" y="820" width="285" height="135" rx="10" fill="#FFFFFF" stroke="#DCE5EA"/>
+<text x="1589" y="849" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#2865A8">MISO · MTEP25 / 26</text>
+<text x="1589" y="883" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">ROW widths and land method;</text>
+<text x="1589" y="908" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">contingency, escalation and</text>
+<text x="1589" y="933" font-family="Noto Sans,Arial,sans-serif" font-size="18" font-weight="400" fill="#536876">lower-voltage cost ratios.</text>
+<text x="60" y="994" font-family="Noto Sans,Arial,sans-serif" font-size="22" font-weight="400" fill="#173344">TransmissionMap sets additional penalties, thresholds and combination rules; assumptions are cited and editable in the Method tab.</text>
+<text x="60" y="1028" font-family="Noto Sans,Arial,sans-serif" font-size="20" font-weight="400" fill="#536876">Screening at 250 m. Coverage and dates vary. Observed footprint bands apply only where processed and are neutral by default.</text>
+<text x="60" y="1058" font-family="Noto Sans,Arial,sans-serif" font-size="19" font-weight="400" fill="#536876">Engineering, permitting and tribal consent require project review. Source detail: docs/routing.md and src/registry/route-presets.ts</text>
+<a href="https://doi.org/10.1073/pnas.2204098120"><rect x="60" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+<a href="https://efis.psc.mo.gov/Document/Display/24603"><rect x="363" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+<a href="https://github.com/NREL/reVX/tree/efb1977/reVX/least_cost_xmission"><rect x="666" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+<a href="https://www.gatransmission.com/wp-content/uploads/2017/08/GTC_EPRISitingMethodologyFactSheet_v2.pdf"><rect x="969" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+<a href="../routing.md#how-its-priced"><rect x="1272" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+<a href="https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP25337433.pdf"><rect x="1575" y="820" width="285" height="135" fill="transparent"><title>Open methodology reference</title></rect></a>
+</svg>

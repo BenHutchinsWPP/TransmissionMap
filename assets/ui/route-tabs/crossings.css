@@ -1,0 +1,31 @@
+/* ── Route panel: Crossings sub-tab (crossings.ts; lazy) ──────────────────────
+   Table (with List crossings by name and its names list) left, pills / sources / map toggles right; one column on a narrow pane. */
+.rx { display: grid; grid-template-columns: minmax(300px, 1.5fr) minmax(260px, 1fr); gap: 14px 28px; align-items: start; }
+.rx-left, .rx-right { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.rx-table { width: 100%; border-collapse: collapse; font: var(--text-sm) var(--font); color: var(--text); }
+.rx-table th { text-align: left; font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); padding: 4px 8px; border-bottom: 1px solid var(--panel-border); }
+.rx-table td { padding: 4px 8px; border-bottom: 1px solid var(--panel-border); }
+.rx-table .rx-num { text-align: right; font-variant-numeric: tabular-nums; }
+.rx-table th.rx-num { text-align: right; }
+.rx-na { color: var(--text-light); }
+.rx-note { color: var(--text-mid); font-size: var(--text-xs); }
+.rx-group th { padding-top: 10px; }
+.rx-row--go { cursor: pointer; }
+.rx-row--go:hover { background: rgba(59, 130, 246, 0.06); }
+.rx-row--on { background: rgba(59, 130, 246, 0.12); box-shadow: inset 3px 0 0 var(--accent); }
+.rx-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rx-box { border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.rx-box h4 { margin: 0; font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+.rx-box p { margin: 0; font-size: var(--text-xs); color: var(--text-mid); line-height: 1.45; }
+.rx-show label { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--text-mid); cursor: pointer; }
+.rx-glyph { font-size: 0.9em; color: var(--text-light); }
+.rx-csv { align-self: flex-start; border: 1px solid var(--panel-border); background: none; border-radius: 6px; padding: 4px 10px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
+.rx-csv:hover { color: var(--accent-hover); border-color: var(--accent); }
+.rx-csv:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rx-csv:disabled { cursor: progress; opacity: 0.7; }
+.rx-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.rx-exact { display: flex; flex-direction: column; gap: 6px; }
+.rx-exact p { margin: 0; }
+.rx-names-head { margin: 6px 0 0; font: 700 var(--text-xs) var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+@container rp-main (max-width: 700px) { .rx { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .rx { grid-template-columns: 1fr; } }
