@@ -1,0 +1,1058 @@
+{
+ "pudl_version": "v2026.8.0",
+ "bas": [
+  {
+   "code": "AEC",
+   "name": "PowerSouth Energy Coop",
+   "region": "SE",
+   "interconnect": "eastern",
+   "retired": "2021-09-01",
+   "lon": -86.457,
+   "lat": 31.706,
+   "anchor": [
+    -86.299,
+    31.631
+   ]
+  },
+  {
+   "code": "AECI",
+   "name": "Associated Electric Coop Inc",
+   "region": "MIDW",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -92.163,
+   "lat": 37.444,
+   "anchor": [
+    -92.163,
+    37.444
+   ]
+  },
+  {
+   "code": "AESO",
+   "name": "Alberta Electric System Operator",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -114.07,
+   "lat": 51.05,
+   "anchor": [
+    -114.07,
+    51.05
+   ]
+  },
+  {
+   "code": "AVA",
+   "name": "Avista Corp",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -117.371,
+   "lat": 47.433,
+   "anchor": [
+    -117.502,
+    47.408
+   ]
+  },
+  {
+   "code": "AVRN",
+   "name": "Avangrid Renewables LCC",
+   "region": "NW",
+   "interconnect": null,
+   "retired": null,
+   "lon": -117.666,
+   "lat": 45.86,
+   "anchor": [
+    -118.129,
+    45.841
+   ]
+  },
+  {
+   "code": "AZPS",
+   "name": "Arizona Public Service Co",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -110.651,
+   "lat": 35.142,
+   "anchor": [
+    -110.651,
+    35.142
+   ]
+  },
+  {
+   "code": "BANC",
+   "name": "Balancing Authority of Northern California",
+   "region": "CAL",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -122.751,
+   "lat": 40.686,
+   "anchor": [
+    -122.719,
+    41.08
+   ]
+  },
+  {
+   "code": "BCHA",
+   "name": "British Columbia Hydro & Power Authority",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -120.4,
+   "lat": 50.7,
+   "anchor": [
+    -120.4,
+    50.7
+   ]
+  },
+  {
+   "code": "BHBA",
+   "name": "Black Hills Energy",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -103.23,
+   "lat": 44.08,
+   "anchor": [
+    -103.23,
+    44.08
+   ]
+  },
+  {
+   "code": "BPAT",
+   "name": "Bonneville Power Administration",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -120.02,
+   "lat": 43.403,
+   "anchor": [
+    -120.02,
+    43.403
+   ]
+  },
+  {
+   "code": "CEA",
+   "name": "Chugach Electric Association Inc",
+   "region": null,
+   "interconnect": null,
+   "retired": null,
+   "lon": -144.293,
+   "lat": 61.594,
+   "anchor": [
+    -144.293,
+    61.594
+   ]
+  },
+  {
+   "code": "CEN",
+   "name": "Centro Nacional De Control De Energia",
+   "region": "MEX",
+   "interconnect": null,
+   "retired": null,
+   "lon": -116.351,
+   "lat": 31.159,
+   "anchor": [
+    -116.2,
+    31.6
+   ]
+  },
+  {
+   "code": "CFE",
+   "name": "Comision Federal de Electricidad",
+   "region": "MEX",
+   "interconnect": null,
+   "retired": "2018-07-01",
+   "lon": -101.901,
+   "lat": 23.737,
+   "anchor": [
+    -101.901,
+    23.737
+   ]
+  },
+  {
+   "code": "CHPD",
+   "name": "PUD No 1 of Chelan County",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -121.043,
+   "lat": 48.373,
+   "anchor": [
+    -120.618,
+    47.885
+   ]
+  },
+  {
+   "code": "CISO",
+   "name": "California Independent System Operator",
+   "region": "CAL",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -116.923,
+   "lat": 35.197,
+   "anchor": [
+    -116.923,
+    35.197
+   ]
+  },
+  {
+   "code": "CPLE",
+   "name": "Duke Energy Progress East",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -78.246,
+   "lat": 35.02,
+   "anchor": [
+    -78.366,
+    35.031
+   ]
+  },
+  {
+   "code": "CPLW",
+   "name": "Duke Energy Progress West",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -82.876,
+   "lat": 35.677,
+   "anchor": [
+    -82.445,
+    35.55
+   ]
+  },
+  {
+   "code": "DEAA",
+   "name": "Arlington Valley LLC",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -112.79,
+   "lat": 34.521,
+   "anchor": [
+    -112.889,
+    33.342
+   ]
+  },
+  {
+   "code": "DOPD",
+   "name": "PUD No 1 of Douglas County",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -119.081,
+   "lat": 48.892,
+   "anchor": [
+    -119.506,
+    48.713
+   ]
+  },
+  {
+   "code": "DUK",
+   "name": "Duke Energy Carolinas LLC",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.889,
+   "lat": 36.259,
+   "anchor": [
+    -80.801,
+    35.968
+   ]
+  },
+  {
+   "code": "EEI",
+   "name": "Electric Energy Inc",
+   "region": "MIDW",
+   "interconnect": "eastern",
+   "retired": "2020-02-29",
+   "lon": -87.61,
+   "lat": 37.353,
+   "anchor": [
+    -88.881,
+    37.224
+   ]
+  },
+  {
+   "code": "EPE",
+   "name": "El Paso Electric",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -106.44,
+   "lat": 31.9,
+   "anchor": [
+    -106.44,
+    31.9
+   ]
+  },
+  {
+   "code": "ERCO",
+   "name": "ERCOT ISO",
+   "region": "TEX",
+   "interconnect": "ercot",
+   "retired": null,
+   "lon": -99.072,
+   "lat": 31.232,
+   "anchor": [
+    -99.072,
+    31.232
+   ]
+  },
+  {
+   "code": "FMPP",
+   "name": "Florida Municipal Power Pool",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -79.798,
+   "lat": 29.446,
+   "anchor": [
+    -81.358,
+    28.448
+   ]
+  },
+  {
+   "code": "FPC",
+   "name": "Duke Energy Florida Inc",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -81.099,
+   "lat": 27.986,
+   "anchor": [
+    -81.375,
+    28.027
+   ]
+  },
+  {
+   "code": "FPL",
+   "name": "Florida Power & Light",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.132,
+   "lat": 26.315,
+   "anchor": [
+    -80.458,
+    26.711
+   ]
+  },
+  {
+   "code": "GCPD",
+   "name": "PUD No 2 of Grant County",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -119.397,
+   "lat": 47.026,
+   "anchor": [
+    -119.578,
+    47.157
+   ]
+  },
+  {
+   "code": "GLHB",
+   "name": "Gridliance Heartland",
+   "region": "MIDW",
+   "interconnect": null,
+   "retired": "2022-09-01",
+   "lon": -89.629,
+   "lat": 38.231,
+   "anchor": [
+    -89.238,
+    37.263
+   ]
+  },
+  {
+   "code": "GRID",
+   "name": "Gridforce Energy Management LLC",
+   "region": null,
+   "interconnect": "western",
+   "retired": null,
+   "lon": -119.833,
+   "lat": 45.598,
+   "anchor": [
+    -119.314,
+    45.793
+   ]
+  },
+  {
+   "code": "GRIF",
+   "name": "Griffith Energy LLC",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": "2023-11-01",
+   "lon": -114.902,
+   "lat": 34.476,
+   "anchor": [
+    -114.133,
+    35.054
+   ]
+  },
+  {
+   "code": "GRMA",
+   "name": "Gila River Power LLC",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": "2018-05-03",
+   "lon": -111.95,
+   "lat": 31.675,
+   "anchor": [
+    -112.694,
+    32.975
+   ]
+  },
+  {
+   "code": "GVL",
+   "name": "Gainesville Regional Utilities",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -85.539,
+   "lat": 29.185,
+   "anchor": [
+    -82.38,
+    29.692
+   ]
+  },
+  {
+   "code": "GWA",
+   "name": "NaturEner Power Watch LLC (GWA)",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -112.406,
+   "lat": 47.961,
+   "anchor": [
+    -112.187,
+    48.539
+   ]
+  },
+  {
+   "code": "HGMA",
+   "name": "New Harquahala Generating Co LLC",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -113.611,
+   "lat": 32.789,
+   "anchor": [
+    -113.113,
+    33.476
+   ]
+  },
+  {
+   "code": "HQT",
+   "name": "Hydro Quebec TransEnergie",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -72.752,
+   "lat": 51.621,
+   "anchor": [
+    -72.752,
+    51.621
+   ]
+  },
+  {
+   "code": "HST",
+   "name": "Homestead (City of)",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.696,
+   "lat": 24.475,
+   "anchor": [
+    -80.484,
+    25.48
+   ]
+  },
+  {
+   "code": "IESO",
+   "name": "IESO (Ontario)",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -88.122,
+   "lat": 52.542,
+   "anchor": [
+    -88.122,
+    52.542
+   ]
+  },
+  {
+   "code": "IID",
+   "name": "Imperial Irrigation District",
+   "region": "CAL",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -115.826,
+   "lat": 32.895,
+   "anchor": [
+    -115.648,
+    33.101
+   ]
+  },
+  {
+   "code": "IPCO",
+   "name": "Idaho Power Co",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -115.952,
+   "lat": 43.589,
+   "anchor": [
+    -115.952,
+    43.589
+   ]
+  },
+  {
+   "code": "ISNE",
+   "name": "New England ISO",
+   "region": "NE",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -71.815,
+   "lat": 43.925,
+   "anchor": [
+    -71.815,
+    43.925
+   ]
+  },
+  {
+   "code": "JEA",
+   "name": "JEA",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.993,
+   "lat": 30.953,
+   "anchor": [
+    -81.646,
+    30.3
+   ]
+  },
+  {
+   "code": "LDWP",
+   "name": "Los Angeles Dept of Water & Power",
+   "region": "CAL",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -118.169,
+   "lat": 36.82,
+   "anchor": [
+    -118.169,
+    36.82
+   ]
+  },
+  {
+   "code": "LGEE",
+   "name": "LG&E & KU Services Co",
+   "region": "MIDW",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -84.578,
+   "lat": 38.109,
+   "anchor": [
+    -84.578,
+    38.109
+   ]
+  },
+  {
+   "code": "MHEB",
+   "name": "Manitoba Hydro Electric",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -96.994,
+   "lat": 55.952,
+   "anchor": [
+    -96.994,
+    55.952
+   ]
+  },
+  {
+   "code": "MISO",
+   "name": "Midcontinent ISO",
+   "region": "MIDW",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -92.585,
+   "lat": 44.326,
+   "anchor": [
+    -92.585,
+    44.326
+   ]
+  },
+  {
+   "code": "NBSO",
+   "name": "New Brunswick System Operator",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -66.562,
+   "lat": 46.76,
+   "anchor": [
+    -66.562,
+    46.76
+   ]
+  },
+  {
+   "code": "NEVP",
+   "name": "Nevada Power Co",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -116.486,
+   "lat": 39.612,
+   "anchor": [
+    -116.486,
+    39.612
+   ]
+  },
+  {
+   "code": "NSB",
+   "name": "New Smyrna Beach Utilities Commission",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": "2020-01-08",
+   "lon": -83.205,
+   "lat": 28.145,
+   "anchor": [
+    -80.922,
+    29.039
+   ]
+  },
+  {
+   "code": "NWMT",
+   "name": "Northwestern Energy",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -110.5,
+   "lat": 46.9,
+   "anchor": [
+    -110.5,
+    46.9
+   ]
+  },
+  {
+   "code": "NYIS",
+   "name": "New York ISO",
+   "region": "NY",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -74.814,
+   "lat": 43.07,
+   "anchor": [
+    -74.814,
+    43.07
+   ]
+  },
+  {
+   "code": "OVEC",
+   "name": "Ohio Valley Electric Corp",
+   "region": "MIDA",
+   "interconnect": "eastern",
+   "retired": "2018-12-01",
+   "lon": -82.132,
+   "lat": 38.911,
+   "anchor": [
+    -82.132,
+    38.911
+   ]
+  },
+  {
+   "code": "PACE",
+   "name": "PacifiCorp East",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -111.504,
+   "lat": 40.077,
+   "anchor": [
+    -111.504,
+    40.077
+   ]
+  },
+  {
+   "code": "PACW",
+   "name": "PacifiCorp West",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -122.623,
+   "lat": 42.266,
+   "anchor": [
+    -122.632,
+    42.157
+   ]
+  },
+  {
+   "code": "PGE",
+   "name": "Portland General Electric",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -122.715,
+   "lat": 45.305,
+   "anchor": [
+    -122.715,
+    45.305
+   ]
+  },
+  {
+   "code": "PJM",
+   "name": "PJM Interconnection",
+   "region": "MIDA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.069,
+   "lat": 39.551,
+   "anchor": [
+    -80.069,
+    39.551
+   ]
+  },
+  {
+   "code": "PNM",
+   "name": "Public Service Co of New Mexico",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -106.964,
+   "lat": 34.727,
+   "anchor": [
+    -106.964,
+    34.727
+   ]
+  },
+  {
+   "code": "PSCO",
+   "name": "Public Service Co of Colorado",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -105.536,
+   "lat": 39.303,
+   "anchor": [
+    -105.536,
+    39.303
+   ]
+  },
+  {
+   "code": "PSEI",
+   "name": "Puget Sound Energy Inc",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -121.509,
+   "lat": 46.976,
+   "anchor": [
+    -121.34,
+    47.354
+   ]
+  },
+  {
+   "code": "SC",
+   "name": "South Carolina Public Service Authority",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -79.108,
+   "lat": 33.228,
+   "anchor": [
+    -79.996,
+    33.214
+   ]
+  },
+  {
+   "code": "SCEG",
+   "name": "South Carolina Electric & Gas Co",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -81.14,
+   "lat": 32.743,
+   "anchor": [
+    -80.827,
+    32.897
+   ]
+  },
+  {
+   "code": "SCL",
+   "name": "Seattle City Light",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -123.155,
+   "lat": 48.327,
+   "anchor": [
+    -122.319,
+    47.667
+   ]
+  },
+  {
+   "code": "SEC",
+   "name": "Seminole Electric Coop Inc",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -82.758,
+   "lat": 29.951,
+   "anchor": [
+    -82.992,
+    29.811
+   ]
+  },
+  {
+   "code": "SEPA",
+   "name": "Southeastern Power Administration (Southern)",
+   "region": "SE",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -82.683,
+   "lat": 33.949,
+   "anchor": [
+    -82.255,
+    33.703
+   ]
+  },
+  {
+   "code": "SIKE",
+   "name": "Sikeston Board of Municipal Utilities",
+   "region": "MIDW",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -89.03,
+   "lat": 35.259,
+   "anchor": [
+    -89.59,
+    36.88
+   ]
+  },
+  {
+   "code": "SOCO",
+   "name": "Southern Co Services Inc",
+   "region": "SE",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -83.319,
+   "lat": 32.261,
+   "anchor": [
+    -83.332,
+    32.248
+   ]
+  },
+  {
+   "code": "SPA",
+   "name": "Southwestern Power Administration",
+   "region": "CENT",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -90.283,
+   "lat": 36.636,
+   "anchor": [
+    -90.079,
+    36.578
+   ]
+  },
+  {
+   "code": "SPC",
+   "name": "Saskatchewan Power Corp",
+   "region": "CAN",
+   "interconnect": null,
+   "retired": null,
+   "lon": -105.786,
+   "lat": 51.692,
+   "anchor": [
+    -105.786,
+    51.692
+   ]
+  },
+  {
+   "code": "SRP",
+   "name": "Salt River Project",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -111.219,
+   "lat": 33.348,
+   "anchor": [
+    -111.428,
+    33.445
+   ]
+  },
+  {
+   "code": "SWPP",
+   "name": "Southwest Power Pool",
+   "region": "CENT",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -98.337,
+   "lat": 38.514,
+   "anchor": [
+    -98.337,
+    38.514
+   ]
+  },
+  {
+   "code": "SWPW",
+   "name": "Southwest Power Pool West",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -105.6,
+   "lat": 41.3,
+   "anchor": [
+    -105.6,
+    41.3
+   ]
+  },
+  {
+   "code": "TAL",
+   "name": "Tallahassee FL (City of)",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -84.606,
+   "lat": 30.834,
+   "anchor": [
+    -84.27,
+    30.244
+   ]
+  },
+  {
+   "code": "TEC",
+   "name": "Tampa Electric Co",
+   "region": "FLA",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -84.023,
+   "lat": 26.414,
+   "anchor": [
+    -82.192,
+    27.814
+   ]
+  },
+  {
+   "code": "TEPC",
+   "name": "Tucson Electric Power Co",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -109.839,
+   "lat": 32.002,
+   "anchor": [
+    -109.874,
+    32.035
+   ]
+  },
+  {
+   "code": "TIDC",
+   "name": "Turlock Irrigation District",
+   "region": "CAL",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -120.898,
+   "lat": 37.518,
+   "anchor": [
+    -120.898,
+    37.518
+   ]
+  },
+  {
+   "code": "TPWR",
+   "name": "Tacoma Power",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -123.668,
+   "lat": 46.946,
+   "anchor": [
+    -122.453,
+    47.221
+   ]
+  },
+  {
+   "code": "TVA",
+   "name": "Tennessee Valley Authority",
+   "region": "TEN",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -86.995,
+   "lat": 35.724,
+   "anchor": [
+    -87.04,
+    35.725
+   ]
+  },
+  {
+   "code": "WACM",
+   "name": "WAPA Rocky Mountain Region",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": "2026-04-01",
+   "lon": -107.962,
+   "lat": 37.433,
+   "anchor": [
+    -107.962,
+    37.433
+   ]
+  },
+  {
+   "code": "WALC",
+   "name": "WAPA Desert Southwest Region",
+   "region": "SW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -113.895,
+   "lat": 35.993,
+   "anchor": [
+    -113.928,
+    35.575
+   ]
+  },
+  {
+   "code": "WAUW",
+   "name": "WAPA Upper Great Plains West",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": "2026-04-01",
+   "lon": -106.698,
+   "lat": 48.055,
+   "anchor": [
+    -106.698,
+    48.055
+   ]
+  },
+  {
+   "code": "WWA",
+   "name": "NaturEner Wind Watch LLC",
+   "region": "NW",
+   "interconnect": "western",
+   "retired": null,
+   "lon": -111.889,
+   "lat": 49.315,
+   "anchor": [
+    -112.07,
+    48.845
+   ]
+  },
+  {
+   "code": "YAD",
+   "name": "Alcoa Power Generating Inc Yadkin Division",
+   "region": "CAR",
+   "interconnect": "eastern",
+   "retired": null,
+   "lon": -80.471,
+   "lat": 34.571,
+   "anchor": [
+    -80.269,
+    35.643
+   ]
+  }
+ ]
+}

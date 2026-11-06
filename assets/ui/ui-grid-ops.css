@@ -1,0 +1,28 @@
+/* ── Grid Ops tab (ui-grid-ops.ts; lazy) ──────────────────────────────────────
+   The Grid Ops tab of the bottom drawer: one node's figures and ties, the
+   metered-flow note, and the table of every node on the map. */
+.gops { padding: 8px 12px 12px; font: var(--text-sm) var(--font); color: var(--text); }
+.gops-head { margin-bottom: 6px; }
+.gops-name { margin: 0; font-size: 15px; font-weight: 600; }
+.gops-hour { margin: 2px 0 0; color: var(--text-mid); font-size: var(--text-xs); }
+.gops-msg { margin: 0 0 8px; color: var(--text-mid); }
+.gops-figs { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 8px; }
+.gops-fig { display: flex; flex-direction: column; }
+.gops-fig-k { color: var(--text-mid); font-size: var(--text-xs); }
+.gops-fig-v { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gops-sub { margin: 8px 0 4px; font-size: var(--text-xs); font-weight: 600; color: var(--text-mid); text-transform: uppercase; letter-spacing: .03em; }
+.gops-ties { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-width: 520px; }
+.gops-tie { position: relative; padding: 2px 6px; min-height: 18px; }
+.gops-tie-bar { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: #dbeafe; }
+.gops-tie-bar.gops-tie-in { background: #ffedd5; }
+.gops-tie-text { position: relative; font-variant-numeric: tabular-nums; }
+.gops-note { margin: 8px 0; color: var(--text-mid); font-size: var(--text-xs); max-width: 640px; }
+.gops-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.td-gops-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.td-gops-table th, .td-gops-table td { padding: 2px 10px 2px 0; text-align: start; border-bottom: 1px solid var(--panel-border); font-weight: normal; }
+.td-gops-table thead th { font-weight: 600; color: var(--text-mid); font-size: var(--text-xs); }
+.td-gops-table .gops-num { text-align: end; }
+.gops-pick { margin: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-align: start; cursor: pointer; }
+.gops-pick:hover, .gops-pick:focus-visible { text-decoration: underline; }
+.gops-row--on { background: #fef3c7; }
+.gops-row--on .gops-pick { font-weight: 600; }
