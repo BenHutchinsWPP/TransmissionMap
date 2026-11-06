@@ -5,7 +5,7 @@ import { state } from '../state.js';
 import { buildPopupHtml } from '../popup-format.js';
 import {
   saveUserData, loadUserData, restoreDrawnFeatures, addImportedLayer, renderMyDataTab, startInlineEdit,
-  copyFeatureToMyData,
+  copyFeatureToMyData, addCopiedFeatures,
 } from './user-data.js';
 import { initDraw, applyColorPick } from './user-data-draw.js';
 import { handleFileOpen } from './user-data-import.js';
@@ -358,8 +358,49 @@ describe('copyFeatureToMyData', () => {
     expect(buildPopupHtml('user-1', props)).toContain('openstreetmap.org/way/123456');
   });
 
+  it('reports a failed save with the feature, so the popup can offer the file', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    state.map = makeStubMap() as unknown as typeof state.map;
+    const r = copyFeatureToMyData({
+      type: 'Feature', id: 1, geometry: { type: 'Point', coordinates: [-100, 40] },
+      properties: { name: 'Sub' }, layer: { id: 'hifld-substations-hv' },
+    } as unknown as MapGeoJSONFeature);
+    expect(r.saved).toBe(false);
+    expect(r.feature.properties).toMatchObject({ name: 'Sub', __src: 'hifld-substations-hv' });
+    expect(state.userLayers).toHaveLength(0);
+  });
+
   it('adds no fid for a layer without a native id', () => {
     const props = copy('hifld-substations-hv', 1234562, { name: 'Sub' });
     expect(props).not.toHaveProperty('fid');
+  });
+});
+
+describe('addCopiedFeatures save result', () => {
+  const failSave = () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+  };
+
+  it('reports saved and keeps a new layer when the write succeeds', () => {
+    expect(addCopiedFeatures([makeFeature('a')], 'Table copy')).toEqual({ saved: true });
+    expect(state.userLayers.map(l => l.filename)).toEqual(['Table copy']);
+  });
+
+  it('removes a new layer whose save failed', () => {
+    failSave();
+    expect(addCopiedFeatures([makeFeature('a')], 'Table copy')).toEqual({ saved: false });
+    expect(state.userLayers).toHaveLength(0);
+  });
+
+  it('takes appended features back out when their save failed, keeping the earlier ones', () => {
+    expect(addCopiedFeatures([makeFeature('a')])).toEqual({ saved: true });
+    failSave();
+    expect(addCopiedFeatures([makeFeature('b'), makeFeature('c')])).toEqual({ saved: false });
+    expect(state.userLayers).toHaveLength(1);
+    expect(state.userLayers[0].geojson.features.map(f => f.id)).toEqual(['a']);
   });
 });

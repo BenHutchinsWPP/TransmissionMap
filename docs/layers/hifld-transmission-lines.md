@@ -53,3 +53,9 @@ _Counts approximate, from the SeerAI HIFLD archive snapshot (`transmission_lines
   `DEADEND`, `RISER`). Use them only after filtering those prefixes.
 - SeerAI `SUB_1`/`SUB_2` names are noisier than the original HIFLD export.
 - Validation dates run through June 2021.
+
+## Line tools
+
+Exact lengths, copies with full geometry, the fault locator and the elevation profile read this
+layer's line GeoParquet (`make line-parquet`, dev-only until published): see
+[../line-tools.md](../line-tools.md) and [../pipeline.md](../pipeline.md) § *Line geometry*.

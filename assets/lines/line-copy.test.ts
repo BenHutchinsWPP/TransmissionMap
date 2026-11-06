@@ -1,0 +1,102 @@
+// line-copy.ts: full geometry merged with the tile properties, the fallback to tile
+// geometry, and the caps (line count, copy size, projected My Data payload) checked
+// before anything is committed.
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const added: { features: GeoJSON.Feature[]; layerName?: string }[] = [];
+let stored = 0;
+vi.mock('../user-data/user-data.js', () => ({
+  addCopiedFeatures: (features: GeoJSON.Feature[], layerName?: string) => added.push({ features, layerName }),
+  storedUserDataChars: () => stored,
+}));
+vi.mock('../user-data/user-data-export.js', () => ({ downloadFile: vi.fn() }));
+
+const full: GeoJSON.LineString = { type: 'LineString', coordinates: [[0, 0], [0.5, 0.5], [1, 1]] };
+let reply: 'ok' | 'offline' | 'unavailable' = 'ok';
+let bigGeometry = false;
+vi.mock('./line-read.js', () => ({
+  MAX_SELECTION: 1000,
+  lineGeometry: async () => (reply === 'ok' ? { ok: true, result: full } : { ok: false, reason: reply }),
+  selectionGeometry: async (_l: string, fids: (string | number)[]) => {
+    if (reply !== 'ok') return { ok: false, reason: reply };
+    const g: GeoJSON.LineString = bigGeometry
+      ? { type: 'LineString', coordinates: Array.from({ length: 2000 }, (_, i) => [i * 1e-6, 1.123456]) }
+      : full;
+    return { ok: true, result: { geometries: new Map(fids.slice(1).map(f => [String(f), g])), missing: [fids[0]] } };
+  },
+  lineDataset: async () => ({ ok: true, result: { dataset: 'osm_transmission_lines', label: 'OSM Transmission Lines',
+    attribution: '© OpenStreetMap contributors', licence: 'ODbL 1.0', url: 'https://www.openstreetmap.org/copyright' } }),
+}));
+
+const { copyLines, itemsBbox, MAX_COPY_CHARS, SIMPLIFIED } = await import('./line-copy.js');
+
+const tile: GeoJSON.LineString = { type: 'LineString', coordinates: [[0, 0], [1, 1]] };
+const item = (fid: number) => ({ fid, properties: { name: `L${fid}`, nominal_kv: 500 }, tileGeometry: tile,
+  mapLayerId: 'osm-transmission-lines-kv300-hv' });
+
+beforeEach(() => { added.length = 0; stored = 0; reply = 'ok'; bigGeometry = false; });
+
+describe('copyLines', () => {
+  it('copies one line with its full geometry, the tile properties and the credit', async () => {
+    const r = await copyLines('osm-transmission-lines', [item(1234562)]);
+    expect(r).toEqual({ kind: 'copied', n: 1, simplified: 0 });
+    const f = added[0].features[0];
+    expect(f.geometry).toEqual(full);
+    expect(f.properties).toMatchObject({ name: 'L1234562', nominal_kv: 500, fid: 1234562,
+      source: 'OSM Transmission Lines', licence: 'ODbL 1.0', osm: 'https://www.openstreetmap.org/way/123456',
+      __src: 'osm-transmission-lines-kv300-hv' });
+    expect(added[0].layerName).toBeUndefined();
+  });
+
+  it('keeps the tile geometry, marked, when the files cannot answer', async () => {
+    reply = 'offline';
+    const r = await copyLines('osm-transmission-lines', [item(12)]);
+    expect(r).toEqual({ kind: 'copied', n: 1, simplified: 1 });
+    expect(added[0].features[0].geometry).toEqual(tile);
+    expect(added[0].features[0].properties?.geometry_source).toBe(SIMPLIFIED);
+  });
+
+  it('refuses when there are no line files here, and commits nothing', async () => {
+    reply = 'unavailable';
+    expect(await copyLines('osm-transmission-lines', [item(12)])).toEqual({ kind: 'refused', reason: 'unavailable' });
+    expect(added).toEqual([]);
+  });
+
+  it('puts a selection in its own layer; a line the files lack keeps its tile geometry', async () => {
+    const r = await copyLines('osm-transmission-lines', [item(12), item(22), item(32)], 'OSM Lines: 3 lines');
+    expect(r).toEqual({ kind: 'copied', n: 3, simplified: 1 });
+    expect(added[0].layerName).toBe('OSM Lines: 3 lines');
+  });
+
+  it('refuses more than 1,000 lines', async () => {
+    const items = Array.from({ length: 1001 }, (_, i) => item(i));
+    expect(await copyLines('osm-transmission-lines', items)).toEqual({ kind: 'refused', reason: 'too-many' });
+    expect(added).toEqual([]);
+  });
+
+  it('offers a download over the copy size cap, with the attribution as a foreign member', async () => {
+    bigGeometry = true;
+    const items = Array.from({ length: 60 }, (_, i) => item(i));
+    const r = await copyLines('osm-transmission-lines', items);
+    expect(r.kind).toBe('download');
+    if (r.kind !== 'download') return;
+    expect(r.chars).toBeGreaterThan(MAX_COPY_CHARS);
+    expect(r.fc).toMatchObject({ attribution: '© OpenStreetMap contributors', licence: 'ODbL 1.0' });
+    expect(r.fc.features[0].properties).not.toHaveProperty('__src');
+    expect(added).toEqual([]);
+  });
+
+  it('offers a download when My Data would pass its storage budget', async () => {
+    stored = 3_999_900;
+    const r = await copyLines('osm-transmission-lines', [item(12)]);
+    expect(r.kind).toBe('download');
+    expect(added).toEqual([]);
+  });
+});
+
+describe('itemsBbox', () => {
+  it('spans every tile geometry', () => {
+    const a = { ...item(1), tileGeometry: { type: 'MultiLineString', coordinates: [[[-3, 2], [1, 5]], [[4, -1], [0, 0]]] } as GeoJSON.Geometry };
+    expect(itemsBbox([a, item(2)])).toEqual([-3, -1, 4, 5]);
+  });
+});

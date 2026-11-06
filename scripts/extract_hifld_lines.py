@@ -26,7 +26,7 @@ Key fields retained:
   TYPE       — e.g. "AC; OVERHEAD", "DC; UNDERGROUND"
   STATUS     — IN SERVICE / NOT AVAILABLE / UNDER CONSTRUCTION
   VOLTAGE    — nominal voltage in kV (integer; -999999 = unknown)
-  VOLT_CLASS — HIFLD voltage class string ("100-161", "345", "500", etc.)
+  VOLT_CLASS — HIFLD voltage class string ("100-161", "345", "500", etc.; blank → null)
   INFERRED   — Y if voltage was inferred rather than confirmed
   SUB_1      — name of substation at one end
   SUB_2      — name of substation at other end
@@ -89,15 +89,19 @@ def load_and_process(shp_path: Path) -> "gpd.GeoDataFrame":
         gdf = gdf.rename(columns=_rename)
 
     # Convert epoch-millisecond timestamps → readable dates.
-    # SeerAI stores VAL_DATE/SOURCEDATE as corrupted int32 — discard those.
+    # VAL_DATE/SOURCEDATE: epoch milliseconds are dates; smaller integers carry no date.
     for col in ("SOURCEDATE", "VAL_DATE"):
         if col in gdf.columns:
             numeric = pd.to_numeric(gdf[col], errors="coerce")
             if numeric.notna().any() and (numeric > 1e9).any():
                 gdf[col] = pd.to_datetime(numeric, unit="ms", utc=True).dt.strftime("%Y-%m-%d")
             elif numeric.notna().any():
-                # int32 junk (SeerAI artifact) — discard
+                # not epoch ms: no date
                 gdf[col] = pd.NA
+
+    # VOLT_CLASS: a blank class is a missing one, not a value
+    if "VOLT_CLASS" in gdf.columns:
+        gdf["VOLT_CLASS"] = gdf["VOLT_CLASS"].replace("", pd.NA)
 
     # VOLTAGE: -999999 → NaN; column is kV
     if "VOLTAGE" in gdf.columns:

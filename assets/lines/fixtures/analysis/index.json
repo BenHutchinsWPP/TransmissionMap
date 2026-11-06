@@ -1,0 +1,145 @@
+{
+ "version": 1,
+ "datasets": {
+  "hifld_transmission_lines": {
+   "path": "hifld_transmission_lines/",
+   "dataset": "hifld_transmission_lines",
+   "build_id": "20261022T194605Z-44f809",
+   "built": "2026-10-22T19:46:05Z",
+   "snapshot": null,
+   "attribution": "HIFLD (DHS/CISA), via source.coop",
+   "label": "HIFLD Transmission Lines",
+   "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+   "url": "https://source.coop/repositories/seerai/hifld/description/",
+   "licence": "Public domain (US federal work, 17 U.S.C. § 105)",
+   "rows": 2,
+   "vertices": 6,
+   "total_km": 31.0,
+   "fid_type": "string",
+   "coordinate_grid_deg": 1e-06,
+   "length": "sphere R=6371.0088 km, haversine per part",
+   "idx": {
+    "role": "idx",
+    "name": "hifld_transmission_lines.idx.6a68e43a.parquet",
+    "bytes": 1044,
+    "sha256": "6a68e43a794c648a836ac10bff4a6f2e93de74aef96f53afd405f09c53364d4a",
+    "footer_len": 874,
+    "rows": 2,
+    "columns": [
+     "fid",
+     "row",
+     "length_km"
+    ]
+   },
+   "geo": [
+    {
+     "role": "geo",
+     "name": "hifld_transmission_lines.geo.p0.55bf4dbd.parquet",
+     "bytes": 3037,
+     "sha256": "55bf4dbd9a7a3ca35735ff48427982120b510d01c9d18010b85d4ef8c307c721",
+     "footer_len": 2467,
+     "rows": 2,
+     "part": 0,
+     "row_offset": 0
+    }
+   ],
+   "chains": null
+  },
+  "osm_transmission_lines": {
+   "path": "osm_transmission_lines/",
+   "dataset": "osm_transmission_lines",
+   "build_id": "20261022T194605Z-44f809",
+   "built": "2026-10-22T19:46:05Z",
+   "snapshot": null,
+   "attribution": "© OpenStreetMap contributors",
+   "label": "OSM Transmission Lines",
+   "source": "OpenStreetMap contributors",
+   "url": "https://www.openstreetmap.org/copyright",
+   "licence": "ODbL 1.0 (attribution + share-alike required)",
+   "rows": 607,
+   "vertices": 1217,
+   "total_km": 3389.7,
+   "fid_type": "int64",
+   "coordinate_grid_deg": 1e-06,
+   "length": "sphere R=6371.0088 km, haversine per part",
+   "idx": {
+    "role": "idx",
+    "name": "osm_transmission_lines.idx.4959f28f.parquet",
+    "bytes": 3034,
+    "sha256": "4959f28f2cc73909a525967ec4756525682598d40a7057d82f4f4461fbc05aff",
+    "footer_len": 1200,
+    "rows": 607,
+    "columns": [
+     "fid",
+     "row",
+     "length_km",
+     "chain",
+     "circuits"
+    ]
+   },
+   "geo": [
+    {
+     "role": "geo",
+     "name": "osm_transmission_lines.geo.p0.8692c821.parquet",
+     "bytes": 9513,
+     "sha256": "8692c82143a0dd5f7903d57299b660116a6a042e94a940e6385f8d447f91b962",
+     "footer_len": 2560,
+     "rows": 607,
+     "part": 0,
+     "row_offset": 0
+    }
+   ],
+   "chains": {
+    "role": "chains",
+    "name": "osm_transmission_lines.chains.6bc770b6.parquet",
+    "bytes": 1986,
+    "sha256": "6bc770b64ab3e8b115b14c83150891c66c292a0d4f923e01f58970223482d8a7",
+    "footer_len": 1552,
+    "rows": 4,
+    "columns": [
+     "chain",
+     "seq",
+     "fid",
+     "row",
+     "rev",
+     "length_km",
+     "start_sub",
+     "end_sub"
+    ]
+   },
+   "chain_stats": {
+    "chains": 605,
+    "multi_way_chains": 1,
+    "ways_in_multi_way_chains": 3,
+    "share_ways_in_multi_way_chains": 0.0049,
+    "ways_per_chain": {
+     "p50": 1,
+     "p90": 1,
+     "p99": 1,
+     "max": 3
+    },
+    "end_reasons": {
+     "branch": 3,
+     "substation": 2,
+     "voltage": 2,
+     "end": 1203
+    },
+    "chain_ends_at_substation": 2,
+    "chains_written": 2,
+    "substation_nodes": {
+     "nodes": 1209,
+     "in_polygon": 1,
+     "near_point": 1,
+     "nearest_point_m_free_nodes": {
+      "<=25": 0,
+      "<=50": 0,
+      "<=100": 1,
+      "<=150": 1,
+      "<=300": 1,
+      "<=500": 1
+     }
+    }
+   }
+  }
+ }
+}

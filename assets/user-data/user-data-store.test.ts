@@ -167,4 +167,17 @@ describe('createUserDataStore', () => {
     expect(onError).toHaveBeenCalledTimes(2);
     expect((onError.mock.calls[0][0] as Error).message).toBe('QuotaExceededError');
   });
+
+  it('save reports false when the write threw, true when written or held back', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bad = { getItem: () => null, setItem: () => { throw new Error('Quota'); } };
+    const failing = createUserDataStore(bad, () => ({ layers: [], drawn: fc(1) }));
+    expect(failing.save()).toBe(true); // held back before load
+    failing.load(() => {});
+    expect(failing.save()).toBe(false);
+    const { getItem, setItem } = memory();
+    const ok = createUserDataStore({ getItem, setItem }, () => ({ layers: [], drawn: fc(1) }));
+    ok.load(() => {});
+    expect(ok.save()).toBe(true);
+  });
 });

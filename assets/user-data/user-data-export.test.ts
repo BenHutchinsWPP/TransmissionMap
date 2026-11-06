@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { geomToKML } from './user-data-export.js';
+import { geomToKML, toCsv } from './user-data-export.js';
 
 describe('geomToKML', () => {
   it('returns empty string for null/undefined', () => {
@@ -84,5 +84,40 @@ describe('geomToKML', () => {
   it('returns empty string for unknown geometry type', () => {
     // @ts-expect-error - testing invalid type
     expect(geomToKML({ type: 'Unknown' })).toBe('');
+  });
+});
+
+describe('toCsv', () => {
+  it('writes note rows after the data and before the source row', () => {
+    const lines = toCsv([{ a: 1 }], ['a'], '<a href="x">EIA-860</a>', ['Filters: Area: Texas, Fort Worth', '=cmd']).split('\r\n');
+    expect(lines).toEqual(['a', '1', '"Filters: Area: Texas, Fort Worth"', "'=cmd", 'Source: EIA-860', '']);
+  });
+
+  it('writes a header and CRLF lines in field order', () => {
+    expect(toCsv([{ b: 2, a: 1 }], ['a', 'b'])).toBe('a,b\r\n1,2\r\n');
+  });
+
+  it('quotes commas, quotes and newlines', () => {
+    const csv = toCsv([{ n: 'Smith, "Big" Plant', m: 'line1\nline2' }], ['n', 'm']);
+    expect(csv).toBe('n,m\r\n"Smith, ""Big"" Plant","line1\nline2"\r\n');
+  });
+
+  it('leaves missing values empty and numbers as they are', () => {
+    expect(toCsv([{ a: null, c: -5 }], ['a', 'b', 'c'])).toBe('a,b,c\r\n,,-5\r\n');
+  });
+
+  it('prefixes formula-like strings with an apostrophe', () => {
+    const rows = [{ v: '=HYPERLINK("http://x","y")' }, { v: '+1' }, { v: '-2' }, { v: '@SUM(A1)' }, { v: 'ok' }];
+    expect(toCsv(rows, ['v']).split('\r\n')).toEqual([
+      'v', `"'=HYPERLINK(""http://x"",""y"")"`, "'+1", "'-2", "'@SUM(A1)", 'ok', '',
+    ]);
+  });
+
+  it('ends with the source credit as text, with the ODbL notice for OSM', () => {
+    const osm = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
+    const last = toCsv([], ['a'], osm).split('\r\n').at(-2);
+    expect(last).toBe('"Source: © OpenStreetMap contributors, ODbL 1.0 (https://opendatacommons.org/licenses/odbl/)"');
+    expect(toCsv([], ['a'], '<a href="https://atlas.eia.gov/">EIA U.S. Energy Atlas</a>').split('\r\n').at(-2))
+      .toBe('Source: EIA U.S. Energy Atlas');
   });
 });

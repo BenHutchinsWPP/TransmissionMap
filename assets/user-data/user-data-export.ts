@@ -1,16 +1,39 @@
-// ─── Export (download, KML/GeoJSON serialization) ────────────────────────────
+// ─── Export (download, KML/GeoJSON/CSV serialization) ────────────────────────
+// Role: My Data's GeoJSON/KML downloads (saveGeoJSON, saveKML), the shared
+//       downloadFile() (text or a Blob, e.g. a chart's PNG), and toCsv(): rows → RFC 4180 CSV for a dataset table,
+//       with spreadsheet-formula cells neutralised, optional note rows (what
+//       the rows were filtered by) and the layer's credit as the last row.
+// Deps: state.ts (userLayers, draw), utils/utils.ts (escapeHtml, csvCell).
 
 import { state } from '../state.js';
-import { escapeHtml } from '../utils/utils.js';
+import { csvCell, escapeHtml } from '../utils/utils.js';
 
-export function downloadFile(text: string, filename: string, mime: string) {
-  const blob = new Blob([text], { type: mime });
+export function downloadFile(data: BlobPart, filename: string, mime: string) {
+  const blob = new Blob([data], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Rows → CSV (RFC 4180: CRLF lines, quoted where needed): a header of
+ *  `fields`, one line per row in that column order, one line per `notes`
+ *  entry (plain text, formula-guarded like any cell), then — when `credit` (a
+ *  registry credit, HTML) is given — a last line naming the source, with the
+ *  ODbL notice for OpenStreetMap data. */
+export function toCsv(rows: readonly Record<string, unknown>[], fields: readonly string[], credit?: string,
+  notes: readonly string[] = []): string {
+  const lines = [fields.map(csvCell).join(',')];
+  for (const r of rows) lines.push(fields.map(f => csvCell(r[f])).join(','));
+  for (const n of notes) lines.push(csvCell(n));
+  if (credit) {
+    let text = 'Source: ' + credit.replace(/<[^>]*>/g, '').replace(/&copy;/g, '©').replace(/&amp;/g, '&');
+    if (/OpenStreetMap/.test(credit)) text += ', ODbL 1.0 (https://opendatacommons.org/licenses/odbl/)';
+    lines.push(csvCell(text));
+  }
+  return lines.join('\r\n') + '\r\n';
 }
 
 const EXPORT_STYLE_KEYS: Record<string, string[]> = {

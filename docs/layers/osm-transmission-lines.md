@@ -135,3 +135,9 @@ these to the decimal.
   ways like Highgate carry neither a frequency tag nor an `HVDC` name, so neither
   rule reaches them — they stay AC/unknown. Under-detection here is upstream tag
   absence, not a parser limit.)
+
+## Line tools
+
+Exact lengths, copies with full geometry, the fault locator and the elevation profile read this
+layer's line GeoParquet (`make line-parquet`, dev-only until published): see
+[../line-tools.md](../line-tools.md) and [../pipeline.md](../pipeline.md) § *Line geometry*.

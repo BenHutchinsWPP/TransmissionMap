@@ -107,7 +107,8 @@ export interface UserDataStore {
   // `restore`, then flushes a save held back before the read.
   load(restore: (payload: UserDataPayload) => void): void;
   // Writes the current snapshot, or holds it back until `load()` has run.
-  save(): void;
+  // False only when the write threw; a held-back save is true.
+  save(): boolean;
   // The last-known drawn features (stored, or from the latest save).
   drawn(): GeoJSON.FeatureCollection;
 }
@@ -121,8 +122,8 @@ export function createUserDataStore(
   let pending = false;
   let drawn = emptyFC();
 
-  function save() {
-    if (!read) { pending = true; return; }
+  function save(): boolean {
+    if (!read) { pending = true; return true; }
     try {
       const snap = snapshot();
       if (snap.drawn) drawn = snap.drawn;
@@ -130,7 +131,9 @@ export function createUserDataStore(
     } catch (e: unknown) {
       console.warn('[TransmissionMap] saveUserData failed:', (e as Error).message);
       onError(e);
+      return false;
     }
+    return true;
   }
 
   function load(restore: (payload: UserDataPayload) => void) {

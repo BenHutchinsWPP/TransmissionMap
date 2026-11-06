@@ -21,7 +21,7 @@ import { escapeHtml } from '../utils/utils.js';
 import { collectCoords, coordsBounds, showFeatureInfo, clearFeatureInfo } from './user-data-geom.js';
 import { drawnFeatureColor, colorPickerInner } from './user-data-colors.js';
 import { t } from '../../src/i18n/index.js';
-import { createUserDataStore } from './user-data-store.js';
+import { createUserDataStore, STORAGE_KEY } from './user-data-store.js';
 import { featureId } from '../feature-id.js';
 import { LAYERS } from '../../src/registry/index.js';
 
@@ -416,7 +416,7 @@ export { startInlineEdit };
 type AddLayerOpts = { color?: string; visible?: boolean; skipZoom?: boolean };
 
 // Adds the layer to state and the map; writes nothing (the restore path uses it directly).
-function mountLayer(filename: string, geojson: GeoJSON.FeatureCollection, { color, visible = true, skipZoom = false }: AddLayerOpts) {
+function mountLayer(filename: string, geojson: GeoJSON.FeatureCollection, { color, visible = true, skipZoom = false }: AddLayerOpts): string {
   const id = 'user-' + state.userLayerCounter++;
   const layerColor = color ?? USER_LAYER_COLORS[state.userLayers.length % USER_LAYER_COLORS.length];
   ensureGeoJsonFeatureUids(geojson, filename);
@@ -425,11 +425,12 @@ function mountLayer(filename: string, geojson: GeoJSON.FeatureCollection, { colo
   addUserLayerToMap(layer);
   if (!visible) applyLayerVisibility(layer, false);
   if (!skipZoom) zoomToUserLayer(layer);
+  return id;
 }
 
 function addUserLayer(filename: string, geojson: GeoJSON.FeatureCollection, opts: AddLayerOpts = {}) {
-  mountLayer(filename, geojson, opts);
-  commit();
+  const id = mountLayer(filename, geojson, opts);
+  return { id, saved: commit() };
 }
 
 // A file from disk: `__src` is set only by copyFeatureToMyData, so a file's own
@@ -443,28 +444,52 @@ export function addImportedLayer(filename: string, geojson: GeoJSON.FeatureColle
 const COPY_LAYER_NAME = 'Copied from map';
 
 // ponytail: queryRenderedFeatures returns tile-clipped geometry — lines/polygons
-// spanning tile boundaries get truncated. Points are exact. Full-geometry refetch
-// isn't feasible client-side from PMTiles; accept clipping or copy at higher zoom.
+// spanning tile boundaries get truncated. Points are exact. Transmission lines
+// copy their full geometry instead (lines/line-copy.ts → addCopiedFeatures).
 // A native stable id rides on the tile feature id, not in the properties, so it
 // is written back under its declared field (OSM `fid`) for the copy's popup link.
-export function copyFeatureToMyData(f: MapGeoJSONFeature) {
+export function copyFeatureToMyData(f: MapGeoJSONFeature): { saved: boolean; feature: GeoJSON.Feature } {
   const owner = LAYERS.find(l => l.mapLayerIds.includes(f.layer.id));
   const decl = owner?.data?.id;
   const nativeId = decl?.native ? featureId(owner!.id, f) : undefined;
-  const clean: GeoJSON.Feature = {
+  const feature: GeoJSON.Feature = {
     type: 'Feature',
     geometry: f.geometry,
     properties: { ...f.properties, ...(nativeId != null && { [decl!.field]: nativeId }), __src: f.layer.id },
   };
-  const layer = state.userLayers.find(l => l.filename === COPY_LAYER_NAME);
+  const fallback = structuredClone(feature);   // before the commit adds its ids
+  return { saved: addCopiedFeatures([feature]).saved, feature: fallback };
+}
+
+// Features copied from the map: appended to the "Copied from map" layer, or,
+// with `layerName`, a new layer of their own (a table selection). Each feature's
+// `__src` names the map layer whose popup renderer it keeps. When the save
+// fails the features are taken back out and `saved` is false.
+export function addCopiedFeatures(features: GeoJSON.Feature[], layerName?: string): { saved: boolean } {
+  const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+  const layer = !layerName && state.userLayers.find(l => l.filename === COPY_LAYER_NAME);
   if (!layer) {
-    addUserLayer(COPY_LAYER_NAME, { type: 'FeatureCollection', features: [clean] }, { skipZoom: true });
-    return;
+    const added = addUserLayer(layerName ?? COPY_LAYER_NAME, fc, { skipZoom: true });
+    if (!added.saved) removeUserLayer(added.id);
+    else if (layerName) zoomToUserLayer(state.userLayers.find(l => l.id === added.id)!);
+    return { saved: added.saved };
   }
-  ensureGeoJsonFeatureUids({ type: 'FeatureCollection', features: [clean] }, layer.id);
-  layer.geojson.features.push(clean);
+  ensureGeoJsonFeatureUids(fc, layer.id);
+  const before = layer.geojson.features.length;
+  layer.geojson.features.push(...features);
   (state.map?.getSource(layer.id) as GeoJSONSource)?.setData(layer.geojson);
-  commit();
+  const saved = commit();
+  if (!saved) {
+    layer.geojson.features.splice(before);
+    (state.map?.getSource(layer.id) as GeoJSONSource)?.setData(layer.geojson);
+    commit();
+  }
+  return { saved };
+}
+
+/** Characters the stored My Data payload holds now (0 when storage is unreadable). */
+export function storedUserDataChars(): number {
+  try { return localStorage.getItem(STORAGE_KEY)?.length ?? 0; } catch { return 0; }
 }
 
 // ─── Persistence (user-data-store.ts) ─────────────────────────────────────────
@@ -486,14 +511,15 @@ const _store = createUserDataStore(
 );
 
 // Persists without re-rendering (a colour pick repaints its swatch in place).
-export function saveUserData() {
-  _store.save();
+export function saveUserData(): boolean {
+  return _store.save();
 }
 
 // The one ending of every My Data edit: persist, then re-render the tab.
-function commit() {
-  saveUserData();
+function commit(): boolean {
+  const saved = saveUserData();
   renderMyDataTab();
+  return saved;
 }
 export { commit as commitUserData };
 

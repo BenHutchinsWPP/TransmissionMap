@@ -201,6 +201,7 @@ function onDrawChange() {
 
 export function setMode(mode: string) {
   if (mode === 'edit' && state.measure.active) toolHooks.deactivateMeasure();
+  if (mode === 'edit' && state.routePick) toolHooks.deactivateRoutePick();
   state.editMode = mode;
   document.getElementById('modeViewBtn')?.classList.toggle('mode-btn--active', mode === 'view');
   document.getElementById('modeEditBtn')?.classList.toggle('mode-btn--active', mode === 'edit');

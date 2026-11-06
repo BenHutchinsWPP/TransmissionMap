@@ -1,0 +1,43 @@
+{
+ "dataset": "hifld_transmission_lines",
+ "build_id": "20261022T194605Z-44f809",
+ "built": "2026-10-22T19:46:05Z",
+ "snapshot": null,
+ "attribution": "HIFLD (DHS/CISA), via source.coop",
+ "label": "HIFLD Transmission Lines",
+ "source": "DHS/CISA Homeland Infrastructure Foundation-Level Data (HIFLD)",
+ "url": "https://source.coop/repositories/seerai/hifld/description/",
+ "licence": "Public domain (US federal work, 17 U.S.C. § 105)",
+ "rows": 2,
+ "vertices": 6,
+ "total_km": 31.0,
+ "fid_type": "string",
+ "coordinate_grid_deg": 1e-06,
+ "length": "sphere R=6371.0088 km, haversine per part",
+ "idx": {
+  "role": "idx",
+  "name": "hifld_transmission_lines.idx.6a68e43a.parquet",
+  "bytes": 1044,
+  "sha256": "6a68e43a794c648a836ac10bff4a6f2e93de74aef96f53afd405f09c53364d4a",
+  "footer_len": 874,
+  "rows": 2,
+  "columns": [
+   "fid",
+   "row",
+   "length_km"
+  ]
+ },
+ "geo": [
+  {
+   "role": "geo",
+   "name": "hifld_transmission_lines.geo.p0.55bf4dbd.parquet",
+   "bytes": 3037,
+   "sha256": "55bf4dbd9a7a3ca35735ff48427982120b510d01c9d18010b85d4ef8c307c721",
+   "footer_len": 2467,
+   "rows": 2,
+   "part": 0,
+   "row_offset": 0
+  }
+ ],
+ "chains": null
+}
