@@ -102,10 +102,20 @@ describe('renderPdf', () => {
     const out = await makeRenderPdf({ canvas: c.make, compress: false })(m, []);
     const s = latin1(out);
     expect(s.startsWith('%PDF-')).toBe(true);
-    expect(s).toContain(`(${pdfGlyphs(m.cost.kpis[0].value)})`);
+    expect(s).toContain(`(${pdfGlyphs(m.cost.kpis[1].value)})`);
     expect(s).toContain('Rough early estimate \\(-30 % / +50 %\\)');
     expect(c.seen.images).toBe(0);
     expect(count(s, '/Subtype /Image')).toBe(0);
+  });
+
+  it('carries the disclaimer heading and the usage notice, as text', async () => {
+    const c = fakeCanvas();
+    const m = model();
+    const s = latin1(await makeRenderPdf({ canvas: c.make, compress: false })(m, []));
+    expect(m.disclaimer.paras).toHaveLength(4);
+    expect(s).toContain('(Disclaimer)');
+    expect(s).toContain('get off their grass');
+    expect(c.seen.images).toBe(0);
   });
 
   it('every route.report.* key and the real tm-default row labels draw as text (0 canvas blocks)', async () => {
@@ -248,27 +258,22 @@ describe('renderPdf', () => {
     const c = fakeCanvas();
     const m = model(x => {
       x.observations = { screening: {
-        buildings: { status: 'unavailable', reason: 'no cache' },
         aviation: { status: 'unavailable', reason: 'no cycle' },
       } as never };
     });
     const out = latin1(await makeRenderPdf({ canvas: c.make, compress: false })(m, []));
-    expect(out).toContain('no cache');
     expect(out).toContain('no cycle');
   });
 
-  it('renders the ok observations: class rows, runway metres and the aviation limit', async () => {
+  it('renders the ok observations: runway metres and the aviation limit', async () => {
     const prov = { source: 'src', sha256: 'x', credit: 'Credit Co', fetchedAt: '2026-01-02', license: 'CC-BY' };
-    const zero = { all: 0, residential: 0, nonresidential: 0, unknown: 0 };
     const m = model(x => {
       x.observations = { screening: {
-        buildings: { status: 'ok', observedM: 100, totalM: 200, counts: { ...zero, all: 7, residential: 3 }, metres: { ...zero, all: 123.456, residential: 40 }, imageryYears: [2021], provenance: prov },
         aviation: { status: 'ok', scope: 'SCOPE-TEXT', cycle: '2026-03', facilities: [{ id: 'KRNO', name: 'Reno Tahoe', type: 'A', use: 'PU', operationalStatus: 'O', distanceM: 4321.09, runwayCoverage: 'all' }],
           runways: [{ airport: 'KRNO', runway: '16R/34L', centrelineM: 1234.56, endM: 2345.67, airportPointM: 3456.78, surveyDates: ['2020-01-01', null] }], provenance: prov },
       } as never };
     });
     const out = latin1(await makeRenderPdf({ canvas: fakeCanvas().make, compress: false })(m, []));
-    expect(out).toContain('(123.5)');
     expect(out).toContain('(KRNO 16R/34L)');
     expect(out).toContain('(1234.6)');
     expect(out).toContain('(KRNO Reno Tahoe)');

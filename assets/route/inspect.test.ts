@@ -33,6 +33,8 @@ describe('decodeCell', () => {
     expect([2, 3, 4, 6, 7].map(f2)).toEqual(['100-year floodplain', 'School, hospital, child care or nursing home',
       'National Register historic place', 'Coastal Barrier Resources unit', 'Formerly used defense site (munitions)']);
     expect(by({ adj: 16 + 1 + (2 << 5) }).adj).toBe('on a ≥ 230 kV line, within 1 cell of a 100–229 kV line');
+    expect(by({ adj: 16 + 1 + 4 + 8 }).adj).toBe('on a ≥ 230 kV line, within 1 cell of a ≥ 500 kV line');
+    expect(by({ adj: 16 + 2 + 4 }).adj).toBe('within 1 cell of a ≥ 230 kV line, within 1 cell of a ≥ 345 kV line');
   });
 
   it('decodes protect bit 7 as the NPS unit named Preserve', () => {
@@ -236,6 +238,8 @@ describe('matchText: a preset match in words', () => {
     expect(words('wetland', { range: [27, 51] })).toEqual(['26–50 % of the cell']);
     expect(words('wildfire', { range: [1, 255] })).toEqual(['any value']);
     expect(words('adj', { field: { shift: 5, mask: 3 }, codes: [1] })).toEqual(['on a 100–229 kV line']);
+    expect(words('adj', { bit: 2 })).toEqual(['within 1 cell of a ≥ 345 kV line']);
+    expect(words('adj', { bit: 3 })).toEqual(['within 1 cell of a ≥ 500 kV line']);
   });
 
   it('a value it cannot name stays the cube code', () => {
@@ -269,6 +273,7 @@ describe('matchText: a preset match in words', () => {
     expect(words('protect', { bit: pb.nps_preserve_bit })).toEqual(['NPS unit named Preserve']);
     const adj = g.adj;
     expect(adj.class_100_mask).toBe(adj.class_mask << adj.class_100_shift);
+    for (const b of Object.keys(adj.kv_tier_bits)) expect(words('adj', { bit: +b })).toEqual([`within 1 cell of a ≥ ${adj.kv_tier_bits[b]} kV line`]);
     for (const c of Object.keys(adj.classes)) {
       expect(matchText('adj', { field: { shift: 0, mask: adj.class_mask }, codes: [+c] }).some(raw)).toBe(false);
       expect(matchText('adj', { field: { shift: adj.class_100_shift, mask: adj.class_mask }, codes: [+c] }).some(raw)).toBe(false);

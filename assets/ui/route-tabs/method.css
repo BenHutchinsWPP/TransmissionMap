@@ -56,3 +56,18 @@
 .rm-upl-needs { padding: 1px 8px; border-radius: 10px; font-size: var(--text-xs); background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
 .rm-upl-msg { color: #b91c1c; font-size: var(--text-xs); }
 .rm-upl-msg:empty { display: none; }
+
+.rm-ci { padding: 8px 10px; border: 1px solid var(--panel-border); border-radius: var(--radius-md); font-size: var(--text-sm); }
+.rm-ci-h, .rm-ci-sub { margin: 0 0 4px; font-size: var(--text-sm); color: var(--text); }
+.rm-ci-sub { margin-top: 8px; }
+.rm-ci-intro, .rm-ci-line, .rm-ci-note { margin: 0 0 6px; color: var(--text-mid); }
+.rm-ci-need { margin: 0 0 4px; color: var(--text-mid); font-size: var(--text-xs); }
+.rm-ci-basis { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.rm-ci-radio { display: flex; align-items: flex-start; gap: 6px; }
+.rm-ci-hint { color: var(--text-mid); }
+.rm-ci-figs, .rm-ci-ends { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.rm-ci-field { display: inline-flex; align-items: center; gap: 4px; color: var(--text-mid); }
+.rm-ci-field input[type="text"] { width: 9ch; }
+.rm-ci-field select { max-width: 32ch; }
+.rm-ci-warn, .rm-ci-msg { margin: 4px 0 0; color: #b91c1c; font-size: var(--text-xs); }
+.rm-ci-warn:empty, .rm-ci-msg:empty { display: none; }

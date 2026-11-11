@@ -1,13 +1,12 @@
 // Layer registry entries — protected lands, tribal lands, critical habitat, and
-// (dev server only, until its rasters are published) the Routing constraints layer.
+// the Routing constraints layer.
 import type { LayerDef } from '../types.js';
 import { CONSTRAINT_PALETTE } from '../colors/route-constraints.js';
 
 // Routing constraints: what the route cube says about the land, one concern at a
 // time (src/colors/route-constraints.ts CONCERNS; the row's picker sets
 // state.routeConcern and assets/route-constraints.ts swaps the raster's url).
-// Registered only on the dev server: its rasters sit beside the route cube in
-// data/route/constraints/ and are not published (assets/constants.ts).
+// Its rasters sit beside the route cube under data/route/ (assets/constants.ts).
 export const routeConstraintsLayer: LayerDef = {
   id:          "route-constraints",
   urlCode:     "RCN",
@@ -116,5 +115,5 @@ export const landLayers: LayerDef[] = [
     regions:     ["usa"],
     downloads: {},
   },
-  ...(import.meta.env.DEV ? [routeConstraintsLayer] : []),
+  routeConstraintsLayer,
 ];

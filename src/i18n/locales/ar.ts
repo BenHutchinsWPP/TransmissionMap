@@ -1383,7 +1383,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "نطاق رصد المباني",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). تُقرَّب المساحات إلى أعلى نسبة مئوية كاملة. الخلية الفارغة لا تعني أرضًا خالية.",
   'route.concern.noteBuildingCoverage': "المنطقة المعالَجة لـ FEMA/ORNL USA Structures (CC BY 4.0)؛ خارجها تكون المباني غير معروفة.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "أسطح المطارات (FAA Part 77)",
   "route.concern.aviation.primary": "السطح الأساسي",
   "route.concern.aviation.under-30": "أدنى سطح Part 77 على ارتفاع أقل من 30 م فوق الأرض",

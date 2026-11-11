@@ -1,7 +1,7 @@
 // MapLibre builders — protected and designated land (PMTiles vector polygons).
 // Role: planPadus() (PAD-US, coloured by designation) and planCritHab() (USFWS
 //       Critical Habitat, coloured by listing status), each a fill + outline pair;
-//       planRouteConstraints() (dev server only: the Routing constraints raster,
+//       planRouteConstraints() (the Routing constraints raster,
 //       nearest resampling, opening on the concern in state).
 // Deps: ./layer-init (planPolygon, planRaster), ./layer-plan (LayerPlan type),
 //       src/colors/buckets.ts (PADUS_CLASS_BUCKETS, PADUS_CLASS_DEFAULT, CRITHAB_BUCKETS),

@@ -1,6 +1,6 @@
 // ─── Route batch PDF ─────────────────────────────────────────────────────────
 // Role: a route report as a PDF `renderPdf(model, pictures)` lays out route-report-model.ts's
-//       `RouteReportModel` in `reportText` order (header, pictures, cost, endpoints, waterfall, strip,
+//       `RouteReportModel` in `reportText` order (header, disclaimer, pictures, cost, endpoints, waterfall, strip,
 //       crossings, observations tables, tribal, method, caveats) with jsPDF, loaded lazily on first use.
 //       Text rule: app wording first passes `pdfGlyphs()` (a fixed symbol table; the eight WinAnsi
 //       punctuation characters are admitted as they are, because jsPDF's standard-font `text()` writes them
@@ -21,7 +21,7 @@ import type { jsPDF as JsPdf } from 'jspdf';
 import { t } from '../../src/i18n/index.js';
 import { COST_BARRIER, COST_BREAKS, COST_PALETTE, SURFACE_PALETTE, WEIGHT_BARRIER, WEIGHT_BREAKS, WEIGHT_PALETTE, type WeightImage } from '../route/route.js';
 import type { RouteScreening } from '../route/screening.js';
-import { buildingHead, buildingRows, facilityHead, facilityRows, runwayHead, runwayRows, source, surveys, unavailableText } from './route-observations.js';
+import { facilityHead, facilityRows, runwayHead, runwayRows, source, surveys, unavailableText } from './route-observations.js';
 import type { PdfPicture, RenderPdf } from './route-batch-types.js';
 import { fillTpl, type RouteReportModel, type Tpl } from './route-report-model.js';
 
@@ -215,6 +215,9 @@ function draw(Ctor: typeof JsPdf, newCanvas: () => CanvasLike, compress: boolean
   paraT(m.parts.title, { size: 18, bold: true }, 2);
   paraT(m.parts.subtitle, { size: 10, color: GREY }, 2);
   para(m.badge.label, { size: 10, bold: true }, 8);
+  heading(m.disclaimer.heading);
+  for (const x of m.disclaimer.paras) para(x, { size: 8 }, 3);
+  y += 5;
   if (pictures.length === 0) para(m.snapshot.unavailable, { size: 9, color: GREY }, 6);
   for (const p of pictures) {
     // caption, picture and legend are measured first and kept on one page
@@ -315,24 +318,12 @@ function draw(Ctor: typeof JsPdf, newCanvas: () => CanvasLike, compress: boolean
   para(m.caveats.credit, { size: 8, color: GREY });
 
   function observations(o?: RouteScreening): void {
-    const metres = (n: number): string => n.toFixed(1);
-    const na = (): string => t('route.cross.na');
     const table = (head: string[], rows: (string | number)[][], widths: number[]): void => {
       tableRow(head, widths, { bold: true, size: 9 });
       for (const row of rows) tableRow(row.map(String), widths, { size: 9 });
     };
     heading(t('route.obs.heading'));
     if (!o) { para(t('route.obs.notRead')); return; }
-    const b = o.buildings;
-    para(t('route.obs.buildings'), { bold: true }, 2);
-    if (b.status === 'unavailable') para(unavailableText(b), { size: 9 });
-    else {
-      para(t('route.obs.coverage', { observed: metres(b.observedM), total: metres(b.totalM) }), { size: 9 });
-      table(buildingHead(), buildingRows(b), [0.5, 0.25, 0.25]);
-      para(t('route.obs.imagery', { years: b.imageryYears.join(', ') || na() }), { size: 9 });
-      para(source(b.provenance), { size: 8, color: GREY });
-    }
-    para(t('route.obs.buildingLimit'), { size: 9 });
     const a = o.aviation;
     para(t('route.obs.aviation'), { bold: true }, 2);
     if (a.status === 'unavailable') para(unavailableText(a), { size: 9 });

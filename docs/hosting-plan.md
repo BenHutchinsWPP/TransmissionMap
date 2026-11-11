@@ -7,6 +7,7 @@ Where each asset class is hosted, and how the world transmission archive is cut.
 | asset class | host |
 |---|---|
 | `data/layers` — every built layer | `data.wpptx.org`, R2 bucket `data-wpptx-org` (`DATA_ORIGIN` in `assets/constants.ts`) |
+| `data/route/<ROUTE_ID>/` — the route planner's cube, report files, constraints archives and screening ([routing-notes.md](internal/routing-notes.md) § *Hosting*) | `data.wpptx.org`, same bucket |
 | `data/analysis` — geometry and columns Parquet, `index.json` ([pipeline.md](pipeline.md) § *Line geometry*, § *Columns files*) | `data.wpptx.org`, same bucket |
 | `data/releases` — download packs | `data.wpptx.org/data/releases/<name>.zip` |
 | live feeds | `live.wpptx.org`, R2 bucket `live-wpptx-org` (`LIVE_ORIGIN`; [layers/wildfire-live.md](layers/wildfire-live.md)) |
@@ -49,7 +50,7 @@ branch tip after each run, so a merged refresh PR or a revert is published by a
 ## The transmission archive
 
 OSM transmission ships as one planet-wide archive,
-`data/layers/osm_transmission_lines.pmtiles` (zoom 2–11), tiled in one tippecanoe
+`data/layers/osm_transmission_lines.pmtiles` (zoom 2–12), tiled in one tippecanoe
 pass. The frontend reads it as one source, `osm_transmission_lines`, and the
 style-layer ids carry no suffix.
 
@@ -156,6 +157,14 @@ objects. A fixed-name object that is about to change is first copied to
 `prev/<stamp>/`; `--rollback STAMP` restores it. The run prints the changed
 fixed-name URLs as the Cloudflare purge list. `--dry-run` needs no rclone or keys;
 `--prune-list` reports unreferenced objects.
+
+`bash scripts/publish_r2.sh --only route` publishes the route set alone (`ARGS=--only route` through
+make), under `data/route/<ROUTE_ID>/`: the cube (`250m/`), the report files (`report/`, with the
+aviation screening observations in `report/screening/`), the constraints archives
+(`constraints/`) and `LICENSE.txt`. `ROUTE_ID` is a hash of `grid.json`, the screening pointer and each selected file's key and size, pinned in `assets/constants.ts`;
+the prefix is immutable, so new data is a new id and a deploy, and old ids stay for deployed bundles.
+There is no `prev/` copy and no purge. The entry objects (`grid.json`, the screening pointer,
+`LICENSE.txt`) are uploaded last. Before pushing main, `bash scripts/check_route_live.sh` (read-only) must pass: the pinned id's entry objects and a cube tile answer 200/206 on the host. Cloudflare caches objects up to 512 MB. See `docs/internal/routing-notes.md` § *Hosting*.
 
 > [!WARNING]
 > Tile attributes are not free to drop. `operator` is a **search** field —

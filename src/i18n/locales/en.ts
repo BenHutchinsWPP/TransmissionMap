@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "Building observation coverage",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). Areas round up to whole percents. A blank cell does not mean vacant land.",
   'route.concern.noteBuildingCoverage': "Area processed for FEMA/ORNL USA Structures (CC BY 4.0); outside it, footprints are unknown.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "Airport surfaces (FAA Part 77)",
   "route.concern.aviation.primary": "Primary surface",
   "route.concern.aviation.under-30": "Lowest Part 77 surface under 30 m above ground",

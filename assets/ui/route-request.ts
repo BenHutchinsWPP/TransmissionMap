@@ -5,14 +5,21 @@
 //       names its uploaded layers by hash only (`uploads`, in band order), never by geometry.
 //       `makeRequestBuilder(list)` binds the saved-method list and returns
 //       `methodFor` / `requestFor`; every failure is a message string, never a throw.
+//       `requestFor` also names each end's terminal kind (`resolveEnds`): the patch's
+//       `cost_inputs.ends` (default auto, auto), where `auto` is `position` only for an end snapped to a
+//       substation whose highest voltage is known and at least the line type's, when the patched method
+//       prices a line position for that line type, else `new`; an explicit choice goes through as given
+//       (route.ts refuses what the method cannot price). Batch and chat share it.
 //       No DOM, no map, no storage.
-// Deps: route/preset-patch.ts (uploadHashes; PresetPatch, AddRow types), route/route.ts (RouteRequest, OverlayMode,
-//       types only), route/custom-presets.ts (CustomPreset, type only), route-tabs/types.ts (types), i18n (t).
+// Deps: route/preset-patch.ts (uploadHashes, validatePresetPatch; PresetPatch, AddRow, EndChoice types), route/route.ts (RouteRequest, OverlayMode,
+//       types only), route/custom-presets.ts (CustomPreset, type only), registry/route-presets.ts (routePreset, EndKind),
+//       route-tabs/types.ts (types), i18n (t).
 
-import { uploadHashes, type AddRow, type PresetPatch } from '../route/preset-patch.js';
+import { uploadHashes, validatePresetPatch, type AddRow, type EndChoice, type PresetPatch } from '../route/preset-patch.js';
+import { routePreset, type EndKind } from '../../src/registry/route-presets.js';
 import type { OverlayMode, RouteRequest } from '../route/route.js';
 import type { CustomPreset } from '../route/custom-presets.js';
-import type { RouteInputs, SolveSpec } from './route-tabs/types.js';
+import type { RouteEnd, RouteInputs, SolveSpec } from './route-tabs/types.js';
 import { t } from '../../src/i18n/index.js';
 
 /** Uploaded-layer rows merged by hash: base entries first in base order, a session entry with a
@@ -48,6 +55,18 @@ export function mergePatch(base: PresetPatch | null | undefined, top: PresetPatc
   return out;
 }
 
+/** Each end's terminal kind for a solve of `lineType` with `patch` on `presetId`'s base: the patch's `cost_inputs.ends`
+ *  (default auto, auto), `auto` resolved at request time. */
+export function resolveEnds(base: string, patch: PresetPatch | undefined, lineType: string, a: RouteEnd, b: RouteEnd): [EndKind, EndKind] {
+  const choice: [EndChoice, EndChoice] = patch?.cost_inputs?.ends ?? ['auto', 'auto'];
+  const p = routePreset(base);
+  const v = p ? validatePresetPatch(p, patch) : null;
+  const line = v?.ok && Object.hasOwn(v.result.line_types, lineType) ? v.result.line_types[lineType] : null;
+  const auto = (e: RouteEnd): EndKind =>
+    e.hit !== null && e.hit.maxKv !== null && line && e.hit.maxKv >= line.kv.value && line.terminals.position ? 'position' : 'new';
+  return [choice[0] === 'auto' ? auto(a) : choice[0], choice[1] === 'auto' ? auto(b) : choice[1]];
+}
+
 export function makeRequestBuilder(list: () => CustomPreset[]) {
   /** The engine's preset id and patch for a method: a `custom:<id>` is its base + its patch, `patch` on top. */
   function methodFor(presetId: string, patch: PresetPatch | null): { preset: string; patch?: PresetPatch } | string {
@@ -64,6 +83,7 @@ export function makeRequestBuilder(list: () => CustomPreset[]) {
     return {
       from: inp.a.lngLat, to: inp.b.lngLat, preset: m.preset, lineType: inp.lineType,
       ...(m.patch ? { presetPatch: m.patch } : {}),
+      terminals: resolveEnds(m.preset, m.patch, inp.lineType, inp.a, inp.b),
       ...(uploadHashes(m.patch).length ? { uploads: uploadHashes(m.patch) } : {}),
       profile: spec.profile, surface: spec.surface, alternatives: spec.alternatives,
       ...(weight ? { weightImage: true, weightMode: weight === 'rows' ? 'route' : weight } : {}),

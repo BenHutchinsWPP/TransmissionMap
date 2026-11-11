@@ -116,13 +116,13 @@ async function route(
     totalNominalUsd: Math.round(c.totalNominal), total2025Usd: Math.round(c.total2025),
     low2025Usd: Math.round(c.band.low), high2025Usd: Math.round(c.band.high),
     meanCostX: +c.meanCostX.toFixed(3), tribalMiles: +r.tribalMiles.toFixed(1),
-    optimality: r.optimality, maskLimited: r.maskLimited, pis: r.cells.pis, name: 'Route',
+    lowestScoreProof: r.optimality, maskLimited: r.maskLimited, pis: r.cells.pis, name: 'Route',
     stroke: ROUTE_COLOR, 'stroke-width': 4,
   }));
   (r.alternatives ?? []).forEach((alt, i) => {
     addImportedLayer(opts.keep ? `route-${preset}-alternative-${i + 1}.geojson` : `${ALT_LAYER} ${i + 1}`, line(alt.path, {
       preset, lineType, lengthMi: +alt.lengthMi.toFixed(1), total2025Usd: Math.round(alt.cost.total2025),
-      routingCostAboveOptimalPct: +alt.pctRoute.toFixed(2), usdVsRoutePct: +alt.pctUsd.toFixed(2), shared: +alt.shared.toFixed(3),
+      routingScoreAboveLowestPct: +alt.pctRoute.toFixed(2), usdVsRoutePct: +alt.pctUsd.toFixed(2), shared: +alt.shared.toFixed(3),
       name: `Alt ${i + 1} +${Math.round(alt.pctRoute)}%`,
       stroke: ALT_COLORS[i % ALT_COLORS.length], 'stroke-width': 3,
     }));

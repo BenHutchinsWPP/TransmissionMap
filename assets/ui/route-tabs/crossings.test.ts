@@ -183,11 +183,11 @@ describe('exact crossings', () => {
     const s = withExact(FIXTURE_SESSION());
     const c = s.result!.profile!.crossings, rows = crossingRows(c, view(s));
     const r = (id: string) => rows.find((x) => x.id === id);
-    expect(r('river')).toMatchObject({ count: 1, note: 'exact' });
-    expect(r('road')).toMatchObject({ count: 2, note: 'exact' });
+    expect(r('river')).toMatchObject({ count: 1, note: 'from vector data' });
+    expect(r('road')).toMatchObject({ count: 2, note: 'from vector data' });
     expect(r('pipeline')).toMatchObject({ count: c.counts.pipeline, note: 'approximate (250 m cells)' });
     expect(r('follows')!.note).toContain('not counted');
-    if (c.counts.rail > 0) expect(r('rail')).toMatchObject({ count: 0, note: 'exact' });
+    if (c.counts.rail > 0) expect(r('rail')).toMatchObject({ count: 0, note: 'from vector data' });
     // without exact data the rows are as before
     expect(crossingRows(c).find((x) => x.id === 'river')).toMatchObject({ count: c.counts.river, note: '' });
     // the line family not read: the follows note makes no claim about line crossings
@@ -240,12 +240,12 @@ describe('exact crossings', () => {
     expect(ctx.calls.at(-1)).toBe(`fitPoints(${JSON.stringify([[-107.785, 40.4]])})`);
     expect(el.textContent).toContain('Pipelines: not read (pipelines_osm.parquet: HTTP 404)');
     expect(row(el, 'river')!.children[1].textContent).toBe('≈1');
-    expect(row(el, 'river')!.children[3].textContent).toBe('exact');
+    expect(row(el, 'river')!.children[3].textContent).toBe('from vector data');
     // the pills take the exact counts; Sources says what exact means
     const pills = [...el.querySelectorAll('.rp-pill')].map((p) => p.textContent);
     expect(pills).toContain('≈1 river');
     expect(pills.some((p) => /^≈2 major roads?$/.test(p!))).toBe(true);
-    expect(el.querySelector('.rx-right')!.textContent).toContain('Counts marked exact');
+    expect(el.querySelector('.rx-right')!.textContent).toContain('Counts marked “from vector data”');
     // a river row click fits the exact points
     row(el, 'river')!.click();
     expect(ctx.calls.at(-1)).toBe(`fitPoints(${JSON.stringify([[-107.785, 40.4]])})`);

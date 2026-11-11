@@ -1,7 +1,7 @@
 // Every row and except entry of every route preset names its dataset; bit-matched bands have no band fallback.
 import { describe, it, expect } from 'vitest';
-import { ROUTE_PRESETS, type Match } from './route-presets.js';
-import { bandData, bandDataLabel, BIT_DATA, BAND_DATA, PROTECT_DATA } from './route-band-data.js';
+import { ROUTE_PRESETS, routePreset, type Match } from './route-presets.js';
+import { bandData, bandDataLabel, methodSources, BIT_DATA, BAND_DATA, PROTECT_DATA } from './route-band-data.js';
 
 describe('route band data', () => {
   it('(a) every row and except entry of every preset has a non-empty label', () => {
@@ -51,5 +51,23 @@ describe('route band data', () => {
     }
     expect(() => bandData('protect', { codes: [1] })).toThrow();
     expect(() => bandData('protect', { bit: 3 })).toThrow();
+  });
+});
+
+describe('methodSources', () => {
+  const all = (id: string) => methodSources(routePreset(id)!, Object.keys(routePreset(id)!.line_types)[0]).join('; ');
+  it('tm-default lists its datasets with licences and no PoPWest', () => {
+    const txt = all('tm-default');
+    for (const w of ['FEMA', 'FAA', 'Wetlands', 'USA Structures', 'USDA']) expect(txt).toContain(w);
+    expect(txt).not.toContain('PoPWest');
+    expect(txt).toContain('(ODbL)');
+  });
+  it('pnas-wu2023 lists PoPWest with its licence', () => {
+    expect(all('pnas-wu2023')).toContain('PoPWest exclusions (TNC et al.) (CC BY 4.0)');
+  });
+  it('has no duplicates and skips nothing it should list', () => {
+    const list = methodSources(routePreset('tm-default')!, 'ac230');
+    expect(new Set(list).size).toBe(list.length);
+    expect(list.length).toBeGreaterThan(5);
   });
 });

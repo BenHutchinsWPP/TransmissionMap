@@ -129,6 +129,7 @@ class GridTests(unittest.TestCase):
         self.assertEqual(j["wetland"]["scale"], 100)
         self.assertEqual(j["adj"]["class_100_shift"], 5)
         self.assertEqual(j["adj"]["class_100_mask"], 0b1100000)
+        self.assertEqual(j["adj"]["kv_tier_bits"], {"2": 345, "3": 500})
         self.assertEqual(j["flags2_bits"]["2"], "100-yr floodplain")
         self.assertIn("7", j["pd_flags"])
         json.dumps(j)
@@ -155,7 +156,11 @@ class GridTests(unittest.TestCase):
         self.assertEqual(g.adj_decode(16 + 1 + (2 << 5)), (1, 2))
         self.assertEqual(g.adj_encode(1, 2), 16 + 1 + (2 << 5))
         self.assertEqual(g.adj_encode(3, 3), 115)
+        self.assertEqual(g.adj_encode(1, 0, True), 16 + 1 + 4)
+        self.assertEqual(g.adj_encode(2, 3, True, True), 16 + 2 + 4 + 8 + (3 << 5))
+        self.assertEqual(g.adj_decode(g.adj_encode(2, 1, True, True)), (2, 1))
         self.assertLessEqual(g.ADJ_MAX, 255)
+        self.assertEqual(g.ADJ_MAX & g.ADJ_RESERVED_MASK, 0)
         self.assertEqual(g.ADJ100_MASK & (g.ADJ_CLASS_MASK | g.ADJ_RESERVED_MASK | 16), 0)
         self.assertEqual(g.adj_encode(3, 3) & g.ADJ_RESERVED_MASK, 0)
         self.assertIsNone(g.adj_decode(0))
@@ -164,6 +169,10 @@ class GridTests(unittest.TestCase):
             g.adj_encode(4)
         with self.assertRaises(ValueError):
             g.adj_encode(0, 4)
+        with self.assertRaises(ValueError):
+            g.adj_encode(1, 0, False, True)  # >= 500 kV implies >= 345 kV
+        with self.assertRaises(ValueError):
+            g.adj_encode(3, 0, True)  # beside >= 345 kV implies >= 230 kV class 1-2
 
     def test_bit_tables(self):
         self.assertTrue(set(g.DESIG_BITS) <= set(range(8)))

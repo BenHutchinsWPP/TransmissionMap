@@ -7,7 +7,9 @@
 //       band blocks (≈ 16 MB at 512² cells), and allocates nothing a solve holds.
 //       Message {id, crossings, baseUrl} (route.ts exactRouteCrossings(): the report GeoParquet
 //       in ../report/ beside the cube directory, sizes from the same HEAD cache) answers {id, outcome}.
-//       The mutable screening manifest bypasses that cache. Optional screening reads require
+//       The mutable screening manifest bypasses that cache. Every HEAD and range read is
+//       `cache: 'no-store'`, so concurrent ranges of one file run in parallel past the browser's
+//       HTTP cache and each body is the whole range. Optional screening reads require
 //       genuine, bounded HTTP ranges and have a transport timeout as well as the report deadline.
 //       I/O is fetch: JSON for
 //       grid.json, HTTP Range requests for the band files. The reader only asks
@@ -50,7 +52,7 @@ const sizeOf = (url: string): Promise<number> => {
   const mutable = mutableManifest(url);
   let s = mutable ? undefined : sizes.get(url);
   if (!s) {
-    s = fetch(url, { method: 'HEAD', ...(mutable ? { cache: 'no-store' as const } : {}), ...(screeningUrl(url) ? { signal: AbortSignal.timeout(30_000) } : {}) }).then((r) => {
+    s = fetch(url, { method: 'HEAD', cache: 'no-store', ...(screeningUrl(url) ? { signal: AbortSignal.timeout(30_000) } : {}) }).then((r) => {
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
       const n = Number(r.headers.get('content-length'));
       return Number.isFinite(n) && n > 0 ? n : Infinity;
@@ -112,7 +114,7 @@ const io = (baseUrl: string, id: number): RouteIO => ({
     const stop = Math.min(end, await sizeOf(url));
     if (stop <= start) return new Uint8Array(0);
     const screening = screeningUrl(url);
-    const r = await fetch(url, { headers: { Range: `bytes=${start}-${stop - 1}` }, ...(screening ? { signal: AbortSignal.timeout(30_000) } : {}), ...(mutableManifest(url) ? { cache: 'no-store' as const } : {}) });
+    const r = await fetch(url, { headers: { Range: `bytes=${start}-${stop - 1}` }, cache: 'no-store', ...(screening ? { signal: AbortSignal.timeout(30_000) } : {}) });
     if (screening) {
       const range = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(r.headers.get('content-range') ?? '');
       if (r.status !== 206 || !range || Number(range[1]) !== start || Number(range[2]) !== stop - 1) {

@@ -16,7 +16,7 @@ import { route, PD_BANDS, OSM_BANDS, readGridJson, type RouteIO } from './route.
 import { costPath, greatCircleM, METRES_PER_MILE, type Sampler } from './cost.js';
 import { routePreset, type BandName } from '../../src/registry/route-presets.js';
 
-const CUBE = 'data/route/250m/';
+const CUBE = process.env.ROUTE_CUBE ?? 'data/route/250m/';
 const INPUT = 'data/build/route/validate/pnas_spurs_sample.geojson';
 const have = existsSync(CUBE + 'grid.json') && existsSync(INPUT);
 const CAP = 100e6;

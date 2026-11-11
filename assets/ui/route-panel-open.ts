@@ -1,10 +1,8 @@
-// ─── Route planner entry points (boot bundle, dev server only) ───────────────
+// ─── Route planner entry points (boot bundle) ──────────────────────────────
 // The Tools ▸ "Plan a route…" item and the map's right-click "Route from/to
-// here" menu (the app's .dropdown card; its sizes inline, so the boot CSS carries no route rule). The routing cube exists only on the dev server, so in a build
-// ROUTE_ENABLED is false and nothing is registered; ui-route.ts loads on use,
-// behind the same flag, so a build emits no route-panel or route-worker chunk.
-// planRouteFromChat is the map chat's way in (the planRoute tool): it refuses in a
-// build and otherwise hands the request to ui-route.ts's routeForChat.
+// here" menu (the app's .dropdown card; its sizes inline, so the boot CSS carries no route rule). ui-route.ts loads on use (dynamic import), so
+// the route panel and the route worker stay out of the boot bundle.
+// planRouteFromChat is the map chat's way in (the planRoute tool): it hands the request to ui-route.ts's routeForChat.
 // The route strings (src/i18n/route/) load beside the chunk, before either entry runs.
 // Deps: state.ts, map-input.ts (onMapContextMenu), diag-log.ts, i18n (t, loadRouteStrings), ui-route.ts (dynamic),
 //       route-tabs/chat-summary.ts and dataset-query.ts (types only).
@@ -15,15 +13,12 @@ import { recordDiagEvent } from '../diag-log.js';
 import type { Outcome } from '../dataset-query.js';
 import type { RouteSummary } from './route-tabs/chat-summary.js';
 
-export const ROUTE_ENABLED = import.meta.env.DEV;
-
 type End = 'A' | 'B';
 
 /** The chat's route request: substation names or [lng, lat] for both ends, or neither (recall the shown route). */
 export interface ChatRouteRequest { from?: string | [number, number]; to?: string | [number, number]; lineType?: string; alternatives?: number }
 
 export async function planRouteFromChat(req: ChatRouteRequest, signal?: AbortSignal): Promise<Outcome<RouteSummary>> {
-  if (!ROUTE_ENABLED) return { ok: false, reason: 'routing is available on the dev server only' };
   let m: typeof import('./ui-route.js');
   try { [m] = await Promise.all([import('./ui-route.js'), loadRouteStrings()]); } catch (err) {
     recordDiagEvent('map', `route panel failed to load: ${err instanceof Error ? err.message : String(err)}`);
@@ -40,7 +35,6 @@ function closeMenu(): void {
 }
 
 function openPanel(at?: { lngLat: [number, number]; end: End }): void {
-  if (!ROUTE_ENABLED) return;   // a build then loads neither ui-route.ts nor the route worker
   void Promise.all([import('./ui-route.js'), loadRouteStrings()]).then(([m]) => m.openRoutePanel(at))
     .catch((err) => recordDiagEvent('map', `route panel failed to load: ${err instanceof Error ? err.message : String(err)}`));
 }
@@ -53,7 +47,7 @@ function showMenu(x: number, y: number, lngLat: [number, number]): void {
   closeMenu();
   const el = document.createElement('div');
   // The app's card (.dropdown) and item (.menu-item: hover) styles; placement and touch-size rows inline,
-  // so no rule for this dev-only menu ships in the boot CSS.
+  // so no rule for this menu ships in the boot CSS.
   el.className = 'dropdown menu-dropdown';
   el.setAttribute('role', 'menu');
   el.style.cssText = `position:fixed;left:${Math.min(x, innerWidth - 200)}px;top:${Math.min(y, innerHeight - 110)}px;z-index:1000;min-width:180px`;
@@ -80,7 +74,7 @@ function showMenu(x: number, y: number, lngLat: [number, number]): void {
 }
 
 export function initRoutePanelEntry(): void {
-  if (ROUTE_ENABLED) wireRouteEntry();
+  wireRouteEntry();
 }
 
 /** Exported for tests; in a build only the dead branch above names it, so it is dropped. */

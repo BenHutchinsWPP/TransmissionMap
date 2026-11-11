@@ -28,7 +28,7 @@ describe('Summary tab', () => {
 
   it('renders the headline, range, pills, tribal note and money heading', () => {
     const { el } = render();
-    expect(el.querySelector('.rp-kpis')?.textContent).toContain('$3.');
+    expect(el.querySelector('.rp-kpis')?.textContent).toContain('$2.');
     expect(el.querySelector('.rp-kpis')?.textContent).toContain('250.1');
     expect(el.querySelector('.rp-range')).not.toBeNull();
     expect(el.querySelectorAll('.rp-pill').length).toBeGreaterThan(3);

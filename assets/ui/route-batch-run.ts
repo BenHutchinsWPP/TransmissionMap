@@ -18,7 +18,8 @@
 //       summary.csv carries the worded reason plus `reason_code`; each PDF picture has its `route.batch.pic.<id>`
 //       caption (an Alternatives picture without alternatives says why in it) and each overlay picture its colour
 //       legend (causeLegend / classLegend / similarLegend); a snap to a substation without a name
-//       says so; an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
+//       says so; summary.csv also names what each end was priced as (`terminal_a`, `terminal_b`) and, when the cost
+//       used the visitor's own figures, `user_costs` as `<basis>:<year>`; an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
 //       The solver, capture, PDF renderer and ZIP sink are injected (route-batch-types.ts); `workerSolver()` is the route
 //       worker under the solver lock (owner 'batch').
 // Deps: i18n (t), route/route-open.ts (lock and calls), route/route.ts (NO_WINDOW_REASONS; types), route/snap.ts (snapAt), route/grid.ts (albersForward),
@@ -110,7 +111,6 @@ export interface BatchOptions {
   dollars?: DollarYear;
   saved: () => CustomPreset[];
   cube?: { version: number; sha256: string } | null;
-  commit?: string;
   date?: string;
 }
 
@@ -131,6 +131,8 @@ export interface RowReport {
   params?: Record<string, string | number>;
   method?: string; lineType?: string; a?: RouteEnd; b?: RouteEnd;
   lengthMi?: number; total2025?: number; optimality?: RouteResult['optimality'];
+  /** What each end was priced as (`new`, `position`, `none`), and `<basis>:<year>` when the cost used figures the visitor entered. */
+  terminalA?: string; terminalB?: string; userCosts?: string;
   /** One entry per picture: the capture's note, or null for a JPEG; `code` when the engine gave none. */
   pictures?: { picture: PictureId; note: string | null; code?: string }[];
 }
@@ -191,12 +193,18 @@ export function boundsOf(lines: readonly (readonly [number, number][])[]): [numb
 class Cancelled extends Error {}
 
 /** The cost.csv the pane downloads, with a BOM. */
-function costFile(r: RouteResult, dollars: DollarYear): string {
-  return BOM + costCsv(r, dollars);
+function costFile(r: RouteResult, dollars: DollarYear, inp: RouteInputs): string {
+  return BOM + costCsv(r, dollars, inp);
+}
+
+/** summary.csv's terminal and entered-figure columns of a result's cost. */
+function costColumns(c: RouteResult['cost']): Pick<RowReport, 'terminalA' | 'terminalB' | 'userCosts'> {
+  const kind = (side: 'A' | 'B') => (c.terminalItems ? c.terminalItems.find((i) => i.end === side)?.kind ?? 'none' : '');
+  return { terminalA: kind('A'), terminalB: kind('B'), userCosts: c.userCosts?.items.length ? `${c.userCosts.basis}:${c.userCosts.year}` : '' };
 }
 
 const SUMMARY_FIELDS = ['line', 'key', 'status', 'reason', 'reason_code', 'folder', 'method', 'line_type', 'a_lon', 'a_lat', 'a_substation',
-  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'optimality', 'pictures'];
+  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'terminal_a', 'terminal_b', 'user_costs', 'lowest_score_proof', 'pictures'];
 
 /** A snapped end's substation name; a snap to a substation without one says so. */
 const subName = (e: RouteEnd | undefined): string => (e?.hit ? e.hit.name || t('route.report.endUnnamedSub') : '');
@@ -207,7 +215,8 @@ function summaryRow(r: RowReport): Record<string, unknown> {
     line_type: r.lineType ?? '', a_lon: r.a?.lngLat[0] ?? '', a_lat: r.a?.lngLat[1] ?? '', a_substation: subName(r.a),
     b_lon: r.b?.lngLat[0] ?? '', b_lat: r.b?.lngLat[1] ?? '', b_substation: subName(r.b),
     length_mi: r.lengthMi === undefined ? '' : +r.lengthMi.toFixed(2), total_usd_2025: r.total2025 === undefined ? '' : Math.round(r.total2025),
-    optimality: r.optimality ?? '',
+    terminal_a: r.terminalA ?? '', terminal_b: r.terminalB ?? '', user_costs: r.userCosts ?? '',
+    lowest_score_proof: r.optimality ?? '',
     pictures: (r.pictures ?? []).map((p) => `${p.picture}: ${p.note ?? 'ok'}${p.code ? ` (${reasonText(p.code)})` : ''}`).join('; '),
   };
 }
@@ -388,15 +397,15 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
     const pdf = await renderPdf(model, ordered.map(({ code: _code, ...pic }) => pic));
     check();
     const folder = `rows/${rowSlug(index + 1, row.key)}`;
-    const files: [string, Uint8Array | string][] = [[`${folder}/report.pdf`, pdf], [`${folder}/cost.csv`, costFile(result, dollars)]];
+    const files: [string, Uint8Array | string][] = [[`${folder}/report.pdf`, pdf], [`${folder}/cost.csv`, costFile(result, dollars, inputs)]];
     if (result.profile) files.push([`${folder}/crossings.csv`, BOM + crossingsCsv(result.profile.crossings, shownExact(session))]);
     for (const [p, d] of files) zip.add(p, d);
     features.push({
       type: 'Feature', geometry: { type: 'LineString', coordinates: path },
-      properties: { line: row.line, key: row.key, folder, method: id, line_type: lineType, length_mi: result.lengthMi, total_usd_2025: Math.round(result.cost.total2025), optimality: result.optimality },
+      properties: { line: row.line, key: row.key, folder, method: id, line_type: lineType, length_mi: result.lengthMi, total_usd_2025: Math.round(result.cost.total2025), lowestScoreProof: result.optimality },
     });
     return {
-      ...rep, status: 'ok', ...(obsCode ? { reason: obsCode } : {}), folder, lengthMi: result.lengthMi, total2025: result.cost.total2025, optimality: result.optimality,
+      ...rep, status: 'ok', ...(obsCode ? { reason: obsCode } : {}), folder, lengthMi: result.lengthMi, total2025: result.cost.total2025, ...costColumns(result.cost), optimality: result.optimality,
       pictures: ordered.map((s) => ({ picture: s.picture, note: s.note ?? null, ...(s.code ? { code: s.code } : {}) })),
     };
   }
@@ -444,7 +453,6 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
         snapKm: opts.snapKm,
         methods: Object.fromEntries(used),
         cube: opts.cube ?? 'unknown',
-        commit: opts.commit ?? 'unknown',
         status, ...(reason ? { reason } : {}),
       }, null, 2));
       return { status, ...(reason ? { reason } : {}), rows: reports };

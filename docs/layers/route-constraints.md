@@ -3,21 +3,19 @@
 What the route cube records about the land, one concern at a time: an overview of
 the strongest constraint per 250 m cell ("What constrains"), the land manager, or
 one mask (GAP 1–2, critical habitat, floodplain, military land, …). Panel group
-**Land**. **Dev server only** until its rasters are published: the registry entry
-is added under `import.meta.env.DEV` (`src/registry/land.ts`), so a production
-build has no row and no source, and its legend frame and Data Credits entry
-(both in `index.html`) stay hidden.
+**Land**. The registry entry is in `src/registry/land.ts`; its legend frame and
+Data Credits entry are in `index.html`.
 
 ## Source
 
 | | |
 |---|---|
-| **Provider** | The route cube's bands (`data/route/250m/pd_*`, and `osm_*` for the OpenStreetMap entries): USGS PAD-US, USFWS, EPA, NPS, BLM, USDA Forest Service, FAA, USACE, USGS 3DEP, NLCD (MRLC), DOE/ANL Section 368; FCC tall structures and USACE dams via HIFLD on source.coop (SeerAI); WorldPop; FEMA/ORNL USA Structures (observed footprint shares); Power of Place – West (Wu 2023; The Nature Conservancy categories); OpenStreetMap (lakes, military, existing lines and parallel-line corridors). Per-band sources and rules: [routing.md](../routing.md) |
+| **Provider** | The route cube's bands (`data/route/250m/pd_*`, and `osm_*` for the OpenStreetMap entries): USGS PAD-US, USFWS, EPA, NPS, BLM, USDA Forest Service, FAA, USACE, USGS 3DEP, NLCD (MRLC), DOE/ANL Section 368; FEMA National Flood Hazard Layer (FEMA; acknowledgement); FCC tall structures and USACE dams via HIFLD on source.coop (SeerAI); WorldPop; FEMA/ORNL USA Structures (observed footprint shares); Power of Place – West (Wu 2023; The Nature Conservancy categories); OpenStreetMap (lakes, military, existing lines and parallel-line corridors). Per-band sources and rules: [routing.md](../routing.md) |
 | **Dataset** | One raster per concern in `src/colors/route-constraints.ts` (`CONCERNS`) |
 | **Coverage** | CONUS. A cell with no building footprint may still have buildings; imagery dates vary by area. |
-| **License** | Public domain (US federal works, 17 U.S.C. §105) for the federal bands, NLCD and DOE/ANL Section 368; CC BY 4.0 for the tall-structure / dam flag (HIFLD packaging by SeerAI), the population concern (WorldPop), the observed building-footprint concerns (USA Structures), and the TNC categories (PoPWest, Wu et al. 2023); ODbL 1.0 for the OpenStreetMap entries (© OpenStreetMap contributors). Per [data-sources.md](../data-sources.md) |
+| **License** | Public domain (US federal works, 17 U.S.C. §105; FEMA asks for acknowledgement of the NFHL as the source) for the federal bands, NLCD and DOE/ANL Section 368; CC BY 4.0 for the tall-structure / dam flag (HIFLD packaging by SeerAI), the population concern (WorldPop), the observed building-footprint concerns (USA Structures), and the TNC categories (PoPWest, Wu et al. 2023); ODbL 1.0 for the OpenStreetMap entries (© OpenStreetMap contributors). Per [data-sources.md](../data-sources.md) |
 | **Attribution** | The layer's map credit (`data.credit`) and the `route-constraints` entry of the Data Credits dialog |
-| **Served** | `data/route/constraints/<concern-id>.pmtiles` + `manifest.json` (paletted PNG raster PMTiles); not under `data/layers/`, so not published |
+| **Served** | `data/route/<ROUTE_ID>/constraints/<concern-id>.pmtiles` on the data host (paletted PNG raster PMTiles; locally `data/route/constraints/`, with a `manifest.json` that is not published); not under `data/layers/`; uploaded by `publish_r2.sh --only route` ([hosting-plan.md](../hosting-plan.md#publishing)) |
 | **Built by** | `scripts/build_route_constraints.py` (`make route-constraints`; log `tmp/logs/route-constraints.log`) |
 | **Raw input** | the route cube (`make route-cube`): `pd_` bands; `osm_` bands for the OpenStreetMap entries only, never the overview or land manager |
 

@@ -54,6 +54,7 @@ import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
 import { FIXTURE_RESULT } from './route-tabs/fixture.js';
 import { ROUTE_PREFS_KEY } from '../route/route-prefs.js';
 import { state } from '../state.js';
+import { acceptNotice, forgetNotice, noticeAccepted, ROUTE_NOTICE_VERSION } from './notice-gate.js';
 
 const flush = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0)); };
 
@@ -79,7 +80,7 @@ let map: ReturnType<typeof fakeMap>;
 
 beforeEach(() => {
   _resetSubstationIndex();
-  localStorage.setItem('tm-notice-route', '2');
+  acceptNotice('route', ROUTE_NOTICE_VERSION);
   const env = installDrawerEnv();
   map = fakeMap(env.map as unknown as Record<string, unknown>);
   state.map = map as unknown as typeof state.map;
@@ -117,7 +118,7 @@ describe('routeForChat: ends', () => {
   it('an exact name places that substation (not the substring sibling) and returns the summary', async () => {
     const { out } = await started({ from: 'midway', to: 'Hemingway' });
     expect(solver.calls).toHaveLength(1);
-    expect(solver.calls[0].req).toMatchObject({ from: [-119.40, 35.40], to: [-116.80, 43.20], profile: true, alternatives: 0, surface: false });
+    expect(solver.calls[0].req).toMatchObject({ from: [-119.40, 35.40], to: [-116.80, 43.20], profile: true, alternatives: 0, surface: false, terminals: ['position', 'position'] });
     await answer();
     const o = await out;
     expect(o.ok).toBe(true);
@@ -151,6 +152,7 @@ describe('routeForChat: ends', () => {
   it('a single exact match below the floor is used, with a note', async () => {
     const { out } = await started({ from: 'Lowly', to: 'Hemingway' });
     expect(solver.calls[0].req.from).toEqual([-120.0, 44.0]);
+    expect(solver.calls[0].req.terminals).toEqual(['new', 'position']);   // a 69 kV end gets a new station, never a line position
     await answer();
     const o = await out;
     expect(o.ok && o.result.notes.some((n) => /end A: the substation is below the line type's kV/.test(n))).toBe(true);
@@ -277,14 +279,45 @@ describe('routeForChat: solving', () => {
 });
 
 describe('route usage notice', () => {
-  beforeEach(() => { localStorage.removeItem('tm-notice-route'); document.querySelectorAll('dialog').forEach((d) => d.remove()); });
+  beforeEach(() => { forgetNotice('route'); document.querySelectorAll('dialog').forEach((d) => d.remove()); });
   const dlg = () => document.querySelector<HTMLDialogElement>('dialog.disclaimer-dialog');
 
-  it('routeForChat refuses before acceptance, builds no pane and solves nothing', async () => {
-    const o = await routeForChat({ from: 'MIDWAY', to: 'Hemingway' });
-    expect(refusal(o)).toBe('route notice not accepted: open Tools ▸ Plan a route… first');
+  it('routeForChat shows the notice first; Cancel refuses, builds no pane and solves nothing', async () => {
+    const out = routeForChat({ from: 'MIDWAY', to: 'Hemingway' });
+    await flush();
+    expect(dlg()).not.toBeNull();
+    expect(_pane()).toBeUndefined();
+    dlg()!.querySelectorAll('button')[0].click();
+    expect(refusal(await out)).toBe('the visitor declined the route usage notice; no route was planned');
     expect(_pane()).toBeUndefined();
     expect(routeLine).not.toHaveBeenCalled();
+    expect(noticeAccepted('route', ROUTE_NOTICE_VERSION)).toBe(false);
+  });
+
+  it('routeForChat: accepting the notice opens the pane in the background and solves', async () => {
+    const out = routeForChat({ from: 'midway', to: 'Hemingway' });
+    await flush();
+    dlg()!.querySelectorAll('button')[1].click();
+    await flush();
+    expect(_pane()).toBeDefined();
+    expect(solver.calls).toHaveLength(1);
+    await answer();
+    expect((await out).ok).toBe(true);
+  });
+
+  it('routeForChat: a call stopped while the notice is open refuses and leaves the notice unaccepted', async () => {
+    const ac = new AbortController();
+    const out = routeForChat({ from: 'midway', to: 'Hemingway' }, ac.signal);
+    await flush();
+    ac.abort();
+    dlg()!.querySelectorAll('button')[1].click();
+    expect(refusal(await out)).toBe('cancelled');
+    expect(_pane()).toBeUndefined();
+    expect(noticeAccepted('route', ROUTE_NOTICE_VERSION)).toBe(false);
+  });
+
+  it('routeForChat recalling with no ends and no pane asks nothing', async () => {
+    expect(refusal(await routeForChat({}))).toBe('no route yet');
     expect(dlg()).toBeNull();
   });
 
@@ -296,19 +329,23 @@ describe('route usage notice', () => {
     await flush();
     expect(dlg()).toBeNull();
     expect(_pane()).toBeUndefined();
-    expect(localStorage.getItem('tm-notice-route')).toBeNull();
+    expect(noticeAccepted('route', ROUTE_NOTICE_VERSION)).toBe(false);
   });
 
-  it('accepting opens the pane, remembers it, and the chat path then works', async () => {
+  it('accepting opens the pane and the chat path then works, until the pane closes, then asks again', async () => {
     openRoutePanel();
     await flush();
     dlg()!.querySelectorAll('button')[1].click();
     await flush();
     expect(_pane()).toBeDefined();
-    expect(localStorage.getItem('tm-notice-route')).toBe('2');
+    expect(localStorage.getItem('tm-notice-route')).toBeNull();
     const { out } = await started({ from: 'midway', to: 'Hemingway' });
     expect(solver.calls).toHaveLength(1);
     await answer();
     expect((await out).ok).toBe(true);
+    closeRoute();
+    void routeForChat({ from: 'MIDWAY', to: 'Hemingway' });
+    await flush();
+    expect(dlg()).not.toBeNull();
   });
 });

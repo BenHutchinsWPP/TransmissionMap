@@ -51,6 +51,21 @@ describe('routeConcernUrl', () => {
   });
 });
 
+describe('routeConcernUrl in a build', () => {
+  it('names the data host\'s versioned constraints archive', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    try {
+      const { routeConcernUrl: prodUrl } = await import('./route-constraints.js');
+      const { ROUTE_ID } = await import('./constants.js');
+      expect(prodUrl('floodplain')).toBe(`pmtiles://https://data.wpptx.org/data/route/${ROUTE_ID}/constraints/floodplain.pmtiles`);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+});
+
 describe('setRouteConcern', () => {
   it('writes state without a map, and falls back to the default for an unknown id', () => {
     setRouteConcern('wsa');

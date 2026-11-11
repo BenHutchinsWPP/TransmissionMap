@@ -307,6 +307,58 @@ describe('route', () => {
     expect(steps).toEqual(['read', 'surfaces', 'solve', 'prove', 'reduce']);
   });
 
+  it('prices the ends by kind without moving the route; refuses kinds the preset cannot price', async () => {
+    const base = await route(req(), fakeIO());
+    const pos = await route(req({ terminals: ['position', 'position'] }), fakeIO());
+    const mixed = await route(req({ terminals: ['new', 'none'] }), fakeIO());
+    if (!base.ok || !pos.ok || !mixed.ok) throw new Error('solve failed');
+    // B&V 2014 T4-6 500 kV: station (2,559,250 + 6 x 1.5 x 2,985,805) x 1.175 = 34,582,007; position (2 x 1.5 x 2,985,805) x 1.175 = 10,524,963 (2014$)
+    expect(base.result.cost.terminalsUsd).toBe(2 * 34_582_007);
+    expect(pos.result.cost.terminalsUsd).toBe(2 * 10_524_963);
+    expect(mixed.result.cost.terminalsUsd).toBe(34_582_007);
+    expect(pos.result.path).toEqual(base.result.path);
+    expect(mixed.result.path).toEqual(base.result.path);
+    expect(pos.result.cost.lineUsdNominal).toBe(base.result.cost.lineUsdNominal);
+    const bad: [Partial<RouteRequest>, RegExp][] = [
+      [{ lineType: 'dc500', terminals: ['position', 'new'] }, /dc500/],
+      [{ terminals: ['new'] as never }, /terminals/],
+      [{ terminals: ['new', 'auto'] as never }, /terminals/],
+      [{ terminals: 'new' as never }, /terminals/],
+      [{ preset: 'pnas-wu2023', terminals: ['position', 'new'] }, /ac500/],
+    ];
+    for (const [over, re] of bad) {
+      const out = await route(req(over), fakeIO());
+      expect(out.ok).toBe(false);
+      expect(!out.ok && out.reason).toMatch(re);
+    }
+    const cost = { basis: 'all-in', year: 2020, line_types: { ac345: { usd_per_mi: 5e6 } } } as const;
+    const allIn = await route(req({ presetPatch: { cost_inputs: cost } }), fakeIO());
+    expect(!allIn.ok && allIn.reason).toMatch(/ac500/);
+  });
+
+  it('prices the alternatives with the same end kinds', async () => {
+    const wallDir = new URL('./fixtures/cube-wall/', import.meta.url);
+    const wallJson = JSON.parse(readFileSync(new URL('grid.json', wallDir), 'utf8'));
+    const out = await route(req({ from: at(20, 29), to: at(60, 29), alternatives: 1, terminals: ['position', 'none'] }), fakeIO(wallJson, wallDir, 'mem://cube-wall-kinds/'));
+    if (!out.ok) throw new Error(out.reason);
+    expect(out.result.alternatives?.length).toBeGreaterThan(0);
+    expect(out.result.cost.terminalsUsd).toBe(10_524_963);
+    for (const a of out.result.alternatives!) expect(a.cost.terminalsUsd).toBe(10_524_963);
+  });
+
+  it('an all-in estimate takes the bare route, costs line $ = entered $/mi × miles, and says its terminals are the method\'s', async () => {
+    const bare = await route(req({ presetPatch: { cost_inputs: { basis: 'bare', year: 2014, line_types: { ac500: { usd_per_mi: 4e6 } } } } }), fakeIO());
+    const all = await route(req({ presetPatch: { cost_inputs: { basis: 'all-in', year: 2014, line_types: { ac500: { usd_per_mi: 4e6 } } } } }), fakeIO());
+    if (!bare.ok || !all.ok) throw new Error('solve failed');
+    expect(all.result.path).toEqual(bare.result.path);
+    expect(all.result.cost.lineUsdNominal).toBeCloseTo(all.result.lengthMi * 4e6, 2);
+    expect(all.result.cost.markupsUsd).toBe(0);
+    expect(all.result.cost.contingency).toBeNull();
+    expect(all.result.cost.userCosts).toMatchObject({ basis: 'all-in', items: ['line'] });
+    expect(all.result.cost.notes).toContain("Terminals use the method's figures as it states them; no contingency is added.");
+    expect(all.result.cost.terminalsUsd).toBe(2 * 34_582_007);
+  });
+
   it('costs the straight-line preset as two points, reading no data', async () => {
     const io = fakeIO();
     const out = await route(req({ preset: 'straight-line-quick' }), io);
@@ -415,6 +467,8 @@ describe('route', () => {
     expect(at('flags2', 81, 5)).toBe(0);
     expect(at('adj', 75, 7)).toBe(16 + 1 + (2 << 5));
     expect(at('adj', 76, 7)).toBe(16 + (3 << 5));
+    expect(at('adj', 85, 7)).toBe(16 + 1 + 4 + 8);
+    expect(at('adj', 86, 7)).toBe(16 + 2 + 4);
     expect(at('adj', 77, 7)).toBe(16);
   });
 

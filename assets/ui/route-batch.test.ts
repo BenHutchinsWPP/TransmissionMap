@@ -213,3 +213,22 @@ describe('lazy only', () => {
     expect(src).toMatch(/import\('\.\/route-batch\.js'\)/);
   });
 });
+
+describe('data location in a build', () => {
+  it('fetches the data host\'s versioned grid.json', async () => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    vi.resetModules();
+    const f = vi.fn(async (_u: string) => new Response('x', { status: 404 }));
+    vi.stubGlobal('fetch', f);
+    try {
+      const { ROUTE_ID } = await import('../constants.js');
+      const { cubeInfo: info } = await import('./route-batch.js');
+      await info();
+      expect(f.mock.calls[0][0]).toBe(`https://data.wpptx.org/data/route/${ROUTE_ID}/250m/grid.json`);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+});

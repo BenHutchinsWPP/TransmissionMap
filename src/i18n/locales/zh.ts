@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "建筑观测覆盖范围",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures（CC BY 4.0）。面积向上取整到整数百分比。空白单元不代表空地。",
   'route.concern.noteBuildingCoverage': "FEMA/ORNL USA Structures（CC BY 4.0）的已处理区域；区域之外建筑轮廓未知。",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "机场面 (FAA Part 77)",
   "route.concern.aviation.primary": "主面",
   "route.concern.aviation.under-30": "Part 77 最低面离地不足 30 米",

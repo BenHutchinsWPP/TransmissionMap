@@ -66,7 +66,7 @@ help:
 	@echo "  make route-cube  routing cube: bands, restrict, slope, flags, costbands, structures, wetland, observed buildings, then 17 pd / 3 osm bands (staged before activation; heavy; log in tmp/logs/route-cube.log)"
 	@echo "  make route-buildings  observed footprint bands from a completed regional cache; first run ARGS='--fetch --bbox WEST SOUTH EAST NORTH' (log in tmp/logs/route-buildings.log)"
 	@echo "  make route-buildings-national ARGS='--source-dir PATH --work-dir PATH'  observed footprint shares from all 49 CONUS state archives (log in tmp/logs/route-buildings-national.log)"
-	@echo "  make route-screening  national building + aviation observations for route reports: one GeoParquet per state from the national-structures work cache + NTAD JSON into an immutable generation in the route cache (ARGS=\"--states RI,DC --output-dir PATH\" for a dry run, --link to point data/route/report/screening at it; log in tmp/logs/route-screening.log)"
+	@echo "  make route-screening  national aviation observations for route reports: NTAD JSON into an immutable generation in the route cache (ARGS=\"--output-dir PATH\" for a trial, --link to point data/route/report/screening at it; log in tmp/logs/route-screening.log)"
 	@echo "  make route-wetland  pd b14 wetland (NWI wetland share per cell) from the state zips in data/raw/route/nwi/ (NWI_DIR=..., NWI_WORK=...; log in tmp/logs/route-wetland.log)"
 	@echo "  make route-structures  pd b13 bldg (homes per cell) from the USA Structures zips (fetch_route_inputs.py structures; STRUCTURES_DIR=...; log in tmp/logs/route-structures.log)"
 	@echo "  make route-cube-assemble  assemble the cube only, from the built bands in data/build/route/250m/ (log in tmp/logs/route-cube-assemble.log)"
@@ -512,7 +512,7 @@ ROUTE_TMP ?= tmp/route
 .PHONY: route-screening
 route-screening:
 	@mkdir -p tmp/logs $(ROUTE_TMP)
-	@systemd-run --user --scope -q -E TMPDIR=$(ROUTE_TMP) -E CPL_TMPDIR=$(ROUTE_TMP) -p MemoryMax=12G -p MemorySwapMax=0 $(PY) $(SCRIPTS)/build_route_screening.py $(ARGS) > tmp/logs/route-screening.log 2>&1; rc=$$?; head -20 tmp/logs/route-screening.log; echo ...; tail -40 tmp/logs/route-screening.log; exit $$rc
+	@systemd-run --user --scope -q -E TMPDIR=$(ROUTE_TMP) -E CPL_TMPDIR=$(ROUTE_TMP) $(PY) $(SCRIPTS)/build_route_screening.py $(ARGS) > tmp/logs/route-screening.log 2>&1; rc=$$?; head -20 tmp/logs/route-screening.log; echo ...; tail -40 tmp/logs/route-screening.log; exit $$rc
 
 route-structures:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi

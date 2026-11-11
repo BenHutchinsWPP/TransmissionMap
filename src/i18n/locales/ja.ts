@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "建物観測の対象範囲",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures（CC BY 4.0）。面積は整数パーセントに切り上げられます。空白のセルは空き地を意味しません。",
   'route.concern.noteBuildingCoverage': "FEMA/ORNL USA Structures（CC BY 4.0）の処理済み範囲。範囲外の建物形状は不明です。",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "空港の表面 (FAA Part 77)",
   "route.concern.aviation.primary": "一次表面",
   "route.concern.aviation.under-30": "Part 77 の最下位の面が地上30 m未満",

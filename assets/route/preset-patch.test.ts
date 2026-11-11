@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_PRESETS, routePreset } from '../../src/registry/route-presets.js';
 import { route, type RouteIO } from './route.js';
-import { uploadHashes, validatePresetPatch, validateRouteOptions } from './preset-patch.js';
+import { uploadHashes, USER_COST_SRC, validatePresetPatch, validateRouteOptions, validateTerminals } from './preset-patch.js';
 
 const P = routePreset('tm-default')!;
 const constRow = P.rows.findIndex((r) => typeof r.route_w === 'number');
@@ -252,5 +252,130 @@ describe('validatePresetPatch add_rows (uploaded layers)', () => {
 
   it('a rows patch cannot address an uploaded row (it does not exist yet)', () => {
     expect(refused({ rows: [{ row: P.rows.length, band: 'upl0', note: 'layer 0', route_w: 2 }], add_rows: [row(0)] })).toMatch(/row must be an integer/);
+  });
+});
+
+describe('cost_inputs', () => {
+  const ok = { basis: 'bare', year: 2020, line_types: { ac230: { usd_per_mi: 2e6, station_usd: 1e7, position_usd: 3e6 } } };
+  const allIn = { basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 5e6 } } };
+  const give = (cost_inputs: unknown, extra: object = {}, preset = P) => refused({ cost_inputs, ...extra }, preset);
+
+  it('refuses a bad shape, basis and year', () => {
+    for (const v of [null, 'x', [], 5]) give(v);
+    give({ year: 2020 });
+    give({ basis: 'bare' });
+    for (const b of ['Bare', 'allin', '', 1, null]) give({ basis: b, year: 2020 });
+    for (const y of [NaN, Infinity, JSON.parse('1e400'), '2020', 2020.5, 1989, 2026, null]) give({ basis: 'bare', year: y });
+    expect(validatePresetPatch(P, { cost_inputs: { basis: 'bare', year: 1990 } }).ok).toBe(true);
+    expect(validatePresetPatch(P, { cost_inputs: { basis: 'bare', year: 2025 } }).ok).toBe(true);
+  });
+  it('refuses unknown keys at every level', () => {
+    expect(give({ ...ok, extra: 1 })).toContain('"extra"');
+    expect(give({ ...ok, line_types: { ac230: { usd_per_mi: 1, bogus: 2 } } })).toContain('"bogus"');
+    give({ ...ok, line_types: { ac999: { usd_per_mi: 1 } } });
+    give({ ...ok, line_types: { __proto__x: { usd_per_mi: 1 } } });
+    give({ ...ok, line_types: [] });
+    give({ ...ok, line_types: { ac230: 5 } });
+  });
+  it('every entry needs a figure; each figure is a finite number in range', () => {
+    give({ ...ok, line_types: { ac230: {} } });
+    for (const v of [0, -1, NaN, Infinity, JSON.parse('1e400'), '1', null, 1e9 + 1]) give({ ...ok, line_types: { ac230: { usd_per_mi: v } } });
+    for (const f of ['station_usd', 'position_usd'])
+      for (const v of [-1, NaN, Infinity, JSON.parse('1e400'), '1', null, 1e10 + 1]) give({ ...ok, line_types: { ac230: { [f]: v } } });
+    for (const v of [1e9]) expect(validatePresetPatch(P, { cost_inputs: { ...ok, line_types: { ac230: { usd_per_mi: v } } } }).ok).toBe(true);
+    for (const f of ['station_usd', 'position_usd'])
+      for (const v of [0, 1e10]) expect(validatePresetPatch(P, { cost_inputs: { ...ok, line_types: { ac230: { [f]: v } } } }).ok).toBe(true);
+  });
+  it('ends: exactly two of auto, new, position, none', () => {
+    for (const e of [[], ['auto'], ['auto', 'auto', 'auto'], ['auto', 'x'], ['auto', 1], 'auto', { 0: 'auto', 1: 'auto' }]) give({ ...ok, ends: e });
+    expect(validatePresetPatch(P, { cost_inputs: { ...ok, ends: ['auto', 'none'] } }).ok).toBe(true);
+    expect(validatePresetPatch(P, { cost_inputs: { basis: 'bare', year: 2020, ends: ['position', 'new'] } }).ok).toBe(true);
+  });
+  it('all-in needs a $/mi for every entry and refuses the settings it makes meaningless', () => {
+    give({ basis: 'all-in', year: 2020 });
+    give({ basis: 'all-in', year: 2020, line_types: {} });
+    give({ basis: 'all-in', year: 2020, line_types: { ac230: { station_usd: 1e6 } } });
+    give({ basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 1e6 }, ac345: { station_usd: 1e6 } } });
+    give(allIn, { contingency: 0.2 });
+    give(allIn, { combine: { [group]: 'multiply' } });
+    give(allIn, { length_factor: true });
+    give(allIn, { length_factor: false });
+    give(allIn, { rows: [{ ...at(constRow), cost_x: 1 }] });
+    give(allIn, { add_rows: [{ layer: '0123456789abcdef', label: 'x', route_w: 1, cost_x: 2 }] });
+    expect(validatePresetPatch(P, { cost_inputs: allIn, rows: [{ ...at(constRow), route_w: 3 }] }).ok).toBe(true);
+    expect(validatePresetPatch(P, { cost_inputs: allIn, add_rows: [{ layer: '0123456789abcdef', label: 'x', route_w: 1, cost_x: 1 }] }).ok).toBe(true);
+  });
+  it('bare applies the figures with their year and source, records user_costs, leaves the registry alone', () => {
+    const before = JSON.stringify(P);
+    const r = validatePresetPatch(P, { cost_inputs: ok });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const l = r.result.line_types.ac230;
+    expect(l.base_per_mi).toEqual({ usd: 2e6, year: 2020, src: USER_COST_SRC });
+    expect(l.terminals).toMatchObject({ usd_each: 1e7, year: 2020, src: USER_COST_SRC, position: { usd_each: 3e6, year: 2020, arithmetic: '', src: USER_COST_SRC } });
+    expect(r.result.user_costs).toEqual({ basis: 'bare', year: 2020, items: ['line', 'station', 'position'], line_types: ['ac230'] });
+    expect(r.result.markups).toEqual(P.markups);
+    expect(r.result.contingency).toEqual(P.contingency);
+    expect(r.result.line_types.ac345).toEqual(P.line_types.ac345);
+    expect(JSON.stringify(P)).toBe(before);
+    expect('user_costs' in P).toBe(false);
+  });
+  it('all-in drops markups, contingency, mitigation, ROW land and the short-line factor, and neutralises every cost multiplier', () => {
+    const r = validatePresetPatch(P, { cost_inputs: allIn });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const o = r.result;
+    expect(o.markups).toEqual([]);
+    for (const k of ['contingency', 'mitigation', 'row_land', 'length_factor'] as const) expect(o[k]).toBeUndefined();
+    expect(o.rows.every((x) => x.cost_x === 1 && x.cost_by_region === undefined)).toBe(true);
+    expect(o.rows.map((x) => x.route_w)).toEqual(P.rows.map((x) => x.route_w));
+    expect(o.rows.map((x) => x.barrier)).toEqual(P.rows.map((x) => x.barrier));
+    expect(o.user_costs).toEqual({ basis: 'all-in', year: 2020, items: ['line'], line_types: ['ac230'] });
+  });
+  it('works on a study preset (position figure entered on a preset that has none)', () => {
+    const w = routePreset('westtec-es')!;
+    const r = validatePresetPatch(w, { cost_inputs: { basis: 'bare', year: 2024, line_types: { ac500: { position_usd: 5e6 } } } });
+    expect(r.ok && r.result.line_types.ac500.terminals.position?.usd_each).toBe(5e6);
+    expect(w.line_types.ac500.terminals.position).toBeUndefined();
+  });
+  it('registry presets carry no user_costs; a patch from before (no cost_inputs) still validates', () => {
+    for (const p of ROUTE_PRESETS) expect(p.user_costs, p.id).toBeUndefined();
+    const r = validatePresetPatch(P, { rows: [{ ...at(constRow), route_w: 3 }], contingency: 0.2, length_factor: false });
+    expect(r.ok && r.result.user_costs).toBeUndefined();
+  });
+});
+
+describe('validateTerminals', () => {
+  const lt = 'ac230';
+  const fine = (k: unknown, p = P, l = lt) => validateTerminals(k, p, l);
+  it('accepts two kinds, each of new, position, none', () => {
+    for (const a of ['new', 'position', 'none'])
+      for (const b of ['new', 'position', 'none']) expect(fine([a, b])).toEqual({ ok: true, result: [a, b] });
+  });
+  it('refuses the wrong shape and an unknown kind', () => {
+    for (const k of [undefined, null, 'new', ['new'], ['new', 'new', 'new'], ['new', 'auto'], ['new', 1], ['position', null], { 0: 'new', 1: 'new' }, [['new'], 'new']])
+      expect(fine(k).ok, JSON.stringify(k)).toBe(false);
+  });
+  it('refuses position where the line type has no position figure, naming the line type', () => {
+    const r = validateTerminals(['position', 'new'], P, 'dc500');
+    expect(r).toMatchObject({ ok: false });
+    expect(!r.ok && r.reason).toContain('dc500');
+    expect(validateTerminals(['new', 'none'], P, 'dc500').ok).toBe(true);
+    expect(validateTerminals(['position', 'new'], routePreset('bv-2014')!, 'ac230').ok).toBe(false);
+    expect(validateTerminals(['new', 'new'], P, 'ac999').ok).toBe(false);
+  });
+  it('accepts position on a study preset once the visitor entered a position figure', () => {
+    const w = routePreset('bv-2014')!;
+    const p = validatePresetPatch(w, { cost_inputs: { basis: 'bare', year: 2020, line_types: { ac230: { position_usd: 4e6 } } } });
+    expect(p.ok && validateTerminals(['position', 'position'], p.result, 'ac230').ok).toBe(true);
+    expect(p.ok && validateTerminals(['position', 'position'], p.result, 'ac345').ok).toBe(false);
+  });
+  it('under all-in a line type without an entered $/mi is refused', () => {
+    const p = validatePresetPatch(P, { cost_inputs: { basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 5e6 } } } });
+    if (!p.ok) throw new Error(p.reason);
+    expect(validateTerminals(['new', 'new'], p.result, 'ac230').ok).toBe(true);
+    const bad = validateTerminals(['new', 'new'], p.result, 'ac345');
+    expect(bad).toMatchObject({ ok: false });
+    expect(!bad.ok && bad.reason).toContain('ac345');
   });
 });

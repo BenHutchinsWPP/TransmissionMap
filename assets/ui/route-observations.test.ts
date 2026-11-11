@@ -13,42 +13,32 @@ import { loadRouteStrings } from '../../src/i18n/index.js';
 const en: Record<string, string> = { ...baseEn, ...routeEn };
 beforeAll(() => loadRouteStrings());
 
-describe('building and aviation observations', () => {
-  it('keeps partial queried coverage, unknown class, dates and omitted runway inventories visible', () => {
+describe('aviation observations', () => {
+  it('keeps dates and omitted runway inventories visible', () => {
     const box = routeObservations(observationFixture());
-    expect(box.textContent).toContain('600.0 of 1000.0');
-    expect(box.textContent).toContain('Unknown class');
-    expect(box.textContent).toContain('2014, 2024');
     expect(box.textContent).toContain('2026/10/01');
     expect(box.textContent).toContain('2014/10/08');
     expect(box.textContent).toContain('Not read');
     expect(box.textContent).toContain('<img src=x');
     expect(box.querySelector('img')).toBeNull();
-    expect(box.querySelectorAll('table')).toHaveLength(3);
+    expect(box.querySelectorAll('table')).toHaveLength(2);
     expect(box.textContent).toContain('Example source');
+    expect(box.textContent).not.toMatch(/building|footprint/i);
   });
-  it('distinguishes missing and unavailable observations from a queried zero', () => {
+  it('distinguishes missing and unavailable observations', () => {
     expect(routeObservations().textContent).toContain('have not been read');
     const obs = observationFixture();
-    obs.buildings = { status: 'unavailable', reason: 'outside regional query' };
-    expect(routeObservations(obs).textContent).toContain('outside regional query');
-    expect(routeObservations(obs).querySelectorAll('table')).toHaveLength(2);
-    const zero = observationFixture();
-    if (zero.buildings.status === 'ok') {
-      zero.buildings.counts = { all: 0, residential: 0, nonresidential: 0, unknown: 0 };
-      zero.buildings.metres = { all: 0, residential: 0, nonresidential: 0, unknown: 0 };
-    }
-    expect(routeObservations(zero).querySelectorAll('table')).toHaveLength(3);
-    expect(routeObservations(zero).textContent).toContain('do not establish');
+    obs.aviation = { status: 'unavailable', reason: 'outside the inventory' };
+    expect(routeObservations(obs).textContent).toContain('outside the inventory');
+    expect(routeObservations(obs).querySelectorAll('table')).toHaveLength(0);
   });
   it('formula-guards exported source text and shares the displayed distance values', () => {
     const obs = observationFixture();
-    if (obs.buildings.status === 'ok') obs.buildings.provenance.credit = '=SUM(1,2)';
+    if (obs.aviation.status === 'ok') obs.aviation.provenance.credit = '=SUM(1,2)';
     const s = FIXTURE_SESSION();
     const csv = crossingsCsv(s.result!.profile!.crossings, { result: { counts: { road: 0, river: 0, rail: 0, pipeline: 0, line230: 0, line100: 0 }, points: [], dupDropped: 0 }, exact: [], failed: [], screening: obs });
     expect(csv).toContain('"\'=SUM(1,2)"');
     expect(csv).toContain('RNO 08/26,50.0,75.0,200.0');
-    expect(csv).toContain('600.0 of 1000.0');
     expect(observationCsvRows(obs).flat().join(' ')).toContain('2014/10/08');
   });
   it('binds observations to every interior vertex, even with identical ends and length', () => {
@@ -62,13 +52,11 @@ describe('building and aviation observations', () => {
     s.result = { ...s.result, path: b };
     expect(shownExact(s)).toBeNull();
   });
-  it('words the national scope: no pilot-area text, pieces note, FAA decision line', () => {
+  it('words the national scope: no pilot-area text, FAA decision line', () => {
     const box = routeObservations(observationFixture());
     expect(box.textContent).not.toMatch(/Reno|Sparks|pilot|serving/i);
-    expect(box.textContent).toContain('footprint pieces');
     expect(box.textContent).toContain('notice zone (14 CFR 77.9)');
     expect(box.textContent).toContain('FAA Form 7460-1 / OE/AAA decides');
-    expect(observationCsvRows(observationFixture()).flat().join(' ')).toContain('footprint pieces');
   });
   it('words the one aviation note: height in m with ft rounded from m, or no class weighed; none without aviation miles', () => {
     const miles = FIXTURE_SESSION().result!.profile!.crossings.miles;
@@ -88,15 +76,13 @@ describe('building and aviation observations', () => {
     expect(keys.length).toBeGreaterThan(5);
     for (const k of keys) expect(en[k as keyof typeof en], k).not.toMatch(/hazard|clearance|approved|safe|compliant/i);
   });
-  it('shows an unavailable reason by key, falling back to its text, and a literal unknown fetch date as words', () => {
+  it('shows an unavailable reason by key, falling back to its text', () => {
     const obs = observationFixture();
-    obs.buildings = { status: 'unavailable', reason: 'engine text', reasonKey: 'route.obs.overBudget' };
+    obs.aviation = { status: 'unavailable', reason: 'engine text', reasonKey: 'route.obs.aviationLimit' };
+    expect(routeObservations(obs).textContent).toContain(`Not available: ${en['route.obs.aviationLimit']}`);
+    expect(routeObservations(obs).textContent).not.toContain('engine text');
     obs.aviation = { status: 'unavailable', reason: 'plain text reason' };
-    const txt = routeObservations(obs).textContent;
-    expect(txt).toContain(`Not available: ${en['route.obs.overBudget']}`);
-    expect(txt).not.toContain('engine text');
-    expect(txt).toContain('Not available: plain text reason');
-    expect(source({ credit: 'C', fetchedAt: 'unknown', license: 'L' })).toBe('C · Fetch date unknown · L');
-    expect(source({ credit: 'C', fetchedAt: '2026-10-31', license: 'L' })).toContain('Fetched 2026-10-31');
+    expect(routeObservations(obs).textContent).toContain('Not available: plain text reason');
+    expect(source({ credit: 'C', fetchedAt: '2026-10-31', license: 'L' })).toBe('C · Fetched 2026-10-31 · L');
   });
 });

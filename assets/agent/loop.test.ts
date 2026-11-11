@@ -161,10 +161,9 @@ describe('showCanvas through the loop: nothing from the frame reaches the model'
 });
 
 describe('systemPrompt', () => {
-  it('names planRoute only when routing is enabled', () => {
-    expect(systemPrompt(true)).toMatch(/call planRoute .*rough early estimate range/);
-    expect(systemPrompt(false)).not.toContain('planRoute');
-    expect(systemPrompt(true)).not.toMatch(/corridor|exploratory/);
+  it('names planRoute', () => {
+    expect(systemPrompt()).toMatch(/call planRoute .*rough early estimate range/);
+    expect(systemPrompt()).not.toMatch(/corridor|exploratory/);
   });
 });
 

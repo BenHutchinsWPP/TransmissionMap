@@ -99,29 +99,39 @@ FLAGS2_BITS = {0: "sage-grouse PHMA/IHMA", 1: "GHMA", 2: "100-yr floodplain",
 
 # OSM adj b3 (power lines only): v = line class + ADJ_COMPUTED_BIT so v != 0 on the grid.
 # Line class 0 beyond 3 cells, 1 on a >= 230 kV line cell, 2 within 1 cell, 3 within 3 cells.
-# Bits 5-6 hold the same class for 100-229 kV lines. Bits 2-3 are reserved for a road class
-# (future option, rebuild adj alone). Max value 16 + 3 + (3 << 5) = 115 fits uint8.
+# Bits 5-6 hold the same class for 100-229 kV lines. Bit 2 is set on or within 1 cell of a
+# >= 345 kV line cell, bit 3 of a >= 500 kV one (osm maxkv code >= 69 / >= 100). Bit 7 is
+# reserved. Max value 16 + 3 + 4 + 8 + (3 << 5) = 127 fits uint8.
 ADJ_COMPUTED_BIT = 16
 ADJ_CLASS_MASK = 0b11
-ADJ_RESERVED_MASK = 0b1100
+ADJ345_BIT = 2
+ADJ500_BIT = 3
+ADJ_KV_TIERS = {ADJ345_BIT: 345, ADJ500_BIT: 500}  # bit -> min kV of the line within 1 cell
+ADJ_RESERVED_MASK = 0b10000000
 ADJ100_SHIFT = 5
 ADJ100_MASK = 0b11 << ADJ100_SHIFT
 ADJ_CLASSES = {0: "beyond 3 cells", 1: "on line", 2: "within 1 cell", 3: "within 3 cells"}
 
 
-ADJ_MAX = ADJ_COMPUTED_BIT | ADJ_CLASS_MASK | ADJ100_MASK
-assert ADJ_MAX == 115 <= 255
+ADJ_MAX = ADJ_COMPUTED_BIT | ADJ_CLASS_MASK | (1 << ADJ345_BIT) | (1 << ADJ500_BIT) | ADJ100_MASK
+assert ADJ_MAX == 127 <= 255
 
 
-def adj_encode(line_class, class_100=0):
+def adj_encode(line_class, class_100=0, near345=False, near500=False):
     for c in (line_class, class_100):
         if c not in ADJ_CLASSES:
             raise ValueError(f"line class must be 0-3, got {c!r}")
-    return ADJ_COMPUTED_BIT | line_class | (class_100 << ADJ100_SHIFT)
+    if near500 and not near345:
+        raise ValueError("a cell beside a >= 500 kV line is beside a >= 345 kV line")
+    if near345 and line_class not in (1, 2):
+        raise ValueError("a cell beside a >= 345 kV line has >= 230 kV line class 1 or 2")
+    return (ADJ_COMPUTED_BIT | line_class | (class_100 << ADJ100_SHIFT)
+            | (near345 << ADJ345_BIT) | (near500 << ADJ500_BIT))
 
 
 def adj_decode(v):
-    """(>= 230 kV class, 100-229 kV class) of an adj value; None where adj was not computed (0 = nodata)."""
+    """(>= 230 kV class, 100-229 kV class) of an adj value; None where adj was not computed (0 = nodata).
+    Bits ADJ345_BIT / ADJ500_BIT (on or beside a >= 345 / >= 500 kV line) are read as bits."""
     if not v & ADJ_COMPUTED_BIT:
         return None
     return (v & ADJ_CLASS_MASK, (v & ADJ100_MASK) >> ADJ100_SHIFT)
@@ -314,6 +324,7 @@ def grid_json(extra=None):
         "flags2_bits": {str(k): v for k, v in FLAGS2_BITS.items()},
         "adj": {"computed_bit": ADJ_COMPUTED_BIT, "class_mask": ADJ_CLASS_MASK,
                 "reserved_mask": ADJ_RESERVED_MASK,
+                "kv_tier_bits": {str(b): kv for b, kv in ADJ_KV_TIERS.items()},
                 "class_100_shift": ADJ100_SHIFT, "class_100_mask": ADJ100_MASK,
                 "classes": {str(k): v for k, v in ADJ_CLASSES.items()}},
         "isoreg": {"codes": {str(k): v for k, v in ISO_CODES.items()},

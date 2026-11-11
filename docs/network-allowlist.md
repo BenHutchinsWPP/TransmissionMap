@@ -31,7 +31,7 @@ The app fails to load or shows no data without these.
 | Host | Why | If blocked |
 |---|---|---|
 | `www.wpptx.org` | The app itself (GitHub Pages) | Page doesn't load at all |
-| `data.wpptx.org` | The project's built map layers, analysis files and download packs | Basemap renders but every data layer is empty |
+| `data.wpptx.org` | The project's built map layers, analysis files, download packs and the route planner's data (`data/route/<id>/`, read with `Range` GETs) | Basemap renders but every data layer is empty; the Route panel and Routing constraints layer report their data unavailable |
 | `live.wpptx.org` | The project's live feeds (wildfire, NWS alerts, outages, weather) | Live layers stay empty and stale-data warnings appear |
 | `tiles.openfreemap.org` | Default basemap: Light/Dark/Hydro vector tiles, map label fonts, icons; also the road/place/boundary overlay drawn over Aerial | Gray/blank background on Light, Dark and Hydro; all map text missing; Aerial shows imagery with no roads or place names |
 | `geocode-api.arcgis.com` | Search box (place/address lookup) | Place search silently returns nothing |

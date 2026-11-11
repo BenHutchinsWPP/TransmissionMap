@@ -1,8 +1,8 @@
 // ─── Route planner pane ──────────────────────────────────────────────────────
-// Role: the Route tab of the bottom drawer (dev server only; lazy chunk opened by
+// Role: the Route tab of the bottom drawer (lazy chunk opened by
 //       route-panel-open.ts through openRoutePanel, which first shows the usage
-//       notice until accepted — notice-gate.ts; the chat's routeForChat refuses
-//       until then, with no modal). Owns the one RouteSession of an open pane:
+//       notice on every open — notice-gate.ts; the chat's routeForChat shows it
+//       too when the pane is not open, and refuses on Cancel). Owns the one RouteSession of an open pane:
 //       - layout: the input column (route-inputs.ts) left, `.rp-main` right: an idle
 //         hint, the 5-step solve progress (aria-live, elapsed seconds, Cancel), the
 //         engine's refusal, or the result (sub-tab tablist + optimality badge + Map ▾
@@ -28,14 +28,14 @@
 //         markers, the profile marker and the ghost line; a legend card in the app's
 //         #legendContainer;
 //       - "Make Alt n the result": the alternative is shown (session.fromAlt) and the
-//         least-cost result kept (session.optimal) as "Optimal (least cost)";
+//         result with the lowest routing score kept (session.optimal) as "Lowest routing score";
 //       - the last method, line type, colour mode and surface choice are saved
 //         (route-prefs.ts) and start the next route;
 //       - the cell inspector: an Inspect toggle in the Map ▾ menu (key "i"; Esc closes the
 //         pinned card first); pointing at the map asks the worker for that 250 m cell
 //         (route-open.ts inspectCell) for a one-line hover preview, a click or tap pins a
 //         card (`.rp-icard`); a hole in the similar-cost areas runs the same inspect even
-//         with Inspect off, prefixed "Not within N % of least cost —"; while on, a map tap
+//         with Inspect off, prefixed "Not within N % of the lowest routing score —"; while on, a map tap
 //         opens no feature popup;
 //       - "Show cell weights": Find asks for `weightImage` (in the shown mode) while it is
 //         on; switched on after a result, one solve merges only the image. Drawn through
@@ -64,7 +64,7 @@
 //       route/route.ts (searchBufferM, SURFACE_PALETTE, WEIGHT_PALETTE, COST_PALETTE, types), route/inspect.ts (textOf, fmtX, presentFacts), colors/route-constraints.ts (palettes),
 //       utils/utils-dom.ts (h, ht), route/grid.ts (albersForward), route/cost.ts (greatCircleM), route/surface-image.ts (palette types),
 //       route/preset-patch.ts (validatePresetPatch, limits), route-request.ts (the request builder), dataset-query.ts (Outcome, type only),
-//       notice-gate.ts (noticeAccepted) + notice-dialog.ts (showNotice): the usage notice,
+//       notice-gate.ts (noticeAccepted, forgetNotice on close) + notice-dialog.ts (showNotice): the usage notice, asked on every open (the chat's planRoute shows it too),
 //       route/custom-presets.ts, route/route-prefs.ts, route/categories.ts, registry/route-presets.ts,
 //       popup.ts (setRouteTapClaims: a hole tap opens no feature popup),
 //       map-input.ts (onMapPoint, onMapTap, onMapPointLeave), state-bus.ts (lang:changed), state.ts, ui-legends.ts (updateLegends),
@@ -103,7 +103,7 @@ import { onMapPoint, onMapTap, onMapPointLeave, type MapPointerEvent, type Unsub
 import { on } from '../state-bus.js';
 import { state } from '../state.js';
 import { getLocale, t } from '../../src/i18n/index.js';
-import { noticeAccepted, ROUTE_NOTICE_VERSION } from './notice-gate.js';
+import { forgetNotice, noticeAccepted, ROUTE_NOTICE_VERSION } from './notice-gate.js';
 import { showNotice } from './notice-dialog.js';
 import { positionColorMenu } from './ui-menubar.js';
 import { downloadFile } from '../user-data/user-data-export.js';
@@ -434,6 +434,7 @@ function dispose(): void {
   const p = pane;
   if (!p) return;
   pane = null;
+  forgetNotice('route');   // the notice is asked again on the next open
   p.batch?.dispose();
   p.batch = null;
   p.call++;
@@ -849,7 +850,7 @@ function mapMenu(p: Pane, ...items: HTMLElement[]): HTMLElement {
   return wrap;
 }
 
-/** "Alt n · +x % routing cost": the shown result is an alternative the user picked. */
+/** "Alt n · +x % routing score": the shown result is an alternative the user picked. */
 function altBadge(s: RouteSession, n: number): HTMLElement {
   const pct = (s.optimal?.alternatives?.[n - 1]?.pctRoute ?? 0).toFixed(1);
   const b = h('span', 'rp-badge rp-badge--alt', t('route.badge.alt', { n, pct }));
@@ -994,16 +995,16 @@ function resultGeojson(s: RouteSession, style = false): FC {
       name: `${endName(inp, 'a')} → ${endName(inp, 'b')}`, kind: 'route', preset: r.preset.id, lineType: c.lineType,
       lengthMi: +r.lengthMi.toFixed(2), dollarYear: c.dollarYear, totalNominalUsd: Math.round(c.totalNominal),
       total2025Usd: Math.round(c.total2025), low2025Usd: Math.round(c.band.low), high2025Usd: Math.round(c.band.high),
-      tribalMiles: +r.tribalMiles.toFixed(2), optimality: r.optimality,
+      tribalMiles: +r.tribalMiles.toFixed(2), lowestScoreProof: r.optimality,
       ...(style ? { stroke: PLAIN, 'stroke-width': 4 } : {}),
     },
   }];
   for (const a of otherRoutes(s)) features.push({
     type: 'Feature', geometry: a.path, properties: {
-      name: a.name, kind: a.alt < 0 ? 'optimal' : 'alternative', lengthMi: +a.lengthMi.toFixed(2),
-      total2025Usd: Math.round(a.cost.total2025), routingCostAboveOptimalPct: +a.pctRoute.toFixed(2),
+      name: a.name, kind: a.alt < 0 ? 'lowest-score' : 'alternative', lengthMi: +a.lengthMi.toFixed(2),
+      total2025Usd: Math.round(a.cost.total2025), routingScoreAboveLowestPct: +a.pctRoute.toFixed(2),
       usdVsRoutePct: +((a.cost.total2025 / (c.total2025 || 1) - 1) * 100).toFixed(2),
-      sharedWithRoute: a.sharedWithRoute === null ? null : +a.sharedWithRoute.toFixed(3),
+      sharedWithLowest: a.sharedWithRoute === null ? null : +a.sharedWithRoute.toFixed(3),
       ...(style ? { stroke: a.colour, 'stroke-width': 3 } : {}),
     },
   });
@@ -1015,7 +1016,7 @@ function exportGeojson(p: Pane): void {
 }
 
 function exportCsv(p: Pane): void {
-  downloadFile(costCsv(p.session.result!, p.session.dollars), `${fileBase(p)}-cost.csv`, 'text/csv;charset=utf-8');
+  downloadFile(costCsv(p.session.result!, p.session.dollars, p.session.resultInputs), `${fileBase(p)}-cost.csv`, 'text/csv;charset=utf-8');
 }
 
 async function addToMyData(p: Pane, btn?: HTMLButtonElement): Promise<void> {
@@ -2122,12 +2123,14 @@ function planEnd(end: End, v: string | [number, number], idx: SubstationIndex | 
   return `ambiguous end ${end} "${asked}": ${exact.length > 1 ? `${exact.length} substations have this name` : 'no exact name match'}; ask the visitor which: ${cands.join('; ')}`;
 }
 
-/** The map chat's planRoute. Opens the pane in the background (Ask stays in view, no focus move), refuses while a
+const DECLINED = 'the visitor declined the route usage notice; no route was planned';
+
+/** The map chat's planRoute. Shows the route usage notice first when the pane is not open (Cancel refuses).
+ *  Opens the pane in the background (Ask stays in view, no focus move), refuses while a
  *  solve of ours runs, solves on the visitor's path (then findAlternatives with the chat's count, ≤ 2), refuses
  *  when a visitor solve replaced its call, cancels on Stop only while its own call is in flight, and with no
  *  ends summarises the shown route. Routing refusals from the engine pass through. */
 export async function routeForChat(req: ChatRouteRequest, signal?: AbortSignal): Promise<ChatOutcome> {
-  if (!noticeAccepted('route', ROUTE_NOTICE_VERSION)) return refuse('route notice not accepted: open Tools ▸ Plan a route… first');
   const hasFrom = req.from !== undefined, hasTo = req.to !== undefined;
   if (hasFrom !== hasTo) return refuse('give both from and to, or neither to recall the shown route');
   if (!hasFrom) {
@@ -2135,6 +2138,10 @@ export async function routeForChat(req: ChatRouteRequest, signal?: AbortSignal):
     return isBusy(pane) ? refuse(BUSY) : summaryOf(pane);
   }
   if (signal?.aborted) return refuse('cancelled');
+  if (!noticeAccepted('route', ROUTE_NOTICE_VERSION)) {
+    if (!(await showNotice('route'))) return refuse(DECLINED);
+    if (signal?.aborted) { forgetNotice('route'); return refuse('cancelled'); }
+  }
   if (!pane) pane = createPane(true);
   else openRoute(dispose, undefined, { background: true });
   const p = pane, s = p.session;

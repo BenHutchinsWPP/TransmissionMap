@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { route, readGridJson, type RouteIO } from './route.js';
 import type { Fetcher } from './cog-read.js';
 
-const CUBE = 'data/route/250m/';
+const CUBE = process.env.ROUTE_CUBE ?? 'data/route/250m/';
 const CAP = 100e6;
 type XY = [number, number];
 interface HoldRoute {

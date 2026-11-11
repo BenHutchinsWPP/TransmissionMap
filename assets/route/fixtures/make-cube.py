@@ -10,7 +10,9 @@ Everywhere: grassland (71), slope bin 1, agency 1, wildfire 1, whpclass 1, state
 isoreg TEPPC, landval $1,500/ac, bldg 1 (no home; 0 under the wall), wetland 1 (none; 0 under the wall), adj class 0 (computed).
 Row 5, cols 75-81 (super-tile 1_0, off every tested path) carry one v3 bit each: flags bit 7 at col 75,
 flags2 bits 2, 3, 4, 6, 7 at cols 76-80; adj at (75, 7) is >= 230 kV class 1 + 100-229 kV class 2,
-at (76, 7) 100-229 kV class 3 only. Row 5, cols 82-84 carry bldg 2, 5 and 12 (1, 4 and 11 homes).
+at (76, 7) 100-229 kV class 3 only, at (85, 7) on a >= 500 kV line (class 1, bits 2 and 3),
+at (86, 7) within 1 cell of a >= 345 kV line only (class 2, bit 2).
+Row 5, cols 82-84 carry bldg 2, 5 and 12 (1, 4 and 11 homes).
 Row 5, cols 86-88 carry wetland 11, 41 and 81 (10, 40 and 80 % of the cell).
 aviation and nfhl are 1 (evaluated, none) on land, 0 under the wall; row 9, cols 75-79 carry
 aviation 2-6, and row 9, cols 82-83 carry nfhl 2 (SFHA) and 3 (no effective panel).
@@ -72,6 +74,8 @@ def write_cube(name, gaps):
         pd[13, 5, col] = rg.wetland_encode(share)
     osm[2, 7, 75] = rg.adj_encode(1, 2)
     osm[2, 7, 76] = rg.adj_encode(0, 3)
+    osm[2, 7, 85] = rg.adj_encode(1, 0, True, True)
+    osm[2, 7, 86] = rg.adj_encode(2, 0, True)
 
     for kind, arr in (("pd", pd), ("osm", osm)):
         for sc in range((COLS + SUPER - 1) // SUPER):

@@ -40,6 +40,7 @@ import en from '../../src/i18n/locales/en.js';
 import enRoute from '../../src/i18n/route/en.js';
 import esRoute from '../../src/i18n/route/es.js';
 import es from '../../src/i18n/locales/es.js';
+import { acceptNotice, ROUTE_NOTICE_VERSION } from './notice-gate.js';
 
 const RAW = /\broute\.[a-z]/;
 const flush = async () => { for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0)); };
@@ -65,7 +66,7 @@ const opened = () => vi.waitFor(() => { if (!document.querySelector('#td-route .
 const shown = () => document.querySelector('#td-route')!.textContent ?? '';
 
 beforeEach(() => {
-  localStorage.setItem('tm-notice-route', '2');
+  acceptNotice('route', ROUTE_NOTICE_VERSION);
   const env = installDrawerEnv();
   const layers = new Map<string, unknown>(); const sources = new Map<string, unknown>();
   state.map = {

@@ -24,9 +24,7 @@
 //       Never throws. FamilyStatus.ms = time from the call's start until the family's last file
 //       finished (includes queue wait behind the limiter).
 // Deps: hyparquet + fzstd, crossings-exact.ts (types, FOLLOW_M), grid.ts (Albers), cog-read.ts (createLimiter),
-//       route.ts (RouteIO type). readSpatialRows also serves screening.ts with bounded raw rows: one SpatialBudget
-//       (maxBytes / maxUncompressed settable, shared across files) and an optional `onRows` sink that receives
-//       phase-2 chunks of ≤ 16,384 rows and keeps none (no row cap unless maxRows is set).
+//       route.ts (RouteIO type).
 
 import { parquetMetadataAsync, parquetReadObjects, type AsyncBuffer, type Compressors, type FileMetaData } from 'hyparquet';
 import { decompress } from 'fzstd';
@@ -172,18 +170,16 @@ function project(g: unknown): [number, number][][] | null {
 }
 
 // ─── Files ───────────────────────────────────────────────────────────────────
-/** One budget object may span several files (the caller passes the same one): `bytes` counts every footer and range.
- *  maxBytes / maxUncompressed default to the crossings families' 48 MiB / 256 MiB per file. */
-export interface SpatialBudget { failed: string | null; bytes: number; groups: number; rowsDecoded: number; maxRows?: number; uncompressed?: number; maxBytes?: number; maxUncompressed?: number }
-export const BYTE_BUDGET_MSG = 'byte budget passed', DECODE_BUDGET_MSG = 'Parquet decode budget passed';
-const CHUNK_ROWS = 16_384;
+/** One budget per family: `bytes` counts every footer and range of its files (48 MiB), `uncompressed` the row groups read (256 MiB). */
+export interface SpatialBudget { failed: string | null; bytes: number; groups: number; rowsDecoded: number; uncompressed?: number }
+const BYTE_BUDGET_MSG = 'byte budget passed', MAX_ROWS = 100_000, CHUNK_ROWS = 16_384, MAX_UNCOMPRESSED = 256 * 2 ** 20;
 interface Tally extends SpatialBudget { rowsKept: number; skipped: number; ms: number; features: ExactFeature[] }
 
 /** Throw unless the family is still alive and in time. */
 function check(t: SpatialBudget, deadline: number): void {
   if (t.failed) throw new Error(t.failed);
   if (Date.now() > deadline) throw new Error('out of time');
-  if (t.bytes > (t.maxBytes ?? MAX_FAMILY_BYTES)) throw new Error(BYTE_BUDGET_MSG);
+  if (t.bytes > MAX_FAMILY_BYTES) throw new Error(BYTE_BUDGET_MSG);
 }
 
 const statOf = (md: FileMetaData, g: number, path: string, which: 'min_value' | 'max_value') => {
@@ -192,20 +188,17 @@ const statOf = (md: FileMetaData, g: number, path: string, which: 'min_value' | 
 };
 
 export interface SpatialRow { row: Record<string, unknown>; index: number }
-/** Bounded raw GeoParquet rows near a corridor. The caller validates attributes and geometry.
- *  With `onRows`, each decoded chunk (≤ 16,384 rows) goes to the sink and nothing is retained (the result is empty);
- *  the row cap then applies only if `maxRows` is set. */
+/** Bounded raw GeoParquet rows near a corridor. The caller validates attributes and geometry. */
 export async function readSpatialRows(io: Pick<RouteIO, 'fetchRange' | 'byteLength'>, url: string, columns: string[],
-  corridor: Corridor, t: SpatialBudget, deadline: number, onRows?: (rows: SpatialRow[]) => void | Promise<void>): Promise<SpatialRow[]> {
+  corridor: Corridor, t: SpatialBudget, deadline: number): Promise<SpatialRow[]> {
   check(t, deadline);
   if (!io.byteLength) throw new Error('no byteLength');
   const size = await io.byteLength(url);
   if (!Number.isFinite(size) || size <= 12) throw new Error('not a Parquet file');
   const cache: { start: number; end: number; data: Promise<Uint8Array> }[] = [];
   const range = (start: number, end: number): Promise<Uint8Array> => {
-    const maxBytes = t.maxBytes ?? MAX_FAMILY_BYTES;
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end > size) throw new Error('invalid or oversized Parquet range');
-    if (end - start > maxBytes || t.bytes + end - start > maxBytes) throw new Error(BYTE_BUDGET_MSG);
+    if (end - start > MAX_FAMILY_BYTES || t.bytes + end - start > MAX_FAMILY_BYTES) throw new Error(BYTE_BUDGET_MSG);
     const c = cache.find((r) => r.start <= start && end <= r.end);
     if (c) return c.data.then((b) => b.subarray(start - c.start, end - c.start));
     check(t, deadline);
@@ -244,7 +237,7 @@ export async function readSpatialRows(io: Pick<RouteIO, 'fetchRange' | 'byteLeng
       const bytes = Number(rg.total_byte_size);
       if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > 16 * 2 ** 20 || n > 100_000) throw new Error('Parquet row group exceeds decode budget');
       t.uncompressed = (t.uncompressed ?? 0) + bytes;
-      if (t.uncompressed > (t.maxUncompressed ?? 256 * 2 ** 20)) throw new Error(DECODE_BUDGET_MSG);
+      if (t.uncompressed > MAX_UNCOMPRESSED) throw new Error('Parquet decode budget passed');
       groups.push([start, start + n]);
     }
   });
@@ -252,7 +245,7 @@ export async function readSpatialRows(io: Pick<RouteIO, 'fetchRange' | 'byteLeng
   const runs: [number, number][] = [], kept = new Set<number>();
   for (const [g0, g1] of groups) {
     check(t, deadline);
-    if (g1 - g0 > (t.maxRows ?? 100_000)) throw new Error('Parquet row budget passed');
+    if (g1 - g0 > MAX_ROWS) throw new Error('Parquet row budget passed');
     const rows = await read(g0, g1, ['bbox'], false);
     let last: [number, number] | undefined;
     rows.forEach((r, i) => {
@@ -272,12 +265,10 @@ export async function readSpatialRows(io: Pick<RouteIO, 'fetchRange' | 'byteLeng
     for (let c0 = a; c0 < b; c0 += CHUNK_ROWS) {
       const c1 = Math.min(b, c0 + CHUNK_ROWS);
       check(t, deadline);
-      if (t.rowsDecoded + c1 - c0 > (t.maxRows ?? (onRows ? Infinity : 100_000))) throw new Error('Parquet row budget passed');
+      if (t.rowsDecoded + c1 - c0 > MAX_ROWS) throw new Error('Parquet row budget passed');
       const rows = await read(c0, c1, [...columns, 'geometry'], true);
       t.rowsDecoded += rows.length;
-      const got: SpatialRow[] = [];
-      rows.forEach((r, i) => { if (kept.has(c0 + i)) got.push({ row: r, index: c0 + i }); });
-      if (onRows) { if (got.length) await onRows(got); } else out.push(...got);
+      rows.forEach((r, i) => { if (kept.has(c0 + i)) out.push({ row: r, index: c0 + i }); });
     }
   }
   return out;

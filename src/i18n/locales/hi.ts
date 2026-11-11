@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "भवन अवलोकन कवरेज",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). क्षेत्र पूर्ण प्रतिशत तक ऊपर की ओर पूर्णांकित होते हैं। खाली कोशिका का अर्थ खाली भूमि नहीं है।",
   'route.concern.noteBuildingCoverage': "FEMA/ORNL USA Structures (CC BY 4.0) के लिए संसाधित क्षेत्र; इसके बाहर पदचिह्न अज्ञात हैं।",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "हवाई अड्डे की सतहें (FAA Part 77)",
   "route.concern.aviation.primary": "प्राथमिक सतह",
   "route.concern.aviation.under-30": "Part 77 की सबसे निचली सतह भूमि से 30 मी से कम ऊपर",

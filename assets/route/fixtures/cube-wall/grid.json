@@ -149,7 +149,11 @@
  "adj": {
   "computed_bit": 16,
   "class_mask": 3,
-  "reserved_mask": 12,
+  "reserved_mask": 128,
+  "kv_tier_bits": {
+   "2": 345,
+   "3": 500
+  },
   "class_100_shift": 5,
   "class_100_mask": 96,
   "classes": {

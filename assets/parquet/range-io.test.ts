@@ -21,6 +21,13 @@ afterEach(() => { vi.useRealTimers(); });
 
 const flush = () => new Promise(r => setTimeout(r, 0));
 
+describe('requests', () => {
+  it('bypass the browser cache (no-store)', async () => {
+    await readRange(FILE, 0, 100, 1000);
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ cache: 'no-store' });
+  });
+});
+
 describe('limiter', () => {
   it('runs at most 6 requests at once; the 7th waits until one settles', async () => {
     const held: (() => void)[] = [];

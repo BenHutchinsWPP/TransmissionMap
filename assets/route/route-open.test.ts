@@ -69,6 +69,22 @@ describe('routeLine / cancelRoute', () => {
   });
 });
 
+describe('data location in a build', () => {
+  it('posts the data host\'s versioned cube url unchanged', async () => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    try {
+      const { routeLine } = await load();
+      const { ROUTE_ID } = await import('../constants.js');
+      void routeLine(req);
+      const m = FakeWorker.all[0].posted[0] as unknown as { baseUrl: string };
+      expect(m.baseUrl).toBe(`https://data.wpptx.org/data/route/${ROUTE_ID}/250m/`);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
 describe('inspectCell', () => {
   const ireq = { lngLat: [-116, 43], preset: 'tm-default', lineType: 'ac500' } as never;
 

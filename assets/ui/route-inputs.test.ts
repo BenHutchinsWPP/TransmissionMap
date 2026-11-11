@@ -155,7 +155,8 @@ describe('route inputs', () => {
 
   it('the line type follows a preset change', () => {
     const labels = () => [...el.querySelectorAll('[role=radio]')].map((b) => b.textContent);
-    expect(labels()).toEqual(['500 AC', '345 AC', '230 AC', '161 AC', '138 AC', '115 AC', '69 AC', '500 DC']);
+    const sc = t('route.in.singleCircuit');
+    expect(labels()).toEqual(['500 AC', `500 AC ${sc}`, '345 AC', `345 AC ${sc}`, '230 AC', `230 AC ${sc}`, '161 AC', '138 AC', '115 AC', '69 AC', '500 DC']);
     el.querySelector<HTMLButtonElement>('[role=radio][data-id=ac345]')!.click();
     expect(session.inputs.lineType).toBe('ac345');
     const sel = el.querySelector('select')!;

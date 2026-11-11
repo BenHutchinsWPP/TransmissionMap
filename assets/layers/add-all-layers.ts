@@ -60,7 +60,7 @@ export function addAllLayers() {
     ...planGeoResource(),
     ...planSeismicHazard(),   // raster — sits low so vector infra draws on top
     ...planWildfireHazard(),  // raster — sits low so vector infra draws on top
-    ...planRouteConstraints(), // raster, dev server only — Routing constraints
+    ...planRouteConstraints(), // raster — Routing constraints
 
     ...planRetailTerritories(),
     ...planEiaBalancingAuthorities(),

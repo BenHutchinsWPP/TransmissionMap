@@ -33,6 +33,16 @@
 #   scripts/publish_r2.sh --rollback STAMP     first save the current fixed names to a new
 #                                              prev/<stamp>/, then copy prev/<STAMP>/ back
 #                                              (files first, manifests last; STAMP required)
+#   scripts/publish_r2.sh --only route [--no-final] [--verify-sha] [--dry-run]
+#                                              the route planner's data under data/route/<ROUTE_ID>/
+#                                              and nothing else (scripts/route_publish_plan.py: the
+#                                              selection, the id, refusals). Runs only when ROUTE_ID
+#                                              in assets/constants.ts equals the computed id (a dry run
+#                                              prints both). Every object is octet-stream + immutable;
+#                                              an existing key with different content aborts. The final
+#                                              group (grid.json, screening pointer, LICENSE.txt) is last
+#                                              and left out by --no-final. --verify-sha checks the
+#                                              screening files' sha256.
 #   scripts/publish_r2.sh --prune-list         read-only report of bucket objects that no
 #                                              manifest names (the layers list, the release
 #                                              manifest, every index.json here and under prev/);
@@ -51,18 +61,35 @@ CC_IMMUTABLE="public, max-age=31536000, immutable"
 CC_FIXED="public, max-age=3600, s-maxage=2592000"
 PY="python3"; [ -x venv/bin/python ] && PY="venv/bin/python"
 
-mode="publish"; stamp_arg=""
-case "${1:-}" in
-  "") ;;
-  --dry-run) mode="dry-run" ;;
-  --rollback)
-    mode="rollback"; stamp_arg="${2:-}"
-    [[ "$stamp_arg" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || {
-      echo "ERROR: --rollback needs the STAMP of a prev/<stamp>/ directory (e.g. 20261106T120000Z)." >&2; exit 2; } ;;
-  --prune-list) mode="prune-list" ;;
-  -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
-  *) echo "ERROR: unknown argument '$1' (see --help)" >&2; exit 2 ;;
-esac
+mode="publish"; stamp_arg=""; only=""; no_final=0; verify_sha=0
+set_mode() {  # one of --dry-run, --rollback, --prune-list
+  [ "$mode" = "publish" ] || { echo "ERROR: give only one of --dry-run, --rollback, --prune-list." >&2; exit 2; }
+  mode="$1"
+}
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) set_mode "dry-run"; shift ;;
+    --rollback)
+      set_mode "rollback"; stamp_arg="${2:-}"
+      [[ "$stamp_arg" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || {
+        echo "ERROR: --rollback needs the STAMP of a prev/<stamp>/ directory (e.g. 20261106T120000Z)." >&2; exit 2; }
+      shift 2 ;;
+    --prune-list) set_mode "prune-list"; shift ;;
+    --only)
+      [ "${2:-}" = "route" ] || { echo "ERROR: --only takes 'route'." >&2; exit 2; }
+      only="route"; shift 2 ;;
+    --no-final) no_final=1; shift ;;
+    --verify-sha) verify_sha=1; shift ;;
+    -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+    *) echo "ERROR: unknown argument '$1' (see --help)" >&2; exit 2 ;;
+  esac
+done
+if [ -z "$only" ] && [ "$no_final" = 1 -o "$verify_sha" = 1 ]; then
+  echo "ERROR: --no-final and --verify-sha go with --only route." >&2; exit 2
+fi
+if [ -n "$only" ] && [ "$mode" = "rollback" -o "$mode" = "prune-list" ]; then
+  echo "ERROR: --only route is for publishing; --rollback and --prune-list take no --only." >&2; exit 2
+fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -145,6 +172,73 @@ if [ "$mode" = "rollback" ]; then
   exit 0
 fi
 
+# ── Route data (--only route) ────────────────────────────────────────────────
+# The route planner's data under data/route/<ROUTE_ID>/ and nothing else; see
+# scripts/route_publish_plan.py for the selection and the id. Every key is new per id,
+# so every object is immutable and nothing is backed up or purged. An existing key
+# with different content aborts the run. The final group (grid.json, the screening
+# pointer, LICENSE.txt) goes last and is left out by --no-final.
+if [ "$only" = "route" ]; then
+  planargs=(--out "$work/route")
+  [ "$verify_sha" = 1 ] && planargs+=(--verify-sha)
+  [ "$no_final" = 1 ] && planargs+=(--no-final)
+  "$PY" scripts/route_publish_plan.py "${planargs[@]}"
+  IFS='|' read -r rid pinned idstatus < "$work/route/id.txt" || true
+  if [ "$idstatus" != "ok" ] && [ "$mode" != "dry-run" ]; then
+    echo "ERROR: ROUTE_ID computed $rid but assets/constants.ts pins '${pinned:-(none)}'; nothing uploaded." >&2
+    exit 1
+  fi
+  check_cmds=(); copy_cmds=()
+  while IFS=$'\t' read -r phase sname sroot sdest slist sctype; do
+    [ -n "$phase" ] || continue
+    rcc=(--checksum --header-upload "Content-Type: $sctype" --header-upload "Cache-Control: $CC_IMMUTABLE")
+    check_cmds+=("$(printf '%q ' rclone check --checksum --one-way --files-from "$slist" --combined "$work/route/$sname.combined" "$sroot" "$DEST/$sdest")")
+    copy_cmds+=("$(printf '%q ' rclone copy "${rcc[@]}" --files-from "$slist" "$sroot" "$DEST/$sdest")")
+  done < "$work/route/sets.tsv"
+  if [ "$mode" = "dry-run" ]; then
+    echo
+    echo "Commands (rclone remote from the environment; keys redacted). Checks first: any '*' (differs) or '!' line aborts."
+    printf '  %s\n' "${check_cmds[@]}"
+    printf '  %s\n' "${copy_cmds[@]}"
+    exit 0
+  fi
+  # Immutability guard: a key the bucket holds with other content aborts before any upload.
+  while IFS=$'\t' read -r phase sname sroot sdest slist sctype; do
+    [ -n "$phase" ] || continue
+    comb="$work/route/$sname.combined"
+    rc=0
+    rclone check --checksum --one-way --files-from "$slist" --combined "$comb" "$sroot" "$DEST/$sdest" \
+      >/dev/null 2>"$work/route/check.err" || rc=$?
+    if [ "$rc" -gt 1 ] || [ ! -f "$comb" ] || grep -q '^[*!] ' "$comb"; then
+      echo "ERROR: $sdest: a key exists with different content, or the comparison failed (rclone check exit $rc); nothing uploaded." >&2
+      grep '^[*!] ' "$comb" 2>/dev/null | head -5 >&2 || true
+      sed -n '1,5p' "$work/route/check.err" >&2
+      exit 1
+    fi
+    [ "$(wc -l < "$slist")" -eq "$(wc -l < "$comb")" ] || {
+      echo "ERROR: $sdest: the comparison is incomplete; nothing uploaded." >&2; exit 1; }
+  done < "$work/route/sets.tsv"
+  for c in "${copy_cmds[@]}"; do
+    eval "$c"
+  done
+  # Verification: every selected key is now in the bucket with the local content.
+  while IFS=$'\t' read -r phase sname sroot sdest slist sctype; do
+    [ -n "$phase" ] || continue
+    comb="$work/route/$sname.after"
+    rc=0
+    rclone check --checksum --one-way --files-from "$slist" --combined "$comb" "$sroot" "$DEST/$sdest" \
+      >/dev/null 2>"$work/route/check.err" || rc=$?
+    if [ "$rc" -ne 0 ] || [ ! -f "$comb" ] || grep -qv '^= ' "$comb" \
+       || [ "$(wc -l < "$slist")" -ne "$(wc -l < "$comb")" ]; then
+      echo "ERROR: $sdest: after the upload the bucket does not match the local files (rclone check exit $rc)." >&2
+      grep -v '^= ' "$comb" 2>/dev/null | head -5 >&2 || true
+      exit 1
+    fi
+  done < "$work/route/sets.tsv"
+  echo "Published and verified $(wc -l < "$work/route/keys.txt") route objects under data/route/$rid/ of $BUCKET."
+  exit 0
+fi
+
 # ── What the manifests name ──────────────────────────────────────────────────
 "$PY" scripts/validate_build.py --list-expected > "$work/expected.list"
 [ -s "$work/expected.list" ] || { echo "ERROR: validate_build.py --list-expected named nothing." >&2; exit 1; }
@@ -216,6 +310,9 @@ for path in indexes:
         keep.add(under(m.get("path", "columns/"), m["file"]["name"]))
 print("\n".join(sorted(keep)))
 EOF
+  # route data: every key under a data/route/<id>/ whose id assets/constants.ts pins
+  pinned_route="$("$PY" scripts/route_publish_plan.py --pinned)"
+  [ -z "$pinned_route" ] || grep "^data/route/$pinned_route/" "$work/remote.list" >> "$work/keep.raw" || [ $? -eq 1 ]
   LC_ALL=C sort -u "$work/keep.raw" > "$work/keep.list"
   LC_ALL=C comm -23 "$work/remote.list" "$work/keep.list" > "$work/prune.list"
   echo "Objects in $BUCKET that no manifest names (prev/ excluded; read-only, nothing is deleted): $(wc -l < "$work/prune.list")"

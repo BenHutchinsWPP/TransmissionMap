@@ -15,6 +15,8 @@
 //   groupsHolding, rowRuns   pure row-group / row-run helpers
 // Requests: plain bounded-range GETs, same-origin credentials only, never a HEAD
 //   or a suffix range — byteLength and the footer length come from index.json.
+//   They bypass the browser cache ('no-store': concurrent ranges of one file
+//   through it can come back short); the byte cache below is the only cache.
 //   Each request is aborted after REQUEST_TIMEOUT_MS (its own clock, from when it
 //   starts), and at most MAX_IN_FLIGHT run at once; the rest wait for a slot.
 //   Fetched ranges sit in one least-recently-used cache of CACHE_BYTES across all
@@ -80,7 +82,7 @@ export const requestLog: { url: string; start: number; end: number }[] = [];
 
 function fetchRange(url: string, start: number, end: number, size: number, signal?: AbortSignal): Promise<ArrayBuffer> {
   if (requestLog.push({ url, start, end }) > 500) requestLog.shift();
-  return fetchTimed(url, { credentials: 'same-origin', headers: { Range: `bytes=${start}-${end - 1}` } }, async res => {
+  return fetchTimed(url, { credentials: 'same-origin', cache: 'no-store', headers: { Range: `bytes=${start}-${end - 1}` } }, async res => {
     if (res.status === 404) throw new Fail('stale-build');   // a content-hashed name the host no longer has
     if (!res.ok) throw new Fail('offline');
     const body = await res.arrayBuffer();

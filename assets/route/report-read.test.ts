@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
-import { parquetMetadata, parquetMetadataAsync, parquetReadObjects } from 'hyparquet';
-import { BYTE_BUDGET_MSG, buildCorridor, readReport, readSpatialRows } from './report-read.js';
+import { parquetMetadata, parquetMetadataAsync } from 'hyparquet';
+import { buildCorridor, readReport, readSpatialRows } from './report-read.js';
 import { exactCrossings, type ExactFeature } from './crossings-exact.js';
 import { albersForward, albersInverse } from './grid.js';
 
@@ -141,11 +141,6 @@ describe('readReport failures', () => {
 
 
 describe('bounded spatial row extraction', () => {
-  it('rejects a row budget before decoding the nearby group', async () => {
-    await expect(readSpatialRows(fsIO(DIR), 'report/rivers.parquet', ['name'], buildCorridor([R_A]),
-      { failed: null, bytes: 0, groups: 0, rowsDecoded: 0, maxRows: 0 }, Date.now() + 1000)).rejects.toThrow('row budget');
-  });
-
   it('rejects an oversized footer before fetching or decoding it', async () => {
     let reads = 0;
     const io = { async byteLength() { return 10_000_000; }, async fetchRange(_url: string, start: number) {
@@ -167,61 +162,5 @@ describe('bounded spatial row extraction', () => {
       await expect(readSpatialRows(fsIO(DIR), 'report/rivers.parquet', ['name'], buildCorridor([R_A]),
         { failed: null, bytes: 0, groups: 0, rowsDecoded: 0 }, Date.now() + 1000)).rejects.toThrow('decode budget');
     } finally { vi.mocked(parquetMetadataAsync).mockClear(); }
-  });
-
-  describe('streaming sink and the shared budget', () => {
-    // 50,000 rows in three row groups, every row inside the corridor; hyparquet's decode is stubbed, the rest of the reader is real.
-    async function stubbed() {
-      const md = parquetMetadata(new Uint8Array(readFileSync(join(DIR, 'rivers.parquet'))).buffer);
-      const rg = (n: number) => ({ ...md.row_groups[0], num_rows: BigInt(n), total_byte_size: BigInt(1000) });
-      vi.mocked(parquetMetadataAsync).mockResolvedValue({ ...md, row_groups: [rg(16_384), rg(16_384), rg(17_232)] });
-      const [lng, lat] = albersInverse(START[0] + 100, START[1]);
-      vi.mocked(parquetReadObjects).mockImplementation((async (o: { rowStart: number; rowEnd: number; columns: string[] }) =>
-        Array.from({ length: o.rowEnd - o.rowStart }, (_, i) => o.columns.includes('bbox')
-          ? { bbox: { xmin: lng, ymin: lat, xmax: lng + 1e-5, ymax: lat + 1e-5 } } : { name: String(o.rowStart + i), geometry: null })) as never);
-    }
-    const sizeIO = () => ({ async byteLength() { return 1_000_000; }, async fetchRange(_u: string, a: number, e: number) {
-      const b = new Uint8Array(e - a); if (a === 0) b.set(new TextEncoder().encode('PAR1')); else if (e === 1_000_000) { new DataView(b.buffer).setUint32(b.length - 8, 1000, true); b.set(new TextEncoder().encode('PAR1'), b.length - 4); } return b; } });
-    const budget = () => ({ failed: null as string | null, bytes: 0, groups: 0, rowsDecoded: 0 });
-    const restore = () => { vi.mocked(parquetMetadataAsync).mockReset(); vi.mocked(parquetReadObjects).mockReset(); };
-
-    it('hands 50,000 rows to the sink in chunks and retains none, with no row cap', async () => {
-      await stubbed();
-      try {
-        const sizes: number[] = [], t = budget();
-        const out = await readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), t, Date.now() + 5000, rows => { sizes.push(rows.length); });
-        expect(out).toEqual([]);
-        expect(sizes.length).toBeGreaterThanOrEqual(2);
-        expect(sizes.reduce((a, b) => a + b, 0)).toBe(50_000);
-        expect(Math.max(...sizes)).toBeLessThanOrEqual(16_384);
-        expect(t.rowsDecoded).toBe(50_000);
-        // without a sink the crossings families keep their 100,000-row cap and still return the rows
-        const t2 = budget();
-        expect((await readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), t2, Date.now() + 5000)).length).toBe(50_000);
-        await expect(readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), { ...budget(), maxRows: 20_000 }, Date.now() + 5000, () => {})).rejects.toThrow('row budget');
-      } finally { restore(); }
-    });
-
-    it('one budget object counts the bytes of every file it is passed to', async () => {
-      await stubbed();
-      try {
-        const t = budget(); let one = 0;
-        await readSpatialRows(sizeIO(), 'a', ['name'], buildCorridor([R_A]), t, Date.now() + 5000, () => {}); one = t.bytes;
-        await readSpatialRows(sizeIO(), 'b', ['name'], buildCorridor([R_A]), t, Date.now() + 5000, () => {});
-        expect(one).toBeGreaterThan(0); expect(t.bytes).toBe(2 * one);
-      } finally { restore(); }
-    });
-
-    it('a 97 MiB tally fails against maxBytes 96 MiB, and 96 MiB or less does not', async () => {
-      await stubbed();
-      try {
-        const over = { ...budget(), bytes: 97 * 2 ** 20, maxBytes: 96 * 2 ** 20 };
-        await expect(readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), over, Date.now() + 5000, () => {})).rejects.toThrow(BYTE_BUDGET_MSG);
-        const under = { ...budget(), bytes: 90 * 2 ** 20, maxBytes: 96 * 2 ** 20 };
-        await expect(readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), under, Date.now() + 5000, () => {})).resolves.toEqual([]);
-        // the crossings default (48 MiB per file) is unchanged
-        await expect(readSpatialRows(sizeIO(), 'x', ['name'], buildCorridor([R_A]), { ...budget(), bytes: 49 * 2 ** 20 }, Date.now() + 5000)).rejects.toThrow(BYTE_BUDGET_MSG);
-      } finally { restore(); }
-    });
   });
 });

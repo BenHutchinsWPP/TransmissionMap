@@ -1,16 +1,18 @@
 // ─── Route panel widgets ─────────────────────────────────────────────────────
 // Role: pure DOM builders the route tabs share — cost waterfall (+ `waterfallLines`, which
 //       turns a CostResult into its lines, summing exactly to the total in either dollar
-//       year), rough-early-estimate range bar, crossing pills, tribal note, optimality badge, source
-//       ⓘ button, headline KPIs. Each returns an element; all text goes in through
+//       year; terminals as one line per kind, from `terminalSplit`; a figure the visitor entered shows
+//       as such through `costSrc`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, tribal note, optimality badge, source
+//       ⓘ button, headline KPI tiles (`kpiTiles`, shared with the report model). Each returns an element; all text goes in through
 //       textContent, so data is never parsed as HTML. Styling: widgets.css (rp-* classes,
 //       app tokens only).
-// Deps: route/cost.ts (greatCircleM, types), route/categories.ts, route/route.ts and
+// Deps: route/cost.ts (greatCircleM, types), route/preset-patch.ts (USER_COST_SRC), route/categories.ts, route/route.ts and
 //       route/profile.ts (types only), registry/route-presets.ts (types), i18n/index.ts, ./widgets.css.
 
 import './widgets.css';
 import { t } from '../../../src/i18n/index.js';
 import { greatCircleM, type CostResult } from '../../route/cost.js';
+import { USER_COST_SRC } from '../../route/preset-patch.js';
 import { categoryLabelKey, routeCategory } from '../../route/categories.js';
 import type { RouteResult } from '../../route/route.js';
 import type { RouteCrossings } from '../../route/profile.js';
@@ -90,6 +92,32 @@ export function waterfall(lines: WaterfallLine[], opts: WaterfallOpts): HTMLElem
   return wrap;
 }
 
+/** A figure's source as shown: what the method cites, or "entered by you" for a figure from `cost_inputs` (a line figure with
+ *  its year and basis; a terminal figure, `terminal`, with its year only: the basis is the line figure's). */
+export function costSrc(src: string | undefined, cost: CostResult, terminal = false): string | undefined {
+  if (src !== USER_COST_SRC) return src;
+  const uc = cost.userCosts;
+  if (terminal) return t('route.src.user.terminal', { year: uc?.year ?? '' });
+  return t('route.src.user', { year: uc?.year ?? '', basis: t(uc?.basis === 'all-in' ? 'route.ci.basis.allin.short' : 'route.ci.basis.bare.short') });
+}
+
+export interface TerminalGroup { n: number; each: number; usd: number }
+/** The terminals of a cost as stations (new and mid-line) and line positions, in method-year dollars. `usd` of a group
+ *  is its items' sum, except that with both kinds the stations take what `terminalsUsd` leaves, so the two sum to
+ *  `terminalsUsd` exactly. Null without `terminalItems` (a result from before kinds). */
+export function terminalSplit(cost: CostResult): { stations: TerminalGroup | null; positions: TerminalGroup | null } | null {
+  const items = cost.terminalItems;
+  if (!items) return null;
+  const total = cost.terminalsUsd ?? 0;
+  const st = items.filter((i) => i.kind !== 'position'), po = items.filter((i) => i.kind === 'position');
+  const group = (xs: typeof items, usd: number): TerminalGroup | null => (xs.length ? { n: xs.length, each: xs[0].usd, usd } : null);
+  const posUsd = po.reduce((s, i) => s + i.usd, 0);
+  return {
+    stations: group(st, po.length ? total - posUsd : total),
+    positions: group(po, st.length ? posUsd : total),
+  };
+}
+
 /** The waterfall lines of a cost: base, one per category (largest first), adjustments, subtotal,
  *  contingency, total. In preset dollars they sum to totalNominal; for 2025$ each is scaled by
  *  total2025 / totalNominal (the one escalation factor), so they sum to total2025. */
@@ -99,7 +127,7 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   const out: WaterfallLine[] = [];
   const add = (label: string, usd: number, group: WaterfallGroup, src?: string) => out.push({ label, value: usd * k, group, src });
 
-  add(t('route.wf.base'), cost.baseUsd, 'base', line?.base_per_mi.src);
+  add(t('route.wf.base'), cost.baseUsd, 'base', costSrc(line?.base_per_mi.src, cost));
   const cats = new Map<string, { usd: number; src: string }>();
   for (const r of cost.perRow) {
     const row = preset.rows[r.row];
@@ -114,7 +142,12 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   if (Math.abs(cost.otherUsd * k) >= 1) add(t('route.wf.other'), cost.otherUsd, 'other');
   const lf = cost.lengthFactor || 1;
   if (lf !== 1) add(t('route.wf.shortLine'), cost.lineUsdNominal * (1 - 1 / lf), 'multipliers');
-  if (cost.terminalsUsd) add(t('route.wf.terminals', { n: cost.terminalCount }), cost.terminalsUsd, 'terminals', line?.terminals.src);
+  const split = terminalSplit(cost);
+  if (!split) { if (cost.terminalsUsd) add(t('route.wf.terminals', { n: cost.terminalCount }), cost.terminalsUsd, 'terminals', costSrc(line?.terminals.src, cost, true)); }
+  else {
+    if (split.stations?.usd) add(t('route.wf.terminals', { n: split.stations.n }), split.stations.usd, 'terminals', costSrc(line?.terminals.src, cost, true));
+    if (split.positions?.usd) add(t('route.wf.terminals.position', { n: split.positions.n }), split.positions.usd, 'terminals', costSrc(line?.terminals.position?.src, cost, true));
+  }
   if (cost.mitigationUsd.mid) add(t('route.wf.mitigation'), cost.mitigationUsd.mid, 'terminals', preset.mitigation?.src);
   if (cost.rowLand && cost.rowLand.usd) add(t('route.wf.rowLand'), cost.rowLand.usd, 'other', cost.rowLand.note);
   if (cost.markupsUsd) add(t('route.wf.markups'), cost.markupsUsd, 'markups', preset.markups.map((m) => m.label).join(', '));
@@ -127,13 +160,24 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   return out;
 }
 
+/** Headline dollars to two significant figures (`$3.1 B`, `$720 M`, `$9.5 M`, `$12 k`); the unit is chosen after
+ *  rounding, so 999.6 M reads "$1.0 B". A no-break space precedes the unit; negatives use U+2212. */
+export function fmtMoneyHead(v: number): string {
+  const s = v < 0 ? '\u2212' : '';
+  const r = Number(Math.abs(v).toPrecision(2));
+  if (!r) return '$0';
+  const [div, unit] = r >= 1e9 ? [1e9, '\u00a0B'] : r >= 1e6 ? [1e6, '\u00a0M'] : r >= 1e3 ? [1e3, '\u00a0k'] : [1, ''];
+  const u = r / div;
+  return `${s}$${u >= 10 ? u.toFixed(0) : u.toFixed(1)}${unit}`;
+}
+
 // ─── range bar ───────────────────────────────────────────────────────────────
 
 /** The estimate class in the reader's language: the presets' rough-early-estimate band has a key; any other label shows as given. */
 export const bandLabel = (label: string): string => (/^Rough early estimate\b/.test(label) ? t('route.range.class5') : label);
 
 /** Estimate low / point / high. The band is stored in 2025$; `dollars: 'preset'` rescales it. */
-export function rangeBar(cost: CostResult, money: (v: number) => string, dollars: DollarYear = 'y2025'): HTMLElement {
+export function rangeBar(cost: CostResult, dollars: DollarYear = 'y2025'): HTMLElement {
   const k = dollars === 'preset' && cost.total2025 ? cost.totalNominal / cost.total2025 : 1;
   const low = cost.band.low * k, high = cost.band.high * k, pt = cost.total2025 * k;
   const pad = (high - low) * 0.1 || 1;
@@ -156,7 +200,7 @@ export function rangeBar(cost: CostResult, money: (v: number) => string, dollars
   for (const [v, bold] of [[low, false], [pt, true], [high, false]] as const) {
     const s = el('span');
     s.style.left = pos(v);
-    s.append(bold ? el('b', undefined, money(v)) : document.createTextNode(money(v)));
+    s.append(bold ? el('b', undefined, fmtMoneyHead(v)) : document.createTextNode(fmtMoneyHead(v)));
     ticks.append(s);
   }
   root.append(lab, track, ticks);
@@ -204,16 +248,32 @@ export function sourceInfo(src: string): HTMLElement {
   return b;
 }
 
-export function kpis(result: RouteResult, money: (v: number) => string, dollars: DollarYear = 'y2025'): HTMLElement {
+/** The five headline tiles: range, point estimate, miles, $/mi all-in, $/mi line only (terminals, with their
+ *  contingency, taken out of the total; both in the shown dollars). */
+export function kpiTiles(result: RouteResult, dollars: DollarYear = 'y2025'): { value: string; label: string }[] {
   const c = result.cost, coords = result.path.coordinates;
   const total = dollars === 'y2025' ? c.total2025 : c.totalNominal;
+  const k = dollars === 'preset' && c.total2025 ? c.totalNominal / c.total2025 : 1;
+  const low = c.band.low * k, high = c.band.high * k;
+  const terminals = (c.terminalsUsd ?? 0) * (dollars === 'y2025' && c.totalNominal ? c.total2025 / c.totalNominal : 1) * (1 + (c.contingency?.pct ?? 0));
   const straightMi = coords.length > 1 ? greatCircleM(coords[0] as [number, number], coords[coords.length - 1] as [number, number]) / M_PER_MI : 0;
-  const one = (v: string, l: string) => { const d = el('div', 'rp-kpi'); d.append(el('span', 'rp-kpi-v', v), el('span', 'rp-kpi-l', l)); return d; };
+  const yearLabel = dollars === 'y2025' ? t('route.kpi.dollars.y2025') : t('route.kpi.dollars.preset', { year: c.dollarYear });
+  const perMi = (usd: number) => t('route.kpi.perMi', { amount: fmtMoneyHead(result.lengthMi ? usd / result.lengthMi : 0) });
+  return [
+    { value: `${fmtMoneyHead(low)} \u2013 ${fmtMoneyHead(high)}`, label: `${bandLabel(c.band.label)} \u00b7 ${yearLabel}` },
+    { value: fmtMoneyHead(total), label: t('route.kpi.total', { dollars: yearLabel }) },
+    { value: t('route.kpi.miles', { mi: result.lengthMi.toFixed(1) }), label: straightMi > 0 ? t('route.kpi.straight', { x: (result.lengthMi / straightMi).toFixed(2) }) : '' },
+    { value: perMi(total), label: t('route.kpi.allIn') },
+    { value: perMi(total - terminals), label: t('route.kpi.lineOnly') },
+  ];
+}
+
+export function kpis(result: RouteResult, dollars: DollarYear = 'y2025'): HTMLElement {
   const root = el('div', 'rp-kpis');
-  root.append(
-    one(money(total), t('route.kpi.total', { dollars: dollars === 'y2025' ? t('route.kpi.dollars.y2025') : t('route.kpi.dollars.preset', { year: c.dollarYear }) })),
-    one(t('route.kpi.miles', { mi: result.lengthMi.toFixed(1) }), straightMi > 0 ? t('route.kpi.straight', { x: (result.lengthMi / straightMi).toFixed(2) }) : ''),
-    one(t('route.kpi.perMi', { amount: money(result.lengthMi ? total / result.lengthMi : 0) }), t('route.kpi.allIn')),
-  );
+  for (const k of kpiTiles(result, dollars)) {
+    const d = el('div', 'rp-kpi');
+    d.append(el('span', 'rp-kpi-v', k.value), el('span', 'rp-kpi-l', k.label));
+    root.append(d);
+  }
   return root;
 }

@@ -24,3 +24,4 @@
 @media (max-width: 640px) {
   .rc-grid { grid-template-columns: 1fr; }
 }
+.rc-method { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--text-mid); cursor: pointer; }

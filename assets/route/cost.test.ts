@@ -5,7 +5,7 @@
 // short-line factor, regional cost sets, clamps and presetBands; row exemptions
 // (`except`) in all of these; per-row $ attribution (baseUsd + perRow + otherUsd = line $, rowFactors).
 import { describe, it, expect } from 'vitest';
-import { ROUTE_PRESETS, routePreset, type BandName, type UploadBand, type CostRow, type RoutePreset } from '../../src/registry/route-presets.js';
+import { ROUTE_PRESETS, routePreset, type BandName, type UploadBand, type CostRow, type EndKind, type RoutePreset } from '../../src/registry/route-presets.js';
 import {
   buildSurfaces, cellsToCoords, compile, costPath, costPolyline, escalationFactor, greatCircleM, gridSampler, lengthFactor,
   matches, minRouteWeight, presetBands, rowFactors, straightLine, terminalCount, COST_X_MAX, METRES_PER_MILE, ROUTE_W_MAX,
@@ -133,7 +133,7 @@ describe('pnas-wu2023 hand calculation', () => {
     expect(r.contingency).toBeNull();
     expect(r.rowLand).toBeNull();
     expect(r.totalNominal).toBeCloseTo(181_012_569.99, 1);
-    expect(r.total2025).toBeCloseTo(181_012_569.99 * 1.04 ** 7, 1);
+    expect(r.total2025).toBeCloseTo(181_012_569.99 * escalationFactor(2018, 2025), 1);
     expect(r.dollarYear).toBe(2018);
     expect(r.mitigationUsd.mid).toBe(0);
     expect(r.barrierM).toBe(0);
@@ -178,15 +178,15 @@ describe('tm-default', () => {
     expect(s.route[0]).toBe(100);
   });
 
-  it('parallel is a min group: §368 ∩ existing line → 0.5, not 0.4; neither → 1', () => {
+  it('parallel is a min group: §368 ∩ existing line → 0.8, not 0.64; neither → 1', () => {
     const b = { flags: u8(1 << 4, 1 << 4, 0, 0), adj: u8(17, 16, 18, 19), state: u8(6, 6, 6, 6) };
-    expect(Array.from(buildSurfaces(P('tm-default'), 'ac500', b, 4, 1).route)).toEqual([0.5, 0.8, 0.5, 1].map(Math.fround));
-    expect(minRouteWeight(P('tm-default'), 'ac500')).toBe(0.5);
+    expect(Array.from(buildSurfaces(P('tm-default'), 'ac500', b, 4, 1).route)).toEqual([0.8, 0.8, 0.8, 1].map(Math.fround));
+    expect(minRouteWeight(P('tm-default'), 'ac500')).toBe(0.8);
   });
 
   it('protection is a max group: WSA on GAP 2 → 1000, not 10000; GAP 1 → 100', () => {
     const b = { protect: u8(2, 1, 0), desig: u8(1, 0, 1 << 2), state: u8(6, 6, 6) };
-    expect(Array.from(buildSurfaces(P('tm-default'), 'ac500', b, 3, 1).route)).toEqual([1000, 100, 10]);   // WSA 1000 × GAP 2 10 would be 10000 if the group multiplied
+    expect(Array.from(buildSurfaces(P('tm-default'), 'ac500', b, 3, 1).route)).toEqual([1000, 100, 20]);   // WSA 1000 × GAP 2 10 would be 10000 if the group multiplied
   });
 
   it('NPS Preserve bit 7 weighs 1 in the protection max group; its Excl. tick gives 1000', () => {
@@ -198,7 +198,7 @@ describe('tm-default', () => {
     const v = validatePresetPatch(tm, { rows: [{ row: PRES, band: 'protect', note: tm.rows[PRES].note, route_w: 1000 }] });
     expect(v.ok).toBe(true);
     if (v.ok) expect(route(v.result)).toEqual([1000, 1000, 1000, 10]);
-    expect(minRouteWeight(tm, 'ac500')).toBe(0.5);
+    expect(minRouteWeight(tm, 'ac500')).toBe(0.8);
   });
 
   it('a wetland counts once: NWI rows skip cells NLCD already weights as forest or wetland', () => {
@@ -209,11 +209,15 @@ describe('tm-default', () => {
     expect(landOnly[4]).toBe(Math.fround(1));
   });
 
-  it('structure multiplier follows the line type', () => {
+  it('structure multiplier follows the line type (B&V Table 2-3 tubular steel against the Table 2-1 base: 500 kV 1.50, 345 kV 1.30, 230 kV 1.00; single circuit the same)', () => {
     const b = { flags: u8(1 << 5), state: u8(6) };
-    expect(cellCostX(P('tm-default'), 'ac500', b, 1, 0)).toBeCloseTo(1.5, 12);
-    expect(cellCostX(P('tm-default'), 'ac345', b, 1, 0)).toBeCloseTo(1.3, 12);
-    expect(cellCostX(P('tm-default'), 'ac230', b, 1, 0)).toBeCloseTo(1.1, 12);
+    const x = (lt: string) => cellCostX(P('tm-default'), lt, b, 1, 0);
+    expect(x('ac500')).toBeCloseTo(1.5, 12);
+    expect(x('ac500s')).toBeCloseTo(1.5, 12);
+    expect(x('ac345')).toBeCloseTo(1.3, 12);
+    expect(x('ac345s')).toBeCloseTo(1.3, 12);
+    expect(x('ac230')).toBeCloseTo(1, 12);
+    expect(x('ac230s')).toBeCloseTo(1, 12);
   });
 
   it('nodata (0) is factor 1 in every band; state 0 is a barrier', () => {
@@ -234,9 +238,9 @@ describe('tm-default', () => {
     expect(r.notes.some((n) => n.includes('consent'))).toBe(true);
   });
 
-  it('345 kV terminals: 2 × B&V 2014 T4-6 station ($22,286,886)', () => {
+  it('345 kV terminals: 2 × B&V 2014 T4-6 station × 1.175 ($22,286,886 × 1.175 = $26,187,091)', () => {
     const r = costPath([[0, -125], [250, -125]], P('tm-default'), 'ac345', gridSampler({ state: u8(6, 6) }, 2, 1, 250));
-    expect(r.terminalsUsd).toBe(2 * 22_286_886);
+    expect(r.terminalsUsd).toBe(2 * 26_187_091);
   });
 
   it('every number carries a src', () => {
@@ -544,12 +548,12 @@ describe('row exemptions (except)', () => {
     // cells: PHMA on a 100–229 kV line (adj 16 + 32); PHMA on a ≥ 230 kV line (adj 17)
     const c: BandMap = { flags2: u8(1, 1), flags: u8(0, 0), adj: u8(48, 17), state: u8(6, 6) };
     const w = (p: RoutePreset) => Array.from(buildSurfaces(p, 'ac500', c, 2, 1).route).map((x) => +x.toFixed(6));
-    expect(w(tm)).toEqual([20 * 0.7, 20 * 0.5]);
-    expect(w(on)).toEqual([0.7, 20 * 0.5]);
+    expect(w(tm)).toEqual([20 * 0.9, 20 * 0.8]);
+    expect(w(on)).toEqual([0.9, 20 * 0.8]);
   });
   it('a §368 cell drops the PHMA factor (the parallel discount still applies); adjacency only when switched on', () => {
-    expect(routeW(tm).map((x) => +x.toFixed(6))).toEqual([20, 0.8, 20 * 0.5, 20, 1]);
-    expect(routeW(withAdj(true)).map((x) => +x.toFixed(6))).toEqual([20, 0.8, 0.5, 20, 1]);
+    expect(routeW(tm).map((x) => +x.toFixed(6))).toEqual([20, 0.8, 20 * 0.8, 20, 1]);
+    expect(routeW(withAdj(true)).map((x) => +x.toFixed(6))).toEqual([20, 0.8, 0.8, 20, 1]);
     for (const p of [tm, withAdj(true)]) for (let i = 0; i < 5; i++) expect(routeW(p)[i]).toBeCloseTo(brute(p, 'ac500', valsAt(b, i)).r, 5);
   });
   it('costPath charges the exempted cell factor 1 and its per-band table shows it', () => {
@@ -648,7 +652,7 @@ describe('lower-voltage line types (69-161 kV)', () => {
   const lts = P('tm-default').line_types;
   const ids = ['ac161', 'ac138', 'ac115', 'ac69'];
   it('are listed in voltage order, before the HVDC type, and shared with straight-line-quick', () => {
-    expect(Object.keys(lts)).toEqual(['ac500', 'ac345', 'ac230', ...ids, 'dc500']);
+    expect(Object.keys(lts)).toEqual(['ac500', 'ac500s', 'ac345', 'ac345s', 'ac230', 'ac230s', ...ids, 'dc500']);
     expect(Object.keys(P('straight-line-quick').line_types)).toEqual(Object.keys(lts));
     expect(Object.keys(P('pnas-wu2023').line_types)).not.toContain('ac138');
   });
@@ -663,13 +667,13 @@ describe('lower-voltage line types (69-161 kV)', () => {
       expect(lts[ac[i]].terminals.src).toContain('our derivation');
     }
     expect(lts.ac138.base_per_mi.usd).toBeCloseTo(1_536_400 * 0.844, -3);
-    expect(lts.ac138.terminals.usd_each).toBeCloseTo(15_142_377 * 0.822, -4);
+    expect(lts.ac138.terminals.usd_each).toBeCloseTo(15_142_377 * 0.822 * 1.175, -4);
     const w = P('tm-default').row_land!.width_ft;
     expect(ids.map((i) => w[i])).toEqual([100, 95, 90, 80]);
   });
-  it('take the 230 kV structure multiplier (1.1) and cost a 1 mi segment', () => {
+  it('take the 230 kV structure multiplier (B&V Table 2-3 tubular steel 1.00) and cost a 1 mi segment', () => {
     const b = { flags: u8(1 << 5), state: u8(6) };
-    for (const id of ids) expect(cellCostX(P('tm-default'), id, b, 1, 0)).toBeCloseTo(1.1, 12);
+    for (const id of ids) expect(cellCostX(P('tm-default'), id, b, 1, 0)).toBeCloseTo(1, 12);
     const run = (id: string) => costPath([[0, -125], [1609.344, -125]], P('tm-default'), id, gridSampler({ state: u8(6, 6, 6, 6, 6, 6, 6) }, 7, 1, 250)).totalNominal!;
     expect(run('ac138')).toBeLessThan(run('ac230'));
     expect(run('ac69')).toBeLessThan(run('ac138'));
@@ -677,9 +681,11 @@ describe('lower-voltage line types (69-161 kV)', () => {
 });
 
 describe('escalation', () => {
-  it('2018→2025 ×1.316, 2014→2025 ×1.539', () => {
-    expect(escalationFactor(2018, 2025)).toBeCloseTo(1.316, 3);
-    expect(escalationFactor(2014, 2025)).toBeCloseTo(1.539, 3);
+  it('the BLS year index: 2014→2025 between the ECI and PPI ratios, 2018→2025 below it', () => {
+    expect(escalationFactor(2014, 2025)).toBeGreaterThan(1.39);
+    expect(escalationFactor(2014, 2025)).toBeLessThan(1.5);
+    expect(escalationFactor(2018, 2025)).toBeLessThan(escalationFactor(2014, 2025));
+    expect(() => escalationFactor(1980, 2025)).toThrow();
     expect(escalationFactor(2025, 2018) * escalationFactor(2018, 2025)).toBeCloseTo(1, 12);
   });
 });
@@ -692,7 +698,7 @@ describe('straight-line-quick', () => {
     const gc = greatCircleM(a, b);
     expect(r.lengthM).toBeCloseTo(gc * 1.3, 6);
     expect(r.lineUsdNominal).toBeCloseTo(gc * 1.3 / METRES_PER_MILE * 3_071_750, 2);
-    const terminals = 2 * 87.9e6 / 1.04 ** 4;  // 2018$ → preset's 2014$
+    const terminals = 2 * 34_582_007;  // B&V T4-6 500 kV station $29,431,495 × 1.175, 2014$
     expect(r.totalNominal).toBeCloseTo(r.lineUsdNominal * 1.175 + terminals, 2);
     expect(r.band.low).toBeCloseTo(r.total2025 * 0.7, 2);
     expect(r.band.high).toBeCloseTo(r.total2025 * 1.5, 2);
@@ -857,8 +863,8 @@ describe('v8 bands: aviation and nfhl rows', () => {
     for (const [b, a] of Object.entries(over)) bands[b as BandName] = Uint8Array.from(a!);
     return Array.from(buildSurfaces(p, lt, bands, n, 1).route);
   };
-  // penetration codes per line type: ac500/dc500 3-6, ac230/ac345 4-6, ac69-ac161 5-6; code 2 is the notice zone
-  const from: Record<string, number> = { ac500: 3, dc500: 3, ac345: 4, ac230: 4, ac161: 5, ac138: 5, ac115: 5, ac69: 5 };
+  // penetration codes per line type: ac500/ac500s/dc500 3-6, ac230/ac345 and their single circuits 4-6, ac69-ac161 5-6; code 2 is the notice zone
+  const from: Record<string, number> = { ac500: 3, ac500s: 3, dc500: 3, ac345: 4, ac345s: 4, ac230: 4, ac230s: 4, ac161: 5, ac138: 5, ac115: 5, ac69: 5 };
 
   it('tm-default: every line type is covered by a single penetration row, disjoint', () => {
     expect(Object.keys(tm.line_types).sort()).toEqual(Object.keys(from).sort());
@@ -921,5 +927,150 @@ describe('v8 bands: aviation and nfhl rows', () => {
         expect(Array.from(buildSurfaces(tm, 'ac500', keepOnly(all, keep), W2, 1).route), drop).not.toEqual(Array.from(buildSurfaces(tm, 'ac500', all, W2, 1).route));
       }
     });
+  });
+});
+
+// ─── terminal kinds, entered figures, all-in ──────────────────────────────────
+// Expected values are typed from B&V 2014 Tables 3-1, 4-6 (per position) and 3-2 (breaker-and-a-half 1.5) and the entered figures.
+const TM = P('tm-default');
+const A: [number, number] = [-112.0, 40.7], B: [number, number] = [-112.5, 40.7]; // ≈ 26 mi
+// tm-default's B&V terminal figures carry B&V §4.4's AFUDC + overhead ×1.175 (p.4-8, Table 4-7).
+const ST230 = Math.round((1_706_250 + 6 * 1.5 * 1_492_903) * 1.175), POS230 = Math.round(2 * 1.5 * 1_492_903 * 1.175);
+const ST500 = Math.round((2_559_250 + 6 * 1.5 * 2_985_805) * 1.175), POS500 = Math.round(2 * 1.5 * 2_985_805 * 1.175);
+
+describe('terminal kinds', () => {
+  it('hand figures: 230 kV station $15,142,377 × 1.175 = $17,792,293, position $4,478,709 × 1.175 = $5,262,483; 500 kV station $29,431,495 × 1.175 = $34,582,007, position $8,957,415 × 1.175 = $10,524,963', () => {
+    expect([ST230, POS230, ST500, POS500]).toEqual([17_792_293, 5_262_483, 34_582_007, 10_524_963]);
+  });
+  it('two positions, mixed, one end and none', () => {
+    const r = (k: [EndKind, EndKind]) => straightLine(A, B, TM, 'ac230', k);
+    expect(r(['position', 'position']).terminalsUsd).toBe(2 * POS230);
+    expect(r(['new', 'position']).terminalsUsd).toBe(ST230 + POS230);
+    expect(r(['none', 'new']).terminalsUsd).toBe(ST230);
+    expect(r(['none', 'none']).terminalsUsd).toBe(0);
+    expect(r(['none', 'none']).terminalCount).toBe(0);
+    expect(r(['new', 'position']).terminalItems).toEqual([{ kind: 'new', end: 'A', usd: ST230 }, { kind: 'position', end: 'B', usd: POS230 }]);
+    expect(r(['none', 'new']).terminalItems).toEqual([{ kind: 'new', end: 'B', usd: ST230 }]);
+    expect(r(['new', 'new']).userCosts).toBeUndefined();
+  });
+  it('positions escalate from their own year; totals follow the items', () => {
+    const p = { ...TM, dollar_year: 2018, line_types: { ...TM.line_types, ac230: { ...TM.line_types.ac230, terminals: { ...TM.line_types.ac230.terminals, usd_each: 10e6, year: 2016, position: { usd_each: 3e6, year: 2012, arithmetic: '', src: 'x' } } } } };
+    const r = straightLine(A, B, p, 'ac230', ['new', 'position']);
+    expect(r.terminalsUsd).toBeCloseTo(10e6 * escalationFactor(2016, 2018) + 3e6 * escalationFactor(2012, 2018), 4);
+    expect(r.terminalItems!.map((x) => x.usd)).toEqual([expect.closeTo(10e6 * escalationFactor(2016, 2018), 4), expect.closeTo(3e6 * escalationFactor(2012, 2018), 4)]);
+  });
+  it('a 500 kV line over 400 mi keeps its mid-line stations, priced as new stations, with position ends', () => {
+    const r = straightLine([-122, 37], [-90, 37], TM, 'ac500', ['position', 'position']);
+    const mi = r.lengthM / METRES_PER_MILE, mids = Math.floor((mi - 400) / 400);
+    expect(mids).toBeGreaterThan(0);
+    expect(r.terminalCount).toBe(2 + mids);
+    expect(r.terminalsUsd).toBeCloseTo(2 * POS500 + mids * ST500, 3);
+    expect(r.terminalItems!.filter((x) => x.kind === 'mid')).toEqual(Array.from({ length: mids }, () => ({ kind: 'mid', end: null, usd: ST500 })));
+    expect(straightLine([-122, 37], [-90, 37], TM, 'ac500', ['none', 'none']).terminalCount).toBe(mids);
+  });
+  it('the count rule has min 2 for every line type of every preset', () => {
+    for (const p of ROUTE_PRESETS) for (const [lt, l] of Object.entries(p.line_types)) expect(l.terminals.min, `${p.id} ${lt}`).toBe(2);
+  });
+  // 2 × usd_each in the preset's year. tm-default and straight-line-quick: the B&V station figures × 1.175, by hand:
+  // 345 kV 22,286,886; 230 kV 15,142,377; 161/138/115/69 kV that × MISO 21.268/19.789/18.350/16.776 ÷ 24.075, kept to the
+  // thousand: 13,376,000/12,447,000/11,541,000/10,551,000; HVDC 460,708,500. westtec-es: the same B&V figures unmarked
+  // (Wu $87.9 M 2018$ at 500 kV, HVDC $460.7 M), escalated by the BLS year index to its 2025 dollars.
+  it.each([
+    ['tm-default', 'ac345', 52374182], ['tm-default', 'ac230', 35584586], ['tm-default', 'ac161', 31433600], ['tm-default', 'ac138', 29250450],
+    ['tm-default', 'ac115', 27121350], ['tm-default', 'ac69', 24794850], ['tm-default', 'dc500', 1082664976],
+    ['pnas-wu2023', 'ac500', 175800000], ['pnas-wu2023', 'dc500', 1309000000],
+    ['straight-line-quick', 'ac345', 52374182], ['straight-line-quick', 'ac230', 35584586], ['straight-line-quick', 'ac161', 31433600],
+    ['straight-line-quick', 'ac138', 29250450], ['straight-line-quick', 'ac115', 27121350], ['straight-line-quick', 'ac69', 24794850], ['straight-line-quick', 'dc500', 1082664976],
+    ['nrel-revx', 'ac500', 20472000], ['nrel-revx', 'ac230', 11000000], ['nrel-revx', 'ac138', 4396000], ['nrel-revx', 'ac69', 2704000],
+    ['bv-2014', 'ac500', 69164014], ['bv-2014', 'ac345', 52374182], ['bv-2014', 'ac230', 35584586], ['bv-2014', 'dc500', 1082664976],
+    ['westtec-es', 'ac500', 2 * 87_900_000 * escalationFactor(2018, 2025)], ['westtec-es', 'ac345', 2 * 22_286_886 * escalationFactor(2014, 2025)],
+    ['westtec-es', 'ac230', 2 * 15_142_377 * escalationFactor(2014, 2025)], ['westtec-es', 'ac161', 2 * 13_376_000 * escalationFactor(2014, 2025)],
+    ['westtec-es', 'ac138', 2 * 12_447_000 * escalationFactor(2014, 2025)], ['westtec-es', 'ac115', 2 * 11_541_000 * escalationFactor(2014, 2025)],
+    ['westtec-es', 'ac69', 2 * 10_551_000 * escalationFactor(2014, 2025)], ['westtec-es', 'dc500', 2 * 460_700_000 * escalationFactor(2014, 2025)],
+  ] as const)('%s %s: no kinds given → two new stations', (id, lt, usd) => {
+    const r = straightLine(A, B, P(id), lt);
+    expect(r.terminalCount).toBe(2);
+    expect(r.terminalsUsd).toBeCloseTo(usd, 3);
+  });
+  it('tm-default and straight-line-quick 500 kV: the B&V T4-6 station × 1.175, 2 × $34,582,007 (2014$)', () => {
+    expect(straightLine(A, B, TM, 'ac500').terminalsUsd).toBe(2 * ST500);
+    expect(straightLine(A, B, P('straight-line-quick'), 'ac500').terminalsUsd).toBe(2 * ST500);
+  });
+});
+
+describe('entered cost figures', () => {
+  const N = 400;                                    // 100 km ≈ 62 mi of uniform cells
+  const path = cellsToCoords(Array.from({ length: N }, (_, i) => i), N, 250);
+  const flat = { landcover: new Uint8Array(N).fill(71), state: new Uint8Array(N).fill(6) } as BandMap;
+  const woods = { landcover: new Uint8Array(N).fill(41), state: new Uint8Array(N).fill(6) } as BandMap;
+  const apply = (cost_inputs: unknown, extra: object = {}) => {
+    const r = validatePresetPatch(TM, { cost_inputs, ...extra });
+    if (!r.ok) throw new Error(r.reason);
+    return r.result;
+  };
+  const E = escalationFactor(2020, 2014);                             // 2020 → 2014 dollars
+
+  it('bare, mixed years to the cent: entered line and station (2020$) with the method\'s own position (2014$)', () => {
+    const p = apply({ basis: 'bare', year: 2020, line_types: { ac230: { usd_per_mi: 2_000_000, station_usd: 10_000_000 } } });
+    const r = costPath(path, p, 'ac230', gridSampler(flat, N, 1, 250), {}, ['new', 'position']);
+    const mi = r.lengthM / METRES_PER_MILE;
+    const line = mi * 2_000_000 * E, terminals = 10_000_000 * E + POS230;
+    expect(r.lineUsdNominal).toBeCloseTo(line, 2);
+    expect(r.markupsUsd).toBeCloseTo(line * 0.175, 2);
+    expect(r.terminalsUsd).toBeCloseTo(terminals, 2);
+    expect(r.totalNominal).toBeCloseTo((line * 1.175 + terminals) * 1.3, 2);
+    expect(r.total2025).toBeCloseTo((line * 1.175 + terminals) * 1.3 * escalationFactor(2014, 2025), 2);
+    expect(r.userCosts).toEqual({ basis: 'bare', year: 2020, items: ['line', 'station'], line_types: ['ac230'] });
+    expect(r.terminalItems).toEqual([{ kind: 'new', end: 'A', usd: expect.closeTo(10_000_000 * E, 2) }, { kind: 'position', end: 'B', usd: POS230 }]);
+  });
+  it('bare keeps the cell multipliers and the short-line factor', () => {
+    const p = apply({ basis: 'bare', year: 2014, line_types: { ac230: { usd_per_mi: 1_000_000 } } });
+    const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(woods, N, 1, 250), {}); // ≈ 5 mi, forest 2.25 (TEPPC)
+    const mi = r.lengthM / METRES_PER_MILE;
+    expect(r.lengthFactor).toBe(1.2);
+    expect(r.lineUsdNominal).toBeCloseTo(mi * 1_000_000 * 2.25 * 1.2, 2);
+  });
+  it('all-in: line $ = entered $/mi × miles, escalated; no multipliers, markups, mitigation, ROW land, contingency or short-line factor', () => {
+    const p = apply({ basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 5_000_000 } } });
+    const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(woods, N, 1, 250), CONSTS);  // ≈ 5 mi of forest
+    const mi = r.lengthM / METRES_PER_MILE;
+    expect(r.lengthFactor).toBe(1);
+    expect(r.lineUsdNominal).toBeCloseTo(mi * 5_000_000 * E, 2);
+    expect(r.baseUsd).toBeCloseTo(mi * 5_000_000 * E, 2);
+    expect(r.markupsUsd).toBe(0);
+    expect(r.mitigationUsd.mid).toBe(0);
+    expect(r.rowLand).toBeNull();
+    expect(r.contingency).toBeNull();
+    expect(r.meanCostX).toBeCloseTo(1, 12);
+    // the method's own stations as it states them, said in a note
+    expect(r.terminalsUsd).toBe(2 * ST230);
+    expect(r.totalNominal).toBeCloseTo(mi * 5_000_000 * E + 2 * ST230, 2);
+    expect(r.notes).toContain("Terminals use the method's figures as it states them; no contingency is added.");
+    expect(r.userCosts).toEqual({ basis: 'all-in', year: 2020, items: ['line'], line_types: ['ac230'] });
+  });
+  it('all-in with every terminal entered carries no terminals note', () => {
+    const p = apply({ basis: 'all-in', year: 2014, line_types: { ac230: { usd_per_mi: 5e6, station_usd: 7e6, position_usd: 2e6 } } });
+    for (const k of [['new', 'new'], ['position', 'position'], ['new', 'position']] as [EndKind, EndKind][]) {
+      const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(flat, N, 1, 250), {}, k);
+      expect(r.notes.some((n) => n.startsWith('Terminals use'))).toBe(false);
+    }
+    expect(costPath(path.slice(0, 33), p, 'ac230', gridSampler(flat, N, 1, 250), {}, ['position', 'position']).terminalsUsd).toBe(4e6);
+  });
+  it('all-in takes the same route as bare: routing weights and barriers are untouched', () => {
+    const bare = apply({ basis: 'bare', year: 2014, line_types: { ac230: { usd_per_mi: 5e6 } } });
+    const all = apply({ basis: 'all-in', year: 2014, line_types: { ac230: { usd_per_mi: 5e6 } } });
+    const bands: BandMap = { landcover: u8(41, 22, 90, 71, 31, 82), slope: u8(1, 2, 4, 8, 1, 3), state: u8(6, 6, 6, 6, 6, 0), flags: u8(0, 1, 2, 8, 16, 32) };
+    const a = buildSurfaces(bare, 'ac230', bands, 6, 1), b = buildSurfaces(all, 'ac230', bands, 6, 1);
+    expect(Array.from(b.route)).toEqual(Array.from(a.route));
+    expect(Array.from(b.barrier)).toEqual(Array.from(a.barrier));
+    expect(minRouteWeight(all, 'ac230')).toBe(minRouteWeight(bare, 'ac230'));
+  });
+  it('baseUsd + Σ perRow + otherUsd = line $ before the short-line factor, bare and all-in', () => {
+    const mix = { landcover: u8(...Array.from({ length: 40 }, (_, i) => [41, 22, 71, 90][i % 4])), state: new Uint8Array(40).fill(6) } as BandMap;
+    for (const basis of ['bare', 'all-in'] as const) {
+      const p = apply({ basis, year: 2014, line_types: { ac230: { usd_per_mi: 3e6 } } });
+      const r = costPath(cellsToCoords(Array.from({ length: 40 }, (_, i) => i), 40, 250), p, 'ac230', gridSampler(mix, 40, 1, 250), {});
+      expect(r.baseUsd + r.perRow.reduce((t, x) => t + x.usd, 0) + r.otherUsd).toBeCloseTo(r.lineUsdNominal / r.lengthFactor, 4);
+    }
   });
 });

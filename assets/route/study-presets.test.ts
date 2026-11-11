@@ -226,13 +226,32 @@ describe('bv-2014 (Black & Veatch 2014, WECC TEPPC)', () => {
 
 describe('westtec-es (Energy Strategies, Line modifiers dialog)', () => {
   const p = P('westtec-es');
-  it('other line types and every terminal are the default method\'s; ac500 keeps the default terminals', () => {
-    const tm = P('tm-default');
-    expect(Object.keys(p.line_types).sort()).toEqual(Object.keys(tm.line_types).sort());
-    for (const lt of Object.keys(tm.line_types)) {
-      expect(p.line_types[lt].terminals, lt).toEqual(tm.line_types[lt].terminals);
-      if (lt !== 'ac500') expect(p.line_types[lt].base_per_mi, lt).toEqual(tm.line_types[lt].base_per_mi);
-    }
+  // Typed from the sources: Wu 2023 S6 500 kV $87.9 M (2018$); B&V T4-6 for 345 / 230 kV; the 69-161 kV stations are the
+  // 230 kV station x MISO MTEP26 Table 4.2-2 (quotients 21.268 / 19.789 / 18.350 / 16.776 over 24.075), as documented to the thousand.
+  const ST230 = 1_706_250 + 6 * 1.5 * 1_492_903;
+  const MISO = (n: number) => ST230 * n / 24.075;
+  it.each([
+    ['ac500', 3_071_750, 87.9e6, 2018],
+    ['ac345', 2_150_300, 2_132_700 + 6 * 1.5 * 2_239_354, 2014],
+    ['ac230', 1_536_400, ST230, 2014],
+    ['ac161', 1_322_800, 13_376_000, 2014],
+    ['ac138', 1_296_600, 12_447_000, 2014],
+    ['ac115', 1_226_000, 11_541_000, 2014],
+    ['ac69', 1_086_200, 10_551_000, 2014],
+    ['dc500', 1_536_400, 460.7e6, 2014],
+  ] as const)('%s: terminal each and 2014 base $/mi are the default method\'s as it was; no position figure', (lt, base, each, year) => {
+    expect(Object.keys(p.line_types).sort()).toEqual(['ac115', 'ac138', 'ac161', 'ac230', 'ac345', 'ac500', 'ac69', 'dc500']);
+    const t = p.line_types[lt].terminals;
+    expect(t.usd_each).toBe(Math.round(each));
+    if (lt.startsWith('ac') && !['ac500', 'ac345', 'ac230'].includes(lt)) close(each, MISO(({ ac161: 21.268, ac138: 19.789, ac115: 18.350, ac69: 16.776 } as Record<string, number>)[lt]), 1e-3);
+    expect(t.year).toBe(year);
+    expect(t.min).toBe(2);
+    expect(t.position).toBeUndefined();
+    if (lt !== 'ac500') expect(p.line_types[lt].base_per_mi).toMatchObject({ usd: base, year: 2014 });
+  });
+  it('ac500 keeps the Wu station count rule: +1 per 400 mi beyond 400', () => {
+    const t = p.line_types.ac500.terminals;
+    expect([t.every_mi, t.after_mi]).toEqual([400, 400]);
   });
   it('ac500 base $4,180,000 per mile in 2025 dollars, no markups', () => {
     expect(p.dollar_year).toBe(2025);
@@ -294,7 +313,32 @@ describe('westtec-es (Energy Strategies, Line modifiers dialog)', () => {
     expect(fac(p, 'ac500', { landcover: 71, adj: adj(1) | (3 << 5) })).toEqual({ r: 1, c: 1 });
     expect(fac(p, 'ac500', { landcover: 71, adj: adj(0) | (1 << 5) })).toEqual({ r: 2, c: 1 });
   });
+  it('voltage match: x 0.9 beside an existing line of at least the new line\'s voltage (adj bit 3 >= 500 kV for 500 kV types, bit 2 >= 345 kV for ac345); cost 1', () => {
+    const on500 = 16 | 1 | 4 | 8, on345 = 16 | 2 | 4;
+    for (const lt of ['ac500', 'dc500']) {
+      expect(fac(p, lt, { landcover: 71, adj: on500 }), lt).toEqual({ r: 0.9, c: 1 });
+      expect(fac(p, lt, { landcover: 71, adj: on345 }), lt).toEqual({ r: 1, c: 1 });
+    }
+    expect(fac(p, 'ac345', { landcover: 71, adj: on345 })).toEqual({ r: 0.9, c: 1 });
+    expect(fac(p, 'ac345', { landcover: 71, adj: on500 })).toEqual({ r: 0.9, c: 1 });
+    for (const lt of ['ac230', 'ac161']) expect(fac(p, lt, { landcover: 71, adj: on500 }), lt).toEqual({ r: 1, c: 1 });
+  });
   it('aviation and nfhl cells weigh 1', () => {
     for (const lt of Object.keys(p.line_types)) expect(fac(p, lt, { landcover: 71, aviation: 6, nfhl: 3 })).toEqual({ r: 1, c: 1 });
+  });
+  it('barriers (tribal, military, airfield, lake) do not apply on or beside an existing >= 230 kV line (adj classes 1, 2); they do 2+ cells off', () => {
+    const adj = (cls: number) => 16 | cls;
+    const barriers: [string, Vals, { r: number; c: number }][] = [
+      ['tribal', { flags: 1 << 0 }, { r: 5, c: 1 }], ['military PAD-US', { flags: 1 << 1 }, { r: 1000, c: 1 }],
+      ['military OSM', { osm_flags: 1 << 7 }, { r: 1000, c: 1 }], ['airfield', { flags: 1 << 2 }, { r: 5, c: 5 }], ['lake', { osm_flags: 1 << 0 }, { r: 5, c: 5 }],
+    ];
+    for (const [n, v, off] of barriers) {
+      for (const c of [1, 2]) expect(fac(p, 'ac500', { landcover: 71, ...v, adj: adj(c) }), `${n} class ${c}`).toEqual({ r: 1, c: 1 });
+      // class 3 (2-3 cells off) is off the line: the follow-existing x2 multiplies the barrier
+      expect(fac(p, 'ac500', { landcover: 71, ...v, adj: adj(3) }), `${n} class 3`).toEqual({ r: off.r * 2, c: off.c });
+      expect(fac(p, 'ac500', { landcover: 71, ...v }), `${n} no adj`).toEqual(off);
+    }
+    // a 100-229 kV line alone does not exempt
+    expect(fac(p, 'ac500', { landcover: 71, flags: 1 << 0, adj: adj(0) | (1 << 5) })).toEqual({ r: 10, c: 1 });
   });
 });

@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { BIT_DATA, BAND_DATA, PROTECT_DATA, type BandData } from '../../src/registry/route-band-data.js';
 
-const GRID = 'data/route/250m/grid.json';
+const GRID = (process.env.ROUTE_CUBE ?? 'data/route/250m/') + 'grid.json';
 const have = existsSync(GRID);
 if (!have) console.warn('route cube absent: band-data.validate suite skipped');
 

@@ -1,21 +1,22 @@
-// Role: worker transport refreshes mutable report metadata and bounds optional range bodies.
+// Role: worker transport refreshes mutable report metadata, bounds optional range bodies and reads
+//       the cube past the HTTP cache.
 //       Uploaded layers: a request handled right after an unawaited upload sees the layer; a rejected upload is not kept
 //       and its reason rides on the later refusal.
 // Deps: route-worker.ts, upload-layer.ts; route.ts mocked to capture its I/O without running the solver.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RouteIO } from './route.js';
 import { uploadLayer } from './upload-layer.js';
-const calls = vi.hoisted(() => ({ io: null as RouteIO | null }));
+const calls = vi.hoisted(() => ({ io: null as RouteIO | null, reportUrl: undefined as string | undefined }));
 vi.mock('./route.js', () => ({
   createInspectCache: () => ({}), createWindowCache: () => ({}),
-  exactRouteCrossings: vi.fn(async (_req, io) => { calls.io = io; return { ok: true, result: {} }; }),
+  exactRouteCrossings: vi.fn(async (_req, io) => { calls.io = io; calls.reportUrl = io.reportUrl; return { ok: true, result: {} }; }),
   inspect: vi.fn(), repaint: vi.fn(), repaintRows: vi.fn(),
   route: vi.fn(async (req: { uploads?: string[] }, io: RouteIO) => {
     const h = (req.uploads ?? []).find((x) => !io.uploads?.has(x));
     return h ? { ok: false, reason: `upload layer ${h} not loaded` } : { ok: true, result: {} };
   }),
 }));
-beforeEach(() => { vi.resetModules(); calls.io = null; });
+beforeEach(() => { vi.resetModules(); calls.io = null; calls.reportUrl = undefined; });
 afterEach(() => { vi.unstubAllGlobals(); });
 async function loadWorker() {
   const scope = { location: { href: 'https://example.test/' }, postMessage: vi.fn(), onmessage: null as null | ((e: { data: unknown }) => Promise<void>) };
@@ -38,7 +39,7 @@ describe('optional report HTTP transport', () => {
     expect(await io.byteLength!(manifest)).toBe(30);
     length = 60;
     expect(await io.byteLength!(manifest)).toBe(60);
-    const file = 'https://example.test/data/route/report/screening/abc/buildings.parquet';
+    const file = 'https://example.test/data/route/report/screening/abc/aviation.json';
     expect(await io.byteLength!(file)).toBe(60);
     length = 90;
     expect(await io.byteLength!(file)).toBe(60);
@@ -50,7 +51,7 @@ describe('optional report HTTP transport', () => {
       ? new Response(null, { headers: { 'content-length': '1000000' } })
       : new Response(new ReadableStream({ cancel }), { status: 200 })));
     const io = await workerIO();
-    await expect(io.fetchRange('https://example.test/report/screening/abc/buildings.parquet', 0, 4)).rejects.toThrow('requested range');
+    await expect(io.fetchRange('https://example.test/report/screening/abc/aviation.json', 0, 4)).rejects.toThrow('requested range');
     expect(cancel).toHaveBeenCalledOnce();
   });
   it('accepts exact ranges and rejects a response body larger than the requested range', async () => {
@@ -58,10 +59,32 @@ describe('optional report HTTP transport', () => {
     vi.stubGlobal('fetch', vi.fn(async (_url, init) => init?.method === 'HEAD'
       ? new Response(null, { headers: { 'content-length': '100' } })
       : new Response(new Uint8Array(oversized ? 5 : 4), { status: 206, headers: { 'content-range': 'bytes 0-3/100' } })));
-    const io = await workerIO(), url = 'https://example.test/report/screening/abc/buildings.parquet';
+    const io = await workerIO(), url = 'https://example.test/report/screening/abc/aviation.json';
     expect(await io.fetchRange(url, 0, 4)).toHaveLength(4);
     oversized = true;
     await expect(io.fetchRange(url, 0, 4)).rejects.toThrow('byte budget');
+  });
+});
+
+describe('cube transport', () => {
+  it('sends every HEAD and band range past the browser HTTP cache', async () => {
+    const fetcher = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'HEAD'
+      ? new Response(null, { headers: { 'content-length': '100' } })
+      : new Response(new Uint8Array(4), { status: 206, headers: { 'content-range': 'bytes 8-11/100' } }));
+    vi.stubGlobal('fetch', fetcher);
+    const io = await workerIO();
+    expect(await io.fetchRange('https://example.test/data/route/250m/pd_0_1.tif', 8, 12)).toHaveLength(4);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    for (const [, init] of fetcher.mock.calls) expect(init?.cache).toBe('no-store');
+  });
+});
+
+describe('report directory', () => {
+  it('sits beside the cube directory, under the same versioned prefix', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const scope = await loadWorker();
+    await scope.onmessage!({ data: { id: 1, baseUrl: 'https://data.example.test/data/route/abc123/250m/', crossings: {} } });
+    expect(calls.reportUrl).toBe('https://data.example.test/data/route/abc123/report/');
   });
 });
 

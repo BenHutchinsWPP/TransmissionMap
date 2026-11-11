@@ -14,9 +14,10 @@ pipeline_lines_na_processed.gpkg, BTS NARN geojson; state.tif/landcover.tif for 
 OSM extraction is staged under <cache>/route-osm/ on an external disk (tags-filter of the
 North America PBF, smart extract to the CONUS bbox, one slim geojsonseq per theme, streamed into the rasterizer); stages are skipped when
 their output exists. Usage: venv/bin/python scripts/build_route_flags.py [--only pd,osm|checks|adj]
-[--check-against <dir>]
+[--check-against <dir>] [--out-dir <dir>]
+--out-dir <dir> reads and writes the bands there instead of data/build/route/250m (a trial build).
 --check-against <dir> (an earlier build directory) asserts the new bands against that
-earlier build's flags.tif/adj.tif (bits 0,2,4,5 identical, bit 3 a superset, adj & 0x1F identical); off by default.
+earlier build's flags.tif/adj.tif (bits 0,2,4,5 identical, bit 3 a superset, adj bits 0-1 and 4-6 identical); off by default.
 Run under systemd-run MemoryMax with TMPDIR/CPL_TMPDIR=tmp/build-tmp.
 """
 import argparse
@@ -465,42 +466,66 @@ def ring_class(line):
 
 def build_adj():
     """osm b3 adj: ring class around >= 230 kV lines (osmflags bit 2) in bits 0-1, around 100-229 kV lines
-    (osmflags bit 3) in bits 5-6; bit 4 = computed, so value != 0 everywhere on the grid."""
+    (osmflags bit 3) in bits 5-6; bits 2 / 3 on or within 1 cell of a >= 345 / >= 500 kV line cell
+    (maxkv code); bit 4 = computed, so value != 0 everywhere on the grid."""
     with rasterio.open(OUT / "osmflags.tif") as r:
         of = r.read(1)
-    cls = ring_class(((of >> 2) & 1).astype(bool))
+    on230 = ((of >> 2) & 1).astype(bool)
+    cls = ring_class(on230)
     cls100 = ring_class(((of >> 3) & 1).astype(bool))
     del of
+    with rasterio.open(OUT / "maxkv.tif") as r:
+        maxkv = r.read(1)
+    ring1 = [(dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1)]
     adj = (G.ADJ_COMPUTED_BIT | cls | (cls100 << G.ADJ100_SHIFT)).astype(np.uint8)
+    near = {}
+    for bit, kv in G.ADJ_KV_TIERS.items():
+        line = maxkv >= kv // G.OSM_MAXKV_DIV
+        stray = int((line & ~on230).sum())
+        log(f"adj >= {kv} kV: {int(line.sum()):,} line cells ({stray} not on a >= 230 kV cell)")
+        assert stray == 0, f">= {kv} kV line cells outside the >= 230 kV line cells"
+        near[bit] = shifted_or(line, ring1)
+        adj |= (near[bit] << bit).astype(np.uint8)
+    del maxkv, on230
     assert all(G.adj_encode(c, c2) == (16 | c | c2 << 5) for c in range(4) for c2 in range(4))
-    if CHECK_AGAINST:  # the >= 230 kV class must not change
+    assert G.adj_encode(1, 0, True, True) == 16 | 1 | 4 | 8
+    if CHECK_AGAINST:  # the >= 230 kV and 100-229 kV classes must not change
         with rasterio.open(CHECK_AGAINST / "adj.tif") as r:
             prev = r.read(1)
-        same = np.array_equal(prev & 0x1F, adj & 0x1F)
-        log(f"adj & 0x1F byte-identical to previous adj.tif: {same}")
-        assert same, "adj >= 230 kV class changed"
+        keep = G.ADJ_COMPUTED_BIT | G.ADJ_CLASS_MASK | G.ADJ100_MASK
+        same = np.array_equal(prev & keep, adj & keep)
+        log(f"adj classes (bits 0-1, 4-6) byte-identical to previous adj.tif: {same}")
+        assert same, "adj >= 230 kV or 100-229 kV class changed"
         del prev
     with rasterio.open(OUT / "state.tif") as r:
         land = r.read(1) > 0
     nland = int(land.sum())
-    shares, shares100 = {}, {}
+    shares, shares100, shares_kv = {}, {}, {}
     for c in range(4):
         for tag, arr, dst in (("", cls, shares), (" 100-229 kV", cls100, shares100)):
             n = int(((arr == c) & land).sum())
             dst[c] = n
             log(f"adj{tag} class {c} ({G.ADJ_CLASSES[c]}): {n:,} land cells = {100 * n / nland:.3f} % of CONUS land (all cells {int((arr == c).sum()):,})")
+    for bit, kv in G.ADJ_KV_TIERS.items():
+        n = int((near[bit] & land).sum())
+        shares_kv[kv] = n
+        log(f"adj bit {bit} (on/beside >= {kv} kV): {n:,} land cells = {100 * n / nland:.3f} % of CONUS land")
     write("adj", adj)
     with rasterio.open(OUT / "adj.tif") as r:
         assert r.transform == AFF and (r.height, r.width) == SHAPE and r.crs.to_epsg() == 5070
         assert r.dtypes[0] == "uint8" and r.nodata == 0
         a = r.read(1)
-    assert a.max() <= G.ADJ_MAX and (a & 16).all() and not (a & 0b1100).any()
+    assert a.max() <= G.ADJ_MAX and (a & 16).all() and not (a & G.ADJ_RESERVED_MASK).any()
+    b2, b3, c = (a >> G.ADJ345_BIT) & 1, (a >> G.ADJ500_BIT) & 1, a & G.ADJ_CLASS_MASK
+    assert not (b3 & ~b2).any(), ">= 500 kV bit without the >= 345 kV bit"
+    assert np.isin(c[b2 == 1], (1, 2)).all(), ">= 345 kV bit outside >= 230 kV classes 1-2"
     log("adj: transform/shape/CRS/dtype/nodata == grid OK; values " + str(np.unique(a).tolist()))
     mp = OUT / "flags_meta.json"
     m = json.loads(mp.read_text()) if mp.exists() else {}
-    m["osm_b3_adj"] = {"rule": "bits 0-1: class 1 on a >= 230 kV line cell (osm b1 bit 2), 2 Chebyshev <= 1 cell, 3 Euclidean <= 3 cells; bits 5-6: the same rings around 100-229 kV line cells (osm b1 bit 3); bit 4 = computed (+16)",
-                       "licence": "derived from osm b1: ODbL, (c) OpenStreetMap contributors; HIFLD public domain (osm file only)",
-                       "land_cells_by_class": shares, "land_cells_by_class_100_229": shares100}
+    m["osm_b3_adj"] = {"rule": "bits 0-1: class 1 on a >= 230 kV line cell (osm b1 bit 2), 2 Chebyshev <= 1 cell, 3 Euclidean <= 3 cells; bits 5-6: the same rings around 100-229 kV line cells (osm b1 bit 3); bit 2: on or Chebyshev <= 1 cell from a cell with osm b2 maxkv >= 69 (>= 345 kV), bit 3 the same for maxkv >= 100 (>= 500 kV); bit 4 = computed (+16)",
+                       "licence": "derived from osm b1 and b2: ODbL, (c) OpenStreetMap contributors; HIFLD public domain (osm file only)",
+                       "land_cells_by_class": shares, "land_cells_by_class_100_229": shares100,
+                       "land_cells_on_beside_kv": shares_kv}
     mp.write_text(json.dumps(m, indent=1))
 
 
@@ -549,13 +574,15 @@ def meta(only, pd_counts, osm_counts, pd_info=None):
 
 
 def main():
+    global CHECK_AGAINST, OUT
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="pd,osm,adj")
     ap.add_argument("--check-against", type=Path, default=None)
+    ap.add_argument("--out-dir", type=Path, default=OUT)
     a = ap.parse_args()
     only = set(a.only.split(","))
-    global CHECK_AGAINST
     CHECK_AGAINST = a.check_against
+    OUT = a.out_dir
     OUT.mkdir(parents=True, exist_ok=True)
     pdc, oc, bits, maxkv, pd_info = {}, {}, None, None, None
     if "pd" in only:

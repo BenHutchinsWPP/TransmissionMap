@@ -89,8 +89,7 @@ const BACKBONE_KV = ['550+', '500-549', '300-499'];
 // One quiet ink for context lines over a coloured wash.
 const CONTEXT_LINE = { color: '#334155', opacity: 0.85, size: 1.4 };
 
-// Transmission siting reads the routing constraints layer, which exists on the
-// dev server only (src/registry/land.ts), so this story is dev-only with it.
+// Transmission siting reads the routing constraints layer (src/registry/land.ts).
 const TRANSMISSION_SITING: MapExperience = {
   id: 'transmission-siting-puzzle',
   title: 'The Transmission Siting Puzzle',
@@ -103,7 +102,7 @@ const TRANSMISSION_SITING: MapExperience = {
     'narrow, which is why new lines tend to follow the old ones.',
   takeaways: [
     'SunZia, a ±525 kV DC line carrying New Mexico wind to Arizona, spent more than a decade in permitting.',
-    'Following an existing line or corridor is usually the easiest way through: the land use is already settled.',
+    'Following an existing line or right-of-way is usually the easiest way through: the land use is already settled.',
     'Pick one concern at a time in the Constraints layer, in the Land group, to see each on its own.',
   ],
   keywords: ['siting', 'routing', 'constraints', 'sunzia', 'permitting'],
@@ -459,7 +458,7 @@ export const EXPERIENCES: MapExperience[] = [
   },
 
   // ── Land, siting & jurisdictions ───────────────────────────────────────────
-  ...(import.meta.env.DEV ? [TRANSMISSION_SITING] : []),
+  TRANSMISSION_SITING,
   {
     id: 'retail-utility-jurisdictions',
     title: 'Co-ops & Public Power: Who Owns the Wires Outside the Cities',

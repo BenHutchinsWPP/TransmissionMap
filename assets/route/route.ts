@@ -9,7 +9,8 @@
 //       the bands asked for, + state, and one limiter keeps ≤ 16 tiles in flight
 //       across every window of both files; a super-tile not in `super_tiles_present`
 //       is all nodata, so state 0 = barrier) → buildSurfaces → solve → reducePath
-//       (δ 0.005 of the whole route's routing cost) → costPath → RouteResult.
+//       (δ 0.005 of the whole route's routing cost) → costPath (end kinds `terminals`, checked by
+//       preset-patch.ts validateTerminals; cost only) → RouteResult.
 //       When the path is not proven optimal (a path that touches the mask edge never
 //       is), or no path is found, it retries once at 2× the buffer; a retry over the
 //       cell cap keeps the first result. `maskLimited` = the returned path still
@@ -47,8 +48,8 @@
 //       part of a solve) takes ≤ 4 EPSG:5070 polylines, reads the report GeoParquet
 //       under io.reportUrl (report-read.ts, EXACT_BUDGET_MS) and intersects
 //       (crossings-exact.ts); a family whose files fail is left out of `exact` with its
-//       reason in `note`. Optional screening.ts observations read buildings and
-//       aviation under the same deadline.
+//       reason in `note`. Optional screening.ts aviation observations are read
+//       under the same deadline.
 //       Uploaded layers: a patch's `add_rows` entry is a row on band upl_<hash>, which
 //       is not in the cube: attempt() rasterises the layer (upload-layer.ts) over the
 //       bbox beside the read bands. The geometry comes only from io.uploads (posted to
@@ -66,13 +67,13 @@
 //       (Outcome, type only).
 
 import type { Outcome } from '../dataset-query.js';
-import { routePreset, type BandName, type RoutePreset } from '../../src/registry/route-presets.js';
+import { routePreset, type BandName, type EndKind, type RoutePreset } from '../../src/registry/route-presets.js';
 import { albersForward, albersInverse, gridFromJson, type Grid } from './grid.js';
 import { createLimiter, openTiff, readTile, readWindow, type Fetcher, type Limiter, type TiffInfo } from './cog-read.js';
 import { distances, solve, traverse, type Scratch } from './dijkstra.js';
 import { reducePath } from './pi-reduce.js';
 import { buildSurfaces, cellFactors, matches, cellsToCoords, compile, costPath, rowFactors, type Compiled, gridSampler, minRouteWeight, presetBands, straightLine, METRES_PER_MILE, type CostResult, type Sampler } from './cost.js';
-import { searchLimitFactor, uploadBand, uploadBudgetReason, uploadHashes, UPLOAD_BYTES_BUDGET, validatePresetPatch, validateRouteOptions, type PresetPatch, type RouteOptions } from './preset-patch.js';
+import { searchLimitFactor, uploadBand, uploadBudgetReason, uploadHashes, UPLOAD_BYTES_BUDGET, validatePresetPatch, validateRouteOptions, validateTerminals, type PresetPatch, type RouteOptions } from './preset-patch.js';
 import { isUploadBand } from '../../src/registry/route-presets.js';
 import { insideCell, rasterize, type UploadLayer } from './upload-layer.js';
 import { classify, DEFAULT_BANDS, PENALTY_BYTES_PER_CELL, penaltyAlternatives, shareWithin } from './similar-cost.js';
@@ -102,6 +103,7 @@ export interface RouteRequest {
   weightImage?: boolean;  // default false: RouteResult.weightImage, the routing-weight overlay
   weightMode?: WeightMode; // default 'route': what weightImage draws
   uploads?: string[];     // hashes of the uploaded layers the request reads (presetPatch.add_rows' layers); geometry is in RouteIO.uploads
+  terminals?: [EndKind, EndKind]; // what each end is, default ['new', 'new'] (cost only: not part of windowKey)
 }
 
 /** What the cell-weight overlay draws: the routing weight the solver sees, or the cost multiplier. */
@@ -283,6 +285,9 @@ async function run(req: RouteRequest, io: RouteIO, windows?: WindowCache): Promi
   const opts = { ok: true as const, result: { ...valid.result, weightImage: req.weightImage === true, weightMode: req.weightMode ?? 'route' } };
   if (typeof req.lineType !== 'string' || !Object.hasOwn(preset.line_types, req.lineType))
     return fail(`preset ${preset.id} has no line type "${String(req.lineType)}" (has ${Object.keys(preset.line_types).join(', ')})`);
+  const ends = validateTerminals(req.terminals ?? ['new', 'new'], preset, req.lineType);
+  if (!ends.ok) return ends;
+  const kinds = ends.result;
   const cap = req.cap ?? DEFAULT_CAP;
   if (!(Number.isFinite(cap) && cap > 0)) return fail('cap must be a positive number');
   const factor = req.bufferFactor ?? 1;
@@ -291,7 +296,7 @@ async function run(req: RouteRequest, io: RouteIO, windows?: WindowCache): Promi
   const presetInfo = { id: preset.id, label: preset.label, attribution: preset.attribution, caveat: preset.caveat };
 
   if (preset.length !== 'routed') {
-    const cost = straightLine(req.from, req.to, preset, req.lineType);
+    const cost = straightLine(req.from, req.to, preset, req.lineType, kinds);
     return {
       ok: true,
       result: {
@@ -344,14 +349,14 @@ async function run(req: RouteRequest, io: RouteIO, windows?: WindowCache): Promi
     if (windows.held.key !== key || windows.held.bytes + estimate > WINDOW_SOLVE_BYTES) windows.held = null;
   }
   let ta = now();
-  const first = await attempt(meta, wanted, layers, io, preset, req.lineType, a, b, buffer1, cap, minW, opts.result, retryFits);
+  const first = await attempt(meta, wanted, layers, io, preset, req.lineType, a, b, buffer1, cap, minW, opts.result, retryFits, kinds);
   if (typeof first === 'string') return fail(first);
   const attempts = [now() - ta];
   let best = first;
   if (!first.solved || !first.proven) {
     if (retryFits) {
       ta = now();
-      const second = await attempt(meta, wanted, layers, io, preset, req.lineType, a, b, buffer1 * 2, cap, minW, opts.result, false);
+      const second = await attempt(meta, wanted, layers, io, preset, req.lineType, a, b, buffer1 * 2, cap, minW, opts.result, false, kinds);
       if (typeof second === 'string') return fail(second);
       attempts.push(now() - ta);
       best = second;
@@ -500,7 +505,7 @@ interface Timings { read: number; surfaces: number; solve: number; prove: number
 
 async function attempt(
   meta: GridMeta, wanted: Set<BandName>, layers: UploadLayer[], io: RouteIO, preset: RoutePreset, lineType: string,
-  a: number[], b: number[], bufferM: number, cap: number, minW: number, opts: RouteOptions & { weightImage: boolean; weightMode: WeightMode }, retryFits: boolean,
+  a: number[], b: number[], bufferM: number, cap: number, minW: number, opts: RouteOptions & { weightImage: boolean; weightMode: WeightMode }, retryFits: boolean, kinds: [EndKind, EndKind],
 ): Promise<Attempt | string> {
   const { grid, present } = meta;
   const box = bboxOf(grid, a, b, bufferM);
@@ -614,7 +619,7 @@ async function attempt(
   const coords = cellsToCoords(red.pis, w, grid.cell, x0, y0);
   const sampler = gridSampler(bands, w, h, grid.cell, x0, y0);
   const consts = { isoreg: { codes: Object.fromEntries(meta.isoreg) }, landval: meta.landval };
-  const cost = costPath(coords, preset, lineType, sampler, consts);
+  const cost = costPath(coords, preset, lineType, sampler, consts, kinds);
   const reduce = now() - t;
 
   let alternatives = 0;
@@ -633,7 +638,7 @@ async function attempt(
         const r = reducePath({ ...g, path: alt.path, delta: DELTA });
         const xy = cellsToCoords(r.pis, w, grid.cell, x0, y0);
         altCoords.push(xy);
-        const c = costPath(xy, preset, lineType, sampler, consts);
+        const c = costPath(xy, preset, lineType, sampler, consts, kinds);
         return {
           path: { type: 'LineString', coordinates: xy.map(([x, y]) => albersInverse(x, y)) },
           lengthMi: c.lengthM / METRES_PER_MILE, cost: c, routeCostRaw: alt.cost,
@@ -1316,7 +1321,7 @@ export async function inspect(req: InspectRequest, io: RouteIO, cache: InspectCa
 export interface ExactCrossingsRequest { polylines: [number, number][][]; lengthsMi: number[] }
 export interface ExactCrossingsResult {
   routes: ExactResult[];                 // one per polyline, in order
-  screening?: RouteScreening[];          // optional building/aviation observations for the same paths
+  screening?: RouteScreening[];          // optional aviation observations for the same paths
   status: ReportRead['status'];
   exact: CrossingPoint['kind'][];        // kinds whose family read ok
   note?: string;                         // the failed families' reasons
@@ -1363,7 +1368,6 @@ export async function exactRouteCrossings(req: ExactCrossingsRequest, io: RouteI
     const [read, screening] = await Promise.all([
       readReport(reportIO, polylines, deadline),
       readRouteScreening(polylines, reportIO, deadline).catch(() => polylines.map(() => ({
-        buildings: { status: 'unavailable' as const, reason: 'building observations unavailable' },
         aviation: { status: 'unavailable' as const, reason: 'aviation observations unavailable' },
       }))),
     ]);

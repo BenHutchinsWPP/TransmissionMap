@@ -1,0 +1,100 @@
+TransmissionMap line-routing data
+=================================
+
+This directory holds the data the TransmissionMap route planner reads: the
+250 m route cube (250m/), crossing-report layers (report/), the Routing
+constraints map tiles (constraints/) and aviation screening files
+(report/screening/). It combines sources under several licences.
+Each file family carries the licence of its sources, as listed below.
+Per-band sources, vintages and processing rules are recorded in
+250m/grid.json and in report/screening/manifest.json.
+
+1. OpenStreetMap-derived files - Open Database License (ODbL) 1.0
+-----------------------------------------------------------------
+Files:
+  250m/osm_*.tif
+  report/roads_motorway_trunk.parquet, report/roads_primary.parquet,
+  report/rivers.parquet, report/pipelines_osm.parquet,
+  report/transmission_osm_us.parquet
+  constraints/osm-lake.pmtiles, constraints/osm-military.pmtiles,
+  constraints/existing-line-230.pmtiles, constraints/parallel-230.pmtiles,
+  constraints/parallel-100.pmtiles
+
+These files contain information from OpenStreetMap, (c) OpenStreetMap
+contributors, made available under the Open Database License (ODbL) 1.0:
+https://opendatacommons.org/licenses/odbl/1-0/
+OpenStreetMap copyright and licence: https://www.openstreetmap.org/copyright
+
+These files are a Derivative Database of OpenStreetMap and are themselves
+made available under the ODbL 1.0. You may copy, distribute and adapt them,
+provided you attribute OpenStreetMap contributors, keep this notice, and
+offer any adapted database you publicly use under the ODbL. Maps, reports
+and other Produced Works made from them must carry the notice
+"(c) OpenStreetMap contributors, ODbL".
+
+The osm_*.tif files also carry public-domain lines from HIFLD (via the
+SeerAI Source Cooperative mirror, packaging CC BY 4.0) and the BTS/FRA North
+American Rail Network; these do not change the ODbL terms of the files.
+
+2. Creative Commons Attribution 4.0 (CC BY 4.0) sources
+-------------------------------------------------------
+https://creativecommons.org/licenses/by/4.0/
+Attribution is required when these data or works made from them are shared.
+
+- USA Structures: Oak Ridge National Laboratory (ORNL); Federal Emergency
+  Management Agency (FEMA) Geospatial Response Office. CC BY 4.0.
+  In: 250m/pd_*.tif bands bldg, built, nonres, bldgunk, and constraints/homes,
+  buildings, nonresidential, building-unknown, building-coverage.
+- WorldPop (www.worldpop.org) / University of Southampton, 2020 population
+  (ppp_2020_1km_Aggregated). CC BY 4.0.
+  In: 250m/pd_*.tif flags bit 5, constraints/pop-100.
+- Power of Place - West: Wu, G. C. et al. (2023), PNAS 120(4) e2204098120;
+  data doi:10.5281/zenodo.7460026 (The Nature Conservancy categories).
+  CC BY 4.0. In: 250m/pd_*.tif protect band (TNC bits), constraints/tnc.
+- HIFLD data via the SeerAI HIFLD archive on Source Cooperative
+  (source.coop/seerai/hifld, 2026-10-17): schools, hospitals, child care
+  centres, nursing homes, FCC antenna structures, USACE dams, USACE FUDS
+  munitions response sites, transmission lines and natural gas pipelines.
+  Underlying data are US federal works; the archive packaging is CC BY 4.0.
+  In: 250m/pd_*.tif flags bit 7 and flags2 bits 3 and 7, 250m/osm_*.tif,
+  report/transmission_hifld.parquet, report/pipelines_hifld_natgas.parquet,
+  constraints/occupied-facilities, tall-structures, fuds, what-constrains.
+
+3. FEMA National Flood Hazard Layer - acknowledgement
+----------------------------------------------------
+Flood hazard areas are derived from the FEMA National Flood Hazard Layer
+(NFHL), Key Layers edition 2026-10 (NFHL_Key_Layers_202610). The NFHL is a
+US federal work; FEMA asks that it be acknowledged as the source.
+Source: FEMA National Flood Hazard Layer.
+In: 250m/pd_*.tif band 19 (nfhl), constraints/fema-flood, fema-flood-map,
+what-constrains. This is a screening derivative at 250 m, not an official
+flood map or a flood-zone determination, and is not endorsed by FEMA.
+
+4. CC0 1.0
+----------
+EPA EnviroAtlas estimated 100-year floodplain (Woznicki et al. 2019), CC0.
+In: 250m/pd_*.tif flags2 bit 2, constraints/floodplain.
+
+5. Public domain (US federal works, 17 U.S.C. 105)
+--------------------------------------------------
+No copyright restrictions; credit given as a courtesy:
+USGS PAD-US 4.1; USGS 3DEP; MRLC/USGS Annual NLCD 2025; U.S. Census Bureau
+(TIGER/Line, cartographic boundaries); Bureau of Indian Affairs; DoD MIRTA;
+FAA (NTAD aviation facilities, runways, runway ends; ADDS) and U.S. DOT
+Bureau of Transportation Statistics; USFWS critical habitat, National
+Wetlands Inventory and Coastal Barrier Resources System; BLM Greater
+Sage-Grouse habitat; DOE/Argonne Section 368 energy corridors; USDA Forest
+Service Wildfire Hazard Potential 2023 (RDS-2015-0047-4); rivers.gov Wild
+and Scenic Rivers; National Park Service National Trails System and
+National Register of Historic Places; EPA National Priorities List; USACE
+Formerly Used Defense Sites; EIA balancing authorities; USDA NASS Census of
+Agriculture 2022; BTS/FRA North American Rail Network
+(report/railroads.parquet).
+report/screening/<generation>/aviation.json: Federal Aviation
+Administration; U.S. DOT Bureau of Transportation Statistics.
+
+6. Everything else
+------------------
+250m/grid.json and report/screening manifests are TransmissionMap metadata.
+All files are provided as-is, without warranty, for planning-level
+screening only; they are not survey, legal or regulatory determinations.

@@ -44,7 +44,7 @@ describe('alternatives tab', () => {
     const { root } = mount();
     const rows = [...root.querySelectorAll('.ra-row')].map((r) => r.textContent);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toMatch(/^Optimal · least cost · 250\.1 mi/);
+    expect(rows[0]).toMatch(/^Lowest routing score · 250\.1 mi/);
     expect(rows[1]).toMatch(/Alt 1 · \+3\.4 % · 258\.4 mi/);
     expect(rows[1]).toContain('mi tribal');
     expect(root.querySelectorAll('thead th')).toHaveLength(4);
@@ -72,7 +72,7 @@ describe('alternatives tab', () => {
     expect(ctx.calls).toContain('setThreshold(0.05)');
     expect(root.querySelectorAll('[role="radio"]')).toHaveLength(4);
   });
-  it('with Alt 2 shown, lists it first, then "Optimal (least cost)" (make → -1) and Alt 1 by its own number', () => {
+  it('with Alt 2 shown, lists it first, then "Lowest routing score" (make → -1) and Alt 1 by its own number', () => {
     const alts = FIXTURE_RESULT.alternatives!;
     const { root, ctx } = mount((s) => {
       s.optimal = FIXTURE_RESULT;
@@ -82,11 +82,11 @@ describe('alternatives tab', () => {
     const rows = [...root.querySelectorAll('.ra-row')].map((r) => r.textContent);
     expect(rows).toHaveLength(3);
     expect(rows[0]).toMatch(/^Alt 2 · \+7\.8 % · 266\.9 mi/);
-    expect(rows[1]).toMatch(/^Optimal \(least cost\) · 250\.1 mi/);
+    expect(rows[1]).toMatch(/^Lowest routing score · 250\.1 mi/);
     expect(rows[2]).toMatch(/^Alt 1 · \+3\.4 %/);
-    expect([...root.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['', 'Alt 2', 'Optimal (least cost)', 'Alt 1']);
+    expect([...root.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['', 'Alt 2', 'Lowest routing score', 'Alt 1']);
     const make = root.querySelector<HTMLButtonElement>('[data-make="-1"]')!;
-    expect(make.getAttribute('aria-label')).toBe('Make the optimal route the result');
+    expect(make.getAttribute('aria-label')).toBe('Make the lowest-score route the result');
     make.click();
     expect(ctx.calls).toContain('makeAltResult(-1)');
     root.querySelector<HTMLButtonElement>('[data-make="0"]')!.click();

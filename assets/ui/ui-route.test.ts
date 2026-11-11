@@ -74,6 +74,7 @@ import { state } from '../state.js';
 import { loadRoutePrefs, localStorageAdapter, ROUTE_PREFS_KEY } from '../route/route-prefs.js';
 import { t, loadRouteStrings } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
+import { acceptNotice, ROUTE_NOTICE_VERSION } from './notice-gate.js';
 
 const flush = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0)); };
 
@@ -116,7 +117,7 @@ function fakeMap(base: { fitBounds: ReturnType<typeof vi.fn> } & Record<string, 
 let map: ReturnType<typeof fakeMap>;
 
 beforeEach(() => {
-  localStorage.setItem('tm-notice-route', '2');
+  acceptNotice('route', ROUTE_NOTICE_VERSION);
   const env = installDrawerEnv();
   vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(max-width: 520px)', media: q, addEventListener() {}, removeEventListener() {} }));   // the Method tab's stacked table (these tests edit its inputs)
   map = fakeMap(env.map as unknown as Parameters<typeof fakeMap>[0]);
@@ -245,7 +246,7 @@ describe('route pane shell', () => {
     const tabs = [...main().querySelectorAll('[role=tab]')];
     expect(tabs.map((b) => b.id)).toEqual(['summary', 'cost', 'profile', 'crossings', 'alternatives', 'method'].map((x) => `rp-tab-${x}`));
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
-    expect(main().querySelector('.rp-badge')?.textContent).toBe('Optimal within search area');
+    expect(main().querySelector('.rp-badge')?.textContent).toBe('Lowest routing score within the search area');
     expect(main().querySelector('[role=tabpanel] .rp-kpis')).not.toBeNull();
     expect(map.layers.has('rp-route')).toBe(true);
     expect(map.layers.has('rp-route-casing')).toBe(true);
@@ -314,6 +315,19 @@ describe('route pane shell', () => {
     expect(_pane()).toBeUndefined();
     expect(routeActions().children.length).toBe(0);
     expect(document.querySelector('.rp-legend')).toBeNull();
+  });
+
+  it('asks for the usage notice again on the next open after a close', async () => {
+    openRoutePanel();
+    expect(_pane()).toBeDefined();
+    closeRoute();
+    openRoutePanel();
+    const dlg = document.querySelector<HTMLElement>('dialog[aria-labelledby="route-notice-title"]');
+    expect(dlg).not.toBeNull();
+    expect(_pane()).toBeUndefined();
+    dlg!.querySelector<HTMLButtonElement>('.disclaimer-accept')!.click();
+    await flush();
+    expect(_pane()).toBeDefined();
   });
 
   it('closing while solving cancels the pending call', async () => {
@@ -385,6 +399,7 @@ describe('route pane lifecycle', () => {
     closeRoute();
     expect(hover.size).toBe(0);
     expect(markerEls()).toBe(0);
+    acceptNotice('route', ROUTE_NOTICE_VERSION);
     await openWithEnds();
     expect(hover.size).toBe(1);
     expect(markerEls()).toBe(2);
@@ -403,7 +418,7 @@ describe('route pane lifecycle', () => {
     expect(routePanel().querySelector('.rp')).not.toBeNull();
   });
 
-  it('making Alt 2 the result badges it, lists the least-cost route as "Optimal (least cost)", and switches back', async () => {
+  it('making Alt 2 the result badges it, lists the lowest-scoring route as "Lowest routing score", and switches back', async () => {
     await solved();
     const alts = FIXTURE_RESULT.alternatives!;
     _pane()!.ctx.makeAltResult(1);
@@ -411,19 +426,19 @@ describe('route pane lifecycle', () => {
     expect(s.result!.path).toBe(alts[1].path);
     expect(s.fromAlt).toBe(2);
     expect(s.optimal).toBe(FIXTURE_RESULT);
-    expect(main().querySelector('.rp-badge')!.textContent).toBe(`Alt 2 · +${alts[1].pctRoute.toFixed(1)} % routing cost`);
+    expect(main().querySelector('.rp-badge')!.textContent).toBe(`Alt 2 · +${alts[1].pctRoute.toFixed(1)} % routing score`);
     const names = (map.sources.get('rp-alts')!.data as GeoJSON.FeatureCollection).features.map((f) => f.properties!.name);
-    expect(names).toEqual(['Optimal (least cost)', 'Alt 1']);   // numbering kept, the shown one left out
-    expect(document.querySelector('.rp-legend')!.textContent).toContain('Optimal (least cost)');
+    expect(names).toEqual(['Lowest routing score', 'Alt 1']);   // numbering kept, the shown one left out
+    expect(document.querySelector('.rp-legend')!.textContent).toContain('Lowest routing score');
     expect(document.querySelector('.rp-legend')!.textContent).not.toContain(t('route.legend.route'));   // the shown route is Alt 2
     main().querySelector<HTMLButtonElement>('#rp-tab-alternatives')!.click();
     const rows = [...main().querySelectorAll('.ra-row')].map((r) => r.textContent);
     expect(rows[0]).toMatch(/^Alt 2 · /);
-    expect(rows[1]).toMatch(/^Optimal \(least cost\) · 250\.1 mi/);
+    expect(rows[1]).toMatch(/^Lowest routing score · 250\.1 mi/);
     main().querySelector<HTMLButtonElement>('[data-make="-1"]')!.click();
     expect(s.result).toBe(FIXTURE_RESULT);
     expect(s.fromAlt).toBeUndefined();
-    expect(main().querySelector('.rp-badge')!.textContent).toBe('Optimal within search area');
+    expect(main().querySelector('.rp-badge')!.textContent).toBe('Lowest routing score within the search area');
     expect(s.previous).toEqual({ path: alts[1].path, lengthMi: alts[1].lengthMi, cost: alts[1].cost });
   });
 
@@ -968,7 +983,7 @@ describe('route pane cell inspector', () => {
     expect(inspectCell).toHaveBeenCalledTimes(1);
     solver.inspects[0].res(reply('Public airfield ≤ 5 km · routing weight ×100'));
     await flush();
-    expect(itip().querySelector('.rp-it-cause')!.textContent).toBe('Not within 10 % of least cost — Public airfield ≤ 5 km · routing ×100');
+    expect(itip().querySelector('.rp-it-cause')!.textContent).toBe('Not within 10 % of the lowest routing score — Public airfield ≤ 5 km · routing ×100');
     tapAt(0.5, 0.5);                                          // a click on the hole pins the card
     await flush();
     solver.inspects[1].res(reply('Public airfield ≤ 5 km · routing weight ×100'));
@@ -979,7 +994,7 @@ describe('route pane cell inspector', () => {
     const ev = (lng: number, lat: number) => ({ point: { x: 1, y: 1 }, lngLat: { lng, lat } }) as never;
     expect(claims(ev(0.5, 0.5))).toBe(true);                  // the feature popup stays shut on the hole
     expect(claims(ev(0.2, 0.8))).toBe(false);
-    expect(card().querySelector('.rp-ic-head')!.textContent).toBe('Not within 10 % of least cost — Public airfield ≤ 5 km · routing ×100');
+    expect(card().querySelector('.rp-ic-head')!.textContent).toBe('Not within 10 % of the lowest routing score — Public airfield ≤ 5 km · routing ×100');
   });
 
   it('holeAt: only a transparent pixel enclosed on four sides', () => {
@@ -1365,6 +1380,7 @@ describe('route pane saved defaults', () => {
     sel.dispatchEvent(new Event('change'));
     expect(loadRoutePrefs(localStorageAdapter())).toMatchObject({ presetId: 'straight-line-quick' });
     closeRoute();
+    acceptNotice('route', ROUTE_NOTICE_VERSION);
     openRoutePanel();
     expect(_pane()!.session.inputs.presetId).toBe('straight-line-quick');
   });

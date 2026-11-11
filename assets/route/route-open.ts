@@ -33,16 +33,17 @@
 //       with no holder only 'panel' calls pass. releaseRoute(owner) frees it, then applies the unregisterUpload calls made meanwhile (deferred
 //       while a non-panel owner holds the lock; a register of the same hash cancels one); hasUpload(hash) says whether a layer is held. recycleWorker(owner) terminates an
 //       idle worker so the next call starts a fresh one (the batch's recycle; registered uploads re-posted).
-//       Data: data/route/250m/ under the page's base URL (dev server only; no DATA entry, never published).
-// Deps: diag-log.ts; route-worker.ts (worker entry); route.ts, upload-layer.ts and
+//       Data: DATA.route_cube (relative to the page's base URL in dev, the data host's versioned prefix in a build).
+// Deps: diag-log.ts; constants.ts (DATA.route_cube); route-worker.ts (worker entry); route.ts, upload-layer.ts and
 //       dataset-query.ts (types only).
 
 import type { Outcome } from '../dataset-query.js';
 import type { ExactCrossingsRequest, ExactCrossingsResult, InspectRequest, InspectResult, RepaintRequest, RepaintResult, RepaintRowsRequest, RowsImage, RouteRequest, RouteResult, RouteStep } from './route.js';
 import type { UploadGeometry } from './upload-layer.js';
 import { recordDiagEvent } from '../diag-log.js';
+import { DATA } from '../constants.js';
 
-const ROUTE_DATA = 'data/route/250m/';
+const ROUTE_DATA = DATA.route_cube;
 /** Who may use the worker while no lock is held. */
 export const PANEL_OWNER = 'panel';
 export const BUSY = 'busy';

@@ -70,7 +70,7 @@ main checkout before `npm run build` (never print it).
 
 - **The first-visit disclaimer** blocks every click. The init script sets
   `localStorage.tm_disclaimer_accepted = "1"` before the page loads.
-- **The route and chat usage notices** are pre-accepted the same way: every browser context `launch()` hands out (and every `browser.newContext`) is seeded with `tm-notice-route` and `tm-notice-chat` = `1`; the dialogs themselves are unit-tested.
+- **The usage notices**: every browser context `launch()` hands out (and every `browser.newContext`) is seeded with `tm-notice-chat` = `1`; the route notice, asked on every open of the Route pane, is accepted by the init script as it appears. The dialogs themselves are unit-tested.
 - **Save view…** falls back to a download only when `showSaveFilePicker` is
   absent; the init script deletes it, and `page.waitForEvent('download')`
   catches the file.
@@ -132,6 +132,7 @@ node drive.mjs --preview sandbox   # the analysis sandbox under the production C
 | `lines-absent` | **dev or preview.** The production-hide rule: dev answers `data/analysis/` 404 (with `access-control-allow-origin: *`, as raw does) by `context.route`; preview points `TM_DATA_HOST` at a stand-in started with `HIDE=data/analysis/`. Two taps on an OSM line, then its table | each popup open with no Length row, Copy or Line tools; no "Copy N checked lines"; `index.json` asked for once, 404, and no other line file; no CSP violation; no console line but the browser's own 404 for `index.json` (`lines-absent-1-popup.png`, `lines-absent-2-table.png`) |
 | `columns` | **dev only** (`data/analysis/columns/` is unpublished; needs the columns files built). The OSM lines table under Area Texas at zoom 5, a row's fly button, `compare-regions` on a switched-off layer, a mocked chat `aggregate`, `data/analysis/` answered 404, the world table opened twice in one page | layer on and layer off at zoom 5: total = the pyarrow reference (`tmp/columns-ref`; a dataset read is the layer's filters over the whole dataset at any zoom), no partial note; fly moves the camera and highlights the line of row 0's id (name, kV, operator read back by id); the template card draws with the Area and the layer off, its own data carrying no partial note and only TX; the model's tool message says `"complete":true` and the reference total; 404: `index.json` requested and answered 404, the "Only the features in the map tiles…" note; world table: the size prompt on open 1, the same non-zero total on both opens, no console error (`columns-1-table-tx.png`, `columns-1b-row-flown.png`, `columns-1c-table-tx-layer-off.png`, `columns-2-compare-regions.png`, `columns-3-chat-aggregate.png`, `columns-4-index-404.png`, `columns-5-world-open-{1,2}.png`) |
 | `proximity` | **dev or preview (judge on preview).** Tools ▸ Proximity on a generated 30,000-row clustered CSV (`TM_PX_CSV` names another, `TM_PX_ROWS` / `TM_PX_RUNS` size it and the repeats; default 5). The page's map is reached by a harness-only trap on `Object.prototype._controls`, so the same code runs on a production bundle. Per run, on a fresh closed tab: the file chosen (ID column picked automatically) at ~1 mile and at 25 km, then threshold changes on the loaded file (30↔25 km, 1↔1.2 mi), then the `px-points` source's `setData` on its own; then (unless `TM_PX_VISUAL=0`) looks: a row click (the camera must not move, the point outlines), then the row's ↗ "Zoom to" button (the fly), a two-point group at z 13.2 / 14.5, near and past the bubble layers' `maxzoom` (also at a tile corner), and a generated 58–72°N set (400 km) on the globe at four zooms (`TM_PX_LARGE=0` skips the 25 km runs) | the Groups table fills; the map has the `px-points` source and its `px-bubbles` and `px-points` circle layers (no other `px-` source); a threshold change sets both sources again and refreshes the status; closing the tab removes every `px-` layer and source; no console errors. Prints median / max (ms) of: chosen→picker, confirm→grid rows, confirm→sources loaded, confirm→idle (includes the 600 ms fit animation), the 250 ms debounce apart from fire→first `setData`, fire→loaded, fire→idle, long-task time, and each source's `setData` sync / →loaded / →idle; raw runs in `proximity-timings.json`. Headless SwiftShader draws slower than a GPU (`proximity-1-load-*.png`, `proximity-2-change-*.png`, `proximity-3…9-*.png`) |
+| `route` | **preview build only; stand-in data host** (see *The route scenario*). A fresh context at 1400×1000: Tools ▸ Plan a route (notice auto-accepted), Malin and Captain Jack picked by search, Find, Cost tab, Crossings tab with Read crossings and observations, then the Routing constraints layer on and a second concern picked | solved with no error box; from the stand-in's request log (worker requests included): positive counts under `data/route/<ROUTE_ID>/250m/`, `report/` and `constraints/`, nothing outside the versioned prefix; no unversioned or page-relative `data/route/` request (context-level request events), no failed or 4xx/5xx one (`ERR_ABORTED` cancels excepted); no console error. Screening is aviation only: the manifest and `aviation.json` are requested (200/206) and no parquet is. Screenshots `route-{summary,cost,crossings,constraints}.png` |
 | `csp` | **preview build only.** Each layer group switched on (US list, then the global list's extra rows), every basemap and the globe, hillshade + 3D terrain + 3D buildings and aerial at z16 over Houston, a place search (Enter), a `?exp=` story, then Tools ▸ Diagnostics (every host probe) | the page carries the CSP meta; a deliberate `http:` fetch is heard by the `securitypolicyviolation` listener (`connect-src` admits any `https:` host, for linked services; `http:` stays refused) (an init script, outside the policy), proving the check is live; then, step by step, nothing refused (listener or `Refused to` console line); place search reaches the geocoder; no console errors. A geocoder that rejects the local key still passes: the request left the page |
 
 **Nearest** is catalogued `ready: false`, so `NEAREST_READY` in `drive.mjs` skips every nearest step of the `templates` rows above (the form, the flows cards, the chat fixture, the phone card) and `spread` checks instead that the gallery offers no nearest card; set it to `true` when nearest is ready.
@@ -158,6 +159,26 @@ HIDE=data/analysis/ python3 -I "$W/datahost.py" "$PWD" 8444 "$W/cert.pem" "$W/ke
 cd "$W" && TM_DATA_HOST=https://localhost:8443/ node drive.mjs --preview lines
 TM_DATA_HOST=https://localhost:8444/ node drive.mjs --preview lines-absent
 ```
+
+### The route scenario
+
+The route planner reads `data/route/<ROUTE_ID>/{250m,report,constraints}/` from the data
+host (`ROUTE_ID` in `assets/constants.ts`; the scenario reads it from there, `TM_REPO`
+names the repo root when `drive.mjs` runs from a copy). `datahost.py` with `ROUTE_ID` set
+maps that prefix to the local `data/route/` (`ROUTE_ROOT` overrides) and answers the
+unversioned `data/route/` 404. `report/screening/` serves what `scripts/route_publish_plan.py`'s `build()` hosts: its pointer as `manifest.json` and the generation's hosted files. It logs every request to its log;
+`TM_DATA_LOG` names that log for the scenario, which asserts on it because a worker's
+requests may not reach page events. `HIDE=data/route/` hides the route tree.
+
+```bash
+ROUTE_ID=$(grep -o 'ROUTE_ID = "[0-9a-f]*"' assets/constants.ts | grep -o '[0-9a-f]\{12\}')
+ROUTE_ID=$ROUTE_ID python3 -I "$W/datahost.py" "$PWD" 8443 "$W/cert.pem" "$W/key.pem" "$W/host.log" &
+# npm run build + preview on 4173, as above
+cd "$W" && TM_REPO=<repo> TM_DATA_HOST=https://localhost:8443/ TM_DATA_LOG="$W/host.log" node drive.mjs --preview route
+```
+
+Checked by planting: `HIDE=data/route/` (no solve), a build whose route origin is
+page-relative, and a build with a wrong `ROUTE_ID` prefix, each fail it.
 
 Each check prints `PASS`/`FAIL`; the run exits non-zero on any failure, and
 `no console errors` closes every scenario. A new scenario is one more entry in

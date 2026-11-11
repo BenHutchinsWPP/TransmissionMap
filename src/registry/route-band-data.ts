@@ -7,14 +7,16 @@
 //       Written from the cube's source text (grid.json); tokens come only from the string literals
 //       of the build scripts (build_route_bands/restrict/flags/costbands/structures/wetland/buildings*.py).
 //       Bit-matched bands (flags, flags2, desig, osm_flags, and protect bit 7 through PROTECT_DATA) have one entry per bit and no band
-//       fallback: an unknown bit throws.
-// Deps: type-only import of BandName/Match from route-presets.ts. No side effects.
+//       fallback: an unknown bit throws. An entry may carry a `licence`; `methodSources(preset, lineType)` lists the
+//       datasets a method reads as "label (licence)" for the printed report.
+// Deps: type-only import of BandName/Match/RoutePreset from route-presets.ts. No side effects.
 
-import { isUploadBand, type BandName, type Match, type UploadBand } from './route-presets.js';
+import { isUploadBand, type BandName, type Match, type RoutePreset, type UploadBand } from './route-presets.js';
 
-export interface BandData { label: string; vintage: string; tokens: string[] }
+export interface BandData { label: string; vintage: string; tokens: string[]; licence?: string }
 
-const d = (label: string, vintage: string, tokens: string[]): BandData => ({ label, vintage, tokens });
+const d = (label: string, vintage: string, tokens: string[], licence?: string): BandData => (licence ? { label, vintage, tokens, licence } : { label, vintage, tokens });
+const ODBL = 'ODbL', CCBY = 'CC BY 4.0', HIFLD_LICENCE = 'CC BY 4.0 for the packaging';
 
 export type BitBand = 'flags' | 'flags2' | 'desig' | 'osm_flags';
 
@@ -26,7 +28,7 @@ export const BIT_DATA: Record<BitBand, Record<number, BandData>> = {
     2: d('FAA airports and runways (5 km)', 'FAA ADDS', ['FAA', 'ADDS']),
     3: d('USFWS critical habitat (Final)', 'USFWS ECOS', ['USFWS', 'CRITHAB']),
     4: d('DOE/ANL Section 368 corridors', 'Section 368', ['Section', '368']),
-    5: d('WorldPop 2020 population density', 'WorldPop 2020', ['WorldPop', '2020']),
+    5: d('WorldPop 2020 population density', 'WorldPop 2020', ['WorldPop', '2020'], CCBY),
     6: d('PAD-US 4.1 state and local parks', 'PAD-US 4.1', ['PAD-US', '4.1']),
     7: d('NID dams + FCC ASR towers', 'NID; FCC ASR', ['NID', 'ASR']),
   },
@@ -34,11 +36,11 @@ export const BIT_DATA: Record<BitBand, Record<number, BandData>> = {
     0: d('BLM sage-grouse RODs 2025–26', 'BLM GRSG ROD Feb 2026', ['GRSG', 'Feb 2026']),
     1: d('BLM sage-grouse RODs 2025–26', 'BLM GRSG ROD Feb 2026', ['GRSG', 'Feb 2026']),
     2: d('EPA EnviroAtlas floodplain 2019', 'EnviroAtlas 2019', ['EnviroAtlas', '2019']),
-    3: d('HIFLD schools, hospitals, care homes', 'HIFLD mirror (source.coop)', ['public_schools', 'hospitals']),
+    3: d('HIFLD schools, hospitals, care homes', 'HIFLD mirror (source.coop)', ['public_schools', 'hospitals'], HIFLD_LICENCE),
     4: d('NPS National Register (NRHP)', 'NPS nrhp_locations', ['NPS', 'nrhp']),
     5: d('EPA Superfund NPL sites', 'EPA NPL', ['EPA', 'NPL']),
     6: d('USFWS CBRS units', 'CBRS Mapper', ['CBRS', 'USFWS']),
-    7: d('USACE FUDS munitions sites', 'HIFLD mirror (source.coop)', ['FUDS', 'USACE']),
+    7: d('USACE FUDS munitions sites', 'HIFLD mirror (source.coop)', ['FUDS', 'USACE'], HIFLD_LICENCE),
   },
   desig: {
     0: d('PAD-US 4.1 (WSA)', 'PAD-US 4.1', ['PAD-US', '4.1']),
@@ -51,14 +53,14 @@ export const BIT_DATA: Record<BitBand, Record<number, BandData>> = {
     7: d('PAD-US 4.1 (WA, SW, NP)', 'PAD-US 4.1', ['PAD-US', 'Fee']),
   },
   osm_flags: {
-    0: d('OpenStreetMap lakes (natural=water)', 'OSM 2026-10', ['natural=water']),
-    1: d('OpenStreetMap waterway=river', 'OSM 2026-10', ['waterway=river']),
-    2: d('OSM + HIFLD lines, 230 kV and up', 'OSM 2026-10; HIFLD frozen', ['HIFLD', '230 kV']),
-    3: d('OSM + HIFLD lines, 100–229 kV', 'OSM 2026-10; HIFLD frozen', ['HIFLD', '100-229 kV']),
-    4: d('OpenStreetMap major roads', 'OSM 2026-10', ['highway=motorway']),
-    5: d('BTS North American Rail Network', 'NARN 2026', ['NARN', 'BTS']),
-    6: d('HIFLD gas lines + OSM pipelines', 'OSM 2026-10; HIFLD frozen', ['HIFLD', 'pipelines']),
-    7: d('OpenStreetMap landuse=military', 'OSM 2026-10', ['landuse=military']),
+    0: d('OpenStreetMap lakes (natural=water)', 'OSM 2026-10', ['natural=water'], ODBL),
+    1: d('OpenStreetMap waterway=river', 'OSM 2026-10', ['waterway=river'], ODBL),
+    2: d('OSM + HIFLD lines, 230 kV and up', 'OSM 2026-10; HIFLD frozen', ['HIFLD', '230 kV'], ODBL),
+    3: d('OSM + HIFLD lines, 100–229 kV', 'OSM 2026-10; HIFLD frozen', ['HIFLD', '100-229 kV'], ODBL),
+    4: d('OpenStreetMap major roads', 'OSM 2026-10', ['highway=motorway'], ODBL),
+    5: d('BTS North American Rail Network', 'NARN 2026', ['NARN', 'BTS'], ODBL),
+    6: d('HIFLD gas lines + OSM pipelines', 'OSM 2026-10; HIFLD frozen', ['HIFLD', 'pipelines'], ODBL),
+    7: d('OpenStreetMap landuse=military', 'OSM 2026-10', ['landuse=military'], ODBL),
   },
 };
 
@@ -72,15 +74,15 @@ export const BAND_DATA: Partial<Record<Exclude<BandName, UploadBand>, BandData>>
   state: d('Census cartographic boundaries 1:500k', 'Census 500k', ['Census', '500k']),
   isoreg: d('EIA Balancing Authorities', 'EIA BA', ['EIA', 'Balancing']),
   landval: d('USDA NASS Census of Agriculture 2022', 'Census of Agriculture 2022', ['NASS', '2022']),
-  bldg: d('FEMA/ORNL USA Structures', 'USA Structures 2025–26', ['FEMA', 'Structures']),
-  built: d('FEMA/ORNL USA Structures, observed footprints', 'Imagery dates vary by source area', ['FEMA', 'Structures']),
-  nonres: d('USA Structures (FEMA/ORNL), nonresidential', 'Imagery dates vary by source area', ['FEMA', 'Structures']),
-  bldgunk: d('USA Structures (FEMA/ORNL), unknown class', 'Imagery dates vary by source area', ['FEMA', 'Structures']),
+  bldg: d('FEMA/ORNL USA Structures', 'USA Structures 2025–26', ['FEMA', 'Structures'], CCBY),
+  built: d('FEMA/ORNL USA Structures, observed footprints', 'Imagery dates vary by source area', ['FEMA', 'Structures'], CCBY),
+  nonres: d('USA Structures (FEMA/ORNL), nonresidential', 'Imagery dates vary by source area', ['FEMA', 'Structures'], CCBY),
+  bldgunk: d('USA Structures (FEMA/ORNL), unknown class', 'Imagery dates vary by source area', ['FEMA', 'Structures'], CCBY),
   aviation: d('FAA NTAD airports, Part 77 screening', 'NTAD effective 2026/10/29', ['FAA NTAD', '2026/10/29']),
   nfhl: d('FEMA National Flood Hazard Layer', 'NFHL_Key_Layers_202610', ['FEMA National Flood Hazard Layer', '202610']),
   wetland: d('USFWS National Wetlands Inventory', 'NWI 2026', ['USFWS', 'Wetlands']),
-  osm_maxkv: d('OSM + HIFLD existing lines (kV)', 'OSM 2026-10; HIFLD frozen', ['OpenStreetMap']),
-  adj: d('Rings around OSM + HIFLD lines', 'OSM 2026-10; HIFLD frozen', ['OpenStreetMap']),
+  osm_maxkv: d('OSM + HIFLD existing lines (kV)', 'OSM 2026-10; HIFLD frozen', ['OpenStreetMap'], ODBL),
+  adj: d('Rings around OSM + HIFLD lines, by voltage', 'OSM 2026-10; HIFLD frozen', ['OpenStreetMap'], ODBL),
 };
 
 /** An uploaded layer's rows (`upl_<hash>`): the visitor's file, so no cube source text to check; the Method tab
@@ -90,7 +92,7 @@ export const UPLOAD_DATA: BandData = d('Uploaded layer', 'Visitor file', []);
 /** `protect` holds three datasets: GAP status (field shift 0), TNC category (field shift 4) and NPS units named Preserve (bit 7). */
 export const PROTECT_DATA = {
   gap: d('PAD-US 4.1 GAP status (USGS)', 'PAD-US 4.1', ['PAD-US', '4.1']),
-  tnc: d('PoPWest exclusions (TNC et al.)', 'PoPWest EnvExclusions', ['PoPWest', '7460026']),
+  tnc: d('PoPWest exclusions (TNC et al.)', 'PoPWest EnvExclusions', ['PoPWest', '7460026'], CCBY),
   preserve: d('PAD-US 4.1 Fee (NPS units named Preserve)', 'PAD-US 4.1', ['PAD-US', 'Preserve']),
 };
 
@@ -116,3 +118,29 @@ export function bandData(band: BandName, match: Match): BandData {
 }
 
 export const bandDataLabel = (band: BandName, match: Match): string => bandData(band, match).label;
+
+/** The datasets a method reads for one line type, as "label (licence)", in first-use order: every row that applies,
+ *  each active `except` entry, each mitigation class, the region, ROW land and tribal bands. Uploaded rows are left out. */
+export function methodSources(preset: RoutePreset, lineType: string): string[] {
+  const out: string[] = [];
+  const add = (band: BandName, match: Match) => {
+    if (isUploadBand(band)) return;
+    const e = bandData(band, match);
+    const text = e.licence ? `${e.label} (${e.licence})` : e.label;
+    if (!out.includes(text)) out.push(text);
+  };
+  for (const r of preset.rows) {
+    if (r.line_types && !r.line_types.includes(lineType)) continue;
+    add(r.band, r.match);
+    for (const x of r.except ?? []) if (x.active !== false) add(x.band, x.match);
+  }
+  for (const c of preset.mitigation?.classes ?? []) for (const a of c.any) add(a.band, a.match);
+  if (preset.regions) add(preset.regions.band, { codes: [] });
+  if (preset.row_land) {
+    add(preset.row_land.band, { codes: [] });
+    add(preset.row_land.developed.band, preset.row_land.developed.match);
+  }
+  add(preset.tribal.band, preset.tribal.match);
+  add(preset.region.band, { codes: [] });
+  return out;
+}

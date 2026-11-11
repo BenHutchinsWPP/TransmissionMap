@@ -46,7 +46,7 @@ export interface RouteSession {
   previous: PreviousRoute | null;  // the result before the last re-solve (delta chip)
   /** While "Make Alt n the result" shows an alternative: n (1-based, numbered as in `optimal.alternatives`). */
   fromAlt?: number;
-  /** While an alternative is shown: the least-cost result, listed as "Optimal (least cost)" to switch back. */
+  /** While an alternative is shown: the lowest-scoring result, listed as "Lowest routing score" to switch back. */
   optimal?: RouteResult;
   altsSolving: boolean;
   altsError: string | null;

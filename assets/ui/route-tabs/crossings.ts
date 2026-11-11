@@ -12,7 +12,7 @@
 //       line per exact point and an ODbL source line. The aviation rows (only with miles) are followed by
 //       one note, `aviationNote`. A failure is one line (session.exactError). All text goes in through
 //       textContent. `crossingRows`, `crossingsCsv`, `pathKey` and `shownExact` are pure. Optional
-//       building/aviation observations share their renderer and export rows with the printable report.
+//       aviation observations share their renderer and export rows with the printable report.
 // Deps: route-tabs/widgets.ts, route-tabs/types.ts (types), route/profile.ts, route/crossings-exact.ts (types),
 //       route-observations.ts, route/screening.ts (types), utils/utils.ts (csvCell), i18n (t), ./crossings.css.
 

@@ -498,14 +498,12 @@ describe('addService: a URL leaves the page only after the visitor agrees', () =
   });
 });
 
-vi.mock('../ui/route-panel-open.js', () => ({ ROUTE_ENABLED: true, planRouteFromChat: vi.fn(async () => ({ ok: true, result: { lengthMi: 1 } })) }));
+vi.mock('../ui/route-panel-open.js', () => ({ planRouteFromChat: vi.fn(async () => ({ ok: true, result: { lengthMi: 1 } })) }));
 import { planRouteFromChat } from '../ui/route-panel-open.js';
 
 describe('planRoute', () => {
-  it('is listed only when routing is enabled, and dispatch refuses it otherwise', async () => {
-    expect(toolSchemas(true).map(s => s.function.name)).toContain('planRoute');
-    expect(toolSchemas(false).map(s => s.function.name)).not.toContain('planRoute');
-    expect(await dispatch('planRoute', {}, {}, false)).toEqual({ ok: false, reason: 'unknown tool "planRoute"' });
+  it('is listed in the tool schemas', () => {
+    expect(toolSchemas().map(s => s.function.name)).toContain('planRoute');
   });
   it('passes its arguments and the stop signal to the panel', async () => {
     const signal = new AbortController().signal;

@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "Покрытие наблюдений зданий",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). Площади округляются вверх до целых процентов. Пустая ячейка не означает свободную землю.",
   'route.concern.noteBuildingCoverage': "Область обработки FEMA/ORNL USA Structures (CC BY 4.0); за её пределами контуры зданий неизвестны.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "Поверхности аэродромов (FAA Part 77)",
   "route.concern.aviation.primary": "Основная поверхность",
   "route.concern.aviation.under-30": "Нижняя поверхность Part 77 на высоте менее 30 м над землёй",

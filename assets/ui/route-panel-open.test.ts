@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-// Tests for the route planner entry points: gated by ROUTE_ENABLED, Tools menu
-// item placement, the context menu staying shut while a tool is active, and the chat's
-// planRouteFromChat refusing when routing is off.
+// Tests for the route planner entry points: Tools menu
+// item placement and the context menu staying shut while a tool is active.
 // With the real dictionaries and a stand-in ui-route.js, each way in has the route strings loaded
 // before the panel code runs.
 // Deps: route-panel-open.js, map-input.js and ui-route.js (mocked), state.js, i18n.
@@ -34,23 +33,6 @@ beforeEach(() => {
 
 describe('initRoutePanelEntry', () => {
   afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
-
-  it('registers nothing when disabled', async () => {
-    vi.stubEnv('DEV', false);
-    vi.resetModules();
-    const m = await import('./route-panel-open.js');
-    expect(m.ROUTE_ENABLED).toBe(false);
-    m.initRoutePanelEntry();
-    expect(document.querySelectorAll('.menu-item').length).toBe(1);
-    expect(input.fn).toBeNull();
-  });
-
-  it('planRouteFromChat refuses when routing is off, without loading the route chunk', async () => {
-    vi.stubEnv('DEV', false);
-    vi.resetModules();
-    const m = await import('./route-panel-open.js');
-    expect(await m.planRouteFromChat({ from: 'A', to: 'B' })).toEqual({ ok: false, reason: 'routing is available on the dev server only' });
-  });
 
   it('inserts the Tools item before Diagnostics', () => {
     initRoutePanelEntry();

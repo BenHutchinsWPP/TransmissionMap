@@ -16,7 +16,7 @@ import { readReport } from './report-read.js';
 import { exactCrossings } from './crossings-exact.js';
 import type { CrossingPoint } from './profile.js';
 
-const CUBE = 'data/route/250m/';
+const CUBE = process.env.ROUTE_CUBE ?? 'data/route/250m/';
 const REPORT = 'data/route/report/';
 const OUT = 'tmp/route-crossings/';
 const have = existsSync(CUBE + 'grid.json') && existsSync(REPORT + 'rivers.parquet');

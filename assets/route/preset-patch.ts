@@ -19,6 +19,10 @@
 //       the preset's own rows only. `uploadHashes` gives a patch's layers in add_rows order.
 //       `UPLOAD_BYTES_BUDGET` (512 MiB of 1 B per bbox cell per layer), `uploadBudgetReason` and `parseUploadBudget`, `localBudget`
 //       (the refusal and its parts, which the views word in the locale); `UPLOAD_TOTAL_VERTICES`.
+//       `cost_inputs` (CostInputs) replaces a line type's base $/mi, station figure and line-position figure with
+//       the visitor's, each with its own dollar year; `all-in` then removes every multiplier, markup, mitigation,
+//       ROW land, contingency and short-line factor (routing weights stay, so the route is the bare route) and
+//       records `user_costs`. `validateTerminals` checks a request's end kinds against the patched preset.
 //       `validateRouteOptions` checks
 //       `alternatives` / `altStretch` / `surface` / `profile` and gives the defaults. Refusals are
 //       Outcomes, never throws; numbers must be finite JS numbers (a string, NaN,
@@ -27,7 +31,7 @@
 // Deps: src/registry/route-presets.ts (types only), dataset-query.ts (Outcome, type only).
 
 import type { Outcome } from '../dataset-query.js';
-import type { Combine, Factor, RoutePreset, UploadBand } from '../../src/registry/route-presets.js';
+import type { Combine, EndKind, Factor, RoutePreset, UploadBand } from '../../src/registry/route-presets.js';
 import { UPLOAD_MAX_VERTICES } from './upload-layer.js';
 
 type Result<T> = Outcome<T>;
@@ -57,7 +61,24 @@ export interface PresetPatch {
    *  entries and `{layer, remove: true}` (route-request.ts mergePatch); a solve's patch takes only
    *  whole entries without `remove`. */
   add_rows?: AddRow[];
+  /** The visitor's own cost figures, on any method (see CostInputs). */
+  cost_inputs?: CostInputs;
 }
+
+export type EndChoice = 'auto' | EndKind;
+/** Entered cost figures; every figure carries `year` and escalates from it by the BLS year index.
+ *  `bare`: the entered $/mi replaces the base $/mi (cell multipliers and the short-line factor still apply),
+ *  station / position figures replace the method's. `all-in`: the entered $/mi is the whole line cost per mile
+ *  (no multipliers, markups, mitigation, ROW land, contingency). */
+export interface CostInputs {
+  basis: 'bare' | 'all-in';
+  year: number;
+  line_types?: Record<string, { usd_per_mi?: number; station_usd?: number; position_usd?: number }>;
+  /** What each end is (UI only; not applied to the preset). */
+  ends?: [EndChoice, EndChoice];
+}
+/** `src` of every figure that came from `cost_inputs`. */
+export const USER_COST_SRC = 'user-entered';
 
 /** An uploaded layer's Method row: whole (as a solve takes it), or a session edit of a saved one. */
 export interface AddRow {
@@ -121,7 +142,7 @@ function factor(v: unknown, current: Factor, range: readonly [number, number], w
 export function validatePresetPatch(preset: RoutePreset, patch: unknown): Result<RoutePreset> {
   if (patch === undefined) return { ok: true, result: preset };
   if (!isObj(patch)) return err('presetPatch must be an object');
-  const unknown = Object.keys(patch).filter((k) => !['rows', 'contingency', 'combine', 'length_factor', 'add_rows'].includes(k));
+  const unknown = Object.keys(patch).filter((k) => !['rows', 'contingency', 'combine', 'length_factor', 'add_rows', 'cost_inputs'].includes(k));
   if (unknown.length) return err(`presetPatch has unknown field "${unknown[0]}"`);
   const out: RoutePreset = structuredClone(preset);
 
@@ -208,7 +229,97 @@ export function validatePresetPatch(preset: RoutePreset, patch: unknown): Result
       });
     }
   }
+  if (patch.cost_inputs !== undefined) {
+    const r = applyCostInputs(out, patch);
+    if (!r.ok) return r;
+  }
   return { ok: true, result: out };
+}
+
+const END_CHOICES: readonly string[] = ['auto', 'new', 'position', 'none'];
+const KINDS: readonly string[] = ['new', 'position', 'none'];
+const FIGURES = ['usd_per_mi', 'station_usd', 'position_usd'] as const;
+
+/** Applies `patch.cost_inputs` to `out` (already patched), or why it is refused. */
+function applyCostInputs(out: RoutePreset, patch: Record<string, unknown>): Result<true> {
+  const ci = patch.cost_inputs;
+  if (!isObj(ci)) return err('cost_inputs must be an object');
+  const top = Object.keys(ci).find((k) => !['basis', 'year', 'line_types', 'ends'].includes(k));
+  if (top !== undefined) return err(`cost_inputs has unknown field "${top}"`);
+  if (ci.basis !== 'bare' && ci.basis !== 'all-in') return err('cost_inputs.basis must be "bare" or "all-in"');
+  const year = ci.year;
+  if (!(typeof year === 'number' && Number.isInteger(year) && year >= 1990 && year <= out.escalation.to_year))
+    return err(`cost_inputs.year must be an integer in [1990, ${out.escalation.to_year}]`);
+  if (ci.ends !== undefined && !(Array.isArray(ci.ends) && ci.ends.length === 2 && ci.ends.every((e) => typeof e === 'string' && END_CHOICES.includes(e))))
+    return err('cost_inputs.ends must be two of auto, new, position, none');
+  const entries: [string, Record<string, number>][] = [];
+  if (ci.line_types !== undefined) {
+    if (!isObj(ci.line_types)) return err('cost_inputs.line_types must be an object');
+    for (const [lt, e] of Object.entries(ci.line_types)) {
+      const at = `cost_inputs.line_types.${lt}`;
+      if (!Object.hasOwn(out.line_types, lt)) return err(`${at}: preset ${out.id} has no line type "${lt}" (has ${Object.keys(out.line_types).join(', ')})`);
+      if (!isObj(e)) return err(`${at} must be an object`);
+      const extra = Object.keys(e).find((f) => !(FIGURES as readonly string[]).includes(f));
+      if (extra !== undefined) return err(`${at} has unknown field "${extra}"`);
+      if (!FIGURES.some((f) => e[f] !== undefined)) return err(`${at} needs at least one of ${FIGURES.join(', ')}`);
+      if (e.usd_per_mi !== undefined && !(finite(e.usd_per_mi) && e.usd_per_mi > 0 && e.usd_per_mi <= 1e9))
+        return err(`${at}.usd_per_mi must be a number in (0, 1e9]`);
+      for (const f of ['station_usd', 'position_usd'] as const)
+        if (e[f] !== undefined && !(finite(e[f]) && e[f] >= 0 && e[f] <= 1e10)) return err(`${at}.${f} must be a number in [0, 1e10]`);
+      entries.push([lt, e as Record<string, number>]);
+    }
+  }
+  const allIn = ci.basis === 'all-in';
+  if (allIn) {
+    if (!entries.length) return err('all-in cost_inputs needs at least one line type with usd_per_mi');
+    const none = entries.find(([, e]) => e.usd_per_mi === undefined);
+    if (none) return err(`all-in cost_inputs.line_types.${none[0]} needs usd_per_mi`);
+    const clash = patch.contingency !== undefined ? 'contingency'
+      : patch.combine !== undefined ? 'combine'
+      : patch.length_factor !== undefined ? 'length_factor'
+      : Array.isArray(patch.rows) && patch.rows.some((r) => isObj(r) && r.cost_x !== undefined) ? 'rows[].cost_x'
+      : Array.isArray(patch.add_rows) && patch.add_rows.some((r) => isObj(r) && r.cost_x !== undefined && r.cost_x !== 1) ? 'add_rows[].cost_x'
+      : null;
+    if (clash) return err(`all-in cost_inputs has no use for ${clash}: it has no effect on an all-in $/mi`);
+  }
+  for (const [lt, e] of entries) {
+    const line = out.line_types[lt];
+    if (e.usd_per_mi !== undefined) line.base_per_mi = { usd: e.usd_per_mi, year, src: USER_COST_SRC };
+    if (e.station_usd !== undefined) {
+      line.terminals.usd_each = e.station_usd;
+      line.terminals.year = year;
+      line.terminals.src = USER_COST_SRC;
+      delete line.terminals.arithmetic;
+      delete line.terminals.markup_in;
+    }
+    if (e.position_usd !== undefined) line.terminals.position = { usd_each: e.position_usd, year, arithmetic: '', src: USER_COST_SRC };
+  }
+  if (allIn) {
+    out.markups = [];
+    delete out.contingency;
+    delete out.mitigation;
+    delete out.row_land;
+    delete out.length_factor;
+    for (const r of out.rows) { r.cost_x = 1; delete r.cost_by_region; }
+  }
+  const items = (['line', 'station', 'position'] as const).filter((it) =>
+    entries.some(([, e]) => e[it === 'line' ? 'usd_per_mi' : it === 'station' ? 'station_usd' : 'position_usd'] !== undefined));
+  out.user_costs = { basis: ci.basis, year, items, line_types: entries.map(([lt]) => lt) };
+  return { ok: true, result: true };
+}
+
+/** A request's end kinds checked against the patched preset and the solve's line type (default both `new`). */
+export function validateTerminals(kinds: unknown, preset: RoutePreset, lineType: string): Result<[EndKind, EndKind]> {
+  if (!(Array.isArray(kinds) && kinds.length === 2 && kinds.every((k) => typeof k === 'string' && KINDS.includes(k))))
+    return err('terminals must be two of new, position, none');
+  const line = Object.hasOwn(preset.line_types, lineType) ? preset.line_types[lineType] : undefined;
+  if (!line) return err(`preset ${preset.id} has no line type "${lineType}"`);
+  const uc = preset.user_costs;
+  if (uc?.basis === 'all-in' && !uc.line_types.includes(lineType))
+    return err(`the all-in figures name no $/mi for line type "${lineType}" (they name ${uc.line_types.join(', ')})`);
+  if (kinds.includes('position') && !line.terminals.position)
+    return err(`line type "${lineType}" of preset ${preset.id} has no line position figure`);
+  return { ok: true, result: kinds as [EndKind, EndKind] };
 }
 
 export interface RouteOptions { alternatives: number; altStretch: number; surface: boolean; profile: boolean }

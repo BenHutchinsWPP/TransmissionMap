@@ -1,38 +1,43 @@
 // ─── Route report model ──────────────────────────────────────────────────────
 // Role: the printed route report as plain data: every heading, sentence and figure of
-//       `route-report.ts`, built from a route session by `buildReportModel` — title, badge, KPIs and
+//       `route-report.ts`, built from a route session by `buildReportModel` — title, badge, the disclaimer (the route usage notice), KPIs (five tiles) and
 //       estimate range, endpoints, waterfall lines (label, value, formatted text, group), strip
 //       segments (miles, cost multiple, agency), crossings table (counts, miles), tribal note,
 //       method (custom label, edit lines, wording) and sources. `fmtMoney` is the dollar formatter the panel and the PDF share. No DOM, no map. `reportText` lists
 //       the text in the order the printed report shows it (the DOM report is its test reference).
 //       `parts` holds the lines that mix app wording with visitor text (the A/B names, a saved method's name)
 //       as a template + parameters (`Tpl`, `fillTpl`), so the PDF can map the wording and keep the visitor's text exact.
-//       `observations` carries the shown path's building/aviation data as given; their tables and notes stay
+//       `observations` carries the shown path's aviation data as given; their tables and notes stay
 //       with route-observations.ts and are not in `reportText`. `method.uploads` lists the method's uploaded layers
 //       (a saved method's stored patch with the session patch on top, `mergePatch`; label, routing weight, cost
-//       multiplier, barrier) as templates whose label is visitor text. `costCsv` is the cost.csv text (pane download and batch ZIP).
-// Deps: route-tabs/widgets.ts (waterfallLines, bandLabel, approxCount), route-tabs/method.ts (methodOf, countEdits),
-//       route-tabs/crossings.ts (shownExact), route-tabs/weights-table.ts (rowLabel, fmtFactor), route/cost.ts
-//       (greatCircleM), route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel), ./route-request.ts (mergePatch),
-//       registry/route-presets.ts, user-data/user-data-export.ts (toCsv), i18n.
+//       multiplier, barrier) as templates whose label is visitor text. The method's edit list also carries the figures the
+//       visitor entered for the line type shown (`cost_inputs`: amount, dollar year, basis) and the ends they set; each
+//       endpoint line names its terminal (new station, line position, none) from the result's `terminalItems`.
+//       The waterfall and the sources read the preset as the solve used it (`solvedPresetOf`), so an entered figure
+//       is cited as such. `costCsv` is the cost.csv text (pane download and batch ZIP).
+// Deps: route-tabs/widgets.ts (waterfallLines, bandLabel, approxCount, kpiTiles, fmtMoneyHead), route-tabs/method.ts (methodOf, countEdits, solvedPresetOf),
+//       route-tabs/cost-inputs.ts (effectiveInputs),
+//       route-tabs/crossings.ts (shownExact), route-tabs/weights-table.ts (rowLabel, fmtFactor), route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel, CostInputs type), ./route-request.ts (mergePatch),
+//       registry/route-presets.ts, registry/route-band-data.ts (methodSources), user-data/user-data-export.ts (toCsv), i18n.
 
 import { t } from '../../src/i18n/index.js';
 import { ROUTE_PRESETS, routePreset } from '../../src/registry/route-presets.js';
 import type { RoutePreset } from '../../src/registry/route-presets.js';
 import type { CrossingPoint, RouteProfile } from '../route/profile.js';
-import { uploadLabel, type PresetPatch } from '../route/preset-patch.js';
+import { uploadLabel, type CostInputs, type PresetPatch } from '../route/preset-patch.js';
 import type { RouteScreening } from '../route/screening.js';
 import type { RouteResult } from '../route/route.js';
-import { greatCircleM } from '../route/cost.js';
+import { methodSources } from '../../src/registry/route-band-data.js';
 import { presetLabel } from '../route/custom-presets.js';
-import type { DollarYear, RouteSession } from './route-tabs/types.js';
+import type { DollarYear, RouteInputs, RouteSession } from './route-tabs/types.js';
 import { toCsv } from '../user-data/user-data-export.js';
-import { countEdits, methodOf } from './route-tabs/method.js';
+import { countEdits, methodOf, solvedPresetOf } from './route-tabs/method.js';
+import { effectiveInputs } from './route-tabs/cost-inputs.js';
 import { shownExact } from './route-tabs/crossings.js';
 import { aviationMiles, aviationNote } from './route-observations.js';
 import { mergePatch } from './route-request.js';
 import { fmtFactor, rowLabel } from './route-tabs/weights-table.js';
-import { approxCount, bandLabel, waterfallLines, type WaterfallGroup, type WaterfallLine } from './route-tabs/widgets.js';
+import { approxCount, bandLabel, fmtMoneyHead, kpiTiles, waterfallLines, type WaterfallGroup, type WaterfallLine } from './route-tabs/widgets.js';
 
 /** Dollars as the panel and the PDF show them (`$3.10 B`, `$716 M`, `$33.4 M`, `$12 k`). */
 export function fmtMoney(v: number): string {
@@ -73,6 +78,8 @@ export interface RouteReportModel {
   title: string;
   subtitle: string;
   badge: { optimality: RouteResult['optimality']; label: string; tip: string };
+  /** The route usage notice's text, printed under the title of every report. */
+  disclaimer: { heading: string; paras: string[] };
   /** The drawn route, [lng, lat] — what a picture is framed on. */
   path: [number, number][];
   lengthMi: number;
@@ -103,12 +110,20 @@ export interface RouteReportModel {
 
 type End = { lngLat: [number, number]; hit: { name: string | null; maxKv: number | null } | null } | null;
 
-function endpoint(label: string, end: End): Tpl {
+/** ", terminal: new station" for an end of a result whose terminals are known; '' otherwise. */
+function terminalOf(cost: RouteResult['cost'], side: 'A' | 'B', preset: RoutePreset): string {
+  if (!cost.terminalItems || cost.terminalsUsd === null) return '';
+  const kind = cost.terminalItems.find((i) => i.end === side)?.kind ?? 'none';
+  const key = kind === 'new' && preset.study_terminals ? 'route.report.term.newStudy' : `route.report.term.${kind}`;
+  return t('route.report.endTerminal', { kind: t(key) });
+}
+
+function endpoint(label: string, end: End, terminal = ''): Tpl {
   if (!end) return { template: '', params: {} };
   const named = !!end.hit?.name;
   const name = end.hit?.name || t(end.hit ? 'route.report.endUnnamedSub' : 'route.report.endUnnamed');
   const kv = end.hit?.maxKv ? `, ${t('route.report.endKv', { kv: end.hit.maxKv })}` : '';
-  return { template: '{label}: {name}{kv} ({lng}, {lat})', params: { label, name, kv, lng: end.lngLat[0].toFixed(4), lat: end.lngLat[1].toFixed(4) }, ...(named ? { visitor: ['name'] } : {}) };
+  return { template: '{label}: {name}{kv} ({lng}, {lat}){terminal}', params: { label, name, kv, lng: end.lngLat[0].toFixed(4), lat: end.lngLat[1].toFixed(4), terminal }, ...(named ? { visitor: ['name'] } : {}) };
 }
 
 function endName(end: End): string {
@@ -116,8 +131,23 @@ function endName(end: End): string {
   return end.hit?.name || `${end.lngLat[1].toFixed(3)}, ${end.lngLat[0].toFixed(3)}`;
 }
 
-/** One line per edited row (and contingency): "Slope — mountain, ≥ 4°: routing ×1.75→2, cost ×1→1.5". */
-export function editLines(preset: RoutePreset, patch: PresetPatch | null): string[] {
+/** The figures entered for `lineType` (amount, dollar year, basis) and the ends set, one line each. */
+export function costInputLines(ci: CostInputs | undefined, lineType: string): string[] {
+  const out: string[] = [];
+  if (!ci) return out;
+  const e = ci.line_types?.[lineType];
+  const basis = t(ci.basis === 'all-in' ? 'route.ci.basis.allin.short' : 'route.ci.basis.bare.short');
+  if (e?.usd_per_mi !== undefined) out.push(t('route.report.edit.userLine', { usd: fmtMoney(e.usd_per_mi), year: ci.year, basis }));
+  if (e?.station_usd !== undefined) out.push(t('route.report.edit.userStation', { usd: fmtMoney(e.station_usd), year: ci.year }));
+  if (e?.position_usd !== undefined) out.push(t('route.report.edit.userPosition', { usd: fmtMoney(e.position_usd), year: ci.year }));
+  const [a, b] = ci.ends ?? ['auto', 'auto'];
+  const kind = (c: string) => t(c === 'auto' ? 'route.ci.end.autoShort' : `route.report.term.${c}`);
+  if (a !== 'auto' || b !== 'auto') out.push(t('route.report.edit.ends', { a: kind(a), b: kind(b) }));
+  return out;
+}
+
+/** One line per edited row (and contingency): "Slope — mountain, ≥ 4°: routing ×1.75→2, cost ×1→1.5"; then the cost inputs' lines. */
+export function editLines(preset: RoutePreset, patch: PresetPatch | null, ci?: CostInputs, lineType = ''): string[] {
   const out: string[] = [];
   for (const e of patch?.rows ?? []) {
     const row = preset.rows[e.row];
@@ -132,6 +162,7 @@ export function editLines(preset: RoutePreset, patch: PresetPatch | null): strin
     const pct = (x: number) => String(+(x * 100).toFixed(6));
     out.push(t('route.report.edit.contingency', { a: pct(preset.contingency.pct), b: pct(patch.contingency) }));
   }
+  out.push(...costInputLines(ci, lineType));
   return out;
 }
 
@@ -209,26 +240,21 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
   const parts = {
     title: tpl('route.report.title', { a: endName(inp.a), b: endName(inp.b) }, ['a', 'b']),
     subtitle: tpl('route.report.sub', { lineType, method: methodLabel, date }),
-    endpointA: endpoint(t('route.report.endA'), inp.a),
-    endpointB: endpoint(t('route.report.endB'), inp.b),
+    endpointA: endpoint(t('route.report.endA'), inp.a, terminalOf(cost, 'A', preset)),
+    endpointB: endpoint(t('route.report.endB'), inp.b, terminalOf(cost, 'B', preset)),
     methodPreset: tpl('route.report.method.preset', { label: methodLabel }),
   };
   const dollars = session.dollars;
 
-  const lines: ReportLine[] = waterfallLines(cost, preset, { dollars }).map((l) => ({
+  const solved = solvedPresetOf(inp) ?? custom?.preset ?? preset;
+  const lines: ReportLine[] = waterfallLines(cost, solved, { dollars }).map((l) => ({
     ...l, text: l.group === 'subtotal' || l.group === 'total' ? money(l.value) : signed(l.value, money),
   }));
   const legend = (['base', 'multipliers', 'terminals', 'markups', 'contingency', 'other'] as WaterfallGroup[])
     .filter((g) => lines.some((l) => l.group === g)).map((group) => ({ group, label: t(`route.wf.legend.${group}`) }));
 
   const coords = result.path.coordinates as [number, number][];
-  const total = dollars === 'y2025' ? cost.total2025 : cost.totalNominal;
-  const straightMi = coords.length > 1 ? greatCircleM(coords[0], coords[coords.length - 1]) / 1609.344 : 0;
-  const kpis = [
-    { value: money(total), label: t('route.kpi.total', { dollars: dollars === 'y2025' ? t('route.kpi.dollars.y2025') : t('route.kpi.dollars.preset', { year: cost.dollarYear }) }) },
-    { value: t('route.kpi.miles', { mi: result.lengthMi.toFixed(1) }), label: straightMi > 0 ? t('route.kpi.straight', { x: (result.lengthMi / straightMi).toFixed(2) }) : '' },
-    { value: t('route.kpi.perMi', { amount: money(result.lengthMi ? total / result.lengthMi : 0) }), label: t('route.kpi.allIn') },
-  ];
+  const kpis = kpiTiles(result, dollars);
   const k = dollars === 'preset' && cost.total2025 ? cost.totalNominal / cost.total2025 : 1;
   const low = cost.band.low * k, high = cost.band.high * k, pt = cost.total2025 * k;
   const pct = (v: number) => `${v < pt ? '−' : '+'}${Math.round((Math.abs(v - pt) / (pt || 1)) * 100)}`;
@@ -236,7 +262,10 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
   const profile = result.profile;
   const edits: string[] = [];
   const n = countEdits(inp.patch);
-  if (n > 0) edits.push(...editLines(custom?.preset ?? preset, inp.patch));
+  const ci = effectiveInputs(custom?.stored ?? null, inp.patch);
+  const own = costInputLines(ci, cost.lineType);
+  if (n > 0) edits.push(...editLines(custom?.preset ?? preset, inp.patch, ci, cost.lineType));
+  else edits.push(...own);
 
   return {
     parts,
@@ -248,7 +277,7 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
     snapshot: { alt: t('route.report.snap.alt'), unavailable: t('route.report.snap.na') },
     cost: {
       heading: t('route.report.cost'), kpis,
-      range: { label: bandLabel(cost.band.label), pct: t('route.range.pct', { lo: pct(low), hi: pct(high) }), low: money(low), point: money(pt), high: money(high) },
+      range: { label: bandLabel(cost.band.label), pct: t('route.range.pct', { lo: pct(low), hi: pct(high) }), low: fmtMoneyHead(low), point: fmtMoneyHead(pt), high: fmtMoneyHead(high) },
       note: t('route.report.cost.range'),
     },
     endpoints: {
@@ -265,11 +294,12 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
     tribal: { shown: result.tribalMiles > 0, heading: t('route.tribal.heading', { mi: result.tribalMiles.toFixed(1) }), note: result.tribalNote ?? t('route.tribal.note') },
     method: {
       heading: t('route.report.method'), preset: fillTpl(parts.methodPreset),
-      editsSummary: n > 0 ? t(`route.report.method.edits.${n === 1 ? 'one' : 'other'}`, { n }) : null, edits, uploads: uploadLines(mergePatch(custom?.stored ?? null, inp.patch) ?? null),
+      editsSummary: n > 0 ? t(`route.report.method.edits.${n === 1 ? 'one' : 'other'}`, { n }) : own.length ? t('route.report.method.own') : null, edits, uploads: uploadLines(mergePatch(custom?.stored ?? null, inp.patch) ?? null),
       attribution: result.preset.attribution, caveat: result.preset.caveat,
       class5: t('route.report.method.class5'), grid: t('route.report.method.grid'),
-      sourcesHeading: t('route.report.sources'), sources: t('route.report.sources.list'),
+      sourcesHeading: t('route.report.sources'), sources: methodSources(solved, cost.lineType).join('; '),
     },
+    disclaimer: { heading: t('route.report.disclaimer'), paras: ['p1', 'p2', 'p3', 'p4'].map((k) => t(`route.notice.${k}`)) },
     caveats: { heading: t('route.report.caveats'), screening: t('route.report.caveat.screening'), credit: t('route.report.credit') },
   };
 }
@@ -277,7 +307,7 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
 /** The report's text segments in print order (the printed report's textContent is their concatenation,
  *  less the observations tables). */
 export function reportText(m: RouteReportModel): string[] {
-  const out: string[] = [m.title, m.subtitle, m.badge.label, m.snapshot.unavailable, m.cost.heading];
+  const out: string[] = [m.title, m.subtitle, m.badge.label, m.disclaimer.heading, ...m.disclaimer.paras, m.snapshot.unavailable, m.cost.heading];
   for (const k of m.cost.kpis) out.push(k.value, k.label);
   out.push(m.cost.range.label, ' ', m.cost.range.pct, m.cost.range.low, m.cost.range.point, m.cost.range.high, m.cost.note);
   out.push(m.endpoints.heading, m.endpoints.a, m.endpoints.b, m.endpoints.optimality);
@@ -302,8 +332,8 @@ export function reportText(m: RouteReportModel): string[] {
 }
 
 /** The cost.csv text: one waterfall line per row, the method's attribution as the footer. */
-export function costCsv(r: RouteResult, dollars: DollarYear): string {
-  const preset = routePreset(r.preset.id) ?? ROUTE_PRESETS[0];
+export function costCsv(r: RouteResult, dollars: DollarYear, inp?: RouteInputs | null): string {
+  const preset = (inp ? solvedPresetOf(inp) : null) ?? routePreset(r.preset.id) ?? ROUTE_PRESETS[0];
   const year = dollars === 'y2025' ? '2025' : String(r.cost.dollarYear);
   const rows = waterfallLines(r.cost, preset, { dollars }).map((l) => ({
     item: l.label, group: l.group, usd: Math.round(l.value), dollars: year, source: l.src ?? '',

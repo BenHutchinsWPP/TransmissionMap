@@ -76,7 +76,7 @@ import { MAX_INPUT_CHARS, MAX_INPUT_FEATURES } from '../sandbox/sandbox-host.js'
 import { t } from '../../src/i18n/index.js';
 import { CATALOGUE } from '../templates/catalogue.js';
 import { showTemplate } from '../templates/show-template.js';
-import { ROUTE_ENABLED, planRouteFromChat, type ChatRouteRequest } from '../ui/route-panel-open.js';
+import { planRouteFromChat, type ChatRouteRequest } from '../ui/route-panel-open.js';
 
 // ─── A JSON-schema subset: what the tool schemas below use, and no more ──────
 
@@ -548,8 +548,8 @@ function capAnalysis(o: api.Outcome<api.AnalysisResult>): api.Outcome<unknown> {
 const BY_NAME = new Map(TOOLS.map(t => [t.name, t]));
 export const TOOL_NAMES: readonly string[] = TOOLS.map(t => t.name);
 
-export function toolSchemas(routeEnabled = ROUTE_ENABLED) {
-  return TOOLS.filter(t => routeEnabled || t.name !== 'planRoute').map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters() } }));
+export function toolSchemas() {
+  return TOOLS.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters() } }));
 }
 
 export const COPY_CONFIRM_ABOVE = 50;
@@ -647,16 +647,16 @@ export function refusalHint(reason: string): string {
 }
 
 /** Run tool `name` with the model's arguments (a JSON string or an object). */
-export async function dispatch(name: string, rawArgs: unknown, opts: DispatchOpts = {}, routeEnabled = ROUTE_ENABLED): Promise<api.Outcome<unknown>> {
-  const r = await run(name, rawArgs, opts, routeEnabled);
+export async function dispatch(name: string, rawArgs: unknown, opts: DispatchOpts = {}): Promise<api.Outcome<unknown>> {
+  const r = await run(name, rawArgs, opts);
   if (r.ok) return r;
   const hint = refusalHint(r.reason);
   return hint ? { ...r, reason: `${r.reason}; ${hint}` } : r;
 }
 
-async function run(name: string, rawArgs: unknown, opts: DispatchOpts, routeEnabled: boolean): Promise<api.Outcome<unknown>> {
+async function run(name: string, rawArgs: unknown, opts: DispatchOpts): Promise<api.Outcome<unknown>> {
   const tool = BY_NAME.get(name);
-  if (!tool || (name === 'planRoute' && !routeEnabled)) return { ok: false, reason: `unknown tool "${name}"` };
+  if (!tool) return { ok: false, reason: `unknown tool "${name}"` };
   let args: unknown = rawArgs ?? {};
   if (typeof args === 'string') {
     try { args = args.trim() ? JSON.parse(args) : {}; } catch { return { ok: false, reason: 'arguments are not valid JSON' }; }

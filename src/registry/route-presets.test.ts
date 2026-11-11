@@ -38,7 +38,6 @@ describe('route presets', () => {
     if (p.contingency) expect(has(p.contingency.src)).toBe(true);
     if (p.length_factor) expect(has(p.length_factor.src)).toBe(true);
     if (p.row_land) for (const s of [p.row_land.src, p.row_land.width_src, p.row_land.developed_src]) expect(has(s)).toBe(true);
-    if (p.escalation.cross_check !== undefined) expect(has(p.escalation.cross_check)).toBe(true);
   });
 
   it.each(ROUTE_PRESETS.map((p) => [p.id, p] as const))('%s: no src anywhere is empty', (_id, p) => {
@@ -106,7 +105,7 @@ describe('route presets', () => {
     expect(rows.map((r) => [r.band, r.route_w, r.cost_x, r.group])).toEqual([
       ['nonres', 1, 1, undefined], ['bldgunk', 1, 1, undefined],
     ]);
-    expect(tm.rows.slice(-6, -4)).toEqual(rows);   // the v8 aviation and nfhl rows follow
+    expect(tm.rows.slice(-6, -4)).toEqual(rows);   // the aviation and nfhl rows follow
     expect(tm.rows.filter((r) => r.band === 'bldg').map((r) => [r.route_w, r.group])).toEqual([
       [1.3, undefined], [1.6, undefined], [2, undefined],
     ]);
@@ -201,20 +200,20 @@ describe('route presets', () => {
   // `ref` is the Method grid's display label, so it stays out of the pin.
   // The v8 `aviation` / `nfhl` rows (all 1/1 in pnas-wu2023) are checked apart, so the pin still proves every PNAS weight is unchanged.
   const V8 = ['aviation', 'nfhl'];
-  const sha = (id: string) => createHash('sha256').update(JSON.stringify(routePreset(id), (k, v) => (k === 'ref' ? undefined : k === 'rows' ? (v as { band: string }[]).filter((r) => !V8.includes(r.band)) : v))).digest('hex');
+  const sha = (id: string) => createHash('sha256').update(JSON.stringify(routePreset(id), (k, v) => (k === 'ref' || k === 'markup_in' || k === 'study_terminals' ? undefined : k === 'rows' ? (v as { band: string }[]).filter((r) => !V8.includes(r.band)) : v))).digest('hex');
   it('pnas-wu2023 carries only neutral 1/1 aviation and nfhl rows', () => {
     const v8 = routePreset('pnas-wu2023')!.rows.filter((r) => V8.includes(r.band));
     expect(v8.map((r) => [r.band, r.route_w, r.cost_x])).toEqual([['aviation', 1, 1], ['nfhl', 1, 1]]);
   });
   it('study presets are unchanged (change detector; assets/route/study-presets.test.ts holds the hand calculation)', () => {
-    const full = (id: string) => createHash('sha256').update(JSON.stringify(routePreset(id), (k, v) => (k === 'ref' ? undefined : v))).digest('hex');
-    expect(full('nrel-revx')).toBe('62c2b8499ee3f8f0a1a5146d083a2c1e182fef0f348a61b7581ef6697c110b01');
-    expect(full('bv-2014')).toBe('c9198249cf5fdc66e50be31090682e107d94db44332f5de5846bef8657dc3dc7');
-    expect(full('westtec-es')).toBe('2a2a9d05da727f68e65fe59fe63afed70a805f6d7e71e7a52ed6e411325cb008');
+    const full = (id: string) => createHash('sha256').update(JSON.stringify(routePreset(id), (k, v) => (k === 'ref' || k === 'markup_in' || k === 'study_terminals' ? undefined : v))).digest('hex');
+    expect(full('nrel-revx')).toBe('9ecf5af254669854d4ca9a0a6a953e318ffbe7dc563a4b1080fc56e93f868890');
+    expect(full('bv-2014')).toBe('9f55f9075d288ce25b05fb9e43939e382da9d9635ddfd7d45a1b18bb446df03f');
+    expect(full('westtec-es')).toBe('2ceac757db91057673e4dd85480a72f271d33f493ab83debc6b366a4016db7b4');
   });
   it('pnas-wu2023 is unchanged; straight-line-quick carries the shared line types', () => {
-    expect(sha('pnas-wu2023')).toBe('ec19b86721a46d776fe26ff49b21e501374f9230585dba71add52936bf97a757');
-    expect(sha('straight-line-quick')).toBe('06dcd748e027234901511152560f30c1a987e63427ee3239fa99d31026f6f311');
+    expect(sha('pnas-wu2023')).toBe('2141f898db900ca31b622c483365a3428bc4037d6180486e400972742cba0353');
+    expect(sha('straight-line-quick')).toBe('9cfb144fefa4ce0454560a99bb64fcea233eb24b81037e806ffb5dd42e8d9294');
   });
 });
 
@@ -273,5 +272,83 @@ describe('moving the v8 rows to the end changes no route', () => {
   it.each(DIFF)('%s %s: compiled LUTs and factors are equal for the HEAD order', (id, lt) => {
     const p = routePreset(id)!;
     expect(strip(compile(p, lt), p)).toEqual(strip(compile(headOrder(p), lt), headOrder(p)));
+  });
+});
+
+describe('tm-default line positions (B&V 2014 T4-6 per position × 1.5 breaker-and-a-half, double circuit = 2 positions, single circuit = 1; × 1.175 AFUDC + overhead)', () => {
+  // Typed from the sources and the plan, never read back from the preset.
+  const MISO_POS = 4_478_709;
+  it.each([
+    ['ac500', 10_524_963], ['ac345', 7_893_723], ['ac230', 5_262_483],
+    ['ac500s', 5_262_482], ['ac345s', 3_946_861], ['ac230s', 2_631_242],
+    ['ac161', 4_646_773], ['ac138', 4_325_761], ['ac115', 4_010_012], ['ac69', 3_667_951],
+  ] as const)('%s position $%d (2014$)', (lt, usd) => {
+    const pos = routePreset('tm-default')!.line_types[lt].terminals.position!;
+    expect(pos.usd_each).toBe(usd);
+    expect(pos.year).toBe(2014);
+    expect(pos.arithmetic).toMatch(/× 1\.175/);
+    expect(pos.src).toBeTruthy();
+  });
+  it('the unmarked figures: double circuit 3 × T4-6 per position; single circuit 1.5 × it, rounded; 69-161 kV the 230 kV figure × the MISO ratio of its station; each × 1.175', () => {
+    expect([3 * 1_492_903, 3 * 2_239_354, 3 * 2_985_805]).toEqual([4_478_709, 6_718_062, 8_957_415]);
+    expect([1.5 * 1_492_903, 1.5 * 2_239_354, 1.5 * 2_985_805].map(Math.round)).toEqual([2_239_355, 3_359_031, 4_478_708]);
+    expect([0.883, 0.822, 0.762, 0.697].map((x) => Math.round(MISO_POS * x))).toEqual([3_954_700, 3_681_499, 3_412_776, 3_121_660]);
+    expect([8_957_415, 6_718_062, 4_478_709, 4_478_708, 3_359_031, 2_239_355, 3_954_700, 3_681_499, 3_412_776, 3_121_660].map((x) => Math.round(x * 1.175)))
+      .toEqual([10_524_963, 7_893_723, 5_262_483, 5_262_482, 3_946_861, 2_631_242, 4_646_773, 4_325_761, 4_010_012, 3_667_951]);
+  });
+  it('HVDC has no position figure; the study presets keep their own terminals', () => {
+    expect(routePreset('tm-default')!.line_types.dc500.terminals.position).toBeUndefined();
+    for (const id of ['pnas-wu2023', 'nrel-revx', 'bv-2014', 'westtec-es'])
+      for (const l of Object.values(routePreset(id)!.line_types)) expect(l.terminals.position, id).toBeUndefined();
+  });
+  it('tm-default and straight-line-quick: the 500 kV station is the B&V T4-6 figure × 1.175, 2014$', () => {
+    for (const id of ['tm-default', 'straight-line-quick']) {
+      const t = routePreset(id)!.line_types.ac500.terminals;
+      expect([t.usd_each, t.year, t.min, t.every_mi, t.after_mi]).toEqual([Math.round((2_559_250 + 6 * 1.5 * 2_985_805) * 1.175), 2014, 2, 400, 400]);
+      expect(t.usd_each).toBe(34_582_007);
+    }
+  });
+  it('every B&V station figure of tm-default is marked × 1.175 (230/345/500 kV, 69-161 kV, HVDC); westtec-es keeps its unmarked ones', () => {
+    const lts = routePreset('tm-default')!.line_types;
+    const unmarked = { ac500: 29_431_495, ac345: 22_286_886, ac230: 15_142_377, ac161: 13_376_000, ac138: 12_447_000, ac115: 11_541_000, ac69: 10_551_000, dc500: 460_708_500 };
+    for (const [lt, usd] of Object.entries(unmarked)) {
+      expect(lts[lt].terminals.usd_each, lt).toBe(Math.round(usd * 1.175));
+      expect(lts[lt].terminals.arithmetic, lt).toMatch(/× 1\.175/);
+    }
+    expect(routePreset('westtec-es')!.line_types.ac345.terminals.usd_each).toBe(22_286_886);
+  });
+});
+
+describe('tm-default single-circuit line types (B&V 2014 Tables 2-1, 2-3, 2-6, 4-6)', () => {
+  const tm = routePreset('tm-default')!;
+  const twins = { ac500s: 'ac500', ac345s: 'ac345', ac230s: 'ac230' } as const;
+  it('follow their double-circuit twin, ac500 stays the first key', () => {
+    expect(Object.keys(tm.line_types)[0]).toBe('ac500');
+    const keys = Object.keys(tm.line_types);
+    for (const [s, d] of Object.entries(twins)) expect(keys.indexOf(s), s).toBe(keys.indexOf(d) + 1);
+  });
+  it('base $/mi from Table 2-1 single circuit (2014$), the station of the twin, ROW widths from Table 2-6', () => {
+    expect([tm.line_types.ac500s, tm.line_types.ac345s, tm.line_types.ac230s].map((l) => [l.base_per_mi.usd, l.base_per_mi.year]))
+      .toEqual([[1_919_450, 2014], [1_343_800, 2014], [959_700, 2014]]);
+    for (const [s, d] of Object.entries(twins)) {
+      const a = tm.line_types[s].terminals, b = tm.line_types[d].terminals;
+      expect([a.usd_each, a.year, a.min, a.every_mi, a.after_mi]).toEqual([b.usd_each, b.year, b.min, b.every_mi, b.after_mi]);
+      expect(tm.line_types[s].kv.value).toBe(tm.line_types[d].kv.value);
+    }
+    const w = tm.row_land!.width_ft;
+    expect([w.ac500s, w.ac345s, w.ac230s]).toEqual([200, 175, 125]);
+  });
+  it('every line type of tm-default sits in the same line_types filters as its twin', () => {
+    for (const [s, d] of Object.entries(twins)) {
+      const key = (r: { line_types?: string[] }, lt: string) => (!r.line_types ? 'all' : r.line_types.includes(lt) ? 'in' : 'out');
+      tm.rows.forEach((r, i) => expect(key(r, s), `${s} row ${i} ${r.note}`).toBe(key(r, d)));
+    }
+  });
+  it('the 230 kV populated-cell row costs 1.00 (B&V Table 2-3 tubular steel against the Table 2-1 base)', () => {
+    const row = tm.rows.find((r) => r.band === 'flags' && r.note === 'pop > 100/mi² → tubular steel' && r.line_types?.includes('ac230'))!;
+    expect(row.cost_x).toBe(1);
+    expect(row.line_types).toEqual(['ac230', 'ac230s', 'ac161', 'ac138', 'ac115', 'ac69']);
+    expect(row.src).toContain('Table 2-3');
+    expect(row.src).toContain('Table 2-1');
   });
 });

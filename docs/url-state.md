@@ -72,7 +72,7 @@ string and the filter would never save or restore, with no error raised.
 | `oc` | OGF planned-lines color-by (`r`=region, `s`=status) | codec, `OC_*` maps |
 | `wc` | WestTEC 10 Yr color-by (`s`=scenario, `d`=dataset) | codec, `WC_*` maps |
 | `nr` | FEMA National Risk Index hazard (the NRI field prefix, lowercased: `wfir`, `hrcn`, …) | codec, `NRI_HAZARDS` in `registry/conditions.ts` |
-| `rc` | Routing constraints concern (a `CONCERNS` id: `floodplain`, `land-manager`, …; dev server only, like the layer; an id keeps its cells and is never renamed) | codec, `CONCERNS` in `src/colors/route-constraints.ts` |
+| `rc` | Routing constraints concern (a `CONCERNS` id: `floodplain`, `land-manager`, …; an id keeps its cells and is never renamed) | codec, `CONCERNS` in `src/colors/route-constraints.ts` |
 | `wv` | Weather Forecast variable dropdown (`t`=Temperature, `tw`=Temp & Wind, `w`=Wind, `ws`=Windstream, `g`=Gust, `h`=Humidity, `d`=Dew Point, `c`=Cloud, `p`=Pressure) | codec, `WEATHER_VARIABLES` in `registry/conditions.ts` |
 | `so` | Fire smoke opacity (integer percent, `0`–`100`) | codec |
 | `bm` | basemap | codec, `BM_*_CODE` maps |

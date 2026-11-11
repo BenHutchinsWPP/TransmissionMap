@@ -37,6 +37,21 @@ PD_SRC = dict(G.PD_BANDS)
 OSM_SRC = {b: ("osmflags" if n == "flags" else n) for b, n in G.OSM_BANDS.items()}
 
 
+MIRROR_ROOT = Path(os.environ.get("HIFLD_MIRROR") or ROOT / "data/raw/hifld-mirror").parent
+
+
+def relative_source_paths(node, mirror_root=MIRROR_ROOT):
+    """A copy of node with every absolute `path` under mirror_root made relative to it
+    (seerai-hifld-.../x.parquet); repo-relative paths stay as they are."""
+    if isinstance(node, dict):
+        return {k: (str(Path(v).relative_to(mirror_root))
+                    if k == "path" and isinstance(v, str) and Path(v).is_absolute() and Path(v).is_relative_to(mirror_root)
+                    else relative_source_paths(v, mirror_root)) for k, v in node.items()}
+    if isinstance(node, list):
+        return [relative_source_paths(v, mirror_root) for v in node]
+    return node
+
+
 def raster_runtime():
     """Keep metadata and directory-promotion checks available to stdlib-only tests."""
     global np, rasterio, MemoryFile, Affine
@@ -361,7 +376,7 @@ def assemble(metadata):
 
     # last, so a complete grid.json implies complete tiles and fixtures
     tmp = OUT / "grid.json.tmp"
-    tmp.write_text(json.dumps(G.grid_json(extra), indent=1))
+    tmp.write_text(json.dumps(relative_source_paths(G.grid_json(extra)), indent=1))
     tmp.replace(OUT / "grid.json")
     log(f"grid.json: {len(present)} super-tiles present, {len(skipped)} skipped {skipped}")
 

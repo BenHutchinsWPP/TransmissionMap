@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "Saklaw ng pagmamasid sa mga gusali",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). Ang mga lugar ay binibilog pataas sa buong porsyento. Ang blangkong cell ay hindi nangangahulugang bakanteng lupa.",
   'route.concern.noteBuildingCoverage': "Lugar na prinoseso para sa FEMA/ORNL USA Structures (CC BY 4.0); sa labas nito, hindi alam ang mga footprint.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "Mga ibabaw ng paliparan (FAA Part 77)",
   "route.concern.aviation.primary": "Pangunahing ibabaw",
   "route.concern.aviation.under-30": "Pinakamababang ibabaw ng Part 77 na wala pang 30 m sa ibabaw ng lupa",

@@ -14,8 +14,8 @@ const PATH_LITERAL = /"(data\/layers\/[^"]+)"/g;
 // DATA entries that are deliberately not data/layers/ paths: the moratorium
 // layer is served from its own branch (MORATORIUM_ORIGIN), which
 // validate_build.py and publish_data.sh leave alone; the Routing constraints
-// rasters are dev-only files beside the route cube (data/route/constraints/).
-const NOT_SCRAPED = new Set<keyof typeof DATA>(['dc_moratoriums', 'route_constraints', 'line_index']);
+// rasters and the route cube are served from data/route/ (versioned by ROUTE_ID on the data host).
+const NOT_SCRAPED = new Set<keyof typeof DATA>(['dc_moratoriums', 'route_cube', 'route_constraints', 'line_index']);
 
 describe('constants.ts data paths', () => {
   const source = readFileSync(new URL('./constants.ts', import.meta.url), 'utf8');
@@ -38,12 +38,29 @@ describe('constants.ts data paths', () => {
     for (const key of NOT_SCRAPED) expect(DATA[key]).not.toMatch(/data\/layers\//);
   });
 
-  it('serves the Routing constraints rasters relative, beside the route cube', () => {
+  it('serves the route cube and Routing constraints relative under Vitest', () => {
+    expect(DATA.route_cube).toBe('data/route/250m/');
     expect(DATA.route_constraints).toBe('data/route/constraints/what-constrains.pmtiles');
   });
 
   it('serves the line geometry index relative, from data/analysis/', () => {
     expect(DATA.line_index).toBe('data/analysis/index.json');
+  });
+});
+
+// On the data host the route data sits under the immutable data/route/<ROUTE_ID>/ prefix.
+describe('route data in prod', () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+
+  it('names the data host and the ROUTE_ID prefix', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    const m = await import('./constants.js');
+    const base = `https://data.wpptx.org/data/route/${m.ROUTE_ID}/`;
+    expect(m.ROUTE_ID).toMatch(/^[0-9a-f]{12}$/);
+    expect(m.DATA.route_cube).toBe(base + '250m/');
+    expect(m.DATA.route_constraints).toBe(base + 'constraints/what-constrains.pmtiles');
   });
 });
 

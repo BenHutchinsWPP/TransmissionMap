@@ -149,3 +149,28 @@ describe('uploaded-layer rows', () => {
     expect(f.ok && (f.result.patch as { add_rows: unknown[] }).add_rows).toEqual([row]);
   });
 });
+
+describe('cost_inputs in a saved method', () => {
+  const tm = ROUTE_PRESETS.find((p) => p.id === 'tm-default')!;
+  it('a stored patch from before cost_inputs reads ok', () => {
+    const item = { id: 'a', name: 'Old', base: tm.id, patch: { contingency: 0.2, length_factor: false }, savedAt: 't' };
+    const [p] = createCustomPresetStore(mem(stored([item]))).list();
+    expect(p.status).toBe('ok');
+    expect(p.preset?.user_costs).toBeUndefined();
+  });
+  it('re-validates cost_inputs on read: a bad figure needs review, a good one comes back as user_costs', () => {
+    const mk = (cost_inputs: unknown) => ({ id: 'a', name: 'Mine', base: tm.id, patch: { cost_inputs }, savedAt: 't' });
+    const good = { basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 5e6 } } };
+    const [g] = createCustomPresetStore(mem(stored([mk(good)]))).list();
+    expect(g.status).toBe('ok');
+    expect(g.preset?.user_costs).toEqual({ basis: 'all-in', year: 2020, items: ['line'], line_types: ['ac230'] });
+    const [b] = createCustomPresetStore(mem(stored([mk({ ...good, year: 2999 })]))).list();
+    expect(b.status).toBe('needs-review');
+    expect(createCustomPresetStore(mem()).save('x', tm.id, { cost_inputs: { basis: 'all-in', year: 2020 } }).ok).toBe(false);
+  });
+  it('a method file carries cost_inputs through', () => {
+    const patch = { cost_inputs: { basis: 'bare', year: 2020, line_types: { ac230: { usd_per_mi: 2e6 } } } };
+    const read = readMethodFile(buildMethodFile('Mine', tm.id, patch));
+    expect(read.ok && read.result.patch).toEqual(patch);
+  });
+});

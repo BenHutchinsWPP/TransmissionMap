@@ -15,11 +15,15 @@ vi.mock('../../src/i18n/index.js', async () => {
   return { t: (k: string, p?: Record<string, string | number>) => (en[k] ?? k).replace(/\{(\w+)\}/g, (m, n) => (p && n in p ? String(p[n]) : m)) };
 });
 
-import { buildReportModel, fillTpl, fmtMoney, reportText } from './route-report-model.js';
+import { fmtMoneyHead } from './route-tabs/widgets.js';
+import { buildReportModel, costCsv, fillTpl, fmtMoney, reportText } from './route-report-model.js';
 import { openRouteReport } from './route-report.js';
-import { FIXTURE_SESSION, fakeTabContext } from './route-tabs/fixture.js';
+import { FIXTURE_RESULT, FIXTURE_SESSION, fakeTabContext, fixtureCost } from './route-tabs/fixture.js';
 import { state } from '../state.js';
 import { CUSTOM_PRESETS_KEY } from '../route/custom-presets.js';
+import { validatePresetPatch } from '../route/preset-patch.js';
+import { routePreset } from '../../src/registry/route-presets.js';
+import { methodSources } from '../../src/registry/route-band-data.js';
 
 const money = (v: number) => `$${Math.round(v)}`;
 
@@ -44,12 +48,15 @@ describe('buildReportModel', () => {
     expect(m.subtitle).toContain('1/2/2026');
     expect(m.lengthMi).toBe(250.1);
     expect(m.path).toHaveLength(6);
-    expect(m.cost.kpis[0].value).toBe(money(r.cost.total2025));
-    expect(m.cost.kpis[1].value).toBe('250.1 mi');
-    expect(m.cost.kpis[2].value).toContain(money(r.cost.total2025 / 250.1));
-    expect(m.cost.range.low).toBe(money(r.cost.band.low));
-    expect(m.cost.range.high).toBe(money(r.cost.band.high));
-    expect(m.cost.range.point).toBe(money(r.cost.total2025));
+    expect(m.cost.kpis).toHaveLength(5);
+    expect(m.cost.kpis[0].value).toBe(`${fmtMoneyHead(r.cost.band.low)} \u2013 ${fmtMoneyHead(r.cost.band.high)}`);
+    expect(m.cost.kpis[1].value).toBe(fmtMoneyHead(r.cost.total2025));
+    expect(m.cost.kpis[2].value).toBe('250.1 mi');
+    expect(m.cost.kpis[3].value).toContain(fmtMoneyHead(r.cost.total2025 / 250.1));
+    expect(m.cost.kpis[4].label).toBe('line only, without terminals');
+    expect(m.cost.range.low).toBe(fmtMoneyHead(r.cost.band.low));
+    expect(m.cost.range.high).toBe(fmtMoneyHead(r.cost.band.high));
+    expect(m.cost.range.point).toBe(fmtMoneyHead(r.cost.total2025));
     // Waterfall: base first, total last, lines sum to the total, signed text for steps.
     const w = m.waterfall.lines;
     expect(w[0].group).toBe('base');
@@ -77,6 +84,20 @@ describe('buildReportModel', () => {
     expect(m.method.editsSummary).toBeNull();
     expect(m.method.attribution).toBe(r.preset.attribution);
     expect(m.method.class5).toContain('AACE International Class 5');
+  });
+
+  it('lists the sources of the method as solved: a session edit that switches exemptions off drops their data', () => {
+    const s = FIXTURE_SESSION();
+    const before = buildReportModel(s, money, '1/2/2026')!.method.sources;
+    const preset = routePreset(s.result!.preset.id)!;
+    const rows = preset.rows.flatMap((r, row) => (r.except?.length ? [{ row, band: r.band, note: r.note, except: r.except.map(() => false) }] : []));
+    expect(rows.length).toBeGreaterThan(0);
+    s.resultInputs = { ...s.resultInputs!, patch: { rows } };
+    const after = buildReportModel(s, money, '1/2/2026')!.method.sources;
+    const solved = validatePresetPatch(preset, { rows });
+    if (!solved.ok) throw new Error(solved.reason);
+    expect(after).toBe(methodSources(solved.result, s.result!.cost.lineType).join('; '));
+    expect(after).not.toBe(before);
   });
 
   it('lists each uploaded layer of the patch with its weights, label kept as typed', () => {
@@ -142,7 +163,7 @@ describe('buildReportModel', () => {
     const m = buildReportModel(s, money)!;
     expect(m.crossings!.rows[6].miles).toBe('82.0');
     expect(m.strip!.endLabel).toBe('mi 100');
-    expect(m.cost.kpis[1].value).toBe('100.0 mi');
+    expect(m.cost.kpis[2].value).toBe('100.0 mi');
   });
 
   it('no profile: no strip, crossings or observations', () => {
@@ -152,12 +173,95 @@ describe('buildReportModel', () => {
     expect([m.strip, m.crossings, m.observations]).toEqual([null, null, null]);
   });
 
+  it('each endpoint line names its terminal kind from the result', () => {
+    const s = FIXTURE_SESSION();
+    const m = buildReportModel(s, money, '1/2/2026')!;
+    expect(m.endpoints.a).toMatch(/\(-119\.3000, 45\.9300\), terminal: new station$/);
+    expect(m.endpoints.b).toMatch(/, terminal: new station$/);
+    s.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'none']) };
+    const p = buildReportModel(s, money, '1/2/2026')!;
+    expect(p.endpoints.a).toMatch(/, terminal: line position at an existing station$/);
+    expect(p.endpoints.b).toMatch(/, terminal: none$/);
+    // a result from before kinds says nothing
+    const old = fixtureCost();
+    delete old.terminalItems;
+    s.result = { ...FIXTURE_RESULT, cost: old };
+    expect(buildReportModel(s, money, '1/2/2026')!.endpoints.a).toMatch(/\)$/);
+  });
+
+  it('a study method\'s new end reads as the method prices it', () => {
+    const s = FIXTURE_SESSION();
+    s.result = { ...FIXTURE_RESULT, preset: { ...FIXTURE_RESULT.preset, id: 'nrel-revx' }, cost: { ...fixtureCost(), preset: 'nrel-revx' } };
+    expect(buildReportModel(s, money, '1/2/2026')!.endpoints.a).toMatch(/, terminal: terminal as the method prices it$/);
+  });
+
+  it('the method section lists the figures the visitor entered, with year and basis, and the ends set', () => {
+    const s = FIXTURE_SESSION();
+    s.resultInputs = { ...s.resultInputs!, patch: { cost_inputs: { basis: 'all-in', year: 2024, line_types: { ac500: { usd_per_mi: 4_500_000, station_usd: 30_000_000, position_usd: 9_000_000 }, ac345: { usd_per_mi: 1e6 } }, ends: ['none', 'position'] } } };
+    const m = buildReportModel(s, fmtMoney, '1/2/2026')!;
+    expect(m.method.editsSummary).toBe('6 edits for this route:');   // 4 figures (3 for ac500, 1 for ac345) + 2 ends
+    expect(m.method.edits).toEqual([
+      'Line cost entered: $4.5\u00a0M per mile, 2024 dollars (all-in cost per mile)',
+      'New station entered: $30.0\u00a0M, 2024 dollars',
+      'Line position entered: $9.0\u00a0M, 2024 dollars',
+      'Terminals set: end A none, end B line position at an existing station',
+    ]);
+    // the report text carries them in print order, after the summary
+    const text = reportText(m);
+    expect(text.indexOf(m.method.edits[0])).toBeGreaterThan(text.indexOf(m.method.editsSummary!));
+  });
+
+  it('a saved method\'s figures are listed without any session edit', () => {
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify({ v: 1, items: [{ id: 'own', name: 'Own', base: 'tm-default', savedAt: '2026-11-04',
+      patch: { cost_inputs: { basis: 'bare', year: 2023, line_types: { ac500: { usd_per_mi: 3_300_000 } } } } }] }));
+    const s = FIXTURE_SESSION();
+    s.resultInputs = { ...s.resultInputs!, presetId: 'custom:own', patch: null };
+    const m = buildReportModel(s, fmtMoney, '1/2/2026')!;
+    expect(m.method.editsSummary).toBe('Your cost entries:');
+    expect(m.method.edits).toEqual(['Line cost entered: $3.3\u00a0M per mile, 2023 dollars (base cost per mile, multipliers still apply)']);
+    localStorage.clear();
+  });
+
+  it('the DOM report prints the entered-figure lines and the terminal kinds as the model has them', () => {
+    const s = FIXTURE_SESSION();
+    s.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'new']) };
+    s.resultInputs = { ...s.resultInputs!, patch: { cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { usd_per_mi: 3_000_000 } } } } };
+    const ctx = fakeTabContext(s);
+    openRouteReport(ctx);
+    const m = buildReportModel(s, (v) => ctx.money(v, v))!;
+    expect(document.getElementById('route-report')!.textContent).toBe(reportText(m).join(''));
+    expect(document.getElementById('route-report')!.textContent).toContain('Line cost entered');
+  });
+
+  it('cost.csv has one row per terminal kind, its sums match the total, and cites an entered figure as entered', () => {
+    const cost = { ...fixtureCost(1, undefined, ['position', 'new']), userCosts: { basis: 'bare' as const, year: 2024, items: ['line' as const], line_types: ['ac500'] } };
+    const r = { ...FIXTURE_RESULT, cost };
+    const inputs = { ...FIXTURE_SESSION().inputs, patch: { cost_inputs: { basis: 'bare' as const, year: 2024, line_types: { ac500: { usd_per_mi: 3e6 } } } } };
+    const csv = costCsv(r, 'y2025', inputs);
+    const lines = csv.split('\r\n').filter(Boolean);
+    expect(lines.find((l) => l.startsWith('Line positions (1)'))).toBeDefined();
+    expect(lines.find((l) => l.startsWith('Terminals (1 stations)'))).toBeDefined();
+    expect(lines.find((l) => l.startsWith('Base'))).toContain('entered by you (2024 dollars, base cost per mile, multipliers still apply)');
+    const usd = lines.slice(1).map((l) => l.split(',')).filter((c) => c[1] !== 'subtotal' && c[1] !== 'total' && /^-?\d+$/.test(c[2] ?? '')).reduce((a, c) => a + Number(c[2]), 0);
+    expect(Math.abs(usd - Math.round(cost.total2025))).toBeLessThanOrEqual(12);
+  });
+
   it('the printed report text equals the model text in order', () => {
     const s = FIXTURE_SESSION();
     const ctx = fakeTabContext(s);
     openRouteReport(ctx);
     const m = buildReportModel(s, (v) => ctx.money(v, v))!;
     expect(document.getElementById('route-report')!.textContent).toBe(reportText(m).join(''));
+  });
+
+  it('every report carries the route usage notice as its disclaimer, under the title', () => {
+    const m = buildReportModel(FIXTURE_SESSION(), money)!;
+    expect(m.disclaimer.heading).toBe('Disclaimer');
+    expect(m.disclaimer.paras).toHaveLength(4);
+    expect(m.disclaimer.paras[0]).toMatch(/^This tool is for early education and rough brainstorming\./);
+    expect(m.disclaimer.paras[1]).toContain('get off their grass');
+    const text = reportText(m);
+    expect(text.indexOf(m.disclaimer.paras[0])).toBeLessThan(text.indexOf(m.cost.heading));
   });
 
   it('a model missing a waterfall line no longer equals the printed text', () => {

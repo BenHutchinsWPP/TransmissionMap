@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "건물 관측 범위",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures(CC BY 4.0). 면적은 정수 퍼센트로 올림됩니다. 빈 셀이 빈 땅을 뜻하지는 않습니다.",
   'route.concern.noteBuildingCoverage': "FEMA/ORNL USA Structures(CC BY 4.0)가 처리된 영역이며, 그 밖의 건물 외곽선은 알 수 없습니다.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "공항 표면 (FAA Part 77)",
   "route.concern.aviation.primary": "1차 표면",
   "route.concern.aviation.under-30": "Part 77 가장 낮은 면이 지상 30 m 미만",

@@ -14,7 +14,7 @@ vi.mock('../../../src/i18n/index.js', async () => {
 });
 
 import tab from './cost.js';
-import { FIXTURE_SESSION, fakeTabContext } from './fixture.js';
+import { FIXTURE_RESULT, FIXTURE_SESSION, fakeTabContext, fixtureCost } from './fixture.js';
 import { routePreset } from '../../../src/registry/route-presets.js';
 
 function render(mut?: (s: ReturnType<typeof FIXTURE_SESSION>) => void) {
@@ -53,6 +53,36 @@ describe('Cost tab', () => {
     expect(total.children[3].textContent).toBe((c.total2025 / 1e6).toFixed(1));
   });
 
+  it('terminals are one row per kind with count × each, and the rows still sum to both totals', () => {
+    const { el, s } = render((x) => { x.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'new']) }; });
+    expect(el.querySelector('tr[data-item="terminals"]')!.children[1].textContent).toBe('1 × $34.6 M');
+    expect(el.querySelector('tr[data-item="positions"]')!.children[1].textContent).toBe('1 × $10.5 M');
+    expect(el.querySelector('tr[data-item="positions"]')!.children[0].textContent).toBe('Line positions');
+    const items = [...el.querySelectorAll<HTMLElement>('tr[data-item]')].filter((r) => r.dataset.item !== 'total');
+    const c = s.result!.cost;
+    expect(Math.abs(items.reduce((a, r) => a + Number(r.dataset.nominal), 0) - c.totalNominal)).toBeLessThan(0.05e6);
+    expect(Math.abs(items.reduce((a, r) => a + Number(r.dataset.usd2025), 0) - c.total2025)).toBeLessThan(0.05e6);
+  });
+
+  it('two line positions show no station row; no terminal at all shows neither', () => {
+    const two = render((x) => { x.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'position']) }; }).el;
+    expect(two.querySelector('tr[data-item="terminals"]')).toBeNull();
+    expect(two.querySelector('tr[data-item="positions"]')!.children[1].textContent).toBe('2 × $10.5 M');
+    const none = render((x) => { x.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['none', 'none']) }; }).el;
+    expect(none.querySelector('tr[data-item="terminals"], tr[data-item="positions"]')).toBeNull();
+  });
+
+  it('an all-in estimate shows no markup rows and cites an entered figure as entered', () => {
+    const cost = { ...fixtureCost(), markupsUsd: 0, userCosts: { basis: 'all-in' as const, year: 2024, items: ['line' as const], line_types: ['ac500'] } };
+    const s = FIXTURE_SESSION();
+    s.result = { ...FIXTURE_RESULT, cost };
+    s.resultInputs = { ...s.inputs, patch: { cost_inputs: { basis: 'all-in', year: 2024, line_types: { ac500: { usd_per_mi: 3e6 } } } } };
+    const el = document.createElement('div');
+    tab.render(el, fakeTabContext(s));
+    expect(el.querySelector('tr[data-item^="markup"]')).toBeNull();
+    expect(el.querySelector('tr[data-item="base"]')!.lastElementChild!.textContent).toContain('entered by you (2024 dollars, all-in cost per mile)');
+  });
+
   it('the toggle sets dollars and re-renders', () => {
     const { el, ctx, s } = render();
     const group = el.querySelector('[role="radiogroup"]')!;
@@ -60,6 +90,22 @@ describe('Cost tab', () => {
     group.querySelector<HTMLButtonElement>('[data-dollars="preset"]')!.click();
     expect(s.dollars).toBe('preset');
     expect(ctx.calls).toContain('rerender()');
+  });
+
+  it('method-year dollars stay hidden until the checkbox is ticked', () => {
+    const { el, ctx } = render();
+    const box = el.querySelector<HTMLInputElement>('.rc-method input')!;
+    expect(box.checked).toBe(false);
+    expect(el.querySelector('.rc-method')!.textContent).toBe('Show method-year dollars and the mitigation range');
+    const total = () => el.querySelector<HTMLElement>('tr[data-item="total"]')!.children[2] as HTMLElement;
+    expect(total().hidden).toBe(true);
+    expect(el.querySelector<HTMLElement>('tr[data-item="base"]')!.dataset.nominal).toBeDefined();
+    box.checked = true;
+    box.dispatchEvent(new Event('change'));
+    expect(ctx.calls).toContain('rerender()');
+    tab.render(el, ctx);
+    expect(el.querySelector<HTMLInputElement>('.rc-method input')!.checked).toBe(true);
+    expect(total().hidden).toBe(false);
   });
 
   it('renders sources as text, never markup', () => {

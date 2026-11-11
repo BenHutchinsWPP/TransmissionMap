@@ -7,10 +7,10 @@
 //       Download ZIP builds the archive on click. A second batch, or any other holder of the lock, is refused with
 //       the `busy` wording. Ends snap as a map click (the HIFLD index from substation-index.ts, the pane's snap
 //       radius) unless "Use the exact points" is on; the cube version and sha256 come from grid.json (fetched
-//       here, hashed with Web Crypto), the app commit is "unknown" (the build defines none). Text-only DOM, no
+//       here, hashed with Web Crypto). Text-only DOM, no
 //       innerHTML. Session only: nothing goes in the link, storage or the undo stack.
 //       Lazy chunk: ui-route.ts imports this module dynamically only; jsPDF stays behind route-batch-pdf.ts's own
-//       dynamic import, so neither reaches the boot bundle or the production build (routing is dev-only).
+//       dynamic import, so neither reaches the boot bundle.
 // Deps: route-batch.css, route-batch-run.ts (runBatch, workerSolver, reasonText, noteText), route-batch-map.ts
 //       (createBatchCapture), route-batch-zip.ts (createZipSink), route-batch-pdf.ts (dynamic), substation-index.ts,
 //       route/batch-csv.ts, route/custom-presets.ts (type), route/preset-patch.ts (type), user-data-export.ts
@@ -18,6 +18,7 @@
 
 import './route-batch.css';
 import { t } from '../../src/i18n/index.js';
+import { DATA } from '../constants.js';
 import { MAX_BATCH_BYTES, parseBatchCsv, type BatchParse } from '../route/batch-csv.js';
 import type { CustomPreset } from '../route/custom-presets.js';
 import type { PresetPatch } from '../route/preset-patch.js';
@@ -40,7 +41,7 @@ export interface BatchHost {
   close: () => void;
 }
 
-const CUBE_URL = 'data/route/250m/grid.json';
+const CUBE_URL = DATA.route_cube + 'grid.json';
 const MAX_SKIP_LINES = 50;
 
 /** The cube's grid.json version and the sha256 of its bytes; null when it cannot be read. */

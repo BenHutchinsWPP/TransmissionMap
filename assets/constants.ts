@@ -41,6 +41,11 @@ const LIVE_ORIGIN = import.meta.env.PROD ? LIVE_HOST : "";
 // data/layers/ path, so validate_build.py and publish_r2.sh leave it alone.
 const MORATORIUM_ORIGIN = import.meta.env.PROD ? MORATORIUM_HOST : "_private/moratoriums/dataset/";
 
+// The route data set on the data host lives under data/route/<ROUTE_ID>/; publish_r2.sh
+// --only route computes the id from the files and refuses to upload unless it equals this.
+export const ROUTE_ID = "68c5f31a9743";
+const ROUTE_ORIGIN = import.meta.env.PROD ? DATA_HOST + "data/route/" + ROUTE_ID + "/" : "data/route/";
+
 // Download packs are plain navigations, never fetch() or range reads, so they
 // need no CORS header. They sit beside the layers on the data host, under
 // data/releases/ (the keys publish_r2.sh uploads them to).
@@ -121,12 +126,15 @@ export const DATA = {
   // under each source's own LAYER_SOURCES label (src/registry/sources.ts) — the manifest's own
   // `source` field isn't rendered. Built by scripts/build_data_manifest.py.
   data_manifest: DATA_ORIGIN + "data/layers/manifest.json",
-  // Routing constraints (dev server only): one raster archive per concern in
-  // src/colors/route-constraints.ts, built by scripts/build_route_constraints.py
-  // beside the route cube. Relative and outside data/layers/, so the publish scripts
-  // never ship it (constants.test.ts NOT_SCRAPED). Names the default concern;
-  // route-constraints.ts routeConcernUrl() swaps in the chosen concern's file.
-  route_constraints: "data/route/constraints/what-constrains.pmtiles",
+  // The route data set (outside data/layers/, so validate_build.py ignores it;
+  // constants.test.ts NOT_SCRAPED): the routing cube's directory (grid.json and the
+  // band COGs; the route worker reads the report GeoParquet in ../report/ beside it)
+  // and the Routing constraints rasters, one archive per concern in
+  // src/colors/route-constraints.ts (this names the default concern;
+  // route-constraints.ts routeConcernUrl() swaps in the chosen concern's file).
+  // On the data host they sit under the immutable data/route/<ROUTE_ID>/ prefix.
+  route_cube: ROUTE_ORIGIN + "250m/",
+  route_constraints: ROUTE_ORIGIN + "constraints/what-constrains.pmtiles",
   // Transmission line GeoParquet: the manifests of the OSM and HIFLD line
   // geometry files, built by scripts/build_line_parquet.py into data/analysis/
   // and read by range from the data host (the files sit beside index.json).

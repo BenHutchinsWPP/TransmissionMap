@@ -1382,7 +1382,7 @@ const locale: LocaleDictionary = {
   'route.concern.building-coverage': "Phạm vi quan sát công trình",
   'route.concern.noteBuildings': "FEMA/ORNL USA Structures (CC BY 4.0). Diện tích được làm tròn lên thành phần trăm nguyên. Ô trống không có nghĩa là đất trống.",
   'route.concern.noteBuildingCoverage': "Vùng đã xử lý của FEMA/ORNL USA Structures (CC BY 4.0); ngoài vùng này không rõ dấu chân công trình.",
-  // Route footprint and aviation observations
+  // Aviation observations
   "route.concern.aviation": "Bề mặt sân bay (FAA Part 77)",
   "route.concern.aviation.primary": "Bề mặt chính",
   "route.concern.aviation.under-30": "Bề mặt Part 77 thấp nhất cao dưới 30 m so với mặt đất",

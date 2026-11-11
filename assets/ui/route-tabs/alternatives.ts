@@ -1,14 +1,14 @@
 // ─── Route panel: Alternatives sub-tab ────────────────────────────────────────────────
 // Role: Alternatives tab. Before a search: an explainer and "Find alternatives"; then the
-//       routes as a list (optimal first; selecting one fits the map to it, "Make this the
+//       routes as a list (lowest routing score first; selecting one fits the map to it, "Make this the
 //       result" promotes it), the similar-cost-areas threshold and toggle, a compare table
-//       (Optimal vs each Alt, rows that differ by default) with a plain-language note, and
+//       (lowest routing score vs each Alt, rows that differ by default) with a plain-language note, and
 //       a GeoJSON export of all routes. Renders from ctx.session; changes the map only
 //       through the context's calls. disabled() is final. The selected row and the "only rows
 //       that differ" box are kept per session (WeakMap) and reset when a different route is shown;
 //       the "none found" text names the stretch the search used (session.altStretch).
-//       While an alternative is the shown result (session.fromAlt), the least-cost route is
-//       listed as "Optimal (least cost)" with its own make button (makeAltResult(-1));
+//       While an alternative is the shown result (session.fromAlt), the lowest-score route is
+//       listed as "Lowest routing score" with its own make button (makeAltResult(-1));
 //       otherRoutes() is that list, also drawn and exported by ui-route.ts.
 // Deps: route/route.ts (types), route-tabs/types.ts (types), route-tabs/colours.ts, i18n (t), ./alternatives.css.
 
@@ -133,8 +133,8 @@ function exportGeojson(ctx: RouteTabContext, cols: Col[]): void {
         total2025Usd: Math.round(c.total), low2025Usd: Math.round(c.low), high2025Usd: Math.round(c.high),
         tribalMiles: +c.tribal.toFixed(2), protectedGap123Miles: c.prot == null ? null : +c.prot.toFixed(2),
         crossings: c.crossings, anglePoints: c.angles,
-        routingCostAboveOptimalPct: c.pctRoute == null ? null : +c.pctRoute.toFixed(2),
-        sharedWithOptimal: c.shared == null ? null : +c.shared.toFixed(3),
+        routingScoreAboveLowestPct: c.pctRoute == null ? null : +c.pctRoute.toFixed(2),
+        sharedWithLowest: c.shared == null ? null : +c.shared.toFixed(3),
       },
     })),
   };

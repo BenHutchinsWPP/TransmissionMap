@@ -8,12 +8,36 @@ headers measured off the real host on 2026-11-10:
   - content-type by extension as publish_r2.sh sets it; never a content-encoding
   - a strong etag; cache-control: public, max-age=3600
 Env HIDE: a path prefix answered 404 (e.g. data/analysis/). Requests logged to LOG.
+Env ROUTE_ID (with optional ROUTE_ROOT, default ROOT/data/route): serves
+data/route/<ROUTE_ID>/{250m,report,constraints}/... from ROUTE_ROOT/...; unversioned data/route/
+stays 404. report/screening/ (a symlink out of the tree) serves exactly what the publish plan
+hosts, taken from scripts/route_publish_plan.py build(): the pointer as manifest.json and the
+generation's files the plan lists; anything else is 404.
 usage: python3 datahost.py ROOT PORT CERT KEY LOG
 """
 import hashlib, http.server, os, re, ssl, sys
 
-ROOT, PORT, CERT, KEY, LOG = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5]
+ROOT, PORT, CERT, KEY, LOG = sys.argv[1], int(sys.argv[2]), *map(os.path.abspath, sys.argv[3:6])
 HIDE = os.environ.get("HIDE", "")
+ROUTE_ID = os.environ.get("ROUTE_ID", "")
+ROUTE_ROOT = os.path.realpath(os.environ.get("ROUTE_ROOT") or os.path.join(ROOT, "data/route"))
+ROUTE_SUBS = ("250m/", "report/", "constraints/")
+SCREEN = {}  # key under report/screening/ -> real path
+if ROUTE_ID:
+    import json, tempfile
+    os.chdir(ROOT)
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import route_publish_plan as plan
+    entries, _skipped, problems, _grid, pointer_bytes = plan.build()
+    if problems:
+        sys.exit("route_publish_plan: " + "; ".join(problems))
+    tmp = tempfile.mkdtemp()
+    ptr_file = os.path.join(tmp, "manifest.json")
+    open(ptr_file, "wb").write(pointer_bytes)
+    for e in entries:
+        if e["family"] == "screening":
+            SCREEN[e["key"][len("report/screening/"):]] = str(e["root"] / e["name"])
+    SCREEN["manifest.json"] = ptr_file
 ALLOWED = ("data/layers/", "data/analysis/")
 TYPES = {".json": "application/json", ".geojson": "application/geo+json", ".zip": "application/zip", ".csv": "text/csv"}
 
@@ -54,9 +78,22 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.log_message("")
         rel = self.path.split("?")[0].lstrip("/")
-        full = os.path.realpath(os.path.join(ROOT, rel))
-        if (not rel.startswith(ALLOWED) or (HIDE and rel.startswith(HIDE))
-                or not full.startswith(os.path.realpath(ROOT)) or not os.path.isfile(full)):
+        pre = "data/route/%s/" % ROUTE_ID
+        if ROUTE_ID and rel.startswith(pre) and rel[len(pre):].startswith(ROUTE_SUBS) and ".." not in rel:
+            sub = rel[len(pre):]
+            full = os.path.realpath(os.path.join(ROUTE_ROOT, sub))
+            if sub.startswith("report/screening/"):
+                full = SCREEN.get(sub[len("report/screening/"):], "")
+                ok = bool(full)
+            else:
+                ok = full.startswith(ROUTE_ROOT + os.sep)
+            if HIDE and rel.startswith(HIDE):
+                ok = False
+        else:
+            full = os.path.realpath(os.path.join(ROOT, rel))
+            ok = (rel.startswith(ALLOWED) and not (HIDE and rel.startswith(HIDE))
+                  and full.startswith(os.path.realpath(ROOT)))
+        if not ok or not os.path.isfile(full):
             return self.reply(404, b"404: Not Found")
         size = os.path.getsize(full)
         ctype = TYPES.get(os.path.splitext(rel)[1], "application/octet-stream")

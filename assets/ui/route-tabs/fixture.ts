@@ -1,14 +1,15 @@
 // ─── Route panel test fixture ────────────────────────────────────────────────
 // Role: one plausible RouteResult (≈ 250 mi 500 kV AC, McNary → Hemingway, tm-default, total
-//       ≈ $3.1 B 2025$) with profile, crossings and two alternatives, a RouteSession around it and a
+//       ≈ $3.1 B 2025$; `fixtureCost` takes the end kinds) with profile, crossings and two alternatives, a RouteSession around it and a
 //       recording RouteTabContext, so every tab and widget test starts from the same data.
 //       Test support only: nothing in the app imports this.
 // Deps: route/route.ts, route/cost.ts, route/profile.ts (types), registry/route-presets.ts, ./types.ts.
 
 import type { RouteResult, RouteAlternative } from '../../route/route.js';
 import type { CostResult } from '../../route/cost.js';
+import { escalationFactor } from '../../route/cost.js';
 import type { RouteCrossings, CrossingPoint, ProfileRun, ProfileSample } from '../../route/profile.js';
-import { routePreset } from '../../../src/registry/route-presets.js';
+import { routePreset, type EndKind } from '../../../src/registry/route-presets.js';
 import type { RouteSession, RouteTabContext } from './types.js';
 
 const PRESET = routePreset('tm-default')!;
@@ -21,7 +22,7 @@ const PATH: [number, number][] = [A, [-118.7, 45.2], [-118.1, 44.7], [-117.6, 44
 const ROW = { forest: 0, suburban: 1, rolling: 8, mountain: 9, tubular: 10, whpHigh: 11 };
 
 /** A consistent CostResult: base + Σ perRow + other = line$ / lengthFactor; totals follow. */
-export function fixtureCost(lengthFactor = 1, lengthMi = LEN_MI): CostResult {
+export function fixtureCost(lengthFactor = 1, lengthMi = LEN_MI, kinds: [EndKind, EndKind] = ['new', 'new']): CostResult {
   const M = 1e6;
   const baseUsd = 3_071_750 * lengthMi;
   const perRow = [
@@ -37,16 +38,20 @@ export function fixtureCost(lengthFactor = 1, lengthMi = LEN_MI): CostResult {
   const lineUsdNominal = rawLine * lengthFactor;
   const mid = 0.7 * M * lengthFactor, rowLand = 12.0 * M;
   const markupsUsd = (lineUsdNominal + rowLand) * 0.175;
-  const terminalsUsd = 2 * 87.9e6 * 1.04 ** (2014 - 2018);
+  const station = 34_582_007, position = 10_524_963;   // tm-default ac500 station and line position, 2014$ (B&V T4-6 × 1.175)
+  const items = ([['A', kinds[0]], ['B', kinds[1]]] as const).filter(([, k]) => k !== 'none')
+    .map(([end, kind]) => ({ kind, end, usd: kind === 'position' ? position : station }));
+  const nPos = items.filter((i) => i.kind === 'position').length;
+  const terminalsUsd = (items.length - nPos) * station + nPos * position;
   const subtotal = lineUsdNominal + markupsUsd + mid + terminalsUsd + rowLand;
   const cont = { usd: subtotal * 0.3, pct: 0.3, label: PRESET.contingency?.label ?? 'Contingency' };
   const totalNominal = subtotal + cont.usd;
-  const total2025 = totalNominal * 1.04 ** (2025 - 2014);
+  const total2025 = totalNominal * escalationFactor(2014, 2025);
   return {
     preset: 'tm-default', lineType: 'ac500', dollarYear: 2014, lengthM: lengthMi * 1609.344, lengthFactor, baseUsd, perRow, otherUsd,
     lineUsdNominal, markupsUsd, mitigationUsd: { low: mid * 0.7, mid, high: mid * 1.8 },
     rowLand: { usd: rowLand, note: 'County land values × 150 ft width', missingMi: 0 },
-    terminalCount: 2, terminalsUsd, contingency: cont, totalNominal, total2025,
+    terminalCount: items.length, terminalsUsd, terminalItems: items, contingency: cont, totalNominal, total2025,
     band: { low: total2025 * 0.7, high: total2025 * 1.5, label: 'Rough early estimate (−30 % / +50 %)' },
     meanCostX: rawLine / baseUsd, perBand: [], segments: [{ lengthM: lengthMi * 1609.344, usd: lineUsdNominal, meanCostX: rawLine / baseUsd }],
     tribalMiles: 6.3, barrierM: 0, notes: [PRESET.caveat],

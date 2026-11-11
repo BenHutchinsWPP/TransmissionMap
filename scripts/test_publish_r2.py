@@ -190,6 +190,7 @@ class PublishR2(unittest.TestCase):
         sd.mkdir(parents=True)
         shutil.copy(HERE / "publish_r2.sh", sd)
         shutil.copy(HERE / "geoparquet_common.py", sd)
+        shutil.copy(HERE / "route_publish_plan.py", sd)
         (sd / "validate_build.py").write_text(
             "import sys\nif '--list-expected' in sys.argv:\n    print(%r)\n" % "\n".join(LISTED))
         (self.repo / "scripts/release_manifest.yaml").write_text(RELEASE_YAML)

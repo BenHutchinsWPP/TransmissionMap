@@ -31,6 +31,18 @@ describe('chatSummary', () => {
     expect(Object.keys(s.crossings).length).toBeGreaterThan(0);
   });
 
+  it('says in one page-written note that the cost uses entered figures, and never carries the figures', () => {
+    const r = result();
+    const entered = { ...r, cost: { ...r.cost, userCosts: { basis: 'all-in' as const, year: 2024, items: ['line' as const, 'station' as const], line_types: ['ac500'] } } };
+    const s = chatSummary(entered, preset, 'Default', A, B);
+    expect(s.notes).toContain('the cost uses figures entered by the visitor (all-in cost per mile)');
+    expect(JSON.stringify(s)).not.toMatch(/2024|usd_per_mi/);
+    // nothing entered (an ends-only object): no note
+    const bare = { ...r, cost: { ...r.cost, userCosts: { basis: 'bare' as const, year: 2025, items: [], line_types: [] } } };
+    expect(chatSummary(bare, preset, 'Default', A, B).notes.some((n) => /entered/.test(n))).toBe(false);
+    expect(chatSummary(r, preset, 'Default', A, B).notes.some((n) => /entered/.test(n))).toBe(false);
+  });
+
   it('drivers equal the Cost tab category lines, signed, largest first', () => {
     const r = result();
     const s = chatSummary(r, preset, 'Default', A, B);

@@ -60,7 +60,7 @@ describe('openRouteReport', () => {
       forPath: pathKey(r.path, r.lengthMi), screening: [observationFixture()] };
     openRouteReport(fakeTabContext(s));
     const obs = document.querySelector('.route-observations');
-    expect(obs?.textContent).toContain('600.0 of 1000.0');
+    expect(obs?.textContent).toContain('Aviation observations');
     expect(obs?.textContent).toContain('RNO 08/26');
     expect(obs?.textContent).toContain('2014/10/08');
     expect(obs?.textContent).toContain('Example source');
@@ -85,8 +85,8 @@ describe('openRouteReport', () => {
     expect(text).toContain('AACE International Class 5 (concept screening)');
     expect(text).toContain(ctx.session.result!.preset.attribution);
     expect(text).toContain(ctx.session.result!.preset.caveat);
-    for (const s of ['NLCD', '3DEP', 'PAD-US', 'USFWS', 'BLM', 'OpenStreetMap (ODbL)', 'HIFLD', 'WorldPop (CC BY', 'PoPWest (CC BY', '© OpenStreetMap contributors']) expect(text).toContain(s);
-    expect(text).toContain('cheapest path found inside the search area');
+    for (const s of ['PAD-US', 'USFWS', 'FEMA National Flood Hazard Layer', 'USA Structures', '(ODbL)', '(CC BY 4.0)', '© OpenStreetMap contributors']) expect(text).toContain(s);
+    expect(text).toContain('lowest routing score found inside the search area');
   });
 
   it('replaces a previous report', () => {

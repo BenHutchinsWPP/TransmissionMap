@@ -5,7 +5,7 @@
 //         GAP / TNC / PoPWest / NPS-Preserve bits, land manager, wildfire, WHP class, flag bits,
 //         state postal code, ISO region from grid.json, land value $/ac, homes in the cell, wetland share,
 //         observed footprint coverage/share (rounded-up bounds), max existing
-//         kV, existing-line adjacency, aviation surface class, NFHL flood class) — encodings of
+//         kV, existing-line adjacency (rings by voltage), aviation surface class, NFHL flood class) — encodings of
 //         scripts/route_grid.py;
 //       - explainCell(): the cell's routing weight and cost multiplier (cost.ts
 //         cellFactors), the matching rows with the winner of each group (rowFactors),
@@ -95,7 +95,11 @@ function bandText(band: BandName, v: number, meta: DecodeMeta): Text[] {
     for (let b = 0; b < 8; b++) if ((other >> b) & 1) on.push(K('route.insp.bit', { n: b }));
     return on.length ? on : [K('route.insp.none')];
   }
-  if (band === 'adj') return v & 16 ? [K(`route.insp.adj.${v & 3}`), ...(((v >> 5) & 3) ? [K(`route.insp.adj100.${(v >> 5) & 3}`)] : [])] : [NODATA];
+  if (band === 'adj') {
+    if (!(v & 16)) return [NODATA];
+    const kv = v & 8 ? [K('route.insp.adjkv.500')] : v & 4 ? [K('route.insp.adjkv.345')] : [];
+    return [K(`route.insp.adj.${v & 3}`), ...kv, ...(((v >> 5) & 3) ? [K(`route.insp.adj100.${(v >> 5) & 3}`)] : [])];
+  }
   // 0 is nodata (scripts/route_grid.py) except where it is a real value: no PAD-US unit, no existing line.
   if (v === 0) return [band === 'protect' ? K('route.insp.gapNone') : band === 'osm_maxkv' ? K('route.insp.none') : NODATA];
   switch (band) {
@@ -139,6 +143,7 @@ const META_BANDS = new Set<BandName>(['isoreg', 'landval']);
 export function matchText(band: BandName, m: Match): Text[] {
   if ('bit' in m) {
     if (BITS[band]) return [K(categoryLabelKey(`${band}:${m.bit}`))];
+    if (band === 'adj' && (m.bit === 2 || m.bit === 3)) return [K(`route.insp.adjkv.${m.bit === 2 ? 345 : 500}`)];
     if (band === 'protect' && m.bit === 6) return [K('route.insp.outsidePopwest')];
     if (band === 'protect' && m.bit === 7) return [K('route.insp.npsPreserve')];
     return [K('route.insp.bit', { n: m.bit })];

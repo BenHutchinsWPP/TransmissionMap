@@ -144,8 +144,8 @@ describe('runBatch over the mini cube', () => {
     const out = await runBatch(opts([row(2, 'Plain'), row(3, 'Saved', { method: 'My method' }), row(4, 'Upload', { method: 'custom:upl' })]), t.deps).done;
     expect(out.status).toBe('done');
     expect(out.rows.map((r) => r.status)).toEqual(['ok', 'ok', 'ok']);
-    const one = { from: SUB, to: B, preset: 'tm-default', lineType: 'ac500', profile: true, surface: false, alternatives: 0, weightImage: true, weightMode: 'cause' };
-    const two = { from: SUB, to: B, preset: 'tm-default', lineType: 'ac500', profile: false, surface: true, alternatives: 0, altStretch: 0.2 };
+    const one = { from: SUB, to: B, preset: 'tm-default', lineType: 'ac500', terminals: ['position', 'new'], profile: true, surface: false, alternatives: 0, weightImage: true, weightMode: 'cause' };
+    const two = { from: SUB, to: B, preset: 'tm-default', lineType: 'ac500', terminals: ['position', 'new'], profile: false, surface: true, alternatives: 0, altStretch: 0.2 };
     const lit: RouteRequest[][] = [
       [{ ...one, presetPatch: SESSION }, { ...two, presetPatch: SESSION }] as RouteRequest[],
       [{ ...one, presetPatch: SAVED }, { ...two, presetPatch: SAVED }] as RouteRequest[],
@@ -171,6 +171,9 @@ describe('runBatch over the mini cube', () => {
     const plain = await route({ ...one, presetPatch: SESSION } as RouteRequest, io());
     expect(plain.ok && plain.result.path.coordinates).not.toEqual(feats[2].geometry.coordinates);   // the upload moved row 3
     expect(out.rows[0].a?.hit?.name).toBe('East Sub');
+    const [shead, srow] = summaryLines(t.zip).map((l) => l.split(','));
+    const col = (name: string) => srow[shead.indexOf(name)];
+    expect([col('terminal_a'), col('terminal_b'), col('user_costs')]).toEqual(['position', 'new', '']);
     for (const f of ['rows/001-plain/report.pdf', 'rows/001-plain/cost.csv', 'rows/002-saved/crossings.csv', 'rows/003-upload/report.pdf', 'batch.json'])
       expect(t.zip.files.has(f), f).toBe(true);
     expect(String(t.zip.files.get('rows/001-plain/cost.csv')).startsWith('\uFEFF')).toBe(true);
@@ -439,7 +442,7 @@ describe('runBatch: observations, unnamed ends, captions', () => {
     expect(req.polylines[0]).toHaveLength(feat.geometry.coordinates.length);
     expect(req.lengthsMi).toEqual([out.rows[0].lengthMi]);
     expect(t.pdf.calls[0].model.observations?.screening).toEqual(observationFixture());
-    expect(String(t.zip.files.get('rows/001-one/crossings.csv'))).toContain('Building and aviation observations');
+    expect(String(t.zip.files.get('rows/001-one/crossings.csv'))).toContain('Aviation observations');
   });
 
   it('a failed read keeps the row ok with the reason worded; a cancel during the read ends the batch at once', async () => {

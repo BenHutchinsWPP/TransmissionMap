@@ -1,6 +1,6 @@
 // ─── Routing constraints layer: the concern picker's state, url and legend ───
 // Role: the one place a concern id becomes the layer's raster url
-//       (routeConcernUrl: data/route/constraints/<concern-id>.pmtiles, beside
+//       (routeConcernUrl: <concern-id>.pmtiles, beside
 //       DATA.route_constraints) and the one setter for state.routeConcern
 //       (setRouteConcern: picker, shared link, Undo, story and Reset all land
 //       here). The setter writes state before its map guard, so seedView() can
@@ -20,8 +20,7 @@
 //       utils/utils.ts (escapeHtml).
 // Called by: view-state.ts (seedView/applyView), ui/ui-filters.ts
 //       (wireRouteConcernSelect), layers/map-layers-land.ts (routeConcernUrl, the
-//       boot url). The layer itself is src/registry/land.ts routeConstraintsLayer
-//       (dev server only).
+//       boot url). The layer itself is src/registry/land.ts routeConstraintsLayer.
 
 import { state } from './state.js';
 import { DATA } from './constants.js';

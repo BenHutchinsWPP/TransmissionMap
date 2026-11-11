@@ -72,9 +72,10 @@ const miles = (km: number) => fmtDistanceMi(km / KM_PER_MI);
 
 function kvBadge(s: SnapHit): HTMLElement { return h('span', kvClass(s), kvText(s)); }
 
-/** "500 AC" / "500 DC" from a line type's nominal kV and its id or label. */
+/** "500 AC" / "500 DC" from a line type's nominal kV and its id or label; a single-circuit type adds its marker. */
 function lineTypeLabel(id: string, lt: RoutePreset['line_types'][string]): string {
-  return `${lt.kv.value} ${/dc/i.test(id) || /\b(hv)?dc\b/i.test(lt.label) ? 'DC' : 'AC'}`;
+  const base = `${lt.kv.value} ${/dc/i.test(id) || /\b(hv)?dc\b/i.test(lt.label) ? 'DC' : 'AC'}`;
+  return /single circuit/i.test(lt.label) ? `${base} ${t('route.in.singleCircuit')}` : base;
 }
 
 export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCallbacks): InputsHandle {

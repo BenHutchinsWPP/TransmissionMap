@@ -21,6 +21,9 @@
 #route-report .rr-small { font-size: 10px; color: #444; }
 
 #route-report .rr-edits { margin: 2px 0 6px; padding-left: 18px; }
+#route-report .rr-disclaimer { font-size: 9.5px; color: #333; border: 1px solid #999; padding: 0 8px 4px; margin: 8px 0; }
+#route-report .rr-disclaimer h2 { margin-top: 6px; }
+#route-report .rr-disclaimer p { margin: 3px 0; }
 
 /* A named page: Letter and its margins apply only to the report's pages, never to a print of the map. */
 @page route-report { size: Letter; margin: 0.5in; }

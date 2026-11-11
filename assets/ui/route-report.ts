@@ -1,7 +1,7 @@
 // ─── Route report ────────────────────────────────────────────────────────────
 // Role: the printable Letter-size report of the shown route, opened by the route
 //       pane's Report button through a dynamic import. Builds `#route-report` on demand
-//       (title, badge, map snapshot, KPIs + estimate range, endpoints, optimality sentence,
+//       (title, badge, the route usage notice as a disclaimer, map snapshot, KPIs + estimate range, endpoints, optimality sentence,
 //       waterfall, long-section strip, crossings table, tribal note, method, sources),
 //       the crossings table taking the exact counts of the kinds session.exact covers while it belongs to
 //       the shown result (crossings.ts shownExact); while some counted kinds are exact and some not, the exact rows
@@ -15,7 +15,7 @@
 //       The wording and figures come from `route-report-model.ts` (`buildReportModel`); this file only
 //       lays them out, so the PDF and the print show the same text (including the method's uploaded-layer lines).
 // Deps: route-report-model.ts (the model), route-tabs/widgets.ts (builders), route-tabs/types.ts (types),
-//       route-observations.ts (shared building/aviation tables), state.ts (map), i18n, ./route-report.css.
+//       route-observations.ts (shared aviation tables), state.ts (map), i18n, ./route-report.css.
 
 import './route-report.css';
 import { state } from '../state.js';
@@ -156,8 +156,10 @@ export function openRouteReport(ctx: RouteTabContext): void {
 
   const wf = waterfall(m.waterfall.lines, { money });
 
-  root.append(head, img, na);
-  root.append(section(m.cost.heading, kpis(result, money, session.dollars), rangeBar(result.cost, money, session.dollars), el('p', 'rr-small', m.cost.note)));
+  const disclaimer = section(m.disclaimer.heading, ...m.disclaimer.paras.map((x) => el('p', undefined, x)));
+  disclaimer.className = 'rr-disclaimer rr-keep';
+  root.append(head, disclaimer, img, na);
+  root.append(section(m.cost.heading, kpis(result, session.dollars), rangeBar(result.cost, session.dollars), el('p', 'rr-small', m.cost.note)));
   root.append(section(m.endpoints.heading, el('div', undefined, m.endpoints.a), el('div', undefined, m.endpoints.b), el('p', undefined, m.endpoints.optimality)));
   root.append(section(m.waterfall.heading, wf));
   if (m.strip) {

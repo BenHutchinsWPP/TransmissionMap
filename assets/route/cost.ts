@@ -52,15 +52,24 @@
 //       base × Π cost_x (cell product clamped to ≤ 1e4) × the short-line factor;
 //       mitigation is a % of line $ by risk class; markups apply to line $ + ROW land;
 //       terminals are added unmarked (PNAS §C formula); contingency is its own
-//       line item on line + markups + mitigation + terminals + ROW land.
+//       line item on line + markups + mitigation + terminals + ROW land. Each end is a
+//       new station, line position(s) at an existing station, or none (`kinds`, default
+//       both new); mid-line stations of a count rule are priced as new stations; each figure
+//       escalates from its own year (terminalItems). A preset carrying `user_costs` (preset-patch.ts)
+//       is the visitor's own figures.
 //       Pure: no DOM, runs in a worker and in Node.
-// Deps: dijkstra.ts (traverse); sandbox/geo-kit.ts (haversineKm); src/registry/route-presets.ts (types only).
+// Deps: dijkstra.ts (traverse); preset-patch.ts (USER_COST_SRC); sandbox/geo-kit.ts (haversineKm); src/registry/route-presets.ts (types only);
+//       src/registry/escalation-index.json (the BLS year index, built by scripts/build_escalation_index.py).
 
 import type {
-  BandName, Combine, Factor, LineType, Match, RoutePreset, TerminalRule,
+  BandName, Combine, EndKind, Factor, LineType, Match, RoutePreset, TerminalRule,
 } from '../../src/registry/route-presets.js';
 import { traverse } from './dijkstra.js';
+import { USER_COST_SRC } from './preset-patch.js';
 import { haversineKm } from '../sandbox/geo-kit.js';
+import ESCALATION_INDEX from '../../src/registry/escalation-index.json';
+
+const YEAR_INDEX = ESCALATION_INDEX.index as Record<string, number>;
 
 export const METRES_PER_MILE = 1609.344;
 const M2_PER_ACRE = 4046.8564224;
@@ -259,7 +268,7 @@ export function compile(preset: RoutePreset, lineTypeId: string, consts: GridCon
     const lv = consts.landval;
     if (!lv) out.notes.push('ROW land not costed (grid.json landval constants not supplied).');
     else {
-      const k = widthFt * FT_M / M2_PER_ACRE * escalationFactor(rl.year, preset.dollar_year, preset.escalation.rate);
+      const k = widthFt * FT_M / M2_PER_ACRE * escalationFactor(rl.year, preset.dollar_year);
       out.rowLandPerM = new Float64Array(256);
       for (let v = 1; v < 256; v++) out.rowLandPerM[v] = lv.base * 2 ** ((v - 1) / lv.steps) * k;
     }
@@ -468,8 +477,12 @@ export function rowFactors(compiled: Compiled, vals: Values, lineTypeId: string)
 
 // ─── money ────────────────────────────────────────────────────────────────────
 
-/** Compound escalation factor from one dollar year to another. */
-export const escalationFactor = (fromYear: number, toYear: number, rate = 0.04): number => (1 + rate) ** (toYear - fromYear);
+/** Cost factor from one dollar year to another: the BLS year index (escalation-index.json) at toYear over fromYear. */
+export const escalationFactor = (fromYear: number, toYear: number): number => {
+  const a = YEAR_INDEX[fromYear], b = YEAR_INDEX[toYear];
+  if (!(a > 0 && b > 0)) throw new Error(`escalation index has no year ${a > 0 ? toYear : fromYear}`);
+  return b / a;
+};
 
 /** Stations for a line of `lengthMi`: min + floor(max(0, L − after) / every). */
 export function terminalCount(rule: TerminalRule, lengthMi: number): number {
@@ -478,7 +491,7 @@ export function terminalCount(rule: TerminalRule, lengthMi: number): number {
 }
 
 const basePerM = (p: RoutePreset, line: LineType): number =>
-  line.base_per_mi.usd * escalationFactor(line.base_per_mi.year, p.dollar_year, p.escalation.rate) / METRES_PER_MILE;
+  line.base_per_mi.usd * escalationFactor(line.base_per_mi.year, p.dollar_year) / METRES_PER_MILE;
 
 /** Short-line factor on line $ for a routed length (the first tier that holds), else 1. */
 export function lengthFactor(preset: RoutePreset, lengthMi: number): number {
@@ -619,8 +632,13 @@ export interface CostResult {
   markupsUsd: number;
   mitigationUsd: { low: number; mid: number; high: number };
   rowLand: { usd: number; note: string; missingMi: number } | null; // missingMi: miles on cells without a land value ($0)
-  terminalCount: number;
-  terminalsUsd: number | null;
+  terminalCount: number;                         // stations and positions costed (ends not `none`, plus mid-line stations)
+  terminalsUsd: number | null;                   // null when a station kind has no sourced figure
+  /** Each terminal in the method's dollar year, A then B then the mid-line stations; `none` ends and
+   *  figures that are null are left out. */
+  terminalItems?: { kind: EndKind | 'mid'; end: 'A' | 'B' | null; usd: number }[];
+  /** The preset's `user_costs`, when the figures are the visitor's. */
+  userCosts?: RoutePreset['user_costs'];
   contingency: { usd: number; pct: number; label: string } | null;
   totalNominal: number;
   total2025: number;
@@ -634,9 +652,9 @@ export interface CostResult {
   notes: string[];
 }
 
-function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost): CostResult {
+function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost, kinds: [EndKind, EndKind]): CostResult {
   const line = preset.line_types[lineTypeId];
-  const { rate, to_year } = preset.escalation;
+  const { to_year } = preset.escalation;
   const u = preset.uncertainty;
   const lf = lengthFactor(preset, lc.lengthM / METRES_PER_MILE);
   const lineUsd = lc.lineUsd * lf, mid = lc.mitigationMid * lf;
@@ -644,15 +662,31 @@ function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost): CostResu
   const markupX = preset.markups.reduce((x, m) => x * m.x, 1);
   const markupsUsd = (lineUsd + rowLandUsd) * (markupX - 1);
   const t = line.terminals;
-  const terminalCountN = terminalCount(t, lc.lengthM / METRES_PER_MILE);
-  const terminalsUsd = t.usd_each === null ? null : terminalCountN * t.usd_each * escalationFactor(t.year, preset.dollar_year, rate);
+  const mids = terminalCount(t, lc.lengthM / METRES_PER_MILE) - t.min;
+  const slots: { kind: EndKind | 'mid'; end: 'A' | 'B' | null }[] = [
+    { kind: kinds[0], end: 'A' as const }, { kind: kinds[1], end: 'B' as const },
+    ...Array.from({ length: mids }, () => ({ kind: 'mid' as const, end: null })),
+  ].filter((x) => x.kind !== 'none');
+  const terminalCountN = slots.length;
+  const stationUsd = t.usd_each === null ? null : t.usd_each * escalationFactor(t.year, preset.dollar_year);
+  const positionUsd = t.position ? t.position.usd_each * escalationFactor(t.position.year, preset.dollar_year) : null;
+  const terminalItems = slots.flatMap((x) => {
+    const usd = x.kind === 'position' ? positionUsd : stationUsd;
+    return usd === null ? [] : [{ kind: x.kind, end: x.end, usd }];
+  });
+  const nPos = slots.filter((x) => x.kind === 'position').length, nSt = terminalCountN - nPos;
+  const terminalsUsd = terminalItems.length < slots.length ? null
+    : nSt * (stationUsd ?? 0) + nPos * (positionUsd ?? 0);
   const subtotal = lineUsd + markupsUsd + mid + (terminalsUsd ?? 0) + rowLandUsd;
   const ct = preset.contingency;
   const contingency = ct ? { usd: subtotal * ct.pct, pct: ct.pct, label: ct.label } : null;
   const totalNominal = subtotal + (contingency?.usd ?? 0);
-  const total2025 = totalNominal * escalationFactor(preset.dollar_year, to_year, rate);
+  const total2025 = totalNominal * escalationFactor(preset.dollar_year, to_year);
   const notes = [preset.caveat, ...preset.notes, ...lc.notes];
   if (terminalsUsd === null) notes.push(`Terminals not costed: ${t.arithmetic ?? t.src}`);
+  const uc = preset.user_costs;
+  if (uc?.basis === 'all-in' && slots.some((x) => (x.kind === 'position' ? t.position?.src : t.src) !== USER_COST_SRC))
+    notes.push("Terminals use the method's figures as it states them; no contingency is added.");
   if (t.report_only) notes.push(`Terminal count rule is unsourced (report only): ${t.src}`);
   if (lc.tribalM > 0) notes.push(preset.tribal.note);
   if (lc.rowLandMissingM > 0) notes.push(`ROW land: ${(lc.rowLandMissingM / METRES_PER_MILE).toFixed(1)} mi on cells without a county land value, charged $0.`);
@@ -665,7 +699,7 @@ function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost): CostResu
     mitigationUsd: { low: mid * (1 + u.low), mid, high: mid * (1 + u.high) },
     rowLand: preset.row_land && lc.rowLandUsd !== null
       ? { usd: lc.rowLandUsd, note: preset.row_land.note, missingMi: lc.rowLandMissingM / METRES_PER_MILE } : null,
-    terminalCount: terminalCountN, terminalsUsd, contingency, totalNominal, total2025,
+    terminalCount: terminalCountN, terminalsUsd, terminalItems, ...(uc ? { userCosts: uc } : {}), contingency, totalNominal, total2025,
     band: { low: total2025 * (1 + u.low), high: total2025 * (1 + u.high), label: u.label },
     meanCostX: lc.meanCostX, perBand: lc.perBand, segments: lc.segments,
     tribalMiles: lc.tribalM / METRES_PER_MILE, barrierM: lc.barrierM, ...(lc.regionM ? { regionM: lc.regionM } : {}), notes,
@@ -676,8 +710,9 @@ function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost): CostResu
  *  `consts` = grid.json's isoreg table and landval constants (regional sets, ROW land). */
 export function costPath(
   coords: [number, number][], preset: RoutePreset, lineTypeId: string, sampler: Sampler, consts: GridConsts = {},
+  kinds: [EndKind, EndKind] = ['new', 'new'],
 ): CostResult {
-  return finish(preset, lineTypeId, costPolyline(coords, preset, lineTypeId, sampler, consts));
+  return finish(preset, lineTypeId, costPolyline(coords, preset, lineTypeId, sampler, consts), kinds);
 }
 
 /** Great-circle metres between two [lng, lat] points. */
@@ -686,7 +721,7 @@ export function greatCircleM(a: [number, number], b: [number, number]): number {
 }
 
 /** No-solve estimate: great circle × the preset's straight-line factor × base, terminals, markups, band. */
-export function straightLine(from: [number, number], to: [number, number], preset: RoutePreset, lineTypeId: string): CostResult {
+export function straightLine(from: [number, number], to: [number, number], preset: RoutePreset, lineTypeId: string, kinds: [EndKind, EndKind] = ['new', 'new']): CostResult {
   const line = preset.line_types[lineTypeId];
   if (!line) throw new Error(`preset ${preset.id} has no line type ${lineTypeId}`);
   const factor = typeof preset.length === 'object' ? preset.length.straight_line_factor : 1;
@@ -696,7 +731,7 @@ export function straightLine(from: [number, number], to: [number, number], prese
     lengthM, lineUsd, meanCostX: 1, mitigationMid: 0, rowLandUsd: null, rowLandMissingM: 0, regionUnmappedM: 0, perBand: [],
     baseUsd: lineUsd, perRow: [], otherUsd: 0, segments: [{ lengthM, usd: lineUsd, meanCostX: 1 }], tribalM: 0, barrierM: 0,
     notes: preset.row_land ? ['ROW land not costed (no route is solved).'] : [],
-  });
+  }, kinds);
 }
 
 // ─── grid helpers ─────────────────────────────────────────────────────────────

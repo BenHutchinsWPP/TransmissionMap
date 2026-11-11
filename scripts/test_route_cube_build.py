@@ -240,5 +240,18 @@ class SourceBandPins(unittest.TestCase):
         cube.load_metadata()
 
 
+class SourcePaths(unittest.TestCase):
+    def test_mirror_paths_relative_repo_paths_kept(self):
+        root = Path("/mnt/x/source-coop")
+        node = {"a": {"sources": [{"path": str(root / "mirror-1/s/s.parquet"), "n": 1},
+                                  {"path": "data/raw/x.tif"}, {"path": "/elsewhere/y.tif"}]},
+                "source": str(root / "mirror-1/untouched")}
+        out = cube.relative_source_paths(node, root)
+        self.assertEqual([s["path"] for s in out["a"]["sources"]],
+                         ["mirror-1/s/s.parquet", "data/raw/x.tif", "/elsewhere/y.tif"])
+        self.assertEqual(out["source"], node["source"])
+        self.assertEqual(node["a"]["sources"][0]["path"], str(root / "mirror-1/s/s.parquet"))
+
+
 if __name__ == "__main__":
     unittest.main()

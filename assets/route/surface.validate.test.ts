@@ -24,7 +24,7 @@ import { surfaceImage } from './surface-image.js';
 import { searchLimitFactor } from './preset-patch.js';
 import { routePreset } from '../../src/registry/route-presets.js';
 
-const CUBE = 'data/route/250m/';
+const CUBE = process.env.ROUTE_CUBE ?? 'data/route/250m/';
 const have = existsSync(CUBE + 'grid.json');
 const SURFACE_BYTES = 11;   // route.ts's SURFACE_BYTES
 const MB = 1024 * 1024;

@@ -20,7 +20,7 @@
 
 import { state } from '../state.js';
 import { activeExperienceId, endExperienceLink, rebaselineExperience } from '../experience-link.js';
-import { LAYER_SOURCES, layerById } from '../../src/registry/index.js';
+import { LAYER_SOURCES } from '../../src/registry/index.js';
 import type { LayerScope } from '../../src/types.js';
 import { YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../../src/colors/ramps.js';
 import { setLayerVisibility } from '../visibility.js';
@@ -78,8 +78,7 @@ export async function init() {
   await loadLanguage(splitHash(location.hash).params.get('lang'));
   updateDomTranslations();
   loadUnits();
-  // The Routing constraints credit ships hidden: it names a layer only the dev server has.
-  if (layerById('route-constraints')) document.querySelector<HTMLElement>('[data-source-credit="route-constraints"]')?.removeAttribute('hidden');
+  document.querySelector<HTMLElement>('[data-source-credit="route-constraints"]')?.removeAttribute('hidden');
   state.yearFilter.min  = YEAR_FILTER_MIN;
   state.yearFilter.max  = YEAR_FILTER_MAX;
 

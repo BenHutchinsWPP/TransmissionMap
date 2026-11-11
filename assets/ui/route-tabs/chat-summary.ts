@@ -1,7 +1,8 @@
 // ─── Route chat summary ──────────────────────────────────────────────────────
 // Role: the page-built, size-capped summary of a route result that the map chat's planRoute tool
 //       returns to the model (2025$ only, estimate range, drivers as the Cost tab's category lines,
-//       crossings by kind, ≤ 2 alternatives, short page-written notes). Pure; no DOM writes.
+//       crossings by kind, ≤ 2 alternatives, short page-written notes; one more says the cost uses the visitor's own
+//       figures, never the figures). Pure; no DOM writes.
 // Deps: ./widgets.ts (waterfallLines), route/route.ts (types), registry/route-presets.ts (types), i18n/index.ts.
 
 import { t } from '../../../src/i18n/index.js';
@@ -48,6 +49,7 @@ export function chatSummary(r: RouteResult, preset: RoutePreset, methodLabel: st
   if (r.altSkipped) notes.push(`alternatives: ${r.altSkipped}`);
   notes.splice(2);
   notes.push('cost is a rough early estimate range (−30 % / +50 %)');
+  if (r.cost.userCosts?.items.length) notes.push(`the cost uses figures entered by the visitor (${r.cost.userCosts.basis === 'all-in' ? 'all-in cost per mile' : 'base cost per mile'})`);
   return {
     a: end(a), b: end(b),
     method: cleanName(methodLabel) ?? '',

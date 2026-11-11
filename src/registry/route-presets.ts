@@ -80,6 +80,9 @@ export interface RowExcept {
   src: string;
 }
 
+/** What one end of a line is: a new station, line position(s) at an existing station, or nothing costed. */
+export type EndKind = 'new' | 'position' | 'none';
+
 export interface Money { usd: number; year: number; src: string }
 
 export interface TerminalRule {
@@ -89,8 +92,11 @@ export interface TerminalRule {
   every_mi?: number;        // +1 station per `every_mi` beyond `after_mi`
   after_mi?: number;
   report_only?: boolean;    // the count rule is unsourced: report, never gate
+  markup_in?: number;       // the markup factor already applied inside these figures
   arithmetic?: string;
   src: string;
+  /** Line position(s) for this line type at an existing station, in its own dollar year; absent = no figure. */
+  position?: { usd_each: number; year: number; arithmetic: string; src: string };
 }
 
 export interface LineType {
@@ -145,11 +151,13 @@ export interface RowLand {
 
 export interface RoutePreset {
   id: string;
+  /** The method follows a published study's terminals: its `new` end reads "Terminal as the method prices it". */
+  study_terminals?: boolean;
   label: string;
   attribution: string;
   caveat: string;
   dollar_year: number;
-  escalation: { rate: number; to_year: number; src: string; cross_check?: string };
+  escalation: { to_year: number; src: string };
   line_types: Record<string, LineType>;
   rows: CostRow[];
   combine: Record<string, Combine>;         // group → rule; ungrouped rows and groups multiply
@@ -164,19 +172,20 @@ export interface RoutePreset {
   length_factor?: { tiers: LengthTier[]; src: string };
   tribal: { band: BandName; match: Match; note: string; src: string };
   notes: string[];
+  /** Set only by validatePresetPatch from `cost_inputs`; never present on a registry preset. */
+  user_costs?: { basis: 'bare' | 'all-in'; year: number; items: ('line' | 'station' | 'position')[]; line_types: string[] };
 }
 
 // ─── shared values ────────────────────────────────────────────────────────────
 
 const ESCALATION = {
-  rate: 0.04, to_year: 2025,
-  src: 'MISO MTEP25 p.1; MISO MTEP26 PSC slides 2026-03-11, slide 4 (4 %/yr)',
-  cross_check: 'BLS WPU117 implies ≈ ×1.23 for 2018→2025 (~3.0 %/yr); the spread sits inside the rough-early-estimate band',
+  to_year: 2025,
+  src: 'BLS annual averages, year index: ECI construction compensation (CIU2012300000000I; CES2000000008 before 2001) and PPI net inputs to power and communication structures (WPUIP231232; WPUSI012011 before 2015), blended 0.526 labour / 0.474 materials (labour share of the MISO MTEP26 cost estimation workbook example line)',
 };
 
 const CLASS5 = {
   low: -0.30, high: 0.50, label: 'Rough early estimate (−30 % / +50 %)',
-  src: 'AACE Class 5 −30 %/+50 %; MISO MTEP25 p.6 (exploratory = Class 5); range as quoted from AACE 18R-97 in the West Contra Costa TAC study (2011); −30/+50 = ours',
+  src: 'ours: −30 %/+50 % sits inside the AACE Class 5 band (−20 % to −50 % / +30 % to +100 %, AACE RP 18R-97 rev. 29 Nov 2011, as printed in the West Contra Costa High-Capacity Transit Study, Task 13.2, Nov 2016, p.3); MISO MTEP25 p.6 (exploratory = Class 5)',
 };
 
 const BV = 'B&V 2014 (WECC TEPPC) §2 base cost per mile, ACSR, >10 mi';
@@ -184,7 +193,55 @@ const BV = 'B&V 2014 (WECC TEPPC) §2 base cost per mile, ACSR, >10 mi';
 const LOWER_KV_NOTE =
   'our derivation (B&V 2014 has no entry below 230 kV); MISO MTEP26 Transmission Cost Estimation Workbook, Cost Guide Tables, Illinois; docs/routing.md § Lower-voltage line types';
 
-const BV_LINES: Record<string, LineType> = {
+const MARKUP_AFUDC = { label: 'AFUDC + overhead', x: 1.175, src: 'B&V 2014 (7.5 % AFUDC + 10 % overhead); PNAS §C formula' };
+
+const BV_SC = `${BV}; p.2-3 Table 2-1 single circuit`;
+const AFUDC_IN = '× 1.175 AFUDC + overhead from p.4-8 §4.4 and Table 4-7, applied here because the engine\'s markups skip terminals';
+
+const POS_BV = `B&V 2014 p.4-7 Table 4-6 (per-position cost), p.3-3 Table 3-2 (breaker-and-a-half 1.5); ${AFUDC_IN}; one double-circuit line = 2 positions = ours`;
+const POS_BV_SC = `B&V 2014 p.4-7 Table 4-6 (per-position cost), p.3-3 Table 3-2 (breaker-and-a-half 1.5); ${AFUDC_IN}; one single-circuit line = 1 position = ours`;
+const POS_LOWER = (kv: string, ratio: string): string =>
+  `B&V 2014 230 kV double-circuit position figure × MISO MTEP26 Table 4.2-2 ratio ${ratio} (${kv} kV station); ${AFUDC_IN}; one double-circuit line = 2 positions = ours; our derivation`;
+
+const POS_230 = { usd_each: 5_262_483, year: 2014, arithmetic: '2 positions × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $1,492,903 per position = $4,478,709; × 1.175 AFUDC + overhead = $5,262,483', src: POS_BV };
+const POS_345 = { usd_each: 7_893_723, year: 2014, arithmetic: '2 positions × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $2,239,354 per position = $6,718,062; × 1.175 AFUDC + overhead = $7,893,723', src: POS_BV };
+const POS_500 = { usd_each: 10_524_963, year: 2014, arithmetic: '2 positions × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $2,985,805 per position = $8,957,415; × 1.175 AFUDC + overhead = $10,524,963', src: POS_BV };
+const POS_230S = { usd_each: 2_631_242, year: 2014, arithmetic: '1 position × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $1,492,903 per position = $2,239,355 (2,239,354.5 rounded up); × 1.175 AFUDC + overhead = $2,631,242', src: POS_BV_SC };
+const POS_345S = { usd_each: 3_946_861, year: 2014, arithmetic: '1 position × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $2,239,354 per position = $3,359,031; × 1.175 AFUDC + overhead = $3,946,861', src: POS_BV_SC };
+const POS_500S = { usd_each: 5_262_482, year: 2014, arithmetic: '1 position × 1.5 (breaker-and-a-half) × B&V 2014 T4-6 $2,985,805 per position = $4,478,708 (4,478,707.5 rounded up); × 1.175 AFUDC + overhead = $5,262,482', src: POS_BV_SC };
+const POS_161 = { usd_each: 4_646_773, year: 2014, arithmetic: '230 kV position figure $4,478,709 × 0.883 = $3,954,700; × 1.175 AFUDC + overhead = $4,646,773', src: POS_LOWER('161', '0.883') };
+const POS_138 = { usd_each: 4_325_761, year: 2014, arithmetic: '230 kV position figure $4,478,709 × 0.822 = $3,681,499; × 1.175 AFUDC + overhead = $4,325,761', src: POS_LOWER('138', '0.822') };
+const POS_115 = { usd_each: 4_010_012, year: 2014, arithmetic: '230 kV position figure $4,478,709 × 0.762 = $3,412,776; × 1.175 AFUDC + overhead = $4,010,012', src: POS_LOWER('115', '0.762') };
+const POS_69 = { usd_each: 3_667_951, year: 2014, arithmetic: '230 kV position figure $4,478,709 × 0.697 = $3,121,660; × 1.175 AFUDC + overhead = $3,667,951', src: POS_LOWER('69', '0.697') };
+
+const ST_500: TerminalRule = {
+  usd_each: 34_582_007, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x, every_mi: 400, after_mi: 400,
+  arithmetic: 'B&V 2014 T4-6: 500 kV substation base $2,559,250 + 6 positions × 1.5 (breaker-and-a-half) × $2,985,805 per position = $29,431,495; × 1.175 AFUDC + overhead = $34,582,007',
+  src: `B&V 2014 p.3-2 Table 3-1 (base), p.3-3 Table 3-2 (breaker-and-a-half 1.5), p.4-7 Table 4-6 (per-position cost); ${AFUDC_IN}; 6 positions and count 2 (one per end) = ours; +1 per 400 mi beyond 400 = our reading of PNAS SI Table S6`,
+  position: POS_500,
+};
+const ST_345: TerminalRule = {
+  usd_each: 26_187_091, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
+  arithmetic: 'B&V 2014 T4-6: 345 kV substation base $2,132,700 + 6 positions × 1.5 (breaker-and-a-half) × $2,239,354 per position = $22,286,886; × 1.175 AFUDC + overhead = $26,187,091',
+  src: `B&V 2014 p.3-2 Table 3-1 (base), p.3-3 Table 3-2 (breaker-and-a-half 1.5), p.4-7 Table 4-6 (per-position cost); ${AFUDC_IN}; 6 positions and count 2 (one per end) = ours`,
+  position: POS_345,
+};
+const ST_230: TerminalRule = {
+  usd_each: 17_792_293, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
+  arithmetic: 'B&V 2014 T4-6: 230 kV substation base $1,706,250 + 6 positions × 1.5 × $1,492,903 per position = $15,142,377; × 1.175 AFUDC + overhead = $17,792,293',
+  src: `B&V 2014 p.3-2 Table 3-1 (base), p.3-3 Table 3-2 (breaker-and-a-half 1.5), p.4-7 Table 4-6 (per-position cost); ${AFUDC_IN}; 6 positions and count 2 = ours`,
+  position: POS_230,
+};
+/** A 69-161 kV station: the 230 kV figure × the MISO MTEP26 ratio, then × 1.175. */
+const stLower = (kv: string, ratio: string, miso: string, scaled: string, marked: string, usd: number, position: TerminalRule['position']): TerminalRule => ({
+  usd_each: usd, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
+  arithmetic: `B&V 2014 T4-6 230 kV substation $15,142,377 × MISO MTEP26 Table 4.2-2 ratio (6 positions breaker-and-a-half, ${kv} kV $${miso} / 230 kV $24.075 M ≈ ${ratio}), kept to the thousand as $${scaled}; × 1.175 AFUDC + overhead = $${marked}`,
+  src: `B&V 2014 p.4-7 T4-6 scaled by MISO MTEP26 Table 4.2-2 ratio ${ratio}; ${AFUDC_IN}; 6 positions and count 2 = ours; our derivation`,
+  position,
+});
+
+/** westtec-es keeps these line types as they were before the default method moved to position figures and the B&V 500 kV station. */
+const WESTTEC_LINES: Record<string, LineType> = {
   ac500: {
     label: '500 kV AC double circuit',
     kv: { value: 500, src: 'nominal voltage class of this line type (500 kV AC double circuit)' },
@@ -277,7 +334,90 @@ const BV_LINES: Record<string, LineType> = {
   },
 };
 
-const MARKUP_AFUDC = { label: 'AFUDC + overhead', x: 1.175, src: 'B&V 2014 (7.5 % AFUDC + 10 % overhead); PNAS §C formula' };
+const BV_LINES: Record<string, LineType> = {
+  ac500: {
+    label: '500 kV AC double circuit',
+    kv: { value: 500, src: 'nominal voltage class of this line type (500 kV AC double circuit)' },
+    base_per_mi: { usd: 3_071_750, year: 2014, src: BV },
+    terminals: ST_500,
+  },
+  ac500s: {
+    label: '500 kV AC single circuit',
+    kv: { value: 500, src: 'nominal voltage class of this line type (500 kV AC single circuit)' },
+    base_per_mi: { usd: 1_919_450, year: 2014, src: BV_SC },
+    terminals: { ...ST_500, position: POS_500S },
+  },
+  ac345: {
+    label: '345 kV AC double circuit',
+    kv: { value: 345, src: 'nominal voltage class of this line type (345 kV AC double circuit)' },
+    base_per_mi: { usd: 2_150_300, year: 2014, src: BV },
+    terminals: ST_345,
+  },
+  ac345s: {
+    label: '345 kV AC single circuit',
+    kv: { value: 345, src: 'nominal voltage class of this line type (345 kV AC single circuit)' },
+    base_per_mi: { usd: 1_343_800, year: 2014, src: BV_SC },
+    terminals: { ...ST_345, position: POS_345S },
+  },
+  ac230: {
+    label: '230 kV AC double circuit',
+    kv: { value: 230, src: 'nominal voltage class of this line type (230 kV AC double circuit)' },
+    base_per_mi: { usd: 1_536_400, year: 2014, src: BV },
+    terminals: ST_230,
+  },
+  ac230s: {
+    label: '230 kV AC single circuit',
+    kv: { value: 230, src: 'nominal voltage class of this line type (230 kV AC single circuit)' },
+    base_per_mi: { usd: 959_700, year: 2014, src: BV_SC },
+    terminals: { ...ST_230, position: POS_230S },
+  },
+  ac161: {
+    label: '161 kV AC double circuit',
+    kv: { value: 161, src: 'nominal voltage class of this line type (161 kV AC double circuit)' },
+    base_per_mi: {
+      usd: 1_322_800, year: 2014,
+      src: `B&V 2014 230 kV double circuit $1,536,400 × MISO MTEP26 ratio 0.861 (161/230 kV double circuit, Table 4.1-2, ROW land and the 30 % contingency + 7.5 % AFUDC removed); ${LOWER_KV_NOTE}`,
+    },
+    terminals: stLower('161', '0.883', '21.268 M', '13,376,000', '15,716,800', 15_716_800, POS_161),
+  },
+  ac138: {
+    label: '138 kV AC double circuit',
+    kv: { value: 138, src: 'nominal voltage class of this line type (138 kV AC double circuit)' },
+    base_per_mi: {
+      usd: 1_296_600, year: 2014,
+      src: `B&V 2014 230 kV double circuit $1,536,400 × MISO MTEP26 ratio 0.844 (138/230 kV double circuit, Table 4.1-2, ROW land and the 30 % contingency + 7.5 % AFUDC removed); ${LOWER_KV_NOTE}`,
+    },
+    terminals: stLower('138', '0.822', '19.789 M', '12,447,000', '14,625,225', 14_625_225, POS_138),
+  },
+  ac115: {
+    label: '115 kV AC double circuit',
+    kv: { value: 115, src: 'nominal voltage class of this line type (115 kV AC double circuit)' },
+    base_per_mi: {
+      usd: 1_226_000, year: 2014,
+      src: `B&V 2014 230 kV double circuit $1,536,400 × MISO MTEP26 ratio 0.798 (115/230 kV double circuit, Table 4.1-2, ROW land and the 30 % contingency + 7.5 % AFUDC removed); ${LOWER_KV_NOTE}`,
+    },
+    terminals: stLower('115', '0.762', '18.350 M', '11,541,000', '13,560,675', 13_560_675, POS_115),
+  },
+  ac69: {
+    label: '69 kV AC double circuit',
+    kv: { value: 69, src: 'nominal voltage class of this line type (69 kV AC double circuit)' },
+    base_per_mi: {
+      usd: 1_086_200, year: 2014,
+      src: `B&V 2014 230 kV double circuit $1,536,400 × MISO MTEP26 ratio 0.707 (69/230 kV double circuit, Table 4.1-2, ROW land and the 30 % contingency + 7.5 % AFUDC removed); ${LOWER_KV_NOTE}`,
+    },
+    terminals: stLower('69', '0.697', '16.776 M', '10,551,000', '12,397,425', 12_397_425, POS_69),
+  },
+  dc500: {
+    label: '500 kV HVDC bipole',
+    kv: { value: 500, src: 'nominal voltage class of this line type (500 kV HVDC bipole)' },
+    base_per_mi: { usd: 1_536_400, year: 2014, src: BV },
+    terminals: {
+      usd_each: 541_332_488, year: 2014, min: 2, report_only: true, markup_in: MARKUP_AFUDC.x,
+      arithmetic: 'B&V 2014 T3-5: 500 kV HVDC converter station, 3,000 MW, $460,708,500; × 1.175 AFUDC + overhead = $541,332,488',
+      src: `B&V 2014 p.3-4 Table 3-5 (500 kV, 3,000 MW converter); ${AFUDC_IN}; count 2, one per end = ours (no source states it); HVDC $ is report-only`,
+    },
+  },
+};
 
 const TRIBAL_NOTE =
   'Tribal land is crossed only with the consent of the tribal nation; these miles are a negotiation, not a cost, and carry no $.';
@@ -308,7 +448,7 @@ const tmDefault: RoutePreset = {
   label: 'TransmissionMap default',
   attribution:
     'Multipliers: Black & Veatch 2014 (WECC TEPPC); regional sets: NREL reVX (BSD-3-Clause); mitigation: SWCA 2013 for WECC; ' +
-    'land values: USDA NASS Census of Agriculture 2022; escalation: MISO MTEP25; ' +
+    'land values: USDA NASS Census of Agriculture 2022; escalation: BLS; ' +
     'residential structures: USA Structures, Oak Ridge National Laboratory (ORNL); Federal Emergency Management Agency (FEMA) Geospatial Response Office (CC BY 4.0).',
   caveat: 'Routes are illustrative, not siting recommendations.',
   dollar_year: 2014,
@@ -320,23 +460,23 @@ const tmDefault: RoutePreset = {
     { band: 'landcover', match: { codes: [22, 23] }, route_w: 1.27, cost_x: 1, cost_by_region: { TEPPC: 1.27, SCE: 2, MISO: 1.08, Southeast: 1.75 }, group: 'terrain', ref: BV_REF, note: 'developed low/medium', src: `${BV_WECC} (suburban); reVX suburban key (config/land_use_classes.json L11-15: NLCD 21, 22, 23; our NLCD 21 stays in the neutral row = ours); ${REVX}` },
     { band: 'landcover', match: { codes: [24] }, route_w: 1.59, cost_x: 1, cost_by_region: { TEPPC: 1.59, SCE: 3, MISO: 1.2, Southeast: 1.12 }, group: 'terrain', ref: BV_REF, note: 'developed high', src: `${BV_WECC} (urban); reVX urban key (land_use_classes.json L16-18: NLCD 24); ${REVX}` },
     { band: 'landcover', match: { codes: [31] }, route_w: 1.05, cost_x: 1, cost_by_region: { TEPPC: 1.05, SCE: 1, MISO: 1, Southeast: 1 }, group: 'terrain', ref: BV_REF, note: 'barren', src: `${BV_WECC} (desert); reVX has no barren class (→ 1); ${REVX}` },
-    { band: 'landcover', match: { codes: [90, 95] }, route_w: 2.5, cost_x: 1, cost_by_region: { TEPPC: 1.2, SCE: 2, MISO: 1.8, Southeast: 1.33 }, group: 'terrain', ref: WPP_REF, note: 'wetland', src: `${BV_WECC} (wetland $); reVX wetland key (land_use_classes.json L19-22: NLCD 90, 95); ${REVX}; routing weight 2.5 = ours, above forest (2.25): EPRI-KY (EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 4) scores woody wetland 9 and emergent 8.7 of 9, and a wetland crossing adds a CWA §404 permit and matting` },
+    { band: 'landcover', match: { codes: [90, 95] }, route_w: 2.5, cost_x: 1, cost_by_region: { TEPPC: 1.2, SCE: 2, MISO: 1.8, Southeast: 1.33 }, group: 'terrain', ref: WPP_REF, note: 'wetland', src: `${BV_WECC} (wetland $); reVX wetland key (land_use_classes.json L19-22: NLCD 90, 95); ${REVX}; routing weight 2.5 = ours, above forest (2.25): EPRI-KY (EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 4) scores "Wetlands + 30' Buffer" 8.7 of 9, and a wetland crossing adds a CWA §404 permit and matting` },
     { band: 'landcover', match: { codes: [12] }, route_w: 1.75, cost_x: 1, cost_by_region: { TEPPC: 1.75, SCE: 2, MISO: 1.21, Southeast: 1.6 }, group: 'terrain', ref: WPP_REF, note: 'ice/snow, treated as mountain', src: `ours (each set's mountain value); ${REVX}` },
     { band: 'landcover', match: { codes: [82] }, route_w: 1, cost_x: 1, cost_by_region: { TEPPC: 1, SCE: 1, MISO: 1.03, Southeast: 1 }, group: 'terrain', ref: BV_REF, note: 'cultivated crops', src: `${BV_WECC} (farmland 1.0 = reVX TEPPC cropland); reVX cropland key (land_use_classes.json L2-5 and dry_cost_creator.py L31 list codes 80 and 81; 80 is not an NLCD class and 81 is pasture/hay, so applying the key to NLCD 82 cultivated crops = ours, and 81 stays in the neutral row); ${REVX}` },
     { band: 'landcover', match: { codes: [21, 52, 71, 81] }, route_w: 1, cost_x: 1, group: 'terrain', ref: BV_REF, note: 'other NLCD', src: `${BV_WECC} (scrub/flat, farmland)` },
     { band: 'slope', match: { range: [2, 3] }, route_w: 1.4, cost_x: 1, cost_by_region: { TEPPC: 1.4, SCE: 1.5, MISO: 1.1, Southeast: 1.2 }, group: 'terrain', ref: BV_REF, note: 'rolling, 1–4°', src: `${BV_WECC} (rolling hill 2–8 %); PNAS S7 1°/4° bands; ${REVX_SLOPE}` },
     { band: 'slope', match: { range: [4, 8] }, route_w: 1.75, cost_x: 1, cost_by_region: { TEPPC: 1.75, SCE: 2, MISO: 1.21, Southeast: 1.6 }, group: 'terrain', ref: BV_REF, note: 'mountain, ≥ 4°', src: `${BV_WECC} (mountain >8 %); PNAS S7; ${REVX_SLOPE}` },
-    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.5, line_types: ['ac500'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 §2 structure (tubular 1.50 at 500 kV); PNAS S7' },
-    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.3, line_types: ['ac345'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 §2 structure (tubular 1.30 at 345 kV); PNAS S7' },
+    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.5, line_types: ['ac500', 'ac500s'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 p.2-4 Table 2-3 (tubular steel 1.50 at 500 kV, single and double circuit; lattice 1.00 is the Table 2-1 base): cost only' },
+    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.3, line_types: ['ac345', 'ac345s'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 p.2-4 Table 2-3 (tubular steel 1.30 at 345 kV, single and double circuit; lattice 1.00 is the Table 2-1 base): cost only' },
     { band: 'whpclass', match: { codes: [4] }, route_w: 1.03, cost_x: 1.03, ref: WU_REF, note: 'WHP high', src: `${PNAS_FIRE}; on class-4 cells of the 2026-10-16 cube the ramp has median 1.031, mean 1.034 → 1.03 (fire hardening in proportion to risk)` },
     { band: 'whpclass', match: { codes: [5] }, route_w: 1.5, cost_x: 1.5, ref: WPP_REF, note: 'WHP very high', src: 'ours (hardening)' },
     { band: 'protect', match: { field: GAP, codes: [1] }, route_w: 100, cost_x: 1, excludable: {}, group: 'protection', ref: WU_REF, note: 'GAP 1', src: 'ours, following PNAS S7 Cat 1 = 100; $ via mitigation' },
     { band: 'protect', match: { field: GAP, codes: [2] }, route_w: 10, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'GAP 2', src: 'ours (routing preference; $ via mitigation)' },
     { band: 'protect', match: { field: GAP, codes: [3] }, route_w: 2, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'GAP 3', src: 'ours (routing preference; $ via mitigation)' },
     { band: 'desig', match: { bit: 0 }, route_w: 1000, cost_x: 1, excludable: { off_w: 100, off_src: 'S17 WSA RC 4 weight before the v1.3 exclusion (ours)' }, group: 'protection', ref: WPP_REF, note: 'Wilderness Study Area', src: `${DESIG} (S17 WSA RC 4); FLPMA §603(c) non-impairment until Congress acts (BLM IM 2017-002: most high-voltage ROW projects will not meet it); WECC risk class 4 (precluded by law or regulation); exclusion weight 1000 = the ES/WestTEC military barrier multiplier, finite so an endpoint inside still solves` },
-    { band: 'desig', match: { bit: 1 }, route_w: 10, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'National Monument (land) / NCA', src: `${DESIG} (S17 NM/NCA RC 3)` },
-    { band: 'desig', match: { bit: 2 }, route_w: 10, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'Inventoried Roadless Area (2001 rule; rescission proposed 2026-08-18, not final as of 2026-10-16)', src: `${DESIG} (S17 IRA RC 3); 36 CFR 294.12` },
-    { band: 'desig', match: { bit: 3 }, route_w: 10, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'ACEC', src: `${DESIG} (S17 ACEC RC 3)` },
+    { band: 'desig', match: { bit: 1 }, route_w: 100, cost_x: 1, group: 'protection', ref: WU_REF, note: 'National Monument (land) / NCA', src: `PNAS (Wu et al. 2023) Table S7 category weight 100, with NM/NCA in that category per Table S17 (risk class 3)` },
+    { band: 'desig', match: { bit: 2 }, route_w: 20, cost_x: 1, group: 'protection', ref: WU_REF, note: 'Inventoried Roadless Area (2001 rule; rescission proposed 2026-08-18, not final as of 2026-10-16)', src: `PNAS (Wu et al. 2023) Table S7 category weight 20, with IRA in that category per Table S17 (risk class 3); 36 CFR 294.12` },
+    { band: 'desig', match: { bit: 3 }, route_w: 20, cost_x: 1, group: 'protection', ref: WU_REF, note: 'ACEC', src: `PNAS (Wu et al. 2023) Table S7 category weight 20, with ACEC in that category per Table S17 (risk class 3)` },
     { band: 'desig', match: { bit: 4 }, route_w: 100, cost_x: 1, excludable: {}, group: 'protection', ref: WU_REF, note: 'Wild & Scenic River corridor', src: `${DESIG}; PNAS Category 1 (Wu et al. 2023); 16 USC 1278` },
     { band: 'desig', match: { bit: 5 }, route_w: 2, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'National Historic/Scenic Trail corridor', src: `${DESIG} (S17 NHT RC 2)` },
     { band: 'desig', match: { bit: 6 }, route_w: 2, cost_x: 1, group: 'protection', ref: WPP_REF, note: 'other special federal area (RNA/SDA/NSBV/HCA/NRA)', src: `${DESIG} (S17 RC 2)` },
@@ -372,9 +512,9 @@ const tmDefault: RoutePreset = {
     { band: 'flags', match: { bit: 3 }, route_w: 5, cost_x: 1, ref: WPP_REF, note: 'critical habitat', src: 'ours' },
     { band: 'flags', match: { bit: 4 }, route_w: 0.8, cost_x: 1, group: 'parallel', ref: WPP_REF, note: 'Section 368 corridor', src: 'ours (preference discount); min with the existing-line discount, not compounded' },
     {
-      band: 'adj', match: { field: { shift: 0, mask: 0b11 }, codes: [1, 2] }, route_w: 0.5, cost_x: 1, group: 'parallel',
+      band: 'adj', match: { field: { shift: 0, mask: 0b11 }, codes: [1, 2] }, route_w: 0.8, cost_x: 1, group: 'parallel',
       ref: GTC_REF, note: 'on or beside an existing ≥ 230 kV line (adj line class 1–2)',
-      src: 'derived from EPRI-GTC Georgia 2006 suitability (existing corridor 1 vs open land 2), Table 2-1 of the EPRI-GTC siting methodology (EPRI 1013080, 2006) as reproduced publicly on Yumpu; PUCT 16 TAC 25.101(b)(3)(B)(i) and FERC Order 1977 resource report 10 name the factor without a value',
+      src: 'ours: as-built check, see docs/routing.md § How it was checked; EPRI-GTC Georgia 2006 suitability scores an existing corridor above open land (Table 2-1 of EPRI 1013080, 2006); PUCT 16 TAC 25.101(b)(3)(B)(i) and FERC Order 1977 resource report 10 name the factor without a value',
     },
     { band: 'flags', match: { bit: 0 }, route_w: 100, cost_x: 1, excludable: {}, ref: WPP_REF, note: 'tribal land (soft barrier)', src: 'ours (soft barrier: finite, so endpoints inside or enclosed by tribal land still solve)' },
     { band: 'flags', match: { bit: 1 }, route_w: 100, cost_x: 1, excludable: { link: 'mil' }, group: 'military', ref: REVX_REF, note: 'military (PAD-US DOD)', src: MIL_SRC },
@@ -382,9 +522,9 @@ const tmDefault: RoutePreset = {
     { band: 'aviation', match: { codes: [2] }, route_w: 1, cost_x: 1, ref: WPP_REF, note: 'notice zone (14 CFR 77.9)', src: 'ours (a notice is a filing, not a prohibition: weight 1, report miles only); FAA Form 7460-1 / OE/AAA decides' },
     { band: 'osm_flags', match: { bit: 0 }, route_w: 20, cost_x: 1, ref: WPP_REF, note: 'lake (OSM)', src: 'ours (routing preference; NLCD 11 already prices water)' },
     {
-      band: 'adj', match: { field: { shift: 5, mask: 0b11 }, codes: [1, 2] }, route_w: 0.7, cost_x: 1, group: 'parallel',
+      band: 'adj', match: { field: { shift: 5, mask: 0b11 }, codes: [1, 2] }, route_w: 0.9, cost_x: 1, group: 'parallel',
       ref: WPP_REF, note: 'on/beside existing 100–229 kV line',
-      src: 'ours; EPRI-GTC scores paralleling existing transmission as most suitable (EPRI 1013080 p.46); weaker than ≥ 230 kV because a 345/500 kV line beside a 115 kV ROW often needs new ROW width',
+      src: 'ours: as-built check, see docs/routing.md § How it was checked; stays weaker than the ≥ 230 kV discount because a 345/500 kV line beside a 115 kV ROW often needs new ROW width; EPRI-GTC scores paralleling existing transmission as most suitable (EPRI 1013080 p.46)',
     },
     { band: 'flags2', match: { bit: 2 }, route_w: 1.5, cost_x: 1, except: [{ band: 'nfhl', match: { codes: [1, 2] }, label: 'where FEMA has an effective flood map', ref: WPP_REF, src: "ours: FEMA's map replaces the estimate where it exists, so a floodplain counts once" }], ref: WPP_REF, note: 'floodplain', src: 'ours; EPRI-KY (EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 4) scores the 100-yr floodplain 9 of 9; a line spans a floodplain and the modelled layer covers 10.9 % of CONUS land, so the weight stays below GAP 3 (2); no $ source for floodplain foundations at concept level; layer: EPA EnviroAtlas estimated floodplain (Woznicki et al. 2019)' },
     { band: 'flags2', match: { bit: 3 }, route_w: 10, cost_x: 1, group: 'sites', ref: WPP_REF, note: 'occupied facility (school, day care and similar)', src: 'ours; EPRI-GTC treats school, day care and similar parcels as avoidance areas (EPRI 1013080 p.40, p.44); 91 m (300 ft) buffer from the 300 ft proximity step (p.46)' },
@@ -393,15 +533,15 @@ const tmDefault: RoutePreset = {
     { band: 'flags2', match: { bit: 7 }, route_w: 3, cost_x: 1, ref: WPP_REF, note: 'FUDS munitions response site', src: 'ours; USACE FUDS munitions response sites carry explosives-safety review; clearance cost not priced' },
     { band: 'flags', match: { bit: 7 }, route_w: 3, cost_x: 1, ref: WPP_REF, note: 'tall structure or dam', src: 'ours; FAA obstruction marking from 200 ft (61 m) (14 CFR 77 / AC 70/7460-1); NID high/significant hazard dams: a line beside a dam crosses its inspection and inundation zone' },
     { band: 'landcover', match: { codes: [11] }, route_w: 1.2, cost_x: 1, cost_by_region: { TEPPC: 1.2, SCE: 2, MISO: 1.8, Southeast: 1.33 }, group: 'terrain', ref: BV_REF, note: 'open water', src: `${BV_WECC} (wetland); applying the reVX wetland key to NLCD 11 = ours; reVX water NLCD 11 × 10 (constants.py L73-75, set last in dry_cost_creator.py L349-351) not adopted (the OSM lake row weights lakes); ${REVX}` },
-    { band: 'bldg', match: { range: [2, 3] }, route_w: 1.3, cost_x: 1, ref: WPP_REF, note: `1–2 homes in cell (${HOMES_WHY})`, src: 'ours (step below the EPRI-KY-derived ≥ 10 row)' },
-    { band: 'bldg', match: { range: [4, 10] }, route_w: 1.6, cost_x: 1, ref: WPP_REF, note: `3–9 homes in cell (${HOMES_WHY})`, src: 'ours (step below the EPRI-KY-derived ≥ 10 row)' },
-    { band: 'bldg', match: { range: [11, 255] }, route_w: 2, cost_x: 1, ref: KY_REF, note: `10+ homes in cell (${HOMES_WHY})`, src: 'derived: EPRI-KY (EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 1) scores 0–300 ft from a building 9 against a background of 4.4 → 9 / 4.4 ≈ 2.0; no $ (cost_x 1)' },
-    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.1, line_types: ['ac230', 'ac161', 'ac138', 'ac115', 'ac69'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 §2 structure (tubular 1.10 at 230 kV); PNAS S7; ≤ 161 kV take the 230 kV value = ours (no source below 230 kV)' },
+    { band: 'bldg', match: { range: [2, 3] }, route_w: 1.3, cost_x: 1, ref: WPP_REF, note: `1–2 homes in cell (${HOMES_WHY})`, src: 'ours (step below the 10+ homes row)' },
+    { band: 'bldg', match: { range: [4, 10] }, route_w: 1.6, cost_x: 1, ref: WPP_REF, note: `3–9 homes in cell (${HOMES_WHY})`, src: 'ours (step below the 10+ homes row)' },
+    { band: 'bldg', match: { range: [11, 255] }, route_w: 2, cost_x: 1, ref: KY_REF, note: `10+ homes in cell (${HOMES_WHY})`, src: 'ours: EPRI-KY (EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 9, report p.36) scores building proximity 0–300 ft 9 against a background of 1; the weight 2 is below that ratio; no $ (cost_x 1)' },
+    { band: 'flags', match: { bit: 5 }, route_w: 1, cost_x: 1.00, line_types: ['ac230', 'ac230s', 'ac161', 'ac138', 'ac115', 'ac69'], ref: BV_REF, note: 'pop > 100/mi² → tubular steel', src: 'B&V 2014 p.2-4 Table 2-3 (tubular steel 1.00 at 230 kV, single and double circuit; lattice 0.90): cost only; the Table 2-1 base assumes tubular steel at 230 kV (p.2-3), so the multiplier is 1.00; ≤ 161 kV take the 230 kV value = ours (no source below 230 kV)' },
     { band: 'desig', match: { bit: 7 }, route_w: 1000, cost_x: 1, excludable: { off_w: 100, off_src: 'ours: = the GAP 1 row and the WSA row before v1.3 (100)' }, group: 'protection', ref: WPP_REF, note: 'Wilderness or National Park (excluded)', src: `${DESIG} (WA, State Wilderness SW) + PAD-US 4.1 Fee Des_Tp NP; Wilderness Act 16 USC 1133(c), a utility line only by Presidential authorization (1133(d)(4)); National Park: Secretary approval under 54 USC 100902 and NPS's no-practicable-alternative rule; weight 1000 as the WSA row` },
     { band: 'flags', match: { bit: 6 }, route_w: 5, cost_x: 1, ref: WPP_REF, note: 'state or local park (GAP 3–4)', src: 'ours (× GAP 3 = 10, the GAP 2 level; GAP 1–2 parks are weighted by their GAP row); state rules restrict utility lines in parks, e.g. Minn. R. 7850.4300 subp. 2, LWCF Act §6(f)(3) (54 USC 200305(f)(3)) conversion review, N.Y. Const. art. XIV' },
     {
       band: 'wetland', match: { range: [52, 101] }, route_w: 2.5, cost_x: 1, ref: WPP_REF, note: 'NWI wetland, over half the cell',
-      src: 'USFWS NWI (emergent, forested/shrub, estuarine/marine wetland); weight = the NLCD wetland row (EPRI-KY wetland 8.7–9 of 9, CWA §404 permit and matting); cost on NLCD only',
+      src: 'USFWS NWI (emergent, forested/shrub, estuarine/marine wetland); weight = the NLCD wetland row (EPRI-KY wetlands 8.7 of 9, CWA §404 permit and matting); cost on NLCD only',
       except: [{ band: 'landcover', match: { codes: [41, 42, 43, 90, 95] }, ref: WPP_REF, label: 'where NLCD already marks forest or wetland', src: 'ours: those cells are weighted by their land-cover row (forest 2.25, wetland 2.5), so a wetland counts once' }],
     },
     {
@@ -420,8 +560,8 @@ const tmDefault: RoutePreset = {
     { band: 'bldgunk', match: { range: [2, 101] }, route_w: 1, cost_x: 1,
       ref: WPP_REF, note: 'observed footprints, unknown class',
       src: 'FEMA/ORNL USA Structures; ours: neutral editable observation of a structure with unknown occupancy class, not vacant land; processed coverage' },
-    { band: 'aviation', match: { codes: [3, 4, 5, 6] }, route_w: 100, cost_x: 1.2, line_types: ['ac500', 'dc500'], ref: WU_REF, note: 'exceeds an obstruction standard — screening (≤ 61 m / 200 ft)', src: 'PNAS S7 (airports within 5 km: weight 100, cost 1.2); the Part 77 surface classes are the screening of the FAA NTAD airport and runway layers; FAA Form 7460-1 / OE/AAA decides' },
-    { band: 'aviation', match: { codes: [4, 5, 6] }, route_w: 100, cost_x: 1.2, line_types: ['ac230', 'ac345'], ref: WU_REF, note: 'exceeds an obstruction standard — screening (≤ 46 m)', src: 'PNAS S7 (airports within 5 km: weight 100, cost 1.2); the Part 77 surface classes are the screening of the FAA NTAD airport and runway layers; FAA Form 7460-1 / OE/AAA decides' },
+    { band: 'aviation', match: { codes: [3, 4, 5, 6] }, route_w: 100, cost_x: 1.2, line_types: ['ac500', 'ac500s', 'dc500'], ref: WU_REF, note: 'exceeds an obstruction standard — screening (≤ 61 m / 200 ft)', src: 'PNAS S7 (airports within 5 km: weight 100, cost 1.2); the Part 77 surface classes are the screening of the FAA NTAD airport and runway layers; FAA Form 7460-1 / OE/AAA decides' },
+    { band: 'aviation', match: { codes: [4, 5, 6] }, route_w: 100, cost_x: 1.2, line_types: ['ac230', 'ac230s', 'ac345', 'ac345s'], ref: WU_REF, note: 'exceeds an obstruction standard — screening (≤ 46 m)', src: 'PNAS S7 (airports within 5 km: weight 100, cost 1.2); the Part 77 surface classes are the screening of the FAA NTAD airport and runway layers; FAA Form 7460-1 / OE/AAA decides' },
     { band: 'aviation', match: { codes: [5, 6] }, route_w: 100, cost_x: 1.2, line_types: ['ac161', 'ac138', 'ac115', 'ac69'], ref: WU_REF, note: 'exceeds an obstruction standard — screening (≤ 30 m)', src: 'PNAS S7 (airports within 5 km: weight 100, cost 1.2); the Part 77 surface classes are the screening of the FAA NTAD airport and runway layers; FAA Form 7460-1 / OE/AAA decides' },
     { band: 'nfhl', match: { codes: [2] }, route_w: 1.5, cost_x: 1, ref: WPP_REF, note: 'FEMA special flood hazard area', src: 'FEMA National Flood Hazard Layer (NFHL_Key_Layers_202610), SFHA ≥ 50 % of the cell; weight = the EPA floodplain row\'s (ours; EPRI-KY: EKPC 2024, KY PSC 2024-00108 Exh. 19 Table 4)' },
   ],
@@ -467,14 +607,14 @@ const tmDefault: RoutePreset = {
   markups: [MARKUP_AFUDC],
   contingency: {
     pct: 0.3, label: 'contingency (rough early estimate)',
-    src: 'MISO MTEP26 exploratory estimates carry 30 % (MISO MTEP26 cost workbook, cell B606; MISO MTEP25 p.4); PJM 30 % (PJM DESTF cost evaluation, 2025-07-15, slides 3–4). ' +
+    src: 'MISO MTEP26 exploratory estimates carry 30 % (MISO MTEP26 cost workbook, cell B606; MISO MTEP25 p.4); PJM 30 % (PJM DESTF cost evaluation, 2025-07-15, slide 3, https://www.pjm.com/-/media/DotCom/committees-groups/task-forces/destf/2025/20250715/20250715-item-04---cost-evaluation-process---presentation.pdf). ' +
       'B&V 2014 §4.3 p.4-8 calls its costs "overnight" and never uses the word "contingency", so 30 % is not a double count. ' +
       'Applied to line + markups + mitigation + terminals + ROW land (MISO applies it to the whole project)',
   },
   row_land: {
     band: 'landval', year: 2022,
-    width_ft: { ac500: 250, ac345: 200, ac230: 150, ac161: 100, ac138: 95, ac115: 90, ac69: 80, dc500: 200 },
-    width_src: 'B&V 2014 §2.5.1 Table 2-6 p.2-7 ROW widths: 500 kV DC 250 ft, 345 kV DC 200 ft, 230 kV DC 150 ft, 500 kV HVDC bipole 200 ft; 161/138/115/69 kV: MISO MTEP26 Transmission Cost Estimation Workbook Table 3.1-1 (100/95/90/80 ft, used as published; MISO uses 125 ft at 230 kV)',
+    width_ft: { ac500: 250, ac500s: 200, ac345: 200, ac345s: 175, ac230: 150, ac230s: 125, ac161: 100, ac138: 95, ac115: 90, ac69: 80, dc500: 200 },
+    width_src: 'B&V 2014 §2.5.1 Table 2-6 p.2-7 ROW widths: 500 kV DC 250 ft, 345 kV DC 200 ft, 230 kV DC 150 ft, 500 kV SC 200 ft, 345 kV SC 175 ft, 230 kV SC 125 ft, 500 kV HVDC bipole 200 ft; 161/138/115/69 kV: MISO MTEP26 Transmission Cost Estimation Workbook Table 3.1-1 (100/95/90/80 ft, used as published; MISO uses 125 ft at 230 kV)',
     developed: { band: 'landcover', match: { codes: [22, 23, 24] } }, developed_x: 5,
     developed_src: 'MISO MTEP25 p.7 (urban/suburban land = 5 × pasture); applied to the NASS all-ag county mean on NLCD 22–24 = ours',
     federal: 'as-private', tribal: 0,
@@ -493,7 +633,7 @@ const tmDefault: RoutePreset = {
     'ROW land = ROW width × routed length × county farmland $/ac (USDA NASS 2022), × 5 on developed land (MISO MTEP25 p.7).',
     'Assumption: federal ROW priced at county private land value; BLM/USFS rent schedules not modelled.',
     'Regional cost sets: NREL reVX config/iso_multipliers.json @ efb1977, BSD-3-Clause licence (LICENSE at efb1977: Copyright (c) 2026, Alliance for Energy Innovation); costs only, routing is national.',
-    'Markups apply to line $ and ROW land, not terminals (PNAS §C formula); contingency applies to the whole subtotal.',
+    'Markups apply to line $ and ROW land; the B&V terminal figures carry the × 1.175 (AFUDC + overhead) in their own values; contingency applies to the whole subtotal.',
   ],
 };
 
@@ -508,6 +648,7 @@ const PNAS_TRIBAL =
 
 const pnasWu2023: RoutePreset = {
   id: 'pnas-wu2023',
+  study_terminals: true,
   label: 'Power of Place – West (Wu et al. 2023)',
   attribution:
     'Method: Wu, G. C., et al. (2023). Minimizing habitat conflicts in meeting net-zero energy targets in the western United States. PNAS 120(4), e2204098120. https://doi.org/10.1073/pnas.2204098120. Data: Zenodo https://doi.org/10.5281/zenodo.7460026. CC BY 4.0.',
@@ -616,10 +757,11 @@ const revxSlope = (range: [number, number], note: string, w: [number, number, nu
 
 const nrelRevx: RoutePreset = {
   id: 'nrel-revx',
+  study_terminals: true,
   label: 'NREL reVX least-cost transmission',
   attribution:
     'Method and values: NREL reVX least_cost_xmission (BSD-3-Clause), commit efb1977; region map and GAP 1 exclusion: Lopez et al. 2025, NREL/TP-6A20-91900; ' +
-    'escalation: MISO MTEP25.',
+    'escalation: BLS.',
   caveat: 'Routes are illustrative, not siting recommendations.',
   dollar_year: 2019,
   escalation: ESCALATION,
@@ -708,30 +850,31 @@ const BV_SLOPE_NOTE = '; B&V slope 2 %/8 % = 1.15°/4.57°, approximated by our 
 
 const bv2014: RoutePreset = {
   id: 'bv-2014',
+  study_terminals: true,
   label: 'Black & Veatch 2014 (WECC TEPPC)',
   attribution:
-    'Method and values: Black & Veatch 2014, Capital Costs for Transmission and Substations (WECC TEPPC); escalation: MISO MTEP25.',
+    'Method and values: Black & Veatch 2014, Capital Costs for Transmission and Substations (WECC TEPPC); escalation: BLS.',
   caveat: 'Routes are illustrative; B&V gives costs only, so routing on its cost multipliers is ours.',
   dollar_year: 2014,
   escalation: ESCALATION,
   line_types: {
     ac500: bvLine('500 kV AC double circuit', 500, 3_071_750, {
-      usd_each: 34_582_007, year: 2014, min: 2,
+      usd_each: 34_582_007, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
       arithmetic: 'B&V 2014 T4-6: 500 kV substation base $2,559,250 + 6 positions × 1.5 × $2,985,805 per position = $29,431,495; × 1.175 AFUDC + overhead = $34,582,007',
       src: BV_TERM('500', '$2,559,250', '$2,985,805'),
     }),
     ac345: bvLine('345 kV AC double circuit', 345, 2_150_300, {
-      usd_each: 26_187_091, year: 2014, min: 2,
+      usd_each: 26_187_091, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
       arithmetic: 'B&V 2014 T4-6: 345 kV substation base $2,132,700 + 6 positions × 1.5 × $2,239,354 per position = $22,286,886; × 1.175 AFUDC + overhead = $26,187,091',
       src: BV_TERM('345', '$2,132,700', '$2,239,354'),
     }),
     ac230: bvLine('230 kV AC double circuit', 230, 1_536_400, {
-      usd_each: 17_792_293, year: 2014, min: 2,
+      usd_each: 17_792_293, year: 2014, min: 2, markup_in: MARKUP_AFUDC.x,
       arithmetic: 'B&V 2014 T4-6: 230 kV substation base $1,706,250 + 6 positions × 1.5 × $1,492,903 per position = $15,142,377; × 1.175 AFUDC + overhead = $17,792,293',
       src: BV_TERM('230', '$1,706,250', '$1,492,903'),
     }),
     dc500: bvLine('500 kV HVDC bipole', 500, 1_536_400, {
-      usd_each: 541_332_488, year: 2014, min: 2, report_only: true,
+      usd_each: 541_332_488, year: 2014, min: 2, report_only: true, markup_in: MARKUP_AFUDC.x,
       arithmetic: 'B&V 2014 T3-5: 500 kV HVDC converter station, 3,000 MW, $460,708,500; × 1.175 AFUDC + overhead = $541,332,488',
       src: `${BVP} p.3-4 Table 3-5 (500 kV, 3,000 MW converter); × 1.175 from p.4-8 §4.4 and Table 4-7, applied here because the engine's markups skip terminals; count 2, one per end = ours (no source states it); HVDC $ is report-only`,
     }),
@@ -778,6 +921,12 @@ const esTerrain = (band: BandName, match: Match, x: number, note: string): CostR
   band, match, route_w: x, cost_x: x, ref: ES_REF, note,
   src: `${ES_DLG}: ${note} ${x}, in cost and routing`,
 });
+// The estimator exempts co-locate line types from its barriers; a new line's cells on or beside an existing ≥ 230 kV line
+// are treated as co-located (ours, fitted to WestTEC's published routes).
+const esOnLine = (): RowExcept => ({
+  band: 'adj', match: { field: { shift: 0, mask: 0b11 }, codes: [1, 2] }, ref: ES_REF, label: 'on/beside existing ≥230 kV lines',
+  src: `${ES_DLG}: barriers exempt co-locate line types; treating a new line's cells on or beside an existing ≥ 230 kV line as co-located (barrier off in routing and cost) = ours, fitted to WestTEC's published routes`,
+});
 const ES_DESIG =
   `per-designation weights 1.2–4.0, baked in, scale 1 (${ES_DLG}); the published screening run shows PAD-US designation ×4; which designation takes which weight is not shown — assumed: the strictest designations take 4.0, the rest 1.2 = ours`;
 const esDesig = (bit: number, w: number, note: string): CostRow => ({
@@ -786,12 +935,14 @@ const esDesig = (bit: number, w: number, note: string): CostRow => ({
 const ES_MIL = (note: string, band: 'flags' | 'osm_flags', bit: number): CostRow => ({
   band, match: { bit }, route_w: EXCLUDED_W, cost_x: 1,
   excludable: { link: 'mil', off_w: 100, off_src: 'ours: = tm-default military weight' },
+  except: [esOnLine()],
   group: 'military', ref: ES_REF, note,
   src: `${ES_DLG}: Military × (barrier) 1000, routing only; which cells ES reads as military is not shown, ours = PAD-US DOD and OSM landuse=military as tm-default`,
 });
 
 const westtecEs: RoutePreset = {
   id: 'westtec-es',
+  study_terminals: true,
   label: 'WestTEC (Energy Strategies)',
   attribution:
     'An imitation of the WestTEC cost estimator\'s scales (Energy Strategies), applied to TransmissionMap\'s public routing data.',
@@ -800,9 +951,9 @@ const westtecEs: RoutePreset = {
   dollar_year: 2025,
   escalation: ESCALATION,
   line_types: {
-    ...BV_LINES,
+    ...WESTTEC_LINES,
     ac500: {
-      ...BV_LINES.ac500,
+      ...WESTTEC_LINES.ac500,
       base_per_mi: {
         usd: 4_180_000, year: 2025,
         src: `Energy Strategies Transmission Cost Estimator (WestTEC), 500 kV base $4.18M/mi; 2025 real dollars (WestTEC report p.iv fn 2)`,
@@ -820,8 +971,8 @@ const westtecEs: RoutePreset = {
     esTerrain('landcover', { codes: [82] }, 1, 'cultivated crops'),
     esTerrain('landcover', { codes: [52, 71, 81] }, 1, 'pasture / shrub'),
     esTerrain('osm_flags', { bit: 1 }, 1.3, 'river (open water that is not a lake)'),
-    esTerrain('osm_flags', { bit: 0 }, 5, 'lake (a barrier the dialog lists inside cost)'),
-    esTerrain('flags', { bit: 2 }, 5, 'airfield (a barrier the dialog lists inside cost; our flag is a 5 km buffer, ES\'s buffer is not shown = ours)'),
+    { ...esTerrain('osm_flags', { bit: 0 }, 5, 'lake (a barrier the dialog lists inside cost)'), except: [esOnLine()] },
+    { ...esTerrain('flags', { bit: 2 }, 5, 'airfield (a barrier the dialog lists inside cost; our flag is a 5 km buffer, ES\'s buffer is not shown = ours)'), except: [esOnLine()] },
     esDesig(7, 4, 'Wilderness or National Park'),
     esDesig(0, 4, 'Wilderness Study Area'),
     esDesig(1, 4, 'National Monument / NCA'),
@@ -832,6 +983,7 @@ const westtecEs: RoutePreset = {
     esDesig(6, 1.2, 'other special federal area'),
     {
       band: 'flags', match: { bit: 0 }, route_w: 5, cost_x: 1, ref: ES_REF, note: 'tribal land (barrier, routing only)',
+      except: [esOnLine()],
       src: `${ES_DLG}: Tribal lands × (barrier) 5, routing only`,
     },
     {
@@ -839,6 +991,11 @@ const westtecEs: RoutePreset = {
       note: 'off existing transmission (≥ 230 kV, more than 1 cell away)',
       src: `${ES_DLG}: Follow existing transmission × ("cells off an existing line; 1–100, 1 = off"), default 1; the published screening run used 2 = shipped; the target voltage is not shown, ≥ 230 kV assumed = ours; a cell on or next to a line counts as on it (a new line runs beside an existing one), as tm-default's parallel rows = ours`,
     },
+    ...([[3, 500, ['ac500', 'dc500']], [2, 345, ['ac345']]] as const).map(([bit, kv, lts]): CostRow => ({
+      band: 'adj', match: { bit }, route_w: 0.9, cost_x: 1, line_types: [...lts], ref: ES_REF,
+      note: `on or beside an existing ≥ ${kv} kV line (a ${kv} kV new line)`,
+      src: `${ES_DLG}: Follow existing transmission (target voltage not shown); preferring an existing line of at least the new line's voltage, ×0.9 in routing only, is ours, fitted to WestTEC's published routes`,
+    })),
     {
       band: 'whpclass', match: { codes: [4, 5] }, route_w: 1.2, cost_x: 1, ref: ES_REF, note: 'high wildfire risk (WHP high, very high)',
       src: `${ES_DLG}: Wildfire × (USFS top quartile) 1.2, routing only; WHP classes high and very high stand in for the top quartile = ours`,
@@ -858,9 +1015,10 @@ const westtecEs: RoutePreset = {
     'How the estimator stacks several modifiers on one cell is not shown; multiplicative is assumed = ours (rows outside the military and protection groups multiply).',
     'PAD-US designation weights are assumed: the estimator shows only "1.2–4.0" and a ×4 screening result, so the strictest designations take 4.0 and the rest 1.2 = ours.',
     'Follow existing transmission: the target voltage is not shown, ≥ 230 kV is assumed = ours; ×2 is the published screening run.',
+    'A 500 kV new line on or beside an existing ≥ 500 kV line, and a 345 kV one beside an existing ≥ 345 kV line, takes routing weight ×0.9 (cost ×1). The voltage match is ours, fitted to WestTEC\'s published routes; ×0.8 sends B2H to a distant 500 kV line.',
     'The airfield buffer is our 5 km flag; the estimator\'s buffer is not shown = ours.',
-    'Barriers apply to new lines (the estimator\'s routing summary).',
-    'Base costs for the other line types and all terminals are the TransmissionMap default\'s (B&V 2014; 500 kV terminals from Wu 2023; 69–161 kV from B&V 2014 × MISO MTEP26 ratios) = ours (not visible in the tool); only the 500 kV base is read from the estimator and is unverified.',
+    'The estimator exempts co-locate line types from its barriers. Treating a new line\'s cells on or beside an existing ≥ 230 kV line as co-located, so the tribal, military, airfield and lake rows do not apply there (in routing or in cost), is ours, fitted to WestTEC\'s published routes.',
+    'Base costs for the other line types and all terminals are B&V 2014 (terminals without B&V\'s ×1.175 AFUDC and overhead; 500 kV terminals from Wu 2023; 69–161 kV from B&V 2014 × MISO MTEP26 ratios) = ours (not visible in the tool); only the 500 kV base is read from the estimator and is unverified.',
     'No markups or contingency: the estimator shows a terrain-only estimate.',
   ],
 };

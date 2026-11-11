@@ -8,8 +8,8 @@ import { createHash } from 'node:crypto';
 import { PD_BANDS, OSM_BANDS } from './route.js';
 import { openTiff, readWindow, type Fetcher } from './cog-read.js';
 
-const CUBE = 'data/route/250m/';
-const FIX = 'data/build/route/fixtures/';
+const CUBE = process.env.ROUTE_CUBE ?? 'data/route/250m/';
+const FIX = process.env.ROUTE_CUBE_FIXTURES ?? 'data/build/route/fixtures/';
 const BLOCK = 512;
 const names = ['pd_rockies', 'osm_flags', 'pd_edge'];
 const have = existsSync(CUBE + 'grid.json') && names.every((n) => existsSync(`${FIX}${n}.json`));

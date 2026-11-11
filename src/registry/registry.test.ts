@@ -207,22 +207,21 @@ describe('COLUMNS_DATASETS (columns-only Parquet)', () => {
   });
 });
 
-describe('Routing constraints layer (dev server only)', () => {
-  it('is registered on the dev server as a raster concern layer', () => {
-    expect(import.meta.env.DEV).toBe(true);
+describe('Routing constraints layer', () => {
+  it('is registered as a raster concern layer', () => {
     const l = layerById('route-constraints');
     expect(l?.routeConcernLayer).toBe(true);
     expect(l?.group).toBe('land');
     expect(l?.data).toMatchObject({ kind: 'raster', key: 'route_constraints' });
   });
 
-  it('is left out of a production registry', async () => {
+  it('is in a production registry', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
     try {
       const { LAYERS: prod } = await import('./index.js');
-      expect(prod.length).toBe(LAYERS.length - 1);
-      expect(prod.some(l => l.id === 'route-constraints')).toBe(false);
+      expect(prod.length).toBe(LAYERS.length);
+      expect(prod.some(l => l.id === 'route-constraints')).toBe(true);
     } finally {
       vi.unstubAllEnvs();
       vi.resetModules();
