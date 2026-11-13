@@ -108,9 +108,6 @@ function note(cols: Col[]): string {
     const parts: string[] = [];
     const dl = a.lengthMi - opt.lengthMi;
     if (Math.abs(dl) >= MIN_DIFF_MI) parts.push(t(dl > 0 ? 'route.alt.d.longer' : 'route.alt.d.shorter', { mi: mi1(Math.abs(dl)) }));
-    const dt = a.tribal - opt.tribal;
-    if (dt >= MIN_DIFF_MI) parts.push(t('route.alt.d.tribalMore', { mi: mi1(dt) }));
-    else if (dt <= -MIN_DIFF_MI) parts.push(t('route.alt.d.tribalLess', { mi: mi1(-dt) }));
     if (a.prot != null && opt.prot != null) {
       const dp = a.prot - opt.prot;
       if (dp >= MIN_DIFF_MI) parts.push(t('route.alt.d.protMore', { mi: mi1(dp) }));
@@ -166,11 +163,6 @@ function list(ctx: RouteTabContext, view: View, cols: Col[], redraw: () => void)
     else if (isOptimal(c, ctx)) text.textContent = t('route.alt.optimal', { mi: mi1(c.lengthMi), usd: money });
     else text.textContent = t('route.alt.row', { n, pct: (c.pctRoute ?? 0).toFixed(1), mi: mi1(c.lengthMi), usd: money });
     b.append(sw, text);
-    if (i > 0 && c.tribal > 0) {
-      const tr = el('span', 'ra-tribal');
-      tr.textContent = ` · ${t('route.alt.rowTribal', { mi: mi1(c.tribal) })}`;
-      text.append(tr);
-    }
     b.addEventListener('click', () => {
       view.selected = i;
       ctx.fitPoints(c.path.coordinates as [number, number][]);
@@ -253,7 +245,7 @@ function rows(ctx: RouteTabContext, cols: Col[]): Row[] {
     { key: 'total', cells: cols.map((c) => ctx.money(c.total, c.total)) },
     { key: 'range', cells: cols.map((c) => `${ctx.money(c.low, c.low)} – ${ctx.money(c.high, c.high)}`) },
     { key: 'length', cells: cols.map((c) => mi(c.lengthMi)) },
-    { key: 'tribal', cells: cols.map((c) => mi(c.tribal)), hi: cols.map((c) => c.tribal > 0) },
+    { key: 'tribal', cells: cols.map((c) => mi(c.tribal)) },
     { key: 'protected', cells: cols.map((c) => mi(c.prot)) },
     { key: 'crossings', cells: cols.map((c) => num(c.crossings, String)) },
     { key: 'shared', cells: cols.map((c) => num(c.shared, (x) => t('route.alt.pct', { pct: Math.round(x * 100) }))), bar: cols.map((c) => c.shared) },

@@ -46,7 +46,7 @@ describe('alternatives tab', () => {
     expect(rows).toHaveLength(3);
     expect(rows[0]).toMatch(/^Lowest routing score · 250\.1 mi/);
     expect(rows[1]).toMatch(/Alt 1 · \+3\.4 % · 258\.4 mi/);
-    expect(rows[1]).toContain('mi tribal');
+    expect(rows[1]).not.toMatch(/tribal/i);
     expect(root.querySelectorAll('thead th')).toHaveLength(4);
     expect(root.querySelector('[data-row="length"]')).toBeTruthy();
     expect(root.textContent).toContain('Alt 2 is');

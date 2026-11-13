@@ -26,13 +26,13 @@ describe('Summary tab', () => {
     expect(tab.disabled(FIXTURE_SESSION())).toBeNull();
   });
 
-  it('renders the headline, range, pills, tribal note and money heading', () => {
+  it('renders the headline, range, pills and money heading, with no Tribal callout', () => {
     const { el } = render();
     expect(el.querySelector('.rp-kpis')?.textContent).toContain('$2.');
     expect(el.querySelector('.rp-kpis')?.textContent).toContain('250.1');
     expect(el.querySelector('.rp-range')).not.toBeNull();
     expect(el.querySelectorAll('.rp-pill').length).toBeGreaterThan(3);
-    expect((el.querySelector('.rp-tribal') as HTMLElement).hidden).toBe(false);
+    expect(el.querySelector('.rp-tribal')).toBeNull();
     expect(el.textContent).toContain('Where the money goes');
   });
 

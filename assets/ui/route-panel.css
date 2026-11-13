@@ -51,9 +51,9 @@
 .ri-list-status { color: var(--text-light); }
 
 /* line type */
-.ri-seg { display: inline-flex; border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; background: var(--ri-surface); }
-.ri-seg-btn { border: 0; border-right: 1px solid var(--panel-border); background: none; padding: 5px 9px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; }
-.ri-seg-btn:last-child { border-right: 0; }
+/* The buttons wrap onto more rows when the column is narrow; the 1px gap over the border colour draws the dividers. */
+.ri-seg { display: inline-flex; flex-wrap: wrap; gap: 1px; max-width: 100%; box-sizing: border-box; border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; background: var(--panel-border); }
+.ri-seg-btn { flex: 1 1 auto; border: 0; background: var(--ri-surface); padding: 5px 9px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; white-space: nowrap; }
 .ri-seg-btn.on { background: var(--ri-tint); color: var(--ri-tint-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
 
 .ri-select { width: 100%; padding: 5px 6px; border: 1px solid var(--panel-border); border-radius: 6px; font: var(--text-sm) var(--font); background: var(--ri-surface); color: var(--text); }
@@ -215,14 +215,18 @@
 .rp-ic-raw summary { cursor: pointer; color: var(--text-mid); }
 .rp-lg-sw--hatch { height: 10px; width: 14px; background: repeating-linear-gradient(45deg, rgb(150, 0, 0) 0 3px, rgba(150, 0, 0, 0.35) 3px 6px); }
 
-@media (max-width: 640px) {
-  .rp { flex-direction: column; }
-  .rp-main { padding: 8px 10px 12px; }
-  .rp-head { top: -8px; }
+/* A phone either way up: the sub-tabs take a row of their own below the badge and Map, so all six stay reachable. */
+@media (max-width: 640px), (max-height: 500px) {
   .rp-head { flex-wrap: wrap; row-gap: 4px; }
   .rp-head > .rp-tabs { order: 2; flex-basis: 100%; }
   /* more sub-tabs past the right edge: they fade out there (the strip's end padding is what fades once scrolled to the end) */
   .rp-head > .rp-tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+}
+@media (max-width: 640px) {
+  .rp { flex-direction: column; }
+  .rp > .ri { width: auto; border-right: 0; }
+  .rp-main { padding: 8px 10px 12px; }
+  .rp-head { top: -8px; }
   .rp-legend { max-width: 200px; padding: 6px 8px; }
   .rp-lg-note { display: none; }
   .rp .ri-strip { flex-wrap: wrap; row-gap: 2px; }

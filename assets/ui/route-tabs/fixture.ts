@@ -126,7 +126,6 @@ export const FIXTURE_RESULT: RouteResult = {
   cost: fixtureCost(),
   segments: PATH.slice(1).map((p, i) => ({ from: PATH[i], to: p, lengthMi: LEN_MI / (PATH.length - 1), usd: fixtureCost().lineUsdNominal / (PATH.length - 1), meanCostX: 1.55 })),
   tribalMiles: 6.3,
-  tribalNote: null,
   optimality: 'within-mask',
   maskLimited: false,
   bufferM: 30_000,

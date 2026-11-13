@@ -1,6 +1,6 @@
 // ─── Route panel: Summary sub-tab ────────────────────────────────────────────
 // Role: the first thing a solved route shows — headline KPIs (total, miles, $/mi),
-//       the rough-early-estimate range bar, crossing pills, the tribal-land note and the
+//       the rough-early-estimate range bar, crossing pills and the
 //       "Colour route by: Cost × | Driver | Plain" radiogroup on the left; a compact
 //       "Where the money goes" waterfall (top 8 lines, the rest folded) on the right.
 //       Renders from ctx.session only; the colour control calls ctx.setColourMode.
@@ -11,7 +11,7 @@
 import './summary.css';
 import { t } from '../../../src/i18n/index.js';
 import { ROUTE_PRESETS, routePreset } from '../../../src/registry/route-presets.js';
-import { crossingPills, kpis, rangeBar, tribalNote, waterfall, waterfallLines } from './widgets.js';
+import { crossingPills, kpis, rangeBar, waterfall, waterfallLines } from './widgets.js';
 import { solvedPresetOf } from './method.js';
 import type { ColourMode, RouteTab, RouteTabContext } from './types.js';
 
@@ -76,7 +76,7 @@ const tab: RouteTab = {
     left.append(kpis(r, dollars), rangeBar(r.cost, dollars));
     const crossings = r.profile?.crossings;
     if (crossings) left.append(crossingPills(crossings));
-    left.append(tribalNote(r), colourControl(ctx));
+    left.append(colourControl(ctx));
 
     const right = el('div', 'rs-right');
     const preset = (ctx.session.resultInputs ? solvedPresetOf(ctx.session.resultInputs) : null) ?? routePreset(r.preset.id) ?? ROUTE_PRESETS[0];

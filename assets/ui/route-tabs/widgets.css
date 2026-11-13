@@ -1,5 +1,5 @@
 /* Route panel widgets (route-tabs/widgets.ts): waterfall, range bar, pills, badge, KPIs. */
-.rp-wf, .rp-range, .rp-kpis, .rp-pills, .rp-tribal, .rp-badge {
+.rp-wf, .rp-range, .rp-kpis, .rp-pills, .rp-badge {
   --rp-base: #64748b; --rp-mult: #d97706; --rp-term: #0891b2; --rp-mark: #8b5cf6; --rp-other: #94a3b8;
   --rp-grid: color-mix(in srgb, var(--text) 8%, transparent);
   --rp-soft: color-mix(in srgb, var(--text) 6%, transparent);
@@ -54,10 +54,6 @@
 .rp-pills { display: flex; flex-wrap: wrap; gap: 4px; }
 .rp-pill { padding: 2px 8px; border: 1px solid var(--panel-border); border-radius: 999px; background: var(--panel-bg); font-size: 11px; color: var(--text-mid); white-space: nowrap; }
 
-.rp-tribal { font-size: 11.5px; padding: 6px 8px; border: 1px solid #f0abfc; border-radius: var(--radius-md); background: color-mix(in srgb, #a21caf 8%, var(--panel-bg)); color: var(--text-mid); }
-.rp-tribal[hidden] { display: none; }
-.rp-tribal b { display: block; color: #a21caf; }
-.rp-tribal b::before { content: "\25C6\00a0"; }
 
 .rp-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: help; border: 1px solid; }
 .rp-badge--proven { background: color-mix(in srgb, #059669 12%, var(--panel-bg)); border-color: #34d399; color: #047857; }

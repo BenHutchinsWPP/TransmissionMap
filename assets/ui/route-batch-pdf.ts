@@ -1,7 +1,7 @@
 // ─── Route batch PDF ─────────────────────────────────────────────────────────
 // Role: a route report as a PDF `renderPdf(model, pictures)` lays out route-report-model.ts's
 //       `RouteReportModel` in `reportText` order (header, disclaimer, pictures, cost, endpoints, waterfall, strip,
-//       crossings, observations tables, tribal, method, caveats) with jsPDF, loaded lazily on first use.
+//       crossings, observations tables, method, caveats) with jsPDF, loaded lazily on first use.
 //       Text rule: app wording first passes `pdfGlyphs()` (a fixed symbol table; the eight WinAnsi
 //       punctuation characters are admitted as they are, because jsPDF's standard-font `text()` writes them
 //       as bytes 0x96 0x97 0x85 0x91–0x95; route-batch-pdf.test.ts checks the bytes); a block whose characters
@@ -299,8 +299,6 @@ function draw(Ctor: typeof JsPdf, newCanvas: () => CanvasLike, compress: boolean
   // ── observations (raw data → the wording of route-observations.ts) ──
   if (m.observations) observations(m.observations.screening);
 
-  // ── tribal ──
-  if (m.tribal.shown) { heading(m.tribal.heading); para(m.tribal.note); }
 
   // ── method ──
   const me = m.method;

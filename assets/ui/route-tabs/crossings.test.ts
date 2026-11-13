@@ -46,12 +46,12 @@ describe('Crossings tab', () => {
     expect(el.textContent).toContain('approximate');
   });
 
-  it('hides zero rows except tribal land', () => {
+  it('hides zero rows, Tribal land with no note', () => {
     const { el } = render((c) => { c.counts.rail = 0; c.miles.phma = 0; c.miles.tribal = 0; c.miles.byAgency = {}; c.miles.desig = {}; });
     expect(row(el, 'rail')).toBeNull();
     expect(row(el, 'phma')).toBeNull();
     expect(row(el, 'agency-2')).toBeNull();
-    expect(row(el, 'tribal')!.children[2].textContent).toBe('0.0');
+    expect(row(el, 'tribal')).toBeNull();
   });
 
   it('a row click fits that kind and highlights the row; Enter works too', () => {
@@ -86,7 +86,7 @@ describe('Crossings tab', () => {
     expect(lines.some((l) => l.startsWith('"Major roads (motorway/trunk/primary)"') || l.startsWith('Major roads'))).toBe(true);
     c.miles.tribal = 1;
     const tribal = crossingsCsv(c).split('\r\n').find((l) => l.startsWith('Tribal land'))!;
-    expect(tribal).toBe('Tribal land,,1.0,"Tribal land is a planning flag, not a permit finding"');
+    expect(tribal).toBe('Tribal land,,1.0,');
   });
 
   it('CSV carries the aviation rows with miles and, after the rows, the one aviation note', () => {
@@ -117,10 +117,8 @@ describe('Crossings tab', () => {
     c.miles.aviation = kept;
   });
 
-  it('escapes quotes and commas', () => {
+  it('lists every non-zero row', () => {
     const { c } = render();
-    const csv = crossingsCsv(c);
-    expect(csv).toContain('"Tribal land is a planning flag, not a permit finding"');
     expect(crossingRows(c).length).toBeGreaterThan(10);
   });
 

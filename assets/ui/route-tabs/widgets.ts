@@ -2,7 +2,7 @@
 // Role: pure DOM builders the route tabs share — cost waterfall (+ `waterfallLines`, which
 //       turns a CostResult into its lines, summing exactly to the total in either dollar
 //       year; terminals as one line per kind, from `terminalSplit`; a figure the visitor entered shows
-//       as such through `costSrc`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, tribal note, optimality badge, source
+//       as such through `costSrc`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, optimality badge, source
 //       ⓘ button, headline KPI tiles (`kpiTiles`, shared with the report model). Each returns an element; all text goes in through
 //       textContent, so data is never parsed as HTML. Styling: widgets.css (rp-* classes,
 //       app tokens only).
@@ -207,7 +207,7 @@ export function rangeBar(cost: CostResult, dollars: DollarYear = 'y2025'): HTMLE
   return root;
 }
 
-// ─── pills, tribal, badge, source, KPIs ─────────────────────────────────────
+// ─── pills, badge, source, KPIs ─────────────────────────────────────
 
 /** A crossing count as shown: "≈" + the number (counts come from 250 m cells or the drawn path, so they are estimates). */
 export const approxCount = (n: number) => `≈${n}`;
@@ -227,12 +227,6 @@ export function crossingPills(c: RouteCrossings, counts: RouteCrossings['counts'
   return root;
 }
 
-export function tribalNote(result: RouteResult): HTMLElement {
-  const root = el('div', 'rp-tribal');
-  root.hidden = !(result.tribalMiles > 0);
-  root.append(el('b', undefined, t('route.tribal.heading', { mi: result.tribalMiles.toFixed(1) })), el('span', undefined, result.tribalNote ?? t('route.tribal.note')));
-  return root;
-}
 
 export function badge(optimality: RouteResult['optimality']): HTMLElement {
   const b = el('span', `rp-badge rp-badge--${optimality}`, t(`route.badge.${optimality}`));

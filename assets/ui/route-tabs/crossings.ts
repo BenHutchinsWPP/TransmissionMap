@@ -1,7 +1,7 @@
 // ─── Route panel: Crossings sub-tab ──────────────────────────────────────────
 // Role: what the routed line crosses and runs through, from result.profile.crossings:
-//       a Feature | Crossings | Miles | Note table (zero rows hidden, except tribal land),
-//       land-manager and designation miles, crossing pills, tribal note, sources, "Show on
+//       a Feature | Crossings | Miles | Note table (zero rows hidden),
+//       land-manager and designation miles, crossing pills, sources, "Show on
 //       map" toggles (ctx.showCrossings; their state is session.crossingKinds, which the
 //       shell's markers follow on every tab, so leaving the tab changes nothing) and a CSV export. A row with crossing points is
 //       clickable / Enter and fits the map to them (ctx.fitPoints).
@@ -22,7 +22,7 @@ import type { CrossingPoint, RouteCrossings } from '../../route/profile.js';
 import type { ExactResult } from '../../route/crossings-exact.js';
 import type { RouteScreening } from '../../route/screening.js';
 import { aviationMiles, aviationNote, observationCsvRows, routeObservations } from '../route-observations.js';
-import { approxCount, crossingPills, tribalNote } from './widgets.js';
+import { approxCount, crossingPills } from './widgets.js';
 import { csvCell } from '../../utils/utils.js';
 import type { RouteSession, RouteTab, RouteTabContext } from './types.js';
 
@@ -59,7 +59,7 @@ export interface CrossingRow {
 const COUNTED: Kind[] = ['river', 'road', 'rail', 'pipeline', 'line230', 'line100'];
 const MILES: ('follows' | 's368' | 'gap12' | 'gap3' | 'critHab' | 'phma' | 'tribal' | 'park' | 'wetland')[] = ['follows', 's368', 'gap12', 'gap3', 'critHab', 'phma', 'tribal', 'park', 'wetland'];
 
-/** The table's rows in display order; zero rows dropped (tribal land always stays; an exact kind stays
+/** The table's rows in display order; zero rows dropped (an exact kind stays
  *  while either count is above zero; the aviation rows appear only with miles, and `aviationNote` follows the table). With `ex`, its kinds take the exact counts. */
 export function crossingRows(c: RouteCrossings, ex?: ExactView | null): CrossingRow[] {
   const rows: CrossingRow[] = [];
@@ -72,9 +72,9 @@ export function crossingRows(c: RouteCrossings, ex?: ExactView | null): Crossing
   }
   for (const m of MILES) {
     const mi = c.miles[m];
-    if (mi > 0 || m === 'tribal') {
+    if (mi > 0) {
       const follows = ex?.exact.includes('line230') ? t('route.cross.note.followsExact') : t('route.cross.note.follows');
-      rows.push({ id: m, label: t(`route.cross.row.${m}`), count: null, miles: mi, note: m === 'follows' ? follows : m === 'tribal' ? t('route.cross.note.tribal') : '', kind: null });
+      rows.push({ id: m, label: t(`route.cross.row.${m}`), count: null, miles: mi, note: m === 'follows' ? follows : '', kind: null });
     }
   }
   for (const { code, miles } of aviationMiles(c)) {
@@ -280,7 +280,7 @@ const tab: RouteTab = {
     const counts = { ...c.counts };
     for (const k of ex?.exact ?? []) counts[k] = ex!.result.counts[k];
     const right = el('div', 'rx-right');
-    right.append(crossingPills(c, counts), tribalNote(r), showBox(ctx), sources);
+    right.append(crossingPills(c, counts), showBox(ctx), sources);
 
     const grid = el('div', 'rx');
     grid.append(left, right);

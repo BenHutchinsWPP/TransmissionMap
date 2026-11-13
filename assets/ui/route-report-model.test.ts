@@ -79,8 +79,6 @@ describe('buildReportModel', () => {
     expect(m.crossings!.rows[6].miles).toBe(c.miles.follows.toFixed(1));
     expect(m.crossings!.rows[7].miles).toBe(c.miles.s368.toFixed(1));
     expect(m.observations).toBeNull();
-    expect(m.tribal.shown).toBe(true);
-    expect(m.tribal.heading).toContain('6.3');
     expect(m.method.editsSummary).toBeNull();
     expect(m.method.attribution).toBe(r.preset.attribution);
     expect(m.method.class5).toContain('AACE International Class 5');

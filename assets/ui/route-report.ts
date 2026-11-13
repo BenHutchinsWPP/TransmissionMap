@@ -2,7 +2,7 @@
 // Role: the printable Letter-size report of the shown route, opened by the route
 //       pane's Report button through a dynamic import. Builds `#route-report` on demand
 //       (title, badge, the route usage notice as a disclaimer, map snapshot, KPIs + estimate range, endpoints, optimality sentence,
-//       waterfall, long-section strip, crossings table, tribal note, method, sources),
+//       waterfall, long-section strip, crossings table, method, sources),
 //       the crossings table taking the exact counts of the kinds session.exact covers while it belongs to
 //       the shown result (crossings.ts shownExact); while some counted kinds are exact and some not, the exact rows
 //       end in " (exact)" and the "approximate" sentence stands for the rest; all exact, one sentence saying the counts come from vector data and the miles from cells,
@@ -22,7 +22,7 @@ import { state } from '../state.js';
 import type { RouteTabContext } from './route-tabs/types.js';
 import { routeObservations } from './route-observations.js';
 import { buildReportModel, fillTpl, type RouteReportModel } from './route-report-model.js';
-import { badge, kpis, rangeBar, tribalNote, waterfall } from './route-tabs/widgets.js';
+import { badge, kpis, rangeBar, waterfall } from './route-tabs/widgets.js';
 import { t } from '../../src/i18n/index.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -169,7 +169,6 @@ export function openRouteReport(ctx: RouteTabContext): void {
   }
   if (m.crossings) root.append(section(m.crossings.heading, crossingsTable(m.crossings)));
   if (m.observations) root.append(routeObservations(m.observations.screening));
-  root.append(tribalNote(result));
   const me = m.method;
   const edits: Node[] = [];
   if (me.editsSummary !== null) {

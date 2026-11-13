@@ -156,7 +156,6 @@ export interface RouteResult {
   cost: CostResult;           // nominal + 2025$ + estimate band, per-band table
   segments: RouteSegment[];
   tribalMiles: number;
-  tribalNote: string | null;
   optimality: 'proven' | 'within-mask' | 'not-solved';
   maskLimited: boolean;
   bufferM: number;
@@ -304,7 +303,7 @@ async function run(req: RouteRequest, io: RouteIO, windows?: WindowCache): Promi
         lengthMi: cost.lengthM / METRES_PER_MILE,
         cost,
         segments: [{ from: req.from, to: req.to, lengthMi: cost.lengthM / METRES_PER_MILE, usd: cost.lineUsdNominal, meanCostX: 1 }],
-        tribalMiles: 0, tribalNote: null,
+        tribalMiles: 0,
         optimality: 'not-solved', maskLimited: false, bufferM: 0,
         cells: { bbox: 0, mask: 0, visited: 0, path: 0, pis: 0 },
         timingsMs: { read: 0, surfaces: 0, solve: 0, prove: 0, reduce: 0, similar: 0, alternatives: 0, total: now() - t0, attempts: [] },
@@ -384,7 +383,6 @@ async function run(req: RouteRequest, io: RouteIO, windows?: WindowCache): Promi
       cost,
       segments,
       tribalMiles: cost.tribalMiles,
-      tribalNote: cost.tribalMiles > 0 ? preset.tribal.note : null,
       optimality: best.proven ? 'proven' : 'within-mask',
       maskLimited: best.touches,
       bufferM: best.bufferM,

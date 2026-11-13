@@ -2,7 +2,7 @@
 // Role: the printed route report as plain data: every heading, sentence and figure of
 //       `route-report.ts`, built from a route session by `buildReportModel` — title, badge, the disclaimer (the route usage notice), KPIs (five tiles) and
 //       estimate range, endpoints, waterfall lines (label, value, formatted text, group), strip
-//       segments (miles, cost multiple, agency), crossings table (counts, miles), tribal note,
+//       segments (miles, cost multiple, agency), crossings table (counts, miles),
 //       method (custom label, edit lines, wording) and sources. `fmtMoney` is the dollar formatter the panel and the PDF share. No DOM, no map. `reportText` lists
 //       the text in the order the printed report shows it (the DOM report is its test reference).
 //       `parts` holds the lines that mix app wording with visitor text (the A/B names, a saved method's name)
@@ -98,7 +98,6 @@ export interface RouteReportModel {
   crossings: null | { heading: string; head: string[]; rows: { label: string; count: string; miles: string }[]; note: string; aviationNote: string | null };
   /** Null unless the shown path has exact crossings; `screening` is absent when observations were not read. */
   observations: null | { screening?: RouteScreening };
-  tribal: { shown: boolean; heading: string; note: string };
   method: {
     heading: string; preset: string; editsSummary: string | null; edits: string[];
     /** One line per uploaded layer in the method; `label` is the visitor's text (a `visitor` parameter, never glyph-mapped). */
@@ -291,7 +290,6 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
       startLabel: t('route.report.strip.miles', { mi: 0 }), endLabel: t('route.report.strip.miles', { mi: Math.round(result.lengthMi) }),
     } : null,
     ...(profile ? crossingsOf(session, profile) : { crossings: null, observations: null }),
-    tribal: { shown: result.tribalMiles > 0, heading: t('route.tribal.heading', { mi: result.tribalMiles.toFixed(1) }), note: result.tribalNote ?? t('route.tribal.note') },
     method: {
       heading: t('route.report.method'), preset: fillTpl(parts.methodPreset),
       editsSummary: n > 0 ? t(`route.report.method.edits.${n === 1 ? 'one' : 'other'}`, { n }) : own.length ? t('route.report.method.own') : null, edits, uploads: uploadLines(mergePatch(custom?.stored ?? null, inp.patch) ?? null),
@@ -321,7 +319,6 @@ export function reportText(m: RouteReportModel): string[] {
     if (m.crossings.aviationNote) out.push(m.crossings.aviationNote);
     out.push(m.crossings.note);
   }
-  out.push(m.tribal.heading, m.tribal.note);
   const me = m.method;
   out.push(me.heading, me.preset);
   if (me.editsSummary !== null) out.push(me.editsSummary, ...me.edits);

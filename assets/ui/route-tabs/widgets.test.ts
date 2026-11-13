@@ -14,7 +14,7 @@ vi.mock('../../../src/i18n/index.js', async () => {
   return { t: (k: string, p?: Record<string, string | number>) => (en[k] ?? k).replace(/\{(\w+)\}/g, (m, n) => (p && n in p ? String(p[n]) : m)) };
 });
 
-import { terminalSplit, waterfall, waterfallLines, rangeBar, crossingPills, tribalNote, badge, sourceInfo, kpis, kpiTiles, fmtMoneyHead, type WaterfallLine } from './widgets.js';
+import { terminalSplit, waterfall, waterfallLines, rangeBar, crossingPills, badge, sourceInfo, kpis, kpiTiles, fmtMoneyHead, type WaterfallLine } from './widgets.js';
 import { FIXTURE_RESULT, fixtureCost } from './fixture.js';
 import { routePreset } from '../../../src/registry/route-presets.js';
 
@@ -128,7 +128,7 @@ describe('waterfall', () => {
   });
 });
 
-describe('badge, rangeBar, pills, kpis, tribal, sourceInfo', () => {
+describe('badge, rangeBar, pills, kpis, sourceInfo', () => {
   it('badge wording', () => {
     const texts = (['proven', 'within-mask', 'not-solved'] as const).map((o) => badge(o));
     expect(texts.map((b) => b.textContent)).toEqual(['Lowest routing score (proven)', 'Lowest routing score within the search area', 'Straight line (no route search)']);
@@ -177,13 +177,6 @@ describe('badge, rangeBar, pills, kpis, tribal, sourceInfo', () => {
       [-3.1e9, '\u2212$3.1\u00a0B'], [-450, '\u2212$450'],
     ];
     for (const [v, text] of cases) expect(fmtMoneyHead(v)).toBe(text);
-  });
-  it('tribalNote heading and default note; hidden at 0 mi', () => {
-    const el = tribalNote(FIXTURE_RESULT);
-    expect(el.textContent).toContain('6.3 mi of tribal land');
-    expect(el.textContent).toContain('tribal consent');
-    expect(tribalNote({ ...FIXTURE_RESULT, tribalMiles: 0, tribalNote: 'x' }).hidden).toBe(true);
-    expect(tribalNote({ ...FIXTURE_RESULT, tribalNote: 'Custom <i>note</i>' }).querySelector('i')).toBeNull();
   });
   it('sourceInfo escapes', () => {
     const b = sourceInfo('<img src=x onerror=1>');

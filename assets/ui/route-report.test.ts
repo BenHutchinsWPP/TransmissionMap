@@ -81,7 +81,7 @@ describe('openRouteReport', () => {
     expect(r.querySelector('.rp-wf')).toBeTruthy();
     expect(r.querySelector('svg.rr-strip')).toBeTruthy();
     expect(r.querySelectorAll('table tr').length).toBe(21);   // + the park and NWI wetland mile rows and the five aviation code rows
-    expect(r.querySelector('.rp-tribal')).toBeTruthy();
+    expect(r.querySelector('.rp-tribal')).toBeNull();
     expect(text).toContain('AACE International Class 5 (concept screening)');
     expect(text).toContain(ctx.session.result!.preset.attribution);
     expect(text).toContain(ctx.session.result!.preset.caveat);
