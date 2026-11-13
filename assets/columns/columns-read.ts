@@ -14,7 +14,7 @@
 //                         conditions/filters, plus the id column for row queries
 //                         or a filter holding the native-id expression ["id"]
 //   readGroups(entry, groups, columns)  rows of those groups, one group at a time
-//   readRowsAt(entry, rows, columns)    rows by absolute row number (row runs)
+//   readRowsAt(entry, rows, columns)    rows by absolute row number: each row group holding one is read once, whole
 //   readTwoPhase(entry, groups, first, rest, pick)  phase 1 reads `first` for
 //                         every row, `pick` keeps some; phase 2 reads `rest` for
 //                         the kept rows only
@@ -30,7 +30,7 @@
 //   (dataset-query.ts), so hyparquet stays out of the boot bundle.
 
 import type { FileMetaData, ColumnChunk } from 'hyparquet';
-import { Fail, loadIndex, openFile, readRows, rowRuns, type FileDir, type FileEntry } from '../parquet/range-io.js';
+import { Fail, loadIndex, openFile, readRows, type FileDir, type FileEntry } from '../parquet/range-io.js';
 import { COLUMNS_DATASETS } from '../../src/registry/columns.js';
 import type { Condition } from '../../src/registry/condition-compile.js';
 
@@ -208,18 +208,29 @@ export async function* readGroups(entry: ColumnsEntry, groups: readonly number[]
     const a = starts[g], b = a + Number(md.row_groups[g].num_rows);
     const got = columns.length ? await readRows(file, md, a, b, [...columns]) : Array.from({ length: b - a }, () => ({}));
     for (let i = 0; i < got.length; i++) yield rowOf(entry, got[i], a + i);
+    await yieldToPage();
   }
 }
 
-/** Rows by absolute row number, reading `columns` only (runs of near rows read as one); keyed by row number. */
+const yieldToPage = () => new Promise<void>(r => setTimeout(r, 0));
+
+/** Rows by absolute row number, reading `columns` only; each row group holding one is read once, whole. Keyed by row number. */
 export async function readRowsAt(entry: ColumnsEntry, rows: readonly number[], columns: readonly string[]): Promise<Map<number, ColumnsRow>> {
   const file = openFile(entry, entry.file);
   const md = await columnsMeta(entry);
-  const out = new Map<number, ColumnsRow>();
+  const starts = groupStarts(md);
   const want = new Set(rows);
-  for (const [a, b] of rowRuns([...want])) {
-    const got = await readRows(file, md, a, b, [...columns]);
-    got.forEach((r, i) => { if (want.has(a + i)) out.set(a + i, rowOf(entry, r, a + i)); });
+  const out = new Map<number, ColumnsRow>();
+  let first = true;
+  for (let g = 0; g < starts.length; g++) {
+    const a = starts[g], b = a + Number(md.row_groups[g].num_rows);
+    let held = false;
+    for (const r of want) if (r >= a && r < b) { held = true; break; }
+    if (!held) continue;
+    if (!first) await yieldToPage();
+    first = false;
+    const got = columns.length ? await readRows(file, md, a, b, [...columns]) : Array.from({ length: b - a }, () => ({}));
+    for (let i = 0; i < got.length; i++) if (want.has(a + i)) out.set(a + i, rowOf(entry, got[i], a + i));
   }
   return out;
 }

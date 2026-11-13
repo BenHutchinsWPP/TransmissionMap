@@ -5,12 +5,18 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { featureFilter } from '@maplibre/maplibre-gl-style-spec';
-import { resetRangeIo, requestLog, Fail } from '../parquet/range-io.js';
+import { resetRangeIo, requestLog, Fail, openFile } from '../parquet/range-io.js';
 import { toMapLibreFilter, type Condition } from '../../src/registry/condition-compile.js';
 import {
   columnsEntry, columnsMeta, pruneGroups, columnsFor, hasIdExpr, readGroups, readRowsAt, readTwoPhase,
   plannedBytes, rowOf, type ColumnsEntry, type ColumnsRow,
 } from './columns-read.js';
+
+const calls = vi.hoisted(() => ({ readRows: 0 }));
+vi.mock('../parquet/range-io.js', async importOriginal => {
+  const m = await importOriginal<typeof import('../parquet/range-io.js')>();
+  return { ...m, readRows: (...a: Parameters<typeof m.readRows>) => { calls.readRows++; return m.readRows(...a); } };
+});
 
 const FIX = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const LINES = 'osm_transmission_lines', RETAIL = 'retail_territories', POINTS = 'osm_substations_points';
@@ -221,6 +227,64 @@ describe('two-phase read', () => {
     const e = await entry(LINES);
     const got = await readRowsAt(e, [11, 0, 5], ['fid']);
     expect([...got.keys()].sort((a, b) => a - b)).toEqual([0, 5, 11]);
+  });
+});
+
+describe('readRowsAt by row group', () => {
+  it('makes one readRows call per group touched, rows spread over every group', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const starts: number[] = [];
+    let s = 0;
+    for (const rg of md.row_groups) { starts.push(s); s += Number(rg.num_rows); }
+    const wanted = starts.flatMap((a, g) => [a, a + Number(md.row_groups[g].num_rows) - 1]);
+    calls.readRows = 0;
+    const got = await readRowsAt(e, wanted, ['fid', 'name']);
+    expect(calls.readRows).toBe(md.row_groups.length);
+    expect(got.size).toBe(new Set(wanted).size);
+    calls.readRows = 0;
+    await readRowsAt(e, [starts[1], starts[1] + 1], ['fid']);
+    expect(calls.readRows).toBe(1);
+  });
+
+  it('a row past the last group is absent, and readTwoPhase rejects with stale-build', async () => {
+    const e = await entry(LINES);
+    const total = (await columnsMeta(e)).row_groups.reduce((n, rg) => n + Number(rg.num_rows), 0);
+    const got = await readRowsAt(e, [0, total, total + 5], ['fid']);
+    expect([...got.keys()]).toEqual([0]);
+    let err: unknown;
+    try {
+      await readTwoPhase(e, [0], ['fid'], ['name'], async rows => {
+        const out: ColumnsRow[] = [];
+        for await (const r of rows) out.push(r);
+        out[0] = { ...out[0], at: total + 1 };
+        return out.slice(0, 1);
+      });
+    } catch (x) { err = x; }
+    expect(err).toBeInstanceOf(Fail);
+    expect((err as Fail<string>).reason).toBe('stale-build');
+  });
+
+  it('equals rowOf over an independent whole-group read, key order included', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const file = openFile(e, e.file);
+    const { readRows } = await import('../parquet/range-io.js');
+    const columns = ['fid', 'name', 'nominal_kv', 'length_km', 'px'];
+    const ref = new Map<number, ColumnsRow>();
+    let a = 0;
+    for (const rg of md.row_groups) {
+      const b = a + Number(rg.num_rows);
+      (await readRows(file, md, a, b, columns)).forEach((r, i) => ref.set(a + i, rowOf(e, r, a + i)));
+      a = b;
+    }
+    const rows = [...ref.keys()].filter(i => i % 2 === 0);
+    const got = await readRowsAt(e, rows, columns);
+    expect([...got.keys()].sort((x, y) => x - y)).toEqual(rows);
+    for (const r of rows) {
+      expect(got.get(r)).toEqual(ref.get(r));
+      expect(Object.keys(got.get(r)!.properties)).toEqual(Object.keys(ref.get(r)!.properties));
+    }
   });
 });
 

@@ -335,10 +335,20 @@ function hideDrawer() {
   mapContainer()?.classList.remove('has-drawer');
 }
 
+/** On a phone the layer panel and the drawer together leave little map: the
+ *  drawer coming up folds the panel away (its own close button, so the Layers
+ *  button comes back). */
+function foldLayersOnPhone() {
+  const c = mapContainer(), lp = document.getElementById('layersPanel');
+  if (!c || !lp || lp.hidden) return;
+  if (c.clientWidth <= 640 || window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches) document.getElementById('closeLayers')?.click();
+}
+
 /** Show the drawer if it is closed (at the layout's default height), or
  *  expand it if it is collapsed. */
 function showDrawer() {
   if (drawer!.classList.contains('td--open') && !collapsed) return;
+  foldLayersOnPhone();
   drawer!.hidden = false;
   drawer!.classList.add('td--open');
   mapContainer()!.classList.add('has-drawer');
@@ -796,7 +806,7 @@ function makeGrid(el: HTMLElement): Tabulator {
     keybindings: { ...GRID_RANGE_DEFAULTS.keybindings, copyToClipboard: false },
     rowHeader: {
       field: '_i', resizable: false, frozen: true, cssClass: 'td-check',
-      hozAlign: 'center', headerHozAlign: 'center', width: matchMedia('(pointer: coarse)').matches ? 44 : 34,
+      hozAlign: 'center', headerHozAlign: 'center', width: 34,
       titleFormatter: checkAllCell, formatter: checkCell,
     } as unknown as boolean,
     rowFormatter: paintRow,
@@ -883,7 +893,7 @@ const colsKeyOf = (tb: Table) => `${tb.req.layerId}|${[...tb.shown].join(',')}`;
 function zoomColumn(): ColumnDefinition {
   return {
     title: '', field: '_i', frozen: true, resizable: false, headerSort: false, movable: false,
-    cssClass: 'td-zoom', hozAlign: 'center', width: matchMedia('(pointer: coarse)').matches ? 44 : 30,
+    cssClass: 'td-zoom', hozAlign: 'center', width: 30,
     titleFormatter: () => Object.assign(document.createElement('span'), { className: 'td-zoom-head' }),
     formatter: zoomCell,
   } as ColumnDefinition;
@@ -1153,7 +1163,7 @@ function syncChecks() {
   copyOffer = null;
   const mode = copyHere(tb.req.layerId);
   const lines = !!mode && mode.noun === 'line';
-  copy.hidden = !mode;
+  copy.hidden = !mode || (!n && compact());   // a phone shows it once a row is checked
   copy.textContent = t(lines ? 'line.copyChecked' : 'table.copyChecked', { n: fmt(n, 0) });
   copy.disabled = !n || n > MAX_COPY_ITEMS;
   copy.title = n > MAX_COPY_ITEMS ? t(lines ? 'line.reason.too-many' : 'copy.reason.too-many')
@@ -1389,6 +1399,9 @@ function toggleFilter(name: string, btn: HTMLElement) {
   const note = el('p', 'td-fp-note', t('table.filterNote'));
   if (tb.partial) note.append(' ', el('strong', '', t('table.filterTiles')));
   const actions = el('div', 'td-fp-actions');
+  const cancel = el('button', 'td-btn td-fp-cancel', t('table.cancel'));
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => closeFilter(true));
   const clear = el('button', 'td-btn td-fp-clear', t('table.filterClear'));
   clear.type = 'button';
   clear.hidden = !cur.length;
@@ -1396,7 +1409,7 @@ function toggleFilter(name: string, btn: HTMLElement) {
   const apply = el('button', 'td-btn td-fp-apply', t('table.filterApply'));
   apply.type = 'button';
   apply.addEventListener('click', () => applyFilter(name, read(), err));
-  actions.append(clear, apply);
+  actions.append(cancel, clear, apply);
   pop.replaceChildren(title, body, err, note, actions);
   pop.hidden = false;
   placeFilter(btn);
@@ -1457,7 +1470,7 @@ function wireFilterPop() {
 // rows only, unless it hides the sort column: then the rows re-sort by the
 // sum field when that is shown, else load unsorted.
 const COMPACT = '(max-width: 640px), (max-height: 500px)';
-const compact = () => matchMedia(COMPACT).matches;
+const compact = () => typeof matchMedia === 'function' && matchMedia(COMPACT).matches;
 
 function syncColsButton() {
   const tb = tbl;
@@ -1745,7 +1758,7 @@ function mapContainer() { return document.querySelector<HTMLElement>('.map-conta
 // else 40 % up to 320 px.
 function defaultFrac(ch: number): number {
   return !compact() ? Math.min(320, ch * 0.4) / ch
-    : matchMedia('(max-height: 500px)').matches ? 0.8 : Math.min(0.6, Math.max(0.5, 400 / ch));
+    : matchMedia('(max-height: 500px)').matches ? 0.8 : 0.6;
 }
 
 function applyHeight() {
@@ -1782,6 +1795,7 @@ function open(quiet = false) {
   // open, stays in its tab.
   const chatting = P.ask.open && $('#td-ask').contains(document.activeElement);
   if (!chatting) pane = 'table';
+  foldLayersOnPhone();
   drawer!.hidden = false;
   drawer!.classList.add('td--open');
   c.classList.add('has-drawer');

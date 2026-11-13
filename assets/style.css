@@ -771,6 +771,10 @@ header h1 {
 /* ── Generator display mode (Icons | Heatmap | Both) ─────────────────────── */
 .gen-mode { padding: 2px 0 4px 24px; }
 .gen-mode select { max-width: 100%; }
+/* Grid Operations: each select on its own line, then the checkbox with its words, like a layer row. */
+.gen-mode:has(.grid-numbers) { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.grid-numbers { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--text-mid); cursor: pointer; }
+.grid-numbers input { flex-shrink: 0; margin: 0; cursor: pointer; }
 .gen-mode-toggle {
   display: inline-flex;
   border: 1px solid var(--panel-border);
@@ -3075,14 +3079,14 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
 @media (max-width: 640px), (max-height: 500px) {
   .table-drawer {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) fit-content(60%);   /* the actions wrap rather than squeeze the tab's name */
     grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     grid-template-areas: "grip grip grip" "tabs tabs actions" "status status status" "body body body" "credit pills pills";
   }
   .td-head, .td-foot { display: contents; }
   .td-grip { grid-area: grip; }
   .td-tabs { grid-area: tabs; min-width: 0; padding-inline-start: 10px; align-self: center; }
-  .td-actions { grid-area: actions; margin: 0; padding: 0 6px 4px; }
+  .td-actions { grid-area: actions; margin: 0; padding: 0 6px 4px; flex-wrap: wrap; justify-content: flex-end; }
   .td-status { grid-area: status; }
   .td-body { grid-area: body; flex-direction: column; border-top: 1px solid var(--panel-border); }
   .td-credit, .td-pills { padding: 3px 10px; border-top: 1px solid var(--panel-border); align-self: stretch; display: flex; align-items: center; }
@@ -3134,7 +3138,7 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
     grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas: "grip grip grip grip" "rail status status status" "rail body body body" "rail tabs pills credit";
   }
-  .td-actions { grid-area: rail; flex-direction: column; justify-content: flex-start; gap: 2px; padding: 4px; border-inline-end: 1px solid var(--panel-border); overflow-y: auto; }
+  .td-actions { grid-area: rail; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; gap: 2px; padding: 4px; border-inline-end: 1px solid var(--panel-border); overflow-y: auto; }
   .td-tabs { grid-area: tabs; padding: 0; border-top: 1px solid var(--panel-border); }
   .td-tab { border: 0; border-radius: 0; background: none; }
   .td-actions .td-btn { width: 44px; padding: 0; font-size: 11px; }
@@ -3143,14 +3147,15 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   .td-colpanel-groups { columns: 2; column-gap: 16px; }
   .td-colpanel fieldset { break-inside: avoid; }
 }
-/* Touch: 40 px rows, 44 px buttons and check cells (whatever the layout). */
+/* Touch: spreadsheet-sized rows (22 px, as a phone spreadsheet app draws them), 44 px buttons
+   around the grid (whatever the layout). */
 @media (pointer: coarse) {
-  .table-drawer { --td-row-h: 40px; }
-  .td-check input { width: 22px; height: 22px; }
-  .td-zoom-btn { width: 40px; height: 40px; vertical-align: middle; }
+  .table-drawer { --td-row-h: 22px; }
+  .td-check input { width: 16px; height: 16px; vertical-align: middle; }
+  .td-zoom-btn { width: 26px; height: 22px; vertical-align: middle; }
   .td-grip { height: 20px; }
-  .td-sort { min-height: 40px; }
-  .td-filter-btn { min-width: 40px; min-height: 40px; font-size: 13px; }
+  .td-sort { min-height: 28px; }
+  .td-filter-btn { min-width: 28px; min-height: 28px; font-size: 13px; }
   .td-fp-opt { min-height: 40px; font-size: 14px; }
   .td-fp-search, .td-fp-text, .td-fp-num, .td-fp-bool { min-height: 40px; font-size: 16px; }
   .td-btn, .td-tab, .td-tab-x, .td-fold, .td-link { min-height: 44px; }
@@ -3500,6 +3505,12 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   .map-container.has-drawer.has-timebar #gridOpsTimebar { bottom: calc(var(--drawer-h) + 76px); }
   .map-container.has-drawer.has-timebar .legend-container,
   .map-container.has-drawer.has-gridops-bar .legend-container { bottom: calc(var(--drawer-h) + 12px + var(--timebar-clearance)); }
+}
+
+/* A short landscape screen with the drawer open: the hour bar rides up to the
+   map's top edge, so it takes the address search's place there. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .map-container.has-drawer.has-gridops-bar .geocoder { display: none; }
 }
 
 /* Grid Operations legend (#gridOpsLegend): the export / import dots. */
