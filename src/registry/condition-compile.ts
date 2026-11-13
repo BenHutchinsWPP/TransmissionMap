@@ -151,11 +151,15 @@ function conditionExpr(dataset: string, c: Condition): FilterExpr {
   // A number field may be stored as a string in tiles; to-number reads either.
   // It also reads a missing, null or '' value as 0, so a number test first
   // asks for a value (to-string reads all three as ''); != and not_in still
-  // match a feature without one.
+  // match a feature without one. A kV of 0 or less is the data's "unknown"
+  // (OSM writes -1), so a kV test asks for a value above 0.
   const raw = ['get', c.field];
-  const num = FIELD_SCHEMA[dataset][c.field].type === 'number';
+  const def = FIELD_SCHEMA[dataset][c.field];
+  const num = def.type === 'number';
   const get = num ? ['to-number', raw] : raw;
-  const valued = (e: FilterExpr): FilterExpr => num ? ['all', ['!=', ['to-string', raw], ''], e] : e;
+  const valued = (e: FilterExpr): FilterExpr => !num ? e
+    : def.unit === 'kV' ? ['all', ['!=', ['to-string', raw], ''], ['>', get, 0], e]
+    : ['all', ['!=', ['to-string', raw], ''], e];
   switch (c.op) {
     case '=':        return valued(['==', get, c.value]);
     case '!=':       return ['!=', get, c.value];

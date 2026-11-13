@@ -435,5 +435,52 @@ class TestStalenessCheck(unittest.TestCase):
         self.assertEqual(covered, expected)
 
 
+class TestCapOutputMw(unittest.TestCase):
+    def feat(self, v, source=None):
+        return {"properties": {"output_mw": v, "source": source}}
+
+    def test_nulls_over_cap_number_and_string(self):
+        for v in (3000, 3000.5, "411000000"):
+            f = self.feat(v)
+            self.assertEqual(build_global_tiles.cap_output_mw(f, "generator"), 1)
+            self.assertIsNone(f["properties"]["output_mw"])
+
+    def test_boundary(self):
+        f = self.feat(2000)
+        self.assertEqual(build_global_tiles.cap_output_mw(f, "generator"), 0)
+        f = self.feat(2000.001)
+        self.assertEqual(build_global_tiles.cap_output_mw(f, "generator"), 1)
+
+    def test_cap_follows_source(self):
+        for kind, source, v, nulled in (
+                ("generator", "wind", 2000, 1), ("generator", "gas", 1500, 0),
+                ("plant", "solar", 7000, 1), ("plant", "coal", 7000, 0)):
+            f = self.feat(v, source)
+            self.assertEqual(build_global_tiles.cap_output_mw(f, kind), nulled)
+
+    def test_leaves_under_cap_missing_and_text(self):
+        for v in (5, "1750", None, "", "n/a"):
+            f = self.feat(v)
+            self.assertEqual(build_global_tiles.cap_output_mw(f, "generator"), 0)
+            self.assertEqual(f["properties"]["output_mw"], v)
+        self.assertEqual(build_global_tiles.cap_output_mw({"properties": {}}, "generator"), 0)
+
+    def test_no_cap_changes_nothing(self):
+        f = self.feat(9e9)
+        self.assertEqual(build_global_tiles.cap_output_mw(f, None), 0)
+        self.assertEqual(f["properties"]["output_mw"], 9e9)
+
+    def test_specs_carry_caps(self):
+        caps = {s["base"]: s.get("output_mw_cap") for s in RETILE + TILE_POLYGONS}
+        self.assertEqual(caps["osm_generators"], "generator")
+        self.assertEqual(caps["osm_plants_polygons"], "plant")
+
+    def test_concat_path_caps_plant_points(self):
+        self.assertEqual(build_global_tiles.CONCAT_OUTPUT_MW_CAP["osm_plants_points"], "plant")
+        f = self.feat(7000, "solar")
+        self.assertEqual(build_global_tiles.cap_output_mw(
+            f, build_global_tiles.CONCAT_OUTPUT_MW_CAP["osm_plants_points"]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

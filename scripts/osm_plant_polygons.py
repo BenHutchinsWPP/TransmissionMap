@@ -16,7 +16,7 @@ from shapely.geometry import Point, MultiPoint
 from shapely.ops import transform as shp_transform
 from pyproj import Transformer
 
-from osm_common import GPKG_FID_OPTIONS, normalise_plant_source, osm_fid, parse_output_mw
+from osm_common import GPKG_FID_OPTIONS, normalise_plant_source, osm_fid, output_cap, parse_output_mw
 
 log = logging.getLogger("extract_osm_plants")
 
@@ -97,7 +97,9 @@ def extract_site_relation_plants(plant_pbf, skip_osm_ids):
             "osm_id":     rid,
             "name":       tags.get("name", "").strip(),
             "source":     normalise_plant_source(tags.get("plant:source", "")),
-            "output_mw":  parse_output_mw(output_raw),
+            "output_mw":  parse_output_mw(
+                output_raw,
+                output_cap("plant", normalise_plant_source(tags.get("plant:source", "")))),
             "operator":   tags.get("operator", "").strip(),
             "start_date": tags.get("start_date", "").strip(),
         })

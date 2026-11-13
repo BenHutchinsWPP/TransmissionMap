@@ -113,6 +113,20 @@ describe('toMapLibreFilter shape', () => {
 
 // to-number reads a missing, null or '' value as 0; a number test must not
 // count those features. Evaluated with MapLibre's own filter.
+describe('a kV test', () => {
+  const matches = (cond: Condition, props: Record<string, unknown>) => {
+    const f = featureFilter(toMapLibreFilter('osm_transmission_lines', [cond]) as FilterSpecification, 'layers[0].filter');
+    return f.filter({ zoom: 10 }, { type: 1, properties: props, geometry: [] } as never);
+  };
+  it('never matches a kV of 0 or less, the data\'s "unknown"', () => {
+    const lt: Condition = { field: 'nominal_kv', op: '<', value: 69 };
+    expect(matches(lt, { nominal_kv: 33 })).toBe(true);
+    expect(matches(lt, { nominal_kv: '33' })).toBe(true);
+    for (const v of [-1, '-1', 0, null, '']) expect(matches(lt, { nominal_kv: v })).toBe(false);
+    expect(matches({ field: 'nominal_kv', op: '=', value: -1 }, { nominal_kv: -1 })).toBe(false);
+  });
+});
+
 describe('a text range (ISO dates)', () => {
   const matches = (cond: Condition, props: Record<string, unknown>) => {
     const f = featureFilter(toMapLibreFilter('dc_moratoriums', [cond]) as FilterSpecification, 'layers[0].filter');

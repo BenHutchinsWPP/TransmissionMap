@@ -5,7 +5,11 @@ fuel string mapping).
 """
 import unittest
 
-from osm_common import add_fid, normalise_plant_source, osm_fid, osm_ref, parse_output_mw
+import re
+from pathlib import Path
+
+from osm_common import (add_fid, normalise_plant_source, osm_fid, osm_ref, output_cap,
+                        parse_output_mw)
 
 
 class TestOsmFid(unittest.TestCase):
@@ -65,6 +69,61 @@ class TestParseOutputMw(unittest.TestCase):
 
     def test_comma_thousands_separator(self):
         self.assertEqual(parse_output_mw("1,200 kW"), 1.2)
+
+    def test_decimal_comma(self):
+        self.assertEqual(parse_output_mw("1,5 MW"), 1.5)
+        self.assertEqual(parse_output_mw("2,25 MW"), 2.25)
+        self.assertEqual(parse_output_mw("1,5"), 1.5)
+
+    def test_cap(self):
+        self.assertIsNone(parse_output_mw("3000 MW", 2000))
+        self.assertEqual(parse_output_mw("1750 MW", 2000), 1750.0)
+        self.assertIsNone(parse_output_mw("2.5 GW", 2000))
+        self.assertEqual(parse_output_mw("1.5 GW", 2000), 1500.0)
+
+    def test_unitless_above_cap_is_none(self):
+        self.assertIsNone(parse_output_mw("411000000", 2000))
+        self.assertIsNone(parse_output_mw("5000", 2000))
+
+    def test_no_cap_keeps_value(self):
+        self.assertEqual(parse_output_mw("411000000"), 411000000.0)
+
+
+class TestOutputCap(unittest.TestCase):
+    def test_boundary(self):
+        for kind, source, cap in (("generator", "wind", 30), ("generator", "gas", 2000),
+                                  ("plant", "solar", 5000), ("plant", "coal", 25000)):
+            c = output_cap(kind, source)
+            self.assertEqual(c, cap)
+            self.assertEqual(parse_output_mw(str(cap), c), float(cap))
+            self.assertIsNone(parse_output_mw(str(cap + 0.001), c))
+
+    def test_wind_turbine_in_kw_is_none(self):
+        self.assertIsNone(parse_output_mw("2000", output_cap("generator", "wind")))
+        self.assertEqual(parse_output_mw("1500", output_cap("generator", "gas")), 1500.0)
+
+    def test_solar_plant_in_kw_is_none(self):
+        self.assertIsNone(parse_output_mw("7000", output_cap("plant", "solar")))
+        self.assertEqual(parse_output_mw("7000", output_cap("plant", "coal")), 7000.0)
+
+    def test_source_is_trimmed_and_lowercased(self):
+        self.assertEqual(output_cap("generator", " Wind "), 30)
+        self.assertEqual(output_cap("generator", None), 2000)
+
+    def test_unknown_kind_raises(self):
+        with self.assertRaises(ValueError):
+            output_cap("line", "wind")
+
+    def test_extract_call_sites_pass_a_cap(self):
+        # The row builders need OSM data to run, so check the source text:
+        # every parse_output_mw call names output_cap.
+        for name in ("extract_osm_generators.py", "extract_osm_plants.py",
+                     "osm_plant_polygons.py"):
+            text = (Path(__file__).parent / name).read_text()
+            calls = re.findall(r"parse_output_mw\((.{0,160})", text, re.S)
+            self.assertTrue(calls, name)
+            for args in calls:
+                self.assertIn("output_cap(", args, name)
 
 
 class TestNormalisePlantSource(unittest.TestCase):

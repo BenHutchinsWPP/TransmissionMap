@@ -167,7 +167,7 @@ describe('a view with where and style, then a plain one', () => {
     const clean = painted(layers);
 
     applyView(experienceUrlState(LEAKY));
-    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
+    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>', ['to-number', ['get', 'nominal_kv']], 0], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
     expect(layers.get('railroads')!.paint!['line-color']).toBe('#ff0000');
     expect(painted(layers)).not.toEqual(clean);
     expect(getDiagLog()).toEqual([]);
@@ -263,7 +263,7 @@ describe('cold boot from a vx link', () => {
     expect(changed).toContain('osm-substations-points-hv');
     expect(changed).toContain('railroads');
     expect(changed.some(id => id.startsWith('osm-transmission-lines'))).toBe(true);
-    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
+    expect(layers.get('osm-substations-points-hv')!.filter).toEqual(expect.arrayContaining([['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>', ['to-number', ['get', 'nominal_kv']], 0], ['>=', ['to-number', ['get', 'nominal_kv']], 345]]]));
     expect(document.querySelector('[role=status]')).toBeNull();
   });
 

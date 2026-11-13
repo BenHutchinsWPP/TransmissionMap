@@ -47,7 +47,8 @@ const HV = 'osm-substations-points-hv';
 const HV_BASE = ['>=', ['to-number', ['get', 'nominal_kv'], -1], 200] as FilterSpecification;
 const KV345 = { field: 'nominal_kv', op: '>=' as const, value: 345 };
 const valued = (f: string, e: unknown[]) => ['all', ['!=', ['to-string', ['get', f]], ''], e];
-const KV345_EXPR = valued('nominal_kv', ['>=', ['to-number', ['get', 'nominal_kv']], 345]);
+// A kV test also asks for a kV above 0 (the data's "unknown" is -1).
+const KV345_EXPR = ['all', ['!=', ['to-string', ['get', 'nominal_kv']], ''], ['>', ['to-number', ['get', 'nominal_kv']], 0], ['>=', ['to-number', ['get', 'nominal_kv']], 345]];
 
 function fakeMap(ids: string[]) {
   const filters: Record<string, unknown> = {};

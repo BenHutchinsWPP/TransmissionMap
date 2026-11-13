@@ -524,8 +524,8 @@ export function defaultColumns(layerId: string, fields: FieldInfo[], idField: st
 }
 
 /** The field the summary sums and the rows sort by at first: an MW field,
- *  else the first number field that is not a year; '' = count. */
-const summableFields = (fields: FieldInfo[]) => fields.filter(f => f.type === 'number' && f.ops.length && !/year/i.test(f.name));
+ *  else the first number field that is not a year or a level (kV); '' = count. */
+const summableFields = (fields: FieldInfo[]) => fields.filter(f => f.type === 'number' && f.ops.length && f.additive !== false && !/year/i.test(f.name));
 
 export function defaultSumField(fields: FieldInfo[]): string {
   const summable = summableFields(fields);

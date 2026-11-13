@@ -62,6 +62,11 @@ group('aggregate (pure)', () => {
     const r = runAggregate(EIA, FIXTURE, () => true, { groupBy: 'states', sum: ['energy_source'] });
     expect(!r.ok && r.reason).toMatch(/not a number field/);
   });
+
+  it('refuses to sum a level (kV)', () => {
+    const r = runAggregate('osm-transmission-lines', [], () => true, { groupBy: 'countries', sum: ['nominal_kv'] });
+    expect(!r.ok && r.reason).toMatch(/is a level, not an amount/);
+  });
 });
 
 group('where and area are the map\'s filter', () => {

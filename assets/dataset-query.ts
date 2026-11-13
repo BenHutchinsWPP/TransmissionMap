@@ -437,6 +437,8 @@ function aggregator(layerId: string, opts: AggregateOpts): { add(f: GeoJSON.Feat
   const schema = FIELD_SCHEMA[q.dataset];
   const notNumber = sum.find(f => schema[f]?.type !== 'number');
   if (notNumber) return `"${notNumber}" is not a number field, so it cannot be summed`;
+  const level = sum.find(f => schema[f]?.additive === false);
+  if (level) return `"${level}" is a level, not an amount, so it cannot be summed: group by it instead`;
   // A region list (|TX|NM|) counts the feature once under each of its codes.
   const list = !!schema[opts.groupBy]?.list;
   const groups = new Map<string | number | null, Group>();
@@ -805,6 +807,7 @@ function planShape(layerId: string, opts: ShapeOpts): ShapePlan | string {
     const valueOf = name === 'length_km' ? measureOf('length_km', lengthKm)
       : name === 'area_km2' ? measureOf('area_km2', areaKm2)
       : roleOf(name)?.role === 'time' ? (f: GeoJSON.Feature) => yearOf(f.properties?.[name])
+      : roleOf(name)?.unit === 'kV' ? (f: GeoJSON.Feature) => { const v = numberOf(f.properties?.[name]); return v !== null && v > 0 ? v : null; }
       : (f: GeoJSON.Feature) => numberOf(f.properties?.[name]);
     bins = { field: name, scale, ...(b.buckets !== undefined && { buckets: b.buckets }), valueOf };
   }

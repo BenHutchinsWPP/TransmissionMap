@@ -38,7 +38,7 @@ Built once per Geofabrik continent — `<code>` is one of `na eu as sa af oc ca 
 - **Selected:** `power=plant` relations/areas — one centroid point and one boundary
   polygon per facility
 - **Row filter:** none
-- **Computed:** `output_mw` = plant total MW from OSM tags; centroid lon/lat for the point layer
+- **Computed:** `output_mw` = plant total MW from OSM tags; a comma followed by one or two digits reads as a decimal point, and a value above the cap is null (plant 25,000 MW, solar or wind plant 5,000 MW); centroid lon/lat for the point layer
 - **Columns kept:** `osm_id`, `name`, `source`, `output_mw`, `operator`, `start_date`, plus the region tags listed in the Source table
 
 ## Fields — points

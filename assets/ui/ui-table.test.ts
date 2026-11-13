@@ -23,9 +23,16 @@ describe('TABLE_DEFAULT_COLUMNS', () => {
     it(`${layerId}: every default column is allowed, the sum field included`, () => {
       expect(cols.filter(c => !allowedFields(layerId).includes(c))).toEqual([]);
       const { fields } = fieldsOf(layerId);
-      expect(cols).toContain(defaultSumField(fields));
+      const sum = defaultSumField(fields);
+      if (sum) expect(cols).toContain(sum);
+      expect(fields.find(f => f.name === sum)?.additive).not.toBe(false);
     });
   }
+
+  it('never sums a level: OSM lines and substations count by default', () => {
+    expect(defaultSumField(fieldsOf('osm-transmission-lines').fields)).toBe('');
+    expect(defaultSumField(fieldsOf('osm-substations-points').fields)).toBe('');
+  });
 
   it('EIA starts with 8 columns, OSM substations with 6', () => {
     const eia = fieldsOf('eia-generators');

@@ -42,7 +42,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from osm_common import _run, _has, add_fid, find_pbf, parse_output_mw as _parse_output_mw
+from osm_common import _run, _has, add_fid, find_pbf, parse_output_mw as _parse_output_mw, output_cap
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,7 +137,7 @@ def extract_node_generators(pbf_path, tmp_dir):
             "source":     _tag("generator:source"),
             "gen_method": _tag("generator:method"),
             "gen_type":   _tag("generator:type"),
-            "output_mw":  _parse_output_mw(output_raw),
+            "output_mw":  _parse_output_mw(output_raw, output_cap("generator", _tag("generator:source"))),
             "operator":   _tag("operator"),
             "start_date": _tag("start_date"),
             "manufactur": _tag("manufacturer") or _tag("generator:manufacturer"),
@@ -237,7 +237,7 @@ def extract_polygon_generators(pbf_path, tmp_dir, include_solar=False):
                 "source":     src,
                 "gen_method": method,
                 "gen_type":   props.get("generator:type", "").strip(),
-                "output_mw":  _parse_output_mw(output_raw),
+                "output_mw":  _parse_output_mw(output_raw, output_cap("generator", src)),
                 "operator":   props.get("operator", "").strip(),
                 "start_date": props.get("start_date", "").strip(),
                 "manufactur": props.get("manufacturer", "").strip()

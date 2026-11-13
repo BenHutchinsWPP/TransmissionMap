@@ -112,25 +112,54 @@ def find_pbf(input_dir, need_tags=None, build_dir="data/build"):
     return all_pbf[0] if all_pbf else None
 
 
-def parse_output_mw(val):
-    """Parse OSM ``*:output:electricity`` strings → float MW (or None)."""
+# Capacity caps for OSM ``*:output:electricity``: the largest single generating
+# unit is about 1,750 MW (Taishan EPR); the largest plant is Three Gorges, 22,500 MW.
+GENERATOR_CAP_MW = 2000
+PLANT_CAP_MW = 25000
+# Per-fuel caps: the largest wind turbine built is about 26 MW; a single
+# solar or wind plant is under 5,000 MW.
+WIND_GENERATOR_CAP_MW = 30
+SOLAR_WIND_PLANT_CAP_MW = 5000
+
+
+def output_cap(kind, source):
+    """The MW cap for a ``"generator"`` or ``"plant"`` row of this fuel source."""
+    source = str(source or "").strip().lower()
+    if kind == "generator":
+        return WIND_GENERATOR_CAP_MW if source == "wind" else GENERATOR_CAP_MW
+    if kind == "plant":
+        return SOLAR_WIND_PLANT_CAP_MW if source in ("solar", "wind") else PLANT_CAP_MW
+    raise ValueError(f"unknown kind {kind!r}")
+
+
+def parse_output_mw(val, cap_mw=None):
+    """Parse OSM ``*:output:electricity`` strings → float MW (or None).
+
+    A comma followed by one or two digits ends the number ("1,5" is 1.5);
+    otherwise commas are thousands separators. A unitless value is MW. A value
+    above ``cap_mw`` (after unit conversion) is None.
+    """
     if not val or str(val).strip().lower() in ("", "yes", "no"):
         return None
     val = str(val).strip()
     m = re.match(r"([\d,.]+)\s*(MW|kW|GW|W)?", val, re.IGNORECASE)
     if not m:
         return None
+    num = m.group(1)
+    num = re.sub(r"^(\d+),(\d{1,2})$", r"\1.\2", num).replace(",", "")
     try:
-        n = float(m.group(1).replace(",", ""))
+        n = float(num)
     except ValueError:
         return None
     unit = (m.group(2) or "MW").upper()
     if unit == "GW":
-        return n * 1000
-    if unit == "KW":
-        return n / 1000
-    if unit == "W":
-        return n / 1_000_000
+        n *= 1000
+    elif unit == "KW":
+        n /= 1000
+    elif unit == "W":
+        n /= 1_000_000
+    if cap_mw is not None and n > cap_mw:
+        return None
     return n
 
 

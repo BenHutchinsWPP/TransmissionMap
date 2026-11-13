@@ -44,6 +44,8 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
+from osm_common import output_cap
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
@@ -117,6 +119,7 @@ RETILE = [
         "src_ext": ".csv",
         "select": ["fid", "name", "source", "gen_method", "gen_type", "output_mw",
                    "operator"],
+        "output_mw_cap": "generator",
         "fields": GLOBAL_FIELDS,
         "min_zoom": 7,
         "max_zoom": 13,
@@ -132,12 +135,8 @@ RETILE = [
         "fields": LINE_FIELDS,
         # A unique id on every line limits --coalesce-densest-as-needed, which
         # would take z12 past what the tiles carry. z11 with simplification
-        # kept off maxzoom is grid-limited (~4.8 m), finer than the z12 it
-        # replaces (~9.6 m at simplification 4).
-        # The 1 MB tile ceiling keeps every line at every zoom: the densest
-        # tile, Gulf Coast 4/3/6, is 507,607 bytes of per-line ids and fields,
-        # which simplification barely moves (500,464 at 6). At this ceiling
-        # the tiles are byte-identical to a 20 MB build.
+        # kept off maxzoom is grid-limited (~4.8 m).
+        # The 1 MB tile ceiling keeps every line at every zoom.
         "min_zoom": 2,
         "max_zoom": 11,
         "max_tile_bytes": 1000000,
@@ -177,7 +176,7 @@ TRANSMISSION_MAX_ZOOM = 12
 
 # Columns carried into the tiles. `minz` is needed at tile time (the -j ladder
 # selects on it) but nothing in assets/ or src/ reads it, so it is dropped again
-# when the finished archive is written — worth 2.5% of the archive. `fid` becomes
+# when the finished archive is written. `fid` becomes
 # the feature id in the one world pass (tile-join carries feature ids through
 # unchanged).
 TRANSMISSION_SELECT = ["fid", "nominal_kv", "operator", "name",
@@ -242,6 +241,7 @@ TILE_POLYGONS = [
         "min_zoom": 5,
         "max_zoom": 12,
         "select": ["fid", "name", "source", "output_mw", "operator", "start_date"],
+        "output_mw_cap": "plant",
         "fields": GLOBAL_FIELDS,
     },
 ]
@@ -249,6 +249,7 @@ TILE_POLYGONS = [
 # Point layers small enough to stay a single gzipped FeatureCollection. They keep
 # the continental GeoJSON's columns (process_continental_osm.py), `fid` among
 # them, which the frontend promotes to the feature id.
+CONCAT_OUTPUT_MW_CAP = {"osm_plants_points": "plant"}
 CONCAT_GEOJSON = ["osm_plants_points", "osm_datacenters", "osm_pipelines_points"]
 
 
@@ -351,17 +352,35 @@ def _warn_unkeyed(unkeyed: int):
                     unkeyed, SEAM_KEY)
 
 
-def _merge_deduped(srcs: List[Path], out: Path, select: List[str]) -> tuple:
+def cap_output_mw(feature: dict, kind) -> int:
+    """Set `output_mw` to None when it exceeds the cap of `kind` ("generator"
+    or "plant") for the feature's `source`; returns 1 when it did, else 0.
+    Missing or non-numeric stays."""
+    props = feature.get("properties") or {}
+    if kind is None or props.get("output_mw") in (None, ""):
+        return 0
+    try:
+        over = float(props["output_mw"]) > output_cap(kind, props.get("source"))
+    except (TypeError, ValueError):
+        return 0
+    if over:
+        props["output_mw"] = None
+    return int(over)
+
+
+def _merge_deduped(srcs: List[Path], out: Path, select: List[str],
+                   output_mw_cap: Optional[str] = None) -> tuple:
     """Write every source to one GeoJSONSeq, keeping the first feature per fid.
 
     Returns (features read, features written). Geofabrik's continental extracts
     overlap — nothing clips them to continent polygons — so the same element
     arrives from two extracts and would otherwise be tiled twice. A feature
     with no fid is always kept. The written file carries only `select`, which
-    includes the fid. Streaming, because a merged file reaches ~1 GB.
+    includes the fid. An `output_mw` above the cap of kind `output_mw_cap` is set to null.
+    Streaming, because a merged file is large.
     """
     seen: set = set()
-    read = kept = unkeyed = 0
+    read = kept = unkeyed = nulled = 0
     with tempfile.TemporaryDirectory(prefix="global-merge-") as tmp, \
             open(out, "w", encoding="utf-8") as sink:
         for src in srcs:
@@ -385,9 +404,12 @@ def _merge_deduped(srcs: List[Path], out: Path, select: List[str]) -> tuple:
                             continue
                         seen.add(key)
                     kept += 1
+                    nulled += cap_output_mw(feature, output_mw_cap)
                     sink.write(json.dumps(feature, ensure_ascii=False) + "\n")
             seq.unlink()
     _warn_unkeyed(unkeyed)
+    if output_mw_cap is not None:
+        log.info("  %d output_mw values above the %s cap set to null", nulled, output_mw_cap)
     return read, kept
 
 
@@ -513,7 +535,7 @@ def retile(spec: dict, dry_run: bool = False):
 
     with tempfile.TemporaryDirectory(prefix="global-tiles-") as tmp:
         merged = Path(tmp) / f"{base}.geojsonl"
-        read, kept = _merge_deduped(srcs, merged, spec["select"])
+        read, kept = _merge_deduped(srcs, merged, spec["select"], spec.get("output_mw_cap"))
         _log_merge(read, kept)
         # tippecanoe needs at least one feature, and --force truncates the target
         # before it reads the input — so an empty merge leaves the archive as it was.
@@ -551,7 +573,7 @@ def tile_polygons(spec: dict, dry_run: bool = False):
 
     with tempfile.TemporaryDirectory(prefix="global-tiles-") as tmp:
         merged = Path(tmp) / f"{base}.geojsonl"
-        read, kept = _merge_deduped(srcs, merged, spec["select"])
+        read, kept = _merge_deduped(srcs, merged, spec["select"], spec.get("output_mw_cap"))
         _log_merge(read, kept)
         _tag_regions(merged, spec["fields"])
         keep_merged(merged, kept_path(base))
@@ -564,6 +586,7 @@ def tile_polygons(spec: dict, dry_run: bool = False):
 
 
 def concat_geojson(base: str, dry_run: bool = False):
+    cap = CONCAT_OUTPUT_MW_CAP.get(base)
     srcs = _inputs(base + "_{code}.geojson.gz")
     if not srcs:
         log.warning("[skip] %s — no continental GeoJSON built", base)
@@ -575,7 +598,7 @@ def concat_geojson(base: str, dry_run: bool = False):
         return
     features = []
     seen: set = set()
-    read = unkeyed = 0
+    read = unkeyed = nulled = 0
     for src in srcs:
         with gzip.open(src, "rt", encoding="utf-8") as f:
             for feature in json.load(f).get("features", []):
@@ -587,8 +610,11 @@ def concat_geojson(base: str, dry_run: bool = False):
                     if key in seen:
                         continue
                     seen.add(key)
+                nulled += cap_output_mw(feature, cap)
                 features.append(feature)
     _warn_unkeyed(unkeyed)
+    if cap is not None:
+        log.info("  %d output_mw values above the %s cap set to null", nulled, cap)
     _log_merge(read, len(features))
     import region_join
     region_join.tag_features(features, "global", base, fields=GLOBAL_FIELDS)

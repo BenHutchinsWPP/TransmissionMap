@@ -100,7 +100,7 @@ const measure = (unit: string, description: string): FieldDef =>
 const textYear = (description: string): FieldDef =>
   ({ type: 'string', ops: [], description, role: 'time', time: 'year' });
 
-const KV_FIELD = KV_LEVEL('Nominal voltage class, in kV.');
+const KV_FIELD = KV_LEVEL('Nominal voltage class, in kV; a value of 0 or less means unknown and matches no kV test except != and not_in.');
 const OUTPUT_MW_FIELD = measure('MW', 'Rated output capacity, in MW.');
 const OSM_SOURCE_FIELD = category('OSM power-generation source tag.', Object.values(OSM_FUEL_MAP).flat());
 // OSM start_date: free text; no condition (its text does not order).

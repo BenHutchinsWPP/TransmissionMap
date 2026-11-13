@@ -121,10 +121,13 @@ group('dataset scope equals the GeoJSON path over the same rows', () => {
     expect(ok(await count(TL, { where: HIGH, area: TX })).total).toBe(3);   // Alpha, Bravo, Delta
   });
 
-  it('aggregate by a region list (each code once per feature), summing a number field', async () => {
+  it('aggregate by a region list (each code once per feature); a kV sum refused on both paths', async () => {
     // Groups of equal size come in file order, which differs (Hilbert) from features.json: compare by key.
     const byKey = (r: { groups: { key: unknown }[] }) => [...r.groups].sort((x, y) => String(x.key).localeCompare(String(y.key)));
-    for (const opts of [{ groupBy: 'admin1', sum: ['nominal_kv'] }, { groupBy: 'countries' }, { groupBy: 'admin1', where: HIGH, area: TX }]) {
+    for (const kv of [await aggregate(TL, { groupBy: 'admin1', sum: ['nominal_kv'] }), await asGeojson(TL, () => aggregate(TL, { groupBy: 'admin1', sum: ['nominal_kv'] }))]) {
+      expect(!kv.ok && kv.reason).toMatch(/is a level, not an amount/);
+    }
+    for (const opts of [{ groupBy: 'admin1' }, { groupBy: 'countries' }, { groupBy: 'admin1', where: HIGH, area: TX }]) {
       const d = ok(await aggregate(TL, opts));
       const g = ok(await asGeojson(TL, () => aggregate(TL, opts)));
       expect(d.complete).toBe(true);

@@ -37,6 +37,7 @@ from pathlib import Path
 from osm_common import (
     _run, _has, add_fid, find_pbf, osm_fid,
     parse_output_mw as _parse_output_mw,
+    output_cap,
     normalise_plant_source as _normalise_source,
 )
 from osm_plant_polygons import extract_site_relation_plants, build_plant_polygons
@@ -127,7 +128,8 @@ def extract_node_plants(pbf_path, tmp_dir):
             "osm_id":     feat.get("osm_id"),
             "name":       str(feat.get("name") or "").strip() or _tag("name"),
             "source":     _normalise_source(_tag("plant:source")),
-            "output_mw":  _parse_output_mw(output_raw),
+            "output_mw":  _parse_output_mw(
+                output_raw, output_cap("plant", _normalise_source(_tag("plant:source")))),
             "operator":   _tag("operator"),
             "start_date": _tag("start_date"),
         })
@@ -226,7 +228,9 @@ def extract_polygon_plants(pbf_path, tmp_dir):
                 "osm_id":     osm_id,
                 "name":       props.get("name", "").strip(),
                 "source":     _normalise_source(props.get("plant:source", "")),
-                "output_mw":  _parse_output_mw(output_raw),
+                "output_mw":  _parse_output_mw(
+                    output_raw,
+                    output_cap("plant", _normalise_source(props.get("plant:source", "")))),
                 "operator":   props.get("operator", "").strip(),
                 "start_date": props.get("start_date", "").strip(),
             })

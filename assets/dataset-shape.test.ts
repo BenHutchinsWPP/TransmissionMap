@@ -210,13 +210,13 @@ group('numeric bins', () => {
     fakeMap({});
     const r = ok(await shapeRows(HIFLD, { bins: { field: 'max_kv' }, by: ['states'], geometry: 'point' }));
     expect(r.bins).toMatchObject({ field: 'max_kv', scale: 'lin' });
-    // null, '' and 'n/a' have no value: the row with bin null, never dropped.
+    // null, '', 'n/a' and a kV of 0 or less (the data's "unknown") have no value: the row with bin null, never dropped.
     const none = r.rows.filter(x => x.bin === null);
     expect(none.every(x => x.lo === undefined && x.hi === undefined)).toBe(true);
     const once = ok(await shapeRows(HIFLD, { bins: { field: 'max_kv' } }));
     expect(once.rows.reduce((a, x) => a + x.count, 0)).toBe(1800);
-    expect(once.rows.find(x => x.bin === null)!.count).toBe(300);
-    expect(once.bins!.stats!.n).toBe(1500);
+    expect(once.rows.find(x => x.bin === null)!.count).toBe(500);
+    expect(once.bins!.stats!.n).toBe(1300);
     expect(once.rows.map(x => x.bin)).toEqual([...once.rows.map(x => x.bin)].sort((a, b) => a === null ? 1 : b === null ? -1 : Number(a) - Number(b)));
     for (const row of once.rows.filter(x => x.bin !== null)) {
       expect(row.lo).toBe(once.bins!.edges[row.bin as number]);
