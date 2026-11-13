@@ -18,6 +18,7 @@ import { layerById, LAYERS } from '../src/registry/index.js';
 import { layerSourceId } from './layers/layer-source.js';
 import { registerBaseFilter, BASE_LAYER_FILTERS } from './layers/base-filters.js';
 import { resetRangeIo, requestLog } from './parquet/range-io.js';
+import { resetDecoded } from './columns/columns-read.js';
 import { lengthKm } from './sandbox/geo-kit.js';
 import { FACET_APPLIERS, effectiveFilter } from './filters.js';
 import { applyLayerPlan, type LayerPlan } from './layers/layer-plan.js';
@@ -55,6 +56,7 @@ const indexFetches = () => fetchMock.mock.calls.filter(([u]) => String(u).endsWi
 
 beforeEach(() => {
   resetRangeIo();
+  resetDecoded();
   indexMissing = false;
   cap.over = false;
   fetchMock.mockClear();
@@ -203,10 +205,10 @@ group('row-group pruning is a shortcut only', () => {
     const where: Condition[] = [{ field: 'nominal_kv', op: '>', value: 0 }];
     await count(TL, { where });   // footer and index first
     requestLog.length = 0;
-    resetRangeIo();
+    resetRangeIo(); resetDecoded();
     const all = ok(await count(TL, { where }));
     const whole = bytes();
-    resetRangeIo();
+    resetRangeIo(); resetDecoded();
     const fra = ok(await count(TL, { where, area: { kind: 'countries', codes: ['FRA'] } }));
     expect(all.total).toBe(10);
     expect(fra.total).toBe(1);

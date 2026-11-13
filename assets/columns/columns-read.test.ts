@@ -9,14 +9,8 @@ import { resetRangeIo, requestLog, Fail, openFile } from '../parquet/range-io.js
 import { toMapLibreFilter, type Condition } from '../../src/registry/condition-compile.js';
 import {
   columnsEntry, columnsMeta, pruneGroups, columnsFor, hasIdExpr, readGroups, readRowsAt, readTwoPhase,
-  plannedBytes, rowOf, type ColumnsEntry, type ColumnsRow,
+  plannedBytes, rowOf, resetDecoded, setDecodedCap, readColumns, rangeRuns, RANGE_GAP, type ColumnsEntry, type ColumnsRow,
 } from './columns-read.js';
-
-const calls = vi.hoisted(() => ({ readRows: 0 }));
-vi.mock('../parquet/range-io.js', async importOriginal => {
-  const m = await importOriginal<typeof import('../parquet/range-io.js')>();
-  return { ...m, readRows: (...a: Parameters<typeof m.readRows>) => { calls.readRows++; return m.readRows(...a); } };
-});
 
 const FIX = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const LINES = 'osm_transmission_lines', RETAIL = 'retail_territories', POINTS = 'osm_substations_points';
@@ -32,6 +26,7 @@ function serve(url: string, init?: RequestInit): Response {
 
 beforeEach(() => {
   resetRangeIo();
+  resetDecoded();
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => serve(url, init)));
 });
 
@@ -231,20 +226,20 @@ describe('two-phase read', () => {
 });
 
 describe('readRowsAt by row group', () => {
-  it('makes one readRows call per group touched, rows spread over every group', async () => {
+  it('makes one range request per group touched, rows spread over every group, and none for a column held', async () => {
     const e = await entry(LINES);
     const md = await columnsMeta(e);
     const starts: number[] = [];
     let s = 0;
     for (const rg of md.row_groups) { starts.push(s); s += Number(rg.num_rows); }
     const wanted = starts.flatMap((a, g) => [a, a + Number(md.row_groups[g].num_rows) - 1]);
-    calls.readRows = 0;
+    const before = requestLog.length;
     const got = await readRowsAt(e, wanted, ['fid', 'name']);
-    expect(calls.readRows).toBe(md.row_groups.length);
+    expect(requestLog.length - before).toBe(md.row_groups.length);   // two columns, one request per group
     expect(got.size).toBe(new Set(wanted).size);
-    calls.readRows = 0;
+    const held = requestLog.length;
     await readRowsAt(e, [starts[1], starts[1] + 1], ['fid']);
-    expect(calls.readRows).toBe(1);
+    expect(requestLog.length).toBe(held);
   });
 
   it('a row past the last group is absent, and readTwoPhase rejects with stale-build', async () => {
@@ -291,7 +286,7 @@ describe('readRowsAt by row group', () => {
 describe('plannedBytes', () => {
   it('is at most the column-chunk bytes a read fetches', async () => {
     for (const [ds, groups, cols] of [[LINES, [1, 2], ['nominal_kv', 'length_km']], [RETAIL, [0, 1], ['name']], [LINES, [0, 1, 2], null]] as const) {
-      resetRangeIo();
+      resetRangeIo(); resetDecoded();
       const e = await entry(ds);
       const columns = cols ?? e.columns;
       const planned = await plannedBytes(e, [...groups], columns);
@@ -311,5 +306,123 @@ describe('columnsEntry', () => {
     expect(await columnsEntry('padus')).toEqual({ ok: false, reason: 'unavailable' });
     const e = await columnsEntry(LINES);
     expect(e.ok && e.result.geometry).toBe('line');
+  });
+});
+
+describe('decoded cache', () => {
+  const cols = ['fid', 'name', 'nominal_kv', 'length_km', 'px'];
+
+  it('a repeat readGroups makes no new request and returns the same rows', async () => {
+    const e = await entry(LINES);
+    const groups = await allGroups(e);
+    const first = await collect(readGroups(e, groups, cols));
+    const n = requestLog.length;
+    const again = await collect(readGroups(e, groups, cols));
+    expect(requestLog.length).toBe(n);
+    expect(again).toEqual(first);
+  });
+
+  it('a row handed out can be changed without changing the next read', async () => {
+    const e = await entry(LINES);
+    const first = await collect(readGroups(e, [0], cols));
+    first[0].properties.name = 'changed';
+    const again = await collect(readGroups(e, [0], cols));
+    expect(again[0].properties.name).not.toBe('changed');
+  });
+
+  it('reads one range per group for all its columns', async () => {
+    const e = await entry(LINES);
+    const groups = await allGroups(e);
+    const n = requestLog.length;
+    await collect(readGroups(e, groups, cols));
+    expect(requestLog.length - n).toBe(groups.length);
+  });
+
+  it('evicts the oldest under a tiny cap, and a Col over the cap is returned but not kept', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const same = async (g: number, c: string) => {   // the byte cache hides a re-fetch, so a re-decode is told by identity
+      const [x] = await readColumns(e, md, g, [c]);
+      await new Promise(r => setTimeout(r, 0));
+      const [y] = await readColumns(e, md, g, [c]);
+      return x === y;
+    };
+    const first = (await readColumns(e, md, 0, ['nominal_kv']))[0];
+    setDecodedCap(first.bytes * 2);
+    await new Promise(r => setTimeout(r, 0));
+    const g1 = (await readColumns(e, md, 1, ['nominal_kv']))[0];
+    const g2 = (await readColumns(e, md, 2, ['nominal_kv']))[0];
+    await new Promise(r => setTimeout(r, 0));
+    expect((await readColumns(e, md, 2, ['nominal_kv']))[0]).toBe(g2);   // newest: held
+    expect((await readColumns(e, md, 0, ['nominal_kv']))[0]).not.toBe(first);   // oldest: evicted
+    expect(g1.codes.length).toBeGreaterThan(0);
+    setDecodedCap(1);   // below any Col
+    const big = await readColumns(e, md, 1, ['name']);
+    expect(big[0].codes.length).toBe(Number(md.row_groups[1].num_rows));
+    expect(await same(1, 'name')).toBe(false);
+  });
+
+  it('shares an in-flight decode and drops a failed one', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const n = requestLog.length;
+    const [a, b] = await Promise.all([readColumns(e, md, 0, ['fid']), readColumns(e, md, 0, ['fid'])]);
+    expect(requestLog.length - n).toBe(1);
+    expect(a[0]).toBe(b[0]);
+    resetDecoded();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 500 })));
+    resetRangeIo();
+    await expect(readColumns(e, md, 1, ['name'])).rejects.toBeInstanceOf(Fail);
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => serve(url, init)));
+    expect((await readColumns(e, md, 1, ['name']))[0].codes.length).toBe(Number(md.row_groups[1].num_rows));
+  });
+
+  it('rows take the file schema order of the columns, not the order asked', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const ref = await collect(readGroups(e, [0], cols));
+    resetDecoded();
+    const rev = await collect(readGroups(e, [0], [...cols].reverse()));
+    expect(rev).toEqual(ref);
+    for (let i = 0; i < rev.length; i++) expect(Object.keys(rev[i].properties)).toEqual(Object.keys(ref[i].properties));
+    expect(md.schema.length).toBeGreaterThan(1);
+  });
+});
+
+describe('range runs', () => {
+  const chunk = (name: string, start: number, size: number) => ({ meta_data: { path_in_schema: [name], data_page_offset: BigInt(start), total_compressed_size: BigInt(size) } });
+  const md = { row_groups: [{ columns: [chunk('a', 100, 1000), chunk('big', 1100, 1_000_000), chunk('c', 1_001_100, 500), chunk('d', 1_001_600, 700)] }] } as never;
+
+  it('splits where a big unwanted chunk lies between, joins neighbours', () => {
+    const r = rangeRuns(md, 0, ['d', 'a', 'c']);
+    expect(r.runs.map(x => [x.start, x.end])).toEqual([[100, 1100], [1_001_100, 1_002_300]]);
+    expect(rangeRuns(md, 0, ['a', 'big', 'c']).runs).toHaveLength(1);
+    const planned = 1000 + 500 + 700;
+    expect(r.runs.reduce((n, x) => n + x.end - x.start, 0)).toBeLessThanOrEqual(planned + RANGE_GAP * (r.runs.length - 1));
+  });
+
+  it('a gap of RANGE_GAP joins, one byte more splits', () => {
+    const m2 = (gap: number) => ({ row_groups: [{ columns: [chunk('a', 0, 10), chunk('b', 10 + gap, 10)] }] }) as never;
+    expect(rangeRuns(m2(RANGE_GAP), 0, ['a', 'b']).runs).toHaveLength(1);
+    expect(rangeRuns(m2(RANGE_GAP + 1), 0, ['a', 'b']).runs).toHaveLength(2);
+  });
+
+  it('a real read fetches at most planned + RANGE_GAP per join', async () => {
+    const e = await entry(LINES);
+    const groups = await allGroups(e);
+    const columns = ['fid', 'nominal_kv', 'px'];
+    const planned = await plannedBytes(e, groups, columns);
+    const n = requestLog.length;
+    await collect(readGroups(e, groups, columns));
+    const fetched = requestLog.slice(n).reduce((a, r) => a + r.end - r.start, 0);
+    expect(fetched).toBeLessThanOrEqual(planned + RANGE_GAP * groups.length * (columns.length - 1));
+  });
+
+  it('readGroups makes no read-ahead: one row of group 0 reads group 0 only', async () => {
+    const e = await entry(LINES);
+    const md = await columnsMeta(e);
+    const n = requestLog.length;
+    for await (const r of readGroups(e, [0, 1, 2], ['fid'])) { expect(r.at).toBe(0); break; }
+    expect(requestLog.length - n).toBe(rangeRuns(md, 0, ['fid']).runs.length);
   });
 });

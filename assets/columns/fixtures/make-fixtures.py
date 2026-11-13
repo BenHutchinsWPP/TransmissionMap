@@ -6,6 +6,10 @@ a world line set (12 rows, 3 row groups; fids above 2^32, real admin-1 and count
 analysis/ (columns/<ds>.<sha8>.parquet + index.json) and <ds>.features.json, the same rows as
 GeoJSON the way the tiles carry them (native id as the feature id, nulls left out): the parity
 reference for the TS tests.
+
+Also writes decode/multipage.parquet for columns-decode.test.ts: 1,500 rows in 3 row groups with
+the columns preset, but pages of ~512 bytes, so each column chunk spans many data pages and the
+name column's dictionary overflows into plain pages; a float column holds -0.0, NaN and nulls.
 """
 import json
 import shutil
@@ -80,6 +84,28 @@ DATASETS = {
 }
 
 
+def multipage(path):
+    """The decode fixture: multi-page chunks, a dictionary-to-plain fallback, -0.0 and NaN."""
+    import pyarrow as pa
+    import geoparquet_common as gc
+    n = 1500
+    kv = [None if i % 7 == 3 else -0.0 if i % 11 == 5 else float("nan") if i % 13 == 6 else float(i % 9) * 57.5
+          for i in range(n)]
+    table = pa.table({
+        "fid": pa.array([E + i * 10 + 2 for i in range(n)], pa.int64()),
+        "name": pa.array([None if i % 17 == 0 else "" if i % 19 == 0 else f"line {i:04d}" for i in range(n)]),
+        "kind": pa.array([None if i % 5 == 4 else ("ac", "dc", "été")[i % 3] for i in range(n)]),
+        "nominal_kv": pa.array(kv, pa.float64()),
+        "built": pa.array([None if i % 6 == 0 else i % 4 == 1 for i in range(n)], pa.bool_()),
+        "px": pa.array([-97_000_000 + i * 1000 for i in range(n)], pa.int32()),
+        "length_km": pa.array([None if i % 8 == 0 else i / 3 for i in range(n)], pa.float32()),
+    })
+    preset = dict(gc.COLUMNS_PRESET, row_group_size=600, data_page_size=512,
+                  dictionary_pagesize_limit=256, write_batch_size=16)
+    gc.write_parquet(table, path, preset, metadata={"build_id": "fixture", "dataset": "multipage"},
+                     no_dictionary={"fid", "px", "length_km"})
+
+
 def main():
     tmp = Path(tempfile.mkdtemp())
     inp = tmp / "input"
@@ -107,6 +133,8 @@ def main():
     shutil.rmtree(out, ignore_errors=True)
     shutil.copytree(tmp / "analysis", out)
     shutil.rmtree(tmp)
+    (HERE / "decode").mkdir(exist_ok=True)
+    multipage(HERE / "decode" / "multipage.parquet")
     for ds, fc in feats.items():
         (HERE / f"{ds}.features.json").write_text(json.dumps(fc, sort_keys=True, indent=1) + "\n")
     total = sum(p.stat().st_size for p in HERE.rglob("*") if p.is_file() and p.suffix != ".py")

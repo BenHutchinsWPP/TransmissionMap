@@ -12,6 +12,8 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ENTRY = resolve(ROOT, 'src/main.ts');
 const FORBIDDEN_FILES = [
   'assets/columns/columns-read.ts',
+  'assets/columns/columns-decode.ts',
+  'assets/columns/columns-worker.ts',
   'assets/parquet/range-io.ts',
   'assets/lines/line-read.ts',
 ].map(f => resolve(ROOT, f));

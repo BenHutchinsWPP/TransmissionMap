@@ -13,24 +13,48 @@
 //                         wanted ∪ every column named as a string in the
 //                         conditions/filters, plus the id column for row queries
 //                         or a filter holding the native-id expression ["id"]
-//   readGroups(entry, groups, columns)  rows of those groups, one group at a time
-//   readRowsAt(entry, rows, columns)    rows by absolute row number: each row group holding one is read once, whole
+//   readGroups(entry, groups, columns)  rows of those groups, one group at a time, no read-ahead (a
+//                         caller may stop early); the page is yielded to every ROW_YIELD rows
+//   readRowsAt(entry, rows, columns)    rows by absolute row number: each row group holding one is read once,
+//                         whole; the next group's columns are fetched while this one's rows are built
+//   readColumns(entry, md, g, columns)  the Cols of one row group: the chunks of the columns not yet
+//                         decoded are fetched as one range request per run of chunks, runs being joined
+//                         when the gap between them is at most RANGE_GAP (64 KiB), so the bytes fetched stay
+//                         close to plannedBytes (range-io: timeout, in-flight limit, byte cache,
+//                         requestLog, build_id); then one decode per column (columns-decode.ts), in a worker
+//                         when there is one
+//   Yielding: `yieldToPage` waits one MessageChannel message (not throttled in a hidden tab, unlike
+//                         setTimeout), setTimeout(0) where there is no MessageChannel
+//   resetDecoded()        test support: forget the decoded cache and the worker state
 //   readTwoPhase(entry, groups, first, rest, pick)  phase 1 reads `first` for
 //                         every row, `pick` keeps some; phase 2 reads `rest` for
 //                         the kept rows only
 //   plannedBytes(entry, groups, columns)  compressed column-chunk bytes
+// Decoded cache: each (file, build_id, row group, column) is decoded once, as a Col (dictionary +
+//   codes), held in one LRU across files: key `${path}${file.name}|${build_id}|${g}|${column}`, a Promise
+//   shared while in flight, dropped when it fails. Settled entries are evicted oldest-first (a hit
+//   re-inserts) to stay within DECODED_CACHE_BYTES by `estimateBytes`; a Col larger than the cap is
+//   returned but not kept. A running call holds its own reference, so eviction never changes a result.
+// Decode: each column is its own message {id, schema, rowGroup, column, bytes, start} to the module worker
+//   columns-worker.ts, `bytes` being that column's chunk (copied by postMessage, never transferred: the
+//   range-io buffer is its cache's); the reply {id, ok, col} carries `codes` transferred. `ok: false`
+//   rejects with a plain Error('columns decode') (outcome `error`). No Worker global, a constructor that
+//   throws, onerror or onmessageerror: the worker is dropped, decoding runs inline for the session and
+//   every pending request is re-run inline, as it is when a reply takes longer than REPLY_TIMEOUT_MS (30 s).
+//   The worker is created on first use, never at load.
 // Rows: {type (1 point, 2 line, 3 polygon), id, properties, measures, at}. A native
 //   id (int64 `fid`) is the row id only, a Number after Number.isSafeInteger
 //   (else `unsafe-id`); any other id stays a property too. A null value is left
 //   out of `properties`, "" is kept. length_km, area_km2, px, py go in `measures`; px/py are stored as int32 micro-degrees and read as degrees.
 // Failures (Fail.reason): range-io's (`unavailable`, `offline`, `stale-build`,
 //   `timeout`) and `unsafe-id`.
-// Deps: parquet/range-io.ts (hyparquet + fzstd), src/registry/columns.ts,
+// Deps: parquet/range-io.ts (hyparquet + fzstd), columns-decode.ts, columns-worker.ts (worker entry), src/registry/columns.ts,
 //   src/registry/condition-compile.ts (types). Imported only by dynamic import()
 //   (dataset-query.ts), so hyparquet stays out of the boot bundle.
 
 import type { FileMetaData, ColumnChunk } from 'hyparquet';
-import { Fail, loadIndex, openFile, readRows, type FileDir, type FileEntry } from '../parquet/range-io.js';
+import { Fail, loadIndex, openFile, type FileDir, type FileEntry } from '../parquet/range-io.js';
+import { decodeColumn, estimateBytes, expand, groupRange, type Col, type DecodeInput } from './columns-decode.js';
 import { COLUMNS_DATASETS } from '../../src/registry/columns.js';
 import type { Condition } from '../../src/registry/condition-compile.js';
 
@@ -199,38 +223,207 @@ const groupStarts = (md: FileMetaData) => {
   return starts;
 };
 
+const yieldToPage = () => new Promise<void>(r => {
+  if (typeof MessageChannel !== 'function') { setTimeout(r, 0); return; }
+  const { port1, port2 } = new MessageChannel();
+  port1.onmessage = () => { port1.close(); r(); };
+  port2.postMessage(0);
+});
+export const ROW_YIELD = 8192;
+export const RANGE_GAP = 64 * 1024;
+export const REPLY_TIMEOUT_MS = 30_000;
+export const DECODED_CACHE_BYTES = 48 * 1024 * 1024;
+
+// ─── Decode (worker, else inline) ────────────────────────────────────────────
+interface Pending { input: DecodeInput; resolve: (c: Col) => void; reject: (e: Error) => void; timer?: ReturnType<typeof setTimeout> }
+let worker: Worker | null = null;
+let inline = typeof Worker !== 'function';
+let nextId = 0;
+const pending = new Map<number, Pending>();
+
+const decodeError = () => new Error('columns decode');
+
+function runInline(p: Pending) {
+  decodeColumn(p.input).then(p.resolve, () => p.reject(decodeError()));
+}
+
+function dropWorker(w: Worker) {
+  w.terminate();
+  if (worker === w) worker = null;
+  inline = true;
+  const rerun = [...pending.values()];
+  pending.clear();
+  for (const p of rerun) { clearTimeout(p.timer); runInline(p); }
+}
+
+function getWorker(): Worker | null {
+  if (inline) return null;
+  if (worker) return worker;
+  try {
+    const w = new Worker(new URL('./columns-worker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = (e: MessageEvent<{ id: number; ok: boolean; col?: Col }>) => {
+      const p = pending.get(e.data.id);
+      if (!p) return;
+      pending.delete(e.data.id);
+      clearTimeout(p.timer);
+      if (e.data.ok && e.data.col) p.resolve(e.data.col); else p.reject(decodeError());
+    };
+    w.onerror = () => dropWorker(w);
+    w.onmessageerror = () => dropWorker(w);
+    return (worker = w);
+  } catch {
+    inline = true;
+    return null;
+  }
+}
+
+function decode(input: DecodeInput): Promise<Col> {
+  return new Promise<Col>((resolve, reject) => {
+    const p: Pending = { input, resolve, reject };
+    const w = getWorker();
+    if (!w) { runInline(p); return; }
+    const id = ++nextId;
+    pending.set(id, p);
+    p.timer = setTimeout(() => { if (pending.has(id)) dropWorker(w); }, REPLY_TIMEOUT_MS);
+    try { w.postMessage({ id, ...input }); }   // copied, never transferred
+    catch { dropWorker(w); }
+  });
+}
+
+// ─── Decoded cache ───────────────────────────────────────────────────────────
+interface Held { col: Promise<Col>; bytes: number | null }
+const decoded = new Map<string, Held>();   // insertion order = least recently used first
+let decodedCap = DECODED_CACHE_BYTES;
+let decodedBytes = 0;
+
+function settle(key: string, h: Held, c: Col) {
+  if (decoded.get(key) !== h) return;
+  h.bytes = estimateBytes(c);
+  if (h.bytes > decodedCap) { decoded.delete(key); return; }
+  decodedBytes += h.bytes;
+  for (const [k, e] of decoded) {
+    if (decodedBytes <= decodedCap) break;
+    if (e.bytes === null) continue;
+    decoded.delete(k);
+    decodedBytes -= e.bytes;
+  }
+}
+
+/** Test support: forget the decoded cache and the worker state. */
+export function resetDecoded() {
+  decoded.clear(); decodedBytes = 0; decodedCap = DECODED_CACHE_BYTES;
+  worker?.terminate();
+  worker = null; for (const p of pending.values()) clearTimeout(p.timer);
+  pending.clear(); inline = typeof Worker !== 'function';
+}
+
+/** Test support: the cache cap (resetDecoded restores it). */
+export function setDecodedCap(n: number) { decodedCap = n; }
+
+export interface Run { start: number; end: number; piece?: Promise<ArrayBuffer> }
+
+/** The byte runs holding the chunks of `columns` in row group `g`: chunks whose gap is at most `gap` share a run. Pure. */
+export function rangeRuns(md: Pick<FileMetaData, 'row_groups'>, g: number, columns: readonly string[], gap = RANGE_GAP) {
+  const want = columns.map(c => ({ c, ...groupRange(md, g, [c]) })).sort((x, y) => x.start - y.start);
+  const runs: Run[] = [];
+  const runOf = new Map<string, Run>();
+  for (const w of want) {
+    let run = runs[runs.length - 1];
+    if (run && w.start - run.end <= gap) run.end = Math.max(run.end, w.end);
+    else runs.push(run = { start: w.start, end: w.end });
+    runOf.set(w.c, run);
+  }
+  return { runs, runOf, want };
+}
+
+/** Cols of `columns` in row group `g`, in the order given: one range request for those not decoded yet. */
+export function readColumns(entry: ColumnsEntry, md: FileMetaData, g: number, columns: readonly string[]): Promise<Col[]> {
+  const base = `${entry.path}${entry.file.name}|${entry.build_id}|${g}|`;
+  const missing = columns.filter(c => {
+    const h = decoded.get(base + c);
+    if (h) { decoded.delete(base + c); decoded.set(base + c, h); }   // most recently used
+    return !h;
+  });
+  if (missing.length) {
+    const { runs, runOf, want } = rangeRuns(md, g, missing);
+    for (const r of runs) {
+      try { r.piece = Promise.resolve(openFile(entry, entry.file).buf.slice(r.start, r.end)); }
+      catch (e) { r.piece = Promise.reject(e); }
+    }
+    for (const w of want) {
+      const key = base + w.c, run = runOf.get(w.c)!;
+      const col = run.piece!.then(buf => decode({
+        schema: md.schema, rowGroup: md.row_groups[g], column: w.c,
+        bytes: buf.slice(w.start - run.start, w.end - run.start), start: w.start,
+      }));
+      const h: Held = { col, bytes: null };
+      decoded.set(key, h);
+      col.then(x => settle(key, h, x), () => { if (decoded.get(key) === h) decoded.delete(key); });
+    }
+  }
+  return Promise.all(columns.map(c => decoded.get(base + c)?.col ?? Promise.reject(new Fail('stale-build'))));
+}
+
+/** The columns in file schema order (the order hyparquet's object rows take), each once. */
+function inSchemaOrder(md: FileMetaData, columns: readonly string[]): string[] {
+  const at = new Map(md.schema.map((s, i) => [s.name, i]));
+  return [...new Set(columns)].sort((a, b) => (at.get(a) ?? 0) - (at.get(b) ?? 0));
+}
+
+/** Raw row i of a group: the columns' values, nulls as null, keys in `names` order. */
+function rawOf(names: readonly string[], cols: readonly Col[], i: number): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+  for (let j = 0; j < names.length; j++) raw[names[j]] = expand(cols[j], i);
+  return raw;
+}
+
 /** Rows of the given row groups, reading `columns` only, one group at a time. */
 export async function* readGroups(entry: ColumnsEntry, groups: readonly number[], columns: readonly string[]): AsyncGenerator<ColumnsRow> {
-  const file = openFile(entry, entry.file);
   const md = await columnsMeta(entry);
   const starts = groupStarts(md);
-  for (const g of groups) {
-    const a = starts[g], b = a + Number(md.row_groups[g].num_rows);
-    const got = columns.length ? await readRows(file, md, a, b, [...columns]) : Array.from({ length: b - a }, () => ({}));
-    for (let i = 0; i < got.length; i++) yield rowOf(entry, got[i], a + i);
+  const names = inSchemaOrder(md, columns);
+  for (let k = 0; k < groups.length; k++) {
+    const g = groups[k];
+    const a = starts[g], n = Number(md.row_groups[g].num_rows);
+    const cols = names.length ? await readColumns(entry, md, g, names) : [];
+    for (let i = 0; i < n; i++) {
+      yield rowOf(entry, rawOf(names, cols, i), a + i);
+      if ((i + 1) % ROW_YIELD === 0) await yieldToPage();
+    }
     await yieldToPage();
   }
 }
 
-const yieldToPage = () => new Promise<void>(r => setTimeout(r, 0));
-
 /** Rows by absolute row number, reading `columns` only; each row group holding one is read once, whole. Keyed by row number. */
 export async function readRowsAt(entry: ColumnsEntry, rows: readonly number[], columns: readonly string[]): Promise<Map<number, ColumnsRow>> {
-  const file = openFile(entry, entry.file);
   const md = await columnsMeta(entry);
   const starts = groupStarts(md);
+  const names = inSchemaOrder(md, columns);
   const want = new Set(rows);
   const out = new Map<number, ColumnsRow>();
-  let first = true;
+  const todo: number[] = [];
   for (let g = 0; g < starts.length; g++) {
     const a = starts[g], b = a + Number(md.row_groups[g].num_rows);
-    let held = false;
-    for (const r of want) if (r >= a && r < b) { held = true; break; }
-    if (!held) continue;
-    if (!first) await yieldToPage();
-    first = false;
-    const got = columns.length ? await readRows(file, md, a, b, [...columns]) : Array.from({ length: b - a }, () => ({}));
-    for (let i = 0; i < got.length; i++) if (want.has(a + i)) out.set(a + i, rowOf(entry, got[i], a + i));
+    for (const r of want) if (r >= a && r < b) { todo.push(g); break; }
+  }
+  const fetch = (k: number) => {
+    if (k >= todo.length || !names.length) return null;
+    const p = readColumns(entry, md, todo[k], names);
+    p.catch(() => {});   // an error is thrown where it is awaited
+    return p;
+  };
+  let next = fetch(0);
+  for (let k = 0; k < todo.length; k++) {
+    const g = todo[k], a = starts[g], b = a + Number(md.row_groups[g].num_rows);
+    if (k) await yieldToPage();
+    const cols = next ? await next : [];
+    next = fetch(k + 1);
+    let done = 0;
+    for (let i = 0; i < b - a; i++) {
+      if (!want.has(a + i)) continue;
+      out.set(a + i, rowOf(entry, rawOf(names, cols, i), a + i));
+      if (++done % ROW_YIELD === 0) await yieldToPage();
+    }
   }
   return out;
 }

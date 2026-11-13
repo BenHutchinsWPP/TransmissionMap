@@ -15,6 +15,7 @@ import { describe as group, it, expect, vi, beforeAll, beforeEach, afterAll } fr
 import { state } from '../state.js';
 import { seedView } from '../view-state.js';
 import { resetRangeIo, requestLog } from '../parquet/range-io.js';
+import { resetDecoded } from './columns-read.js';
 import { areaCondition, type AreaFilter } from '../../src/registry/area-filter.js';
 import { COLUMNS_DATASETS } from '../../src/registry/columns.js';
 import { FACET_APPLIERS } from '../filters.js';
@@ -92,6 +93,7 @@ const measured: Record<string, { bytes: number; requests: number; budget: string
 
 function freshIo() {
   resetRangeIo();
+  resetDecoded();
   served.length = 0;
 }
 
