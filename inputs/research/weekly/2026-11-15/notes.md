@@ -1,0 +1,417 @@
+# Weekly refresh 2026-11-15
+
+Mode: research. Rows are AI-extracted, each checked against a quote on its page; every new row is unconfirmed until reviewed.
+
+Rows: 7 moratoriums, 1 bans, 0 utilities, 21 updates. Leads: 282. Confirmed unchanged: 42.
+Search requests: 44. Pages fetched: 300 (rate 0.583). Model calls: 241, refusals 0.
+Known pages skipped (refresh_ledger.json): 0 not fetched (no claim in 2 runs), 3 fetched but unchanged, not read.
+
+## Caps hit
+
+- max_pages
+
+## Search errors
+
+- none
+
+## Seed pages
+
+- https://www.savrn.com/data-center-moratorium-tracker: 0 cited URLs kept, 0 dropped
+- https://datacenterbans.com/: 0 cited URLs kept, 0 dropped
+- https://dcmap.us/: 0 cited URLs kept, 0 dropped
+- https://servercountry.org/: 0 cited URLs kept, 0 dropped
+- https://writing.strisker.com/: fetch failed (http_403)
+- https://www.nj.gov/pinelands/landuse/amend/ords.shtml: 0 cited URLs kept, 0 dropped
+- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20moratorium&dateRange=custom&startdt=2026-10-30&enddt=2026-11-15: fetch failed (http_403)
+- https://efts.sec.gov/LATEST/search-index?q=%22data%20center%22%20%22pause%22%20%22new%20load%22&dateRange=custom&startdt=2026-10-30&enddt=2026-11-15: fetch failed (http_403)
+- https://efts.sec.gov/LATEST/search-index?q=%22large%20load%22%20moratorium%20%22data%20center%22&dateRange=custom&startdt=2026-10-30&enddt=2026-11-15: fetch failed (http_403)
+
+## Leads
+
+- not fetched (max_pages): https://yahoo.com/news/politics/articles/where-data-center-bans-ballot-132131127.html
+- not fetched (max_pages): https://foxbaltimore.com/news/nation-world/backdoor-subsidy-for-ai-data-centers-cato-analyst-says-let-chips-act-tax-credit-expire
+- fetch failed: https://newsminer.com/news/local_news/borough-planning-commission-weighs-in-on-data-center-moratorium/article_13c587a1-d510-49fa-a9f5-8d8c10838d1e.html | http_429
+- fetch failed: https://newsminer.com/opinion/editorials/a-prudent-pause-on-large-scale-data-centers/article_52fe4502-7853-4525-a5b5-e6ce8bce4676.html | http_429
+- fetch failed: https://newsminer.com/news/local_news/school-testing-data-center-moratorium-spark-discussion-at-assembly/article_6ac582a2-1e7b-41a0-926c-e2389cfa67c0.html | http_429
+- fetch failed: https://kfsk.org/2026/11/02/petersburg-borough-assembly-to-discuss-data-center-moratorium-on-monday | http_403
+- fetch failed: https://citizenportal.ai/articles/10979802/alaska/petersburg-borough/petersburg-assembly-directs-manager-to-draft-9month-moratorium-ordinance-for-certain-data-centers | http_403
+- fetch failed: https://citizenportal.ai/articles/10300059/alaska/petersburg-borough/assembly-rejects-temporary-moratorium-on-data-centers-after-lengthy-debate-developer-funds-electrical-study | http_403
+- fetch failed: https://kfsk.org/2026/10/05/petersburg-borough-assembly-to-consider-appeal-budget-adjustments-data-center-related-items-today | http_403
+- fetch failed: https://yahoo.com/news/articles/fort-collins-council-votes-data-201210112.html | http_403
+- fetch failed: https://coloradoan.com/story/news/local/fort-collins/2026/10/21/fort-collins-city-council-oks-6-month-data-center-moratorium/92358161007 | http_403
+- fetch failed: https://citizenportal.ai/articles/11500687/colorado/larimer-county/fort-collins-city/fort-collins-directs-staff-to-draft-temporary-moratorium-on-certain-data-centers | http_403
+- fetch failed: https://www.coloradoan.com/story/news/local/2026/09/08/fort-collins-looks-at-data-center-limits-regulations/91598741007/ | http_403
+- fetch failed: https://coloradocitizenobservers.substack.com/p/weigh-in-for-civics-should-larimer | http_403
+- fetch failed: https://mtexpress.com/news/state_regional/data-center-proposed-for-public-land-south-of-shoshone/article_d2665288-8689-4684-b575-aa31ac9c8d5d.html | http_429
+- fetch failed: https://www.axios.com/local/chicago/2026/09/23/chicago-12-month-moratorium-data-centers-ai-johnson-pritzker-trump | http_403
+- fetch failed: https://wglt.org/local-news/2026-11-13/rep-sharon-chung-seeks-compromise-on-state-data-center-regulations-and-keeping-the-bears-in-illinois | url_error
+- fetch failed: https://www.nbcchicago.com/news/local/one-year-ban-on-new-data-center-construction-in-chicago-proposed-by-mayor-johnson/3992908/ | error_IncompleteRead
+- no page text: https://therealdeal.com/chicago/2026/10/06/chicagolands-mchenry-county-weighs-data-center-moratorium | empty
+- fetch failed: https://www.yahoo.com/news/politics/articles/chicago-mayor-johnson-proposes-12-183629887.html | http_403
+- fetch failed: https://www.bloomberg.com/graphics/2026-chicago-office-ai-data-center-conversion | http_403
+- fetch failed: https://www.yahoo.com/news/politics/articles/proposed-chicago-data-center-pause-175000144.html | http_403
+- fetch failed: https://citizenportal.ai/articles/10134079/Indiana/Vermillion-County/Plan-commission-recommends-12-month-moratorium-on-new-data-center-applications | http_403
+- fetch failed: https://yahoo.com/news/articles/vermillion-co-commissioners-dismiss-data-123846933.html | http_403
+- fetch failed: https://writing.strisker.com/data-centers-daily-notes-september-22-2026 | http_403
+- fetch failed: https://eagletribune.com/news/merrimack_valley/proposal-would-pause-data-center-projects/article_132b1128-0e5b-4d11-b256-8e6ee33159e7.html | http_429
+- fetch failed: https://www.lansingstatejournal.com/story/news/local/2026/10/07/annexation-mason-data-center-state-boundary-commission/92133182007/ | http_403
+- fetch failed: https://detroitnews.com/story/news/local/michigan/2026/08/18/johnson-warns-against-data-center-pause-stumping-in-michigan-swing-seat/91358562007 | http_403
+- fetch failed: https://mlive.com/news/detroit/2026/09/dearborn-approves-6-month-pause-on-new-data-centers-amid-ai-boom.html | http_403
+- fetch failed: https://yahoo.com/news/us/articles/dearborn-approves-6-month-pause-145407949.html | http_403
+- fetch failed: https://citizenportal.ai/articles/11348435/Michigan/Wayne-County/Melvindale/Melvindale-council-extends-moratorium-and-directs-ordinance-to-ban-plasma-centers | http_403
+- fetch failed: https://crescent-news.com/news/local_news/defiance-library-levy-proposal-defeated-data-center-prohibition-approved/article_5968ece1-d570-48f8-8137-2bbeef078889.html | http_429
+- fetch failed: https://crescent-news.com/news/local_news/defiance-mayor-data-center-vote-gives-city-leaders-direction/article_4a5839f5-3736-47cb-b296-7e0e435c4f4f.html | http_429
+- fetch failed: https://archive.ph/SdOji | timeout
+- fetch failed: https://yahoo.com/news/us/articles/not-not-now-voters-approve-041651798.html | http_403
+- fetch failed: https://kentucky.com/news/nation-world/national/article317710354.html | timeout
+- fetch failed: https://wfmj.com/news/local-news/hubbard/decision-2026-data-center-ban-passes-in-hubbard/article_8cccc076-a29e-45dc-8baa-a4bf9f9ac7fe.html | http_429
+- fetch failed: https://wfmj.com/news/local-news/hubbard/hearing-tonight-on-hubbard-township-data-center-zoning/article_b353dd4f-6c95-4754-a70b-19267bc048bd.html | http_429
+- fetch failed: https://wfmj.com/news/local-news/hubbard-township-trustees-vote-down-proposed-data-center-regulations/article_1e0dd4f9-66f6-481c-b235-5c66f3edb08c.html | http_429
+- fetch failed: https://yahoo.com/news/politics/articles/hubbard-city-voters-decide-data-152324938.html | http_403
+- fetch failed: https://wfmj.com/news/local-news/hubbard/decision-2026-hubbard-city-voters-can-approve-or-reject-data-center-ban/article_fe70643c-a1e8-44cc-8ccb-56a5a52854d6.html | http_429
+- fetch failed: https://www.nbc4i.com/news/your-local-election-hq/columbus-area-communities-vote-on-data-center-issues-live-results/ | http_403
+- fetch failed: https://nbc4i.com/news/your-local-election-hq/pataskala-residents-to-vote-on-whether-to-ban-data-centers | http_403
+- fetch failed: https://citizenportal.ai/articles/11233716/Ohio/Licking-County/Pataskala-City/Pataskala-staff-proposes-sweeping-rewrite-of-marijuana-rules-would-prohibit-commercial-cultivation-and-retail-across-city | http_403
+- fetch failed: https://yahoo.com/news/politics/articles/pataskala-village-granville-voters-deciding-230224545.html | http_403
+- fetch failed: https://wvxu.org/politics/2026-11-13/developer-sues-trenton-over-voter-approved-data-center-ban | url_error
+- fetch failed: https://journal-news.com/local/elections/trenton-data-center-ban-passes-with-nearly-80-of-the-vote/article_63a9951a-54e1-5dcc-86b3-e70ed7887ce2.html | http_429
+- fetch failed: https://journal-news.com/local/proposed-amazon-data-center-could-face-another-hurdle-as-township-moves-to-ban-the-developments/article_bb83bba2-9a91-563b-bb44-220dc9de2ad3.html | http_429
+- fetch failed: https://cincinnati.com/story/news/politics/2026/11/12/data-center-developer-challenging-ohio-citys-new-ban/92748671007/?gca-cat=p&gca-ds=sophi&gca-epti=undefined&gca-ft=0&gca-uir=true&gnt-cfr=1 | http_403
+- fetch failed: https://journal-news.com/local/proposed-amazon-data-center-could-face-another-hurdle-as-st-clair-twp-moves-to-ban/article_bb83bba2-9a91-563b-bb44-220dc9de2ad3.html | http_429
+- fetch failed: https://yahoo.com/news/politics/articles/ohioans-overwhelmingly-pass-data-center-051528805.html | http_403
+- fetch failed: https://wvxu.org/environment/2026-11-03/trenton-votes-to-ban-data-centers | url_error
+- fetch failed: https://yahoo.com/news/politics/articles/data-centers-0-21-ballot-220902943.html | http_403
+- fetch failed: https://springfieldnewssun.com/local/urbana-data-center-ban-mayor-recall-passing-in-early-results/article_9e06e857-7744-5b4f-b813-191707d2c226.html | http_429
+- fetch failed: https://whio.com/news/local/election-2026-voters-decide-ban-data-centers-recall-urbana-mayor/BDVOCXCRMJHZPCPYXE43A5RJCQ | http_403
+- fetch failed: https://springfieldnewssun.com/local/urbana-data-center-what-happens-if-the-charter-amendment-and-proposed-settlement-pass/article_3820c658-ed1b-5510-9a30-2106f5413689.html | http_429
+- fetch failed: https://wdtn.com/news/local-news/urbana-votes-spark-ripple-effect-across-miami-valley | http_403
+- fetch failed: https://yahoo.com/news/politics/articles/election-2026-voters-decide-ban-080818211.html | http_403
+- fetch failed: https://springfieldnewssun.com/local/urbana-council-tables-data-center-settlement-proposal-for-second-time/article_79d7634c-e12e-5aa4-9731-81436857bfd5.html | http_429
+- fetch failed: https://citizenportal.ai/articles/11312110/Ohio/Champaign-County/Urbana/Moratorium-co-chairs-tell-Urbana-council-study-is-unfinished-and-ask-to-delay-settlement-vote | http_403
+- fetch failed: https://www.emporiagazette.com/free/article_54c8e595-c310-4d3c-af9c-d4622bf62e7f.html | http_429
+- fetch failed: https://emporiagazette.com/free/article_9058118e-214c-4f24-ae51-7b5531c3e1f5.html | http_429
+- fetch failed: https://emporiagazette.com/free/article_7d5a95c3-fa97-4493-a1dd-0cd920b1d601.html | http_429
+- fetch failed: https://citizenportal.ai/articles/10597618/Kansas/Lyon-County/Emporia-City/Residents-urge-Emporia-officials-to-move-meetings-resist-proposed-data-center-staff-clarifies-Kansas-Park-LLC-role | http_403
+- fetch failed: https://www.emporiagazette.com/free/article_25f887b0-530f-4841-87a5-73b3fb053a8b.html | http_429
+- fetch failed: https://citizenportal.ai/articles/11525000/kentucky/scott-county/georgetown-city/council-approves-temporary-moratorium-on-data-centers-in-georgetown | http_403
+- fetch failed: https://www.kvue.com/article/news/community/data-centers/georgetown-texas-residents-opposing-proposed-data-center-zoning-hearing/269-15331ddc-8cda-4e1f-9b66-9a4b4ae76f09 | http_403
+- fetch failed: https://wuky.org/wuky-news/2026-10-27/another-kentucky-city-puts-pin-in-data-centers | url_error
+- fetch failed: https://statesmanjournal.com/story/news/local/2026/11/10/salem-weighs-code-change-that-could-block-verrus-data-center/92692998007 | http_403
+- fetch failed: https://statesmanjournal.com/story/news/local/2026/11/06/what-a-code-clarification-could-do-to-stop-ai-data-centers-in-salem/92628818007 | http_403
+- fetch failed: https://dailyamerican.com/story/news/technology/2026/10/21/somerset-county-pa-commissioners-adopt-data-center-ordinance-among-latest-laws/92359915007 | http_403
+- fetch failed: https://tribdem.com/news/local_news/somerset-county-adds-regulations-as-proposals-surge-statewide/article_3732a1bc-4f06-4c59-9c8d-cd3dac0427a8.html | http_429
+- fetch failed: https://www.kvrr.com/homepage/harmony-township-cancels-meeting-to-discuss-data-center-moratorium/article_ee8178d8-1b22-4dc9-b3d6-f6c1d34efd6e.html | http_429
+- fetch failed: https://kvrr.com/homepage/complaint-filed-with-attorney-general-against-harmony-township-over-data-center/article_a55e8b27-d495-418e-831b-2799f7ce3eea.html | http_429
+- fetch failed: https://www.kvrr.com/news/local/regional-utilities-push-back-on-harmony-township-energy-bans/article_7f509705-268f-45d4-b156-84a071bb0da6.html | http_429
+- fetch failed: https://kvrr.com/homepage/harmony-township-was-supposed-to-meet-to-vote-on-whether-to-impose-a-two-year/article_ee8178d8-1b22-4dc9-b3d6-f6c1d34efd6e.html | http_429
+- fetch failed: https://kvrr.com/news/local/harmony-township-cancels-energy-moratorium-vote-following-legal-challenges/article_181bd7c5-f476-4a32-bf66-dca3f975fcf6.html | http_429
+- fetch failed: https://yahoo.com/news/articles/blount-county-commissioners-approve-yearlong-022355711.html | http_403
+- fetch failed: https://citizenportal.ai/articles/11225273/Tennessee/Blount-County/Commission-forwards-moratorium-on-advanced-computing-and-data-centers-for-comprehensive-impact-study | http_403
+- fetch failed: https://yahoo.com/news/us/articles/could-blount-county-put-housing-180545834.html | http_403
+- fetch failed: https://www.wfaa.com/article/news/local/denton-county/denton-closer-toward-implementing-6-month-pause-new-data-centers/287-c29da5cd-8caf-492a-8eca-d95069846030 | http_403
+- fetch failed: https://seekingalpha.com/article/4966973-coreweave-after-the-midterms-texas-moratorium-meets-debt | http_403
+- fetch failed: https://kera.org/2026/11/03/dentons-core-scientific-data-center-faces-tceq-violations-due-to-air-quality-emissions | http_403
+- fetch failed: https://yahoo.com/news/articles/hood-county-denton-face-growing-222204937.html | http_403
+- fetch failed: https://docklinemagazine.com/politics-government/denton-makes-it-harder-to-build-a-data-center | http_403
+- fetch failed: https://yahoo.com/news/articles/data-center-concerns-grow-despite-233041844.html | http_403
+- fetch failed: https://www.star-telegram.com/news/local/fort-worth/article318024974.html | timeout
+- fetch failed: https://yahoo.com/news/articles/fort-worth-data-center-regulations-184135668.html | http_403
+- fetch failed: https://kera.org/2026/11/11/fort-worth-committee-presents-recommendations-on-how-city-can-best-regulate-data-centers | http_403
+- fetch failed: https://yahoo.com/news/articles/fort-worth-data-center-commission-061844850.html | http_403
+- fetch failed: https://star-telegram.com/csa-content/article318034434.html | timeout
+- fetch failed: https://yahoo.com/news/us/articles/data-centers-bring-big-promises-211005376.html | http_403
+- fetch failed: https://europesays.com/us/1188128 | error_RemoteDisconnected
+- fetch failed: https://yahoo.com/news/us/articles/fort-worth-commission-lays-19-042749684.html | http_403
+- fetch failed: https://progresstexas.substack.com/p/the-data-center-dilemma-a-chance | http_403
+- fetch failed: https://everythinglubbock.com/news/local-news/lubbock-lawmaker-files-bill-for-more-restrictions-on-large-scale-data-centers | http_403
+- fetch failed: https://everythinglubbock.com/news/local-news/tx-attorney-general-water-usage | http_403
+- fetch failed: https://wxpr.org/community/2026-10-21/wisconsin-rapids-rejects-permit-for-data-center | url_error
+- fetch failed: https://arkansasbusiness.com/article/data-center-files-federal-suit-against-pulaski-county | http_403
+- fetch failed: https://yahoo.com/news/politics/articles/little-rock-ordinance-pause-data-035317476.html | http_403
+- fetch failed: https://yahoo.com/news/us/articles/pulaski-county-faces-lawsuit-ordinance-032020816.html | http_403
+- fetch failed: https://yahoo.com/news/politics/articles/pulaski-county-judge-candidate-warns-040103495.html | http_403
+- fetch failed: https://kark.com/news/local-news/little-rock-approves-retiree-pension-increases-youth-program-funding-data-center-pause-fails | http_403
+- fetch failed: https://citizenportal.ai/articles/11173246/Arizona/Coconino-County/Flagstaff-City/Flagstaff-council-leans-toward-rezoning-approach-to-regulate-data-centers-and-other-resourceintensive-industries | http_403
+- fetch failed: https://politico.com/newsletters/california-currents/2026/11/02/californias-data-center-ballot-fight-01145683 | http_403
+- fetch failed: https://forbes.com/sites/zacharyfolk/2026/11/04/heres-where-voters-are-rejecting-data-centers-at-the-ballot-full-list | http_403
+- fetch failed: https://yahoo.com/news/us/articles/california-communities-fighting-back-data-201727348.html | http_403
+- fetch failed: https://politico.com/newsletters/california-playbook/2026/11/09/no-longer-the-focus-of-trump-resistance-01156159 | http_403
+- fetch failed: https://gizmodo.com/voters-turn-election-night-into-a-bloodbath-for-ai-data-centers-2000834821 | http_403
+- fetch failed: https://www.wric.com/news/politics/capitol-connection/the-politics-behind-calls-for-a-data-center-moratorium-in-virginia/ | http_403
+- fetch failed: https://mprnews.org/story/2026/11/15/st-cloud-considers-new-rules-for-data-centers | http_403
+- fetch failed: https://mprnews.org/story/2026/11/13/minneapolis-city-council-votes-to-require-casebycase-approval-of-new-data-centers | http_403
+- fetch failed: https://thehill.com/homenews/senate/6214878-hawley-calls-gop-data-center-moratorium/ | http_403
+- fetch failed: https://www.politico.com/live-updates/2026/11/11/congress/hawley-backs-nationwide-data-center-moratorium-01161019 | http_403
+- fetch failed: https://spokesman.com/stories/2026/nov/12/boise-city-council-approves-6-month-moratorium-on- | http_403
+- fetch failed: https://www.washingtonpost.com/technology/2026/11/04/voters-pass-over-20-ballot-measures-ban-or-restrict-data-centers/ | timeout
+- fetch failed: https://www.kget.com/news/local-news/delano-city-council-to-consider-temporary-ban-on-data-centers/ | http_403
+- fetch failed: https://bangordailynews.com/2026/11/14/bangor/bangor-government/brewer-data-centers-joam40zk0w | http_403
+- fetch failed: https://bringmethenews.com/minnesota-news/limits-on-size-location-of-data-centers-in-minneapolis-narrowly-approved-by-city-council | http_403
+- fetch failed: https://www.theatlantic.com/technology/2026/11/americans-really-dont-like-data-centers-elections/689284/ | http_403
+- fetch failed: https://kunc.org/news/2026-11-12/boulder-county-commissioners-ban-large-scale-data-centers-only-allowing-50-kilowatts-or-less | url_error
+- fetch failed: https://www.yahoo.com/news/us/articles/cumberland-county-data-center-pause-100430217.html | http_403
+- fetch failed: https://www.forbes.com/sites/zacharyfolk/2026/11/02/heres-where-data-center-bans-are-on-the-ballot-full-list/ | http_403
+- fetch failed: https://wkyufm.org/2026-11-13/data-center-concerns-sparked-major-wins-for-local-candidates-critical-of-the-industry | url_error
+- fetch failed: https://www.mlive.com/news/jackson/2026/11/shooting-victims-carry-on-townships-pass-data-center-rules-jackson-headlines-nov-6-12.html | http_403
+- fetch failed: https://detroitnews.com/story/news/local/wayne-county/2026/11/12/allen-park-passes-data-center-moratorium-extension/92740664007 | http_403
+- fetch failed: https://thehill.com/policy/technology/6217137-heritage-leader-gop-data-center-mistake/ | http_403
+- no county: CO Fort Collins | https://collegian.com/articles/news/2026/11/category-news-october-city-council-recap-biennial-budget-housing-follow-up-data-center-moratorium/ | Fort Collins adopted Ordinance No. 147, a temporary moratorium on construction of data centers exceeding 10 megawatts in the city, in effect until April 6.
+- no county: CO Fort Collins | https://www.longmontleader.com/colorado-news/fort-collins-city-council-advances-six-month-moratorium-on-new-data-centers-12938650 | Fort Collins council gave first reading Oct. 20, 2026 to a six-month moratorium on data center applications; final vote scheduled Nov. 3. Accessory uses over 10 MW covered.
+- no county: CO Brighton | https://environmentamerica.org/colorado/center/updates/colorado-communities-press-pause-on-data-centers/ | Page reports Brighton enacted a temporary ban or moratorium on new data centers; no adoption date, expiry or size limit is given.
+- no county: CO Lafayette | https://environmentamerica.org/colorado/center/updates/colorado-communities-press-pause-on-data-centers/ | Page reports Lafayette enacted a temporary ban or moratorium on new data centers; no adoption date, expiry or size limit is given.
+- nothing usable (kind none): CO Fort Collins | https://environmentamerica.org/colorado/center/updates/colorado-communities-press-pause-on-data-centers/ | Page says Fort Collins began the process of passing a data center moratorium with a first reading; no adoption vote date is given.
+- no county: CO Fort Collins | https://kcsufm.com/2026/10/fort-collins-city-council-unanimously-approves-data-center-moratorium-associated-students-of-colorado-state-university-swore-in-new-senators-and-associates-us-supreme-blocks-president-donald-trump-m/ | Fort Collins City Council unanimously approved a temporary moratorium on data centers at its October 20, 2026 meeting, to give council more time to define data centers.
+- no county: CO Longmont | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Longmont City Council approved Ordinance 2026-34, a permanent ban on hyperscale data centers in all zoning districts, defined as 5% of Platte River Power Authority nameplate capacity or 100 MW,…
+- no county: CO Fort Collins | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Fort Collins approved a data center moratorium in the fall 2026 wave of Colorado moratoria; the page gives no exact date.
+- no county: CO Broomfield | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Broomfield approved a data center moratorium in July 2026, per the page; no terms given.
+- no county: CO Monument | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Monument approved a data center moratorium in July 2026, per the page; no terms given.
+- no county: CO Woodland Park | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Woodland Park approved a data center moratorium in July 2026, per the page; no terms given.
+- no county: CO Berthoud | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Berthoud approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Loveland | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Loveland approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Commerce City | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Commerce City approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Thornton | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Thornton approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Arvada | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Arvada approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Brighton | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Brighton approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Lafayette | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Lafayette approved a data center moratorium in the fall 2026 wave, per the page; no exact date or terms given.
+- no county: CO Lochbuie | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | Lochbuie passed a five-year data center moratorium in July 2026, described as the longest in Colorado.
+- no county: CO South Fork | https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/ | South Fork has a data center moratorium running through June 18, 2027; adoption date not given on the page.
+- no county: CO Loveland | https://www.corealestatebrokers.com/post/10-26-2026-industrial-flex-weekly-update | Loveland has a 12-month moratorium covering data-center facilities using 10 MW or more, as reported in an industrial real estate newsletter.
+- no county: CO Longmont | https://www.corealestatebrokers.com/post/10-26-2026-industrial-flex-weekly-update | Longmont has banned hyperscale data centers, per a brief newsletter mention with no adoption date or ordinance details.
+- status regression replaced→active: ID Kootenai County | https://www.kivitv.com/wood-river-valley/blaine-county-passes-emergency-moratorium-on-data-centers-giving-the-county-182-days-to-craft-rules | nm-id-kootenai-county-2025: The page states Kootenai County already has a moratorium in place on data centers; no dates or terms are given.
+- further change from a second source: ID Blaine County | https://www.mtexpress.com/news/blaine_county/county-enacts-emergency-moratorium-on-data-centers/article_f6a9f3b1-88ad-40c6-b9c2-36649bedfe3f.html | nm-id-blaine-county-undated: date_expires 2027-04-06
+- nothing usable (kind none): IL Chicago | https://news.wttw.com/2026/09/28/energy-benchmarks-possible-moratorium-among-topics-driving-chicago-s-data-center | A proposed temporary data center moratorium was introduced at Chicago City Council and sent to the Rules committee; no vote or adoption is reported.
+- nothing usable (kind none): IL Chicago | https://www.chicagotribune.com/2026/09/23/mayor-brandon-johnson-chicago-data-center-moratorium/ | Mayor Brandon Johnson proposed a one-year data center moratorium ordinance, introduced to the City Council on 2026-09-23; it has not been adopted.
+- nothing usable (kind none): IL Chicago | https://blockclubchicago.org/2026/09/23/year-long-ban-on-new-data-centers-pitched-by-chicago-mayor-brandon-johnson/ | Mayor Johnson and aldermen introduced a proposed 12-month pause on new data center construction; no council vote is reported.
+- dropped on escalation re-read: TX Governor Greg Abbott | https://www.techtimes.com/articles/327991/20260924/chicago-introduces-moratorium-halt-data-centers-ai-grid-costs-hit-residential-bills.htm | Governor Greg Abbott announced a pause on all new Texas data center project approvals pending Public Utility Commission audits.
+- no county: IL Chicago | https://www.techtimes.com/articles/327991/20260924/chicago-introduces-moratorium-halt-data-centers-ai-grid-costs-hit-residential-bills.htm | Mayor Johnson introduced an ordinance to the Chicago City Council freezing permits for new data centers and barring material expansion of existing ones for up to one year; committee referral pending.
+- no county: IL Aurora | https://www.techtimes.com/articles/327991/20260924/chicago-introduces-moratorium-halt-data-centers-ai-grid-costs-hit-residential-bills.htm | The suburban city of Aurora passed a six-month moratorium on data centers in September 2025.
+- no county: IL Elgin | https://www.chicagotribune.com/2026/09/15/elgin-council-moratorium-data-centers/ | Elgin city council gave unanimous preliminary approval to a one-year data center development moratorium; final vote is pending at a future council meeting with no date given.
+- no county: IN Michigan City | https://www.chicagotribune.com/2026/10/21/michigan-city-residents-concerned-about-new-data-center-moratorium-ordinance/ | Proposed ordinance would impose a temporary moratorium on new data center development in Michigan City, exempting Google's data center under construction on Royal Road; pending council vote.
+- no county: IL West Chicago | https://colocationscout.com/reports/chicago-data-center-permits-q3-2026.html | West Chicago City Council adopted Ordinance 26-O-0011, a 180-day pause on new data centers and battery storage.
+- no county: IL Romeoville | https://colocationscout.com/reports/chicago-data-center-permits-q3-2026.html | Romeoville Village Board adopted Ordinance ORD26-2090, extending an existing moratorium to data centers for 36 months.
+- no county: IN Zionsville | https://youarecurrent.com/2026/09/22/zionsville-town-council-approves-moratorium-on-data-centers-wind-and-solar-projects/ | Zionsville Town Council approved a one-year moratorium on data centers, solar and wind farms, and battery energy storage systems while zoning code is reviewed.
+- nothing usable (kind none): MA Methuen | https://shrewsburypost.com/2026/09/08/data-center-development-faces-proposed-one-year-moratorium-in-methuen/ | Mayor D.J. Beauregard proposed a one-year zoning moratorium on large-scale data centers; the proposal was scheduled before the Methuen City Council on September 8.
+- no county: OH Oregon | https://www.13abc.com:443/2026/11/04/oregon-approves-data-center-restriction-charter-amendment/ | Voters approved Issue 25, a charter amendment capping data centers at 25 megawatts in Oregon, Ohio.
+- no county: OH Defiance | https://www.13abc.com:443/2026/11/04/oregon-approves-data-center-restriction-charter-amendment/ | Voters approved a charter amendment prohibiting data centers over 25 megawatts within Defiance city limits; data centers are not banned outright.
+- no county: OH Defiance | https://www.13abc.com:443/2026/11/04/oregon-approves-data-center-restriction-charter-amendment/ | Defiance has a temporary moratorium on data centers that took effect in September 2026 and is to last six months.
+- nothing usable (kind none): OH Defiance | https://www.ohio.news/stories/ohio-voters-across-18-municipalities-will-decide-21-separate-data-center-questions-this-election/ | Page says Defiance is considering an outright data center ban tied to a specific proposal; no adoption vote date, ordinance terms or Nov. 3 result is given.
+- no county: OH Defiance | https://www.crescent-news.com/news/local_news/defiance-council-addresses-data-centers-in-wake-of-charter-vote/article_cbc0f8a6-cb7a-4c48-84bd-453a43fab85e.html | Defiance voters approved a city charter amendment prohibiting data centers using 25 megawatts of power or more; council tabled a related zoning ordinance.
+- no county: OH Defiance | https://www.13abc.com:443/2026/10/28/defiance-voters-decide-charter-amendment-limiting-data-center-size/ | Defiance City Council passed a temporary ban on data centers, effective September 2026 for six months, to study facility impacts.
+- jurisdiction not named on page: OH Pataskala | https://www.securities.io/ohio-voters-back-data-center-limits-and-reject-edgeconnex-agreement/ | Pataskala voters approved a charter amendment prohibiting construction of data centers with aggregate monthly demand or peak load above 25 MW within city limits.
+- no county: OH Hubbard | https://hoodline.com/2026/11/hubbard-township-trustee-moves-to-ban-secret-data-center-deals-after-nda-uproar/ | Hubbard City Council passed a year-long moratorium on data center development in June, per the page.
+- no county: OH Hubbard Township | https://hoodline.com/2026/11/hubbard-township-trustee-moves-to-ban-secret-data-center-deals-after-nda-uproar/ | Hubbard Township trustees voted 2-1 in February to impose a one-year moratorium barring data centers from the township.
+- no county: OH Hubbard | https://hoodline.com/2026/11/hubbard-township-trustee-moves-to-ban-secret-data-center-deals-after-nda-uproar/ | Hubbard voters approved a total ban on data center development in the November 3 election, per unofficial results of about 76%.
+- no county: OH Trenton | https://dataphoenix.info/news/us-data-center-ballot-backlash-2026 | Voters approved Issue 17, a charter amendment prohibiting construction of a data center, per an unofficial count; certification pending.
+- no county: ME Wiscasset | https://dataphoenix.info/news/us-data-center-ballot-backlash-2026 | Town approved a six-month moratorium on accepting, processing, reviewing or approving applications for new or expanded data centers filed on or after November 3, 2026.
+- no county: OH Sunbury | https://www.unite.ai/ohio-voters-back-local-data-center-limits-in-unofficial-results/ | Sunbury voters passed a charter amendment prohibiting construction of data centers over 25 MW, per unofficial results.
+- no county: OH Trenton | https://www.daytondailynews.com/local/piqua-and-trenton-voters-approved-bans-on-large-data-centers/article_31fd66e3-370d-5190-9115-413295a5e5da.html | Trenton voters approved Issue 17, a charter amendment prohibiting construction of data centers above 25 megawatts.
+- no county: OH Piqua | https://www.daytondailynews.com/local/piqua-and-trenton-voters-approved-bans-on-large-data-centers/article_31fd66e3-370d-5190-9115-413295a5e5da.html | Piqua voters approved a charter amendment adding Section 138, prohibiting construction of data centers above 25 megawatts of peak load.
+- no county: OH Piqua | https://ohiocapitaljournal.com/2026/11/09/data-centers-go-0-for-21-in-ballot-initiatives-around-ohio/ | Piqua voters approved a ballot measure prohibiting data centers within city limits.
+- no county: OH Trenton | https://local12.com/news/local/company-sues-city-over-vote-that-practically-bans-large-scale-data-centers-tech-technology-prologis-amendment-ballot-project | Trenton voters approved a city charter amendment in November by ballot measure that practically bans large-scale data centers. Prologis has sued the city over it.
+- no county: OH Trenton | https://www.wcpo.com/news/local-news/saint-clair-township-moves-to-block-data-centers-after-neighboring-trenton-voters-reject-large-scale-projects | Trenton voters approved Issue 17, restricting data centers larger than 25 megawatts in the city.
+- no county: OH Piqua | https://farmaction.us/ohio-capital-journal-data-centers-go-0-for-21-in-ballot-initiatives-around-ohio/ | Piqua voters approved a ballot measure prohibiting data centers within city limits by a 2-to-1 margin.
+- no county: OH Jackson Township | https://www.statenews.org/section/the-ohio-newsroom/2026-11-02/from-trenton-to-grove-city-data-centers-are-on-ohio-ballots-this-election | Jackson Township passed a one-year moratorium on data centers, per the page; the county is not stated.
+- no county: OH Pleasant Township | https://www.statenews.org/section/the-ohio-newsroom/2026-11-02/from-trenton-to-grove-city-data-centers-are-on-ohio-ballots-this-election | Pleasant Township passed a permanent measure restricting data centers, per the page; scope and county are not stated.
+- nothing usable (kind none): OH Trenton | https://www.statenews.org/section/the-ohio-newsroom/2026-11-02/from-trenton-to-grove-city-data-centers-are-on-ohio-ballots-this-election | Page says Trenton voters were to decide on a ballot measure limiting hyperscale data centers; no result or details are given.
+- nothing usable (kind none): OH Trenton | https://www.ovabc.org/data-center-zoning-after-trentons-issue-17-what-it-means-for-ohio-valley-builders/ | Charter amendment Issue 17 on the Nov 3, 2026 ballot would prohibit new data centers in Trenton above 25 MW aggregate monthly demand or peak load. Outcome not reported.
+- no county: OH Piqua | https://www.wyso.org/government-politics-news/2026-11-04/across-southwest-ohio-voters-pushed-back-against-data-centers-and-politicians-who-support-them | Piqua voters approved a charter amendment banning construction of data centers larger than 25 megawatts of peak power demand in the city, per final unofficial results.
+- no county: OH Urbana | https://dayton247now.com/news/local/urbana-council-postpones-decision-on-1b-data-center-settlement-vs-legal-fight | Urbana issued an emergency data center moratorium, per the page; the page gives no adoption date, scope, or end date.
+- no county: OH Urbana | https://dayton247now.com/news/local/voters-in-urbana-and-piqua-reject-data-center-projects-leaving-next-steps-unclear | Urbana voters approved a ban on data center construction in a November 2026 ballot measure, reported as 77 percent in favor. An emergency moratorium was issued in March.
+- no county: OH Piqua | https://dayton247now.com/news/local/voters-in-urbana-and-piqua-reject-data-center-projects-leaving-next-steps-unclear | Piqua voters approved a charter amendment adding Section 138 to the City Charter that prohibits construction of data center facilities meeting specific criteria; results are unofficial.
+- no county: OH Trenton | https://hoodline.com/2026/11/urbana-voters-oust-15-year-mayor-ban-future-data-centers-in-landslide/ | Trenton, Ohio voters passed a measure banning data centers that use more than 25 megawatts of electricity.
+- no county: KS Emporia | https://www.kake.com/home/voters-approve-ban-on-high-impact-data-centers-in-el-dorado-emporia/article_f841f8d4-5275-49a3-9fa2-7ba075d9698b.html | Emporia voters approved a ban on high-impact data center construction in the city by a vote of 4,346 to 2,891.
+- no county: KS Emporia | https://www.kwch.com:443/2026/11/03/three-kansas-communities-decide-data-center-bans-this-election/ | Voters approved an ordinance banning high-impact data centers, including those at 10 MW or more or using over 10,000 gallons of water per day, per unofficial results.
+- no county: KS El Dorado | https://www.kwch.com:443/2026/11/03/three-kansas-communities-decide-data-center-bans-this-election/ | Voters approved a ballot ordinance prohibiting high-impact data centers over 10 MW and battery energy storage systems for 10 years, per unofficial results.
+- no county: KS Ottawa | https://www.kwch.com:443/2026/11/03/three-kansas-communities-decide-data-center-bans-this-election/ | Voters approved a ban on utility-intensive data centers in Ottawa, per unofficial results; the ban has no specified expiration date.
+- no county: KS Emporia | https://www.wibw.com:443/2026/11/04/emporia-votes-yes-banning-data-centers-city/ | Voters approved a ban on high-impact data centers in Emporia, including facilities with peak load of 10 MW or water use over 10,000 gallons per day, by 4,346 to 2,891.
+- no county: KY Georgetown | https://www.wkyt.com:443/2026/10/27/georgetown-extends-data-center-moratorium-june-2027/ | Georgetown City Council voted unanimously to extend the city's data center moratorium, with expiration moved to June 30, 2027.
+- no county: KY Georgetown | https://www.lex18.com/news/covering-kentucky/georgetown-extends-data-center-moratorium-to-june-2027-begins-drafting-citywide-hyperscale-ban | Georgetown city council extended its data center moratorium through June 30, 2027. The city has also started drafting a citywide ban on hyperscale data centers.
+- jurisdiction not named on page: TX Texas Governor Greg Abbott | https://www.law.georgetown.edu/environmental-law-review/blog/not-in-my-watershed-what-the-midterms-mean-for-data-center-regulation/ | Governor Abbott directed the Texas Commission on Environmental Quality to halt new data center permits pending state audits of electricity and water use.
+- no county: MA Salem | https://patch.com/massachusetts/salem/salem-city-council-passes-ban-data-centers-witch-city | Salem City Council passed on second passage a zoning ordinance banning data centers in the city, eliminating the earlier 2-megawatt threshold.
+- no county: MA Salem | https://www.govtech.com/artificial-intelligence/salem-mass-leaders-approve-data-center-ban | Salem City Council gave final approval to a zoning amendment defining data centers and banning them in the city, with a 2026 revisit planned.
+- nothing usable (kind none): ND Harmony Township | https://kfgo.com/2026/10/22/geronimo-power-ceo-offers-six-month-data-center-pause-ahead-of-disputed-harmony-township-moratorium-vote/ | Harmony Township canceled the scheduled hearings and votes on six proposed energy moratoria after legal challenges over public notice; no moratorium was adopted.
+- nothing usable (kind none): ND Harmony Township | https://www.wdayradionow.com/news/local-news/first-on-flag-family-billions-at-stake-as-harmony-township-weighs-data-center-pause/ | Harmony Township supervisors were preparing to consider a proposed two-year development moratorium that would reach beyond data centers; the page reports no vote result.
+- nothing usable (kind none): TX Denton | https://dentonrc.com/news/council-amends-development-code-to-make-it-tougher-to-build-a-data-center-in-denton/article_ea8be9ab-c200-4f86-a3ff-8e4971008b4e.html | Denton council approved development code amendments limiting data center locations and requiring specific-use permits; a possible 90-day moratorium is set for a public hearing, not a vote.
+- no county: TX Denton | https://www.audacy.com/krld/news/local/denton-residents-voicing-concerns-about-data-centers-city-considers-six-month-pause | Denton City Council is considering a six-month temporary moratorium on new data center projects, with a vote scheduled for December 1, 2026.
+- jurisdiction not named on page: TX Texas Governor Greg Abbott | https://fortworthreport.org/2026/11/10/fort-worth-takes-next-step-toward-data-center-moratorium-as-lawmakers-prep-legislation/ | Gov. Greg Abbott directed state agencies to halt permitting on data centers and audit projects seeking grid connection. The page gives no date for the directive.
+- no county: TX Fort Worth | https://www.cbsnews.com/texas/news/fort-worth-data-centers-90-day-moratorium-residents-concerns-november-2026/ | Fort Worth is considering a proposed 90-day moratorium on data center development; first of two required public hearings was held, and the next is tentatively scheduled.
+- no county: TX Fort Worth | https://www.fox4news.com/news/fort-worth-leaders-receive-data-center-recommendations-could-lead-moratorium-development | Fort Worth commission delivered 19 data center recommendations to council with no action taken; a 90-day temporary moratorium is under consideration, with a hearing planned January 2027.
+- nothing usable (kind none): TX Fort Worth | https://latination.com/texas-data-centers-pause-fort-worth/ | Fort Worth is considering a temporary 90-day moratorium on new data centers; a second public hearing and a February City Council vote are planned.
+- no county: TX Fort Worth | https://communityimpact.com/keller-roanoke-northeast-fort-worth/government/fort-worth-holds-1st-public-hearing-on-data-center-moratorium/ | Fort Worth City Council initiated a moratorium process on accepting, processing and approving data center applications; a second public hearing is set for Jan. 12 and a second reading for Feb. 23,…
+- no county: TX Fort Worth | https://www.nbcdfw.com/news/local/fort-worth-data-center-special-commission-recommendations/4104274/ | Fort Worth City Council approved a 90-day moratorium on new data center rezoning and permit applications while the city considers how to regulate future development.
+- nothing usable (kind none): TX Fort Worth | https://www.fwweekly.com/2026/11/11/data-center-moratorium/ | Fort Worth City Council voted Aug 11 to initiate a process toward a temporary data center moratorium; the moratorium has not been adopted per the page.
+- jurisdiction not named on page: TX State of Texas | https://www.nbcdfw.com/investigations/what-a-new-texas-governor-could-mean-for-data-centers/4101794/ | Gov. Greg Abbott paused state permits for new data centers so state agencies could audit projects and analyze grid impacts.
+- no county: TX Lubbock | https://www.kcbd.com:443/2026/11/11/lubbock-residents-urge-council-pass-data-center-moratorium/ | Lubbock City Council has a proposed 90-day data center moratorium, not yet adopted. Second public hearing and first council vote are set for Dec. 10, 2026.
+- dropped on escalation re-read: TX Texas Commission on Environmental Quality | https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/ | On Governor Abbott's instruction, the Texas Commission on Environmental Quality was directed to stop issuing new permits for data centers until the state grid audit is done.
+- conflicting sources: TX Texas | https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/ | date_adopted differ from https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/
+- nothing usable (kind none): AR Little Rock | https://www.arkansasonline.com/news/2026/oct/19/little-rock-board-set-to-vote-on-data-center/ | Little Rock board is reported as set to vote on a data center moratorium; the page gives no vote date or moratorium terms.
+- no county: AR Little Rock | https://www.arkansasonline.com/news/2026/oct/20/little-rock-board-rejects-6-month-data-center/ | Little Rock board reportedly rejected a proposed six-month data center moratorium; no moratorium adopted per the page headline.
+- no county: AR Little Rock | https://arktimes.com/arkansas-blog/2026/10/20/little-rock-board-fails-again-to-pass-data-center-moratorium | Little Rock City Board of Directors failed 4-4 to pass a six-month data center moratorium ordinance; no moratorium was adopted.
+- nothing usable (kind none): AR Little Rock | https://arktimes.com/arkansas-blog/2026/10/13/local-officials-data-center-maxxing-city-to-vote-on-moratorium-next-week | Little Rock Board of Directors to vote next week on a proposed six-month data center moratorium by Director Kathy Webb; no vote was taken at the agenda meeting.
+- no county: AR Little Rock | https://www.arkansasonline.com/news/2026/oct/13/little-rock-city-board-to-consider-new-six-month/ | Little Rock city board is scheduled to consider a proposed six-month moratorium on data center facility approvals; no vote result is reported on the page.
+- no county: AR Little Rock | https://katv.com/news/local/city-of-little-rock-board-declines-to-advance-six-month-data-center-moratorium | Little Rock board vote on a proposed six-month data center moratorium ended in a 4-4 tie with 1 recusal, so the moratorium did not advance.
+- no county: AR Little Rock | https://katv.com/news/local/googles-1b-data-center-looms-as-little-rock-rejects-six-month-moratorium-in-4-4-tie | Six-month temporary moratorium on hyperscale data center approvals proposed to Little Rock Board of Directors failed on a 4-4 tie vote; the existing data center ordinance remains in place.
+- nothing usable (kind none): CA Alhambra | https://www.sgvtribune.com/2026/11/03/election-results-data-center-ban-in-alhambra-measure-db-goes-to-voters/ | Alhambra Measure DB, a citywide public-vote ban on data centers in all city zones, was leading in unofficial returns as of Nov 5, 2026, pending certification.
+- jurisdiction not named on page: CA Oakland | https://calmatters.org/economy/technology/2026/10/california-data-centers-hit-with-local-regulation-flood/ | Oakland city council unanimously approved a 45-day moratorium on new data center approvals.
+- no county: CA Alhambra | https://calmatters.org/economy/technology/2026/10/california-data-centers-hit-with-local-regulation-flood/ | Alhambra residents will vote on a data center moratorium measure in the November 2026 election.
+- jurisdiction not named on page: NY New York State | https://calmatters.org/economy/technology/2026/10/california-data-centers-hit-with-local-regulation-flood/ | New York governor ordered a one-year pause on hyperscale data centers, as reported by CalMatters.
+- nothing usable (kind none): CA Alhambra | https://www.nbclosangeles.com/news/local/alhambra-data-center-vote/3955230/ | Measure DB asks Alhambra voters whether to prohibit data centers in all city zones; the page reports no election result.
+- jurisdiction not named on page: CA Oakland | https://www.arkansasonline.com/news/2026/oct/24/california-cities-resisting-data-centers/ | Oakland city council unanimously approved a 45-day moratorium on new approvals for data center development.
+- no county: CA Alhambra | https://www.arkansasonline.com/news/2026/oct/24/california-cities-resisting-data-centers/ | Alhambra residents are scheduled to vote in the November election on a data center moratorium measure; the tracked row lists a permanent ban.
+- no county: CA Alhambra | https://lamag.com/news/alhambra-considers-data-center-ban-over-environmental-concerns/ | Alhambra's Measure DB, a November 2026 ballot measure, would prohibit data centers in all city zones if voters approve it. The page does not report the result.
+- nothing usable (kind none): CA Alhambra | https://x.com/NBCLA/status/2112982333494104299 | Measure DB places a question before Alhambra voters on whether data centers should be prohibited in the city; no election date is given on the page.
+- nothing usable (kind none): KS Ottawa | https://www.kshb.com/news/local-news/missouri/kansas-city/kansas-city-denies-downtown-data-center-as-sen-hawley-calls-for-nationwide-moratorium | Page says voters in Ottawa and other Kansas cities approved data center construction bans; no ordinance text, date or limits are given.
+- no county: CA Oakland | https://dailycaller.com/2026/11/14/minneapolis-data-center-rules-oakland-moratorium/ | Oakland City Council voted to extend its pause on new data centers until October 2027, for 10 months.
+- nothing usable (kind none): AZ Office of Governor Katie Hobbs | https://arizonadailyindependent.com/2026/11/13/arizona-democrats-call-for-data-center-moratorium-in-2027/ | Article quotes a legislator saying the governor ordered a data center moratorium; the page gives no adoption date, text, or scope for it.
+- no county: MN Minneapolis | https://www.cbsnews.com/minnesota/news/minneapolis-city-council-vote-on-data-centers/ | Council passed data center rules (7-6) capping facilities at 150,000 sq ft if renewable or 50,000 sq ft if not, requiring existing space, and barring data centers as a building's primary use; full…
+- no county: MN Minneapolis | https://www.cbsnews.com/minnesota/news/minneapolis-city-council-vote-on-data-centers/ | City of Minneapolis five-month moratorium on data center development, adopted in June 2026, set to expire Nov. 21.
+- no county: CA Fairfield | https://www.kalw.org/bay-area-news/2026-11-12/bay-area-cities-extend-or-pass-new-moratoriums-on-data-centers | Fairfield City Council unanimously approved a 45-day urgency ordinance holding data center applications from being accepted, processed or approved.
+- status regression extended→active: CO Larimer County | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/ | nm-co-larimer-county-2026: Larimer County adopted a data center moratorium after Denver's, per an opinion column; terms not given.
+- no county: CO Longmont | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/ | Longmont banned hyperscale data centers outright rather than adopting a pause, per an opinion column.
+- no county: NC Raleigh | https://www.yahoo.com/news/articles/must-list-nc-cities-counties-100000527.html | Raleigh adopted a six-month pause on data centers in October 2026, according to an opinion column.
+- no county: NC Charlotte | https://www.yahoo.com/news/articles/must-list-nc-cities-counties-100000527.html | Charlotte extended its data center moratorium to October 2027, according to an opinion column.
+- no county: MD Frederick | https://www.fredericknewspost.com/opinion/editorial/city-moratorium-allows-time-to-understand-data-center-impacts/article_57987803-fe07-5898-ac42-c45e2b035c56.html | Frederick City Council adopted an ordinance creating a two-year moratorium on City acceptance, processing or approval of land management code amendments to allow data centers, covering current and…
+- no county: MA New Bedford | https://turnto10.com/news/local/new-bedford-city-council-passes-ban-on-data-centers | New Bedford City Council passed an ordinance banning data centers, according to a statement from Mayor Jon Mitchell. The page does not give an effective date.
+- no county: OK Edmond | https://www.newsweek.com/more-cities-move-to-ban-data-centers-after-midterm-backlash-12700558 | Edmond City Council unanimously (5-0) extended an existing data center moratorium, pausing rezoning and building-permit applications until June 30, 2027.
+- no county: ID Boise | https://www.newsweek.com/more-cities-move-to-ban-data-centers-after-midterm-backlash-12700558 | Boise mayor proposed and the city approved a moratorium on development of mega data centers within city limits, with immediate effect.
+- no county: TN Memphis | https://www.newsweek.com/more-cities-move-to-ban-data-centers-after-midterm-backlash-12700558 | Memphis City Council passed a 135-day temporary pause on data centers in a 7-5 vote; the council rejected a proposed 18-month moratorium 6-6.
+- no county: IA Marshalltown | https://www.newsweek.com/more-cities-move-to-ban-data-centers-after-midterm-backlash-12700558 | Marshalltown adopted a temporary four-month moratorium on data-center applications in August 2026 while officials develop local regulations.
+- no county: MN Rochester | https://www.twincities.com/2026/11/13/rochester-considering-temporary-ban-on-data-center-development/ | Rochester City Council is scheduled to consider a temporary interim ordinance imposing a moratorium on new data center development while city staff study regulations.
+- no county: KS Emporia | https://www.theguardian.com/us-news/2026/nov/04/datacenters-midterm-elections | Voters approved a ban on high-impact datacenters in Emporia, Kansas, at the election; the page gives no size or district limit.
+- no county: CA Oakley | https://www.siliconvalley.com/2026/11/12/oakley-moves-to-ban-all-data-centers-even-tiny-ones-in-homes/ | Council introduced a zoning ordinance banning data centers in all Oakley zoning districts, including home-based businesses; not yet adopted.
+- no county: CA Oakley | https://www.siliconvalley.com/2026/11/12/oakley-moves-to-ban-all-data-centers-even-tiny-ones-in-homes/ | Oakley adopted a 45-day temporary moratorium on data centers in April, later extended by one year; it bars accepting, processing or approving land use applications for data centers.
+- no county: FL Edgewater | https://fortune.com/2026/11/13/voters-data-centers-ballot-measures-midterms/ | Voters in Edgewater, Florida approved a local ballot measure to prohibit data centers, as reported in a 2026 opinion article. The page gives no vote date or scope.
+- no county: CA Alhambra | https://fortune.com/2026/11/13/voters-data-centers-ballot-measures-midterms/ | Voters in Alhambra, California approved a local ballot measure to prohibit data centers, as reported in a 2026 opinion article. The page gives no vote date or scope.
+- no county: MI Richland Township | https://www.fox17online.com/richland-township-approves-temporary-bans-on-new-data-centers-battery-energy-storage-developments | Richland Township approved a 12-month moratorium on data centers while it studies impacts and zoning rules. The page says the moratorium is temporary and not a permanent ban.
+- dropped on escalation re-read: OH Green Township | https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/ | Green Township adopted a 12-month moratorium on all new development while it prepares zoning, which the page places in the data center context.
+- no county: MI Comstock Township | https://publicmedianet.org/news/community/comstock-township-planning-commission-advances-data-center-and-solar-ordinance-work/ | Comstock Township has a one-year data center moratorium, per staff description at the November 12 Planning Commission meeting; adoption date and scope not given.
+- no county: MI Romulus | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | Romulus city council unanimously approved a 180-day data center moratorium effective immediately, to craft permanent regulations.
+- no county: MI Clinton Township | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | Clinton Township's Board of Trustees voted 6-0 to approve a 180-day data center moratorium, per The Detroit News.
+- jurisdiction not named on page: MI Kalamazoo | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | Kalamazoo's City Commission approved a one-year data center moratorium resolution in August, per datacenterbans.com.
+- no county: ME Gorham | https://wgme.com/news/local/maine-lawmakers-push-statewide-data-center-regulations-ai-technology-economy | Gorham town officials approved another 180-day pause on new data centers, according to a linked headline; no ordinance details appear on the page.
+- jurisdiction not named on page: NY New York State | https://www.landgate.com/news/mapping-data-center-moratoriums-for-site-selection | New York enacted a one-year pause on data center facilities over 20 MW, as reported in a LandGate article with no adoption date or statute cited.
+- rejected in review (duplicate): NY New York | https://www.techtimes.com/articles/327991/20260924/chicago-introduces-moratorium-halt-data-centers-ai-grid-costs-hit-residential-bills.htm | duplicate: nm-state-ny-executive-order-no-62-2026 (Executive Order No. 62 (2026), adopted 2026-07-14)
+- rejected in review (weak_source): OH St. Clair Township | https://www.wcpo.com/news/local-news/saint-clair-township-moves-to-block-data-centers-after-neighboring-trenton-voters-reject-large-scale-projects | weak_source: the reading model's confidence is 0.55, below 0.6
+- rejected in review (weak_source): CO Kiowa County | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/ | weak_source: the reading model's confidence is 0.50, below 0.6
+- rejected in review (weak_source): CO Palmer Lake | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/ | weak_source: the reading model's confidence is 0.40, below 0.6
+- rejected in review (weak_source): MI Blackman Township | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | weak_source: the reading model's confidence is 0.55, below 0.6
+- rejected in review (duplicate): AK Fairbanks North Star Borough | https://www.alaskasnewssource.com:443/2026/10/24/fairbanks-borough-mayor-proposes-temporary-data-center-moratorium/ | The dataset already tracks a pending Fairbanks North Star Borough moratorium, and this page describes the same proposed ordinance.
+- rejected in review (wrong_status): IN Vermillion County | https://www.wthitv.com/2026/10/06/vermillion-county-commissioners-reject-data-center-moratorium-2-1-vote/ | The page reports commissioners voted 2-1 to reject the moratorium, so the status should be rejected, not withdrawn, as the dataset uses for Fort Wayne.
+- rejected in review (wrong_status): OH Defiance | https://www.securities.io/ohio-voters-back-data-center-limits-and-reject-edgeconnex-agreement/ | The page reports Defiance's ban passed only in unofficial results, with certification pending and no effective date, so calling it active is not clearly supported.
+- rejected in review (wrong_status, date_unsupported, other): OH Trenton | https://www.unite.ai/ohio-voters-back-local-data-center-limits-in-unofficial-results/ | The excerpt says Trenton held a vote but never gives the result, so active status is unsupported; adoption date and Issue 17 also do not appear on the page.
+- rejected in review (weak_source): TX Texas | https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/ | A secondhand aggregator calls the Aug. 3 audit directive a pause; it may just be the audit behind the tracked Sept. 21 TCEQ order and needs a primary source.
+- rejected in review (not_yet_happened, wrong_status): CA San Francisco | https://www.kalw.org/bay-area-news/2026-11-12/bay-area-cities-extend-or-pass-new-moratoriums-on-data-centers | The page says San Francisco's committee only plans to vote next week on an extension, so no extension has been adopted yet.
+- rejected in review (weak_source, date_unsupported): CO Phillips County | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/ | An opinion column's passing remark that Phillips moratorium expired cannot override the tracked extended status through 2026-12-31 or clear its dates.
+- rejected in review (weak_source): NC Pitt County | https://www.yahoo.com/news/articles/must-list-nc-cities-counties-100000527.html | An opinion column briefly mentions a Pitt County hearing on a proposed moratorium, with no terms; a new measure needs more specific reporting.
+- rejected in review (not_yet_happened, wrong_status): NC Cumberland County | https://www.cityviewnc.com/stories/cumberland-county-considers-extending-data-center-moratorium/ | The page says the county only plans a hearing and vote on the extension for December 14, so the moratorium has not yet been extended.
+- rejected in review (weak_source): NC Fayetteville | https://www.cityviewnc.com/stories/cumberland-county-considers-extending-data-center-moratorium/ | The page is about Cumberland County and mentions Fayetteville's planned hearing only briefly; the 180-day term comes from a sidebar teaser, not reporting.
+- rejected in review (duplicate): IN Vanderburgh County | https://www.14news.com:443/2026/11/13/data-center-projects-moratoriums-proposed-rules-vary-by-county/ | Vanderburgh County's pause on data center applications during the study is already tracked as an active temporary moratorium expiring 2026-12-31.
+- rejected in review (date_unsupported, wrong_status, weak_source): OH Weathersfield Township | https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/ | Page only says a six-month pause was approved in April; it doesn't address the tracked extension, so expiry 2026-10 and expired status are unsupported.
+- rejected in review (date_unsupported, date_less_precise, weak_source): OH Shalersville Township | https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/ | The page confirms a six-month extension on Oct 20, but not that it runs from that date; the 2027-04-20 expiry is inferred and dropping the tracked 2025-11 adoption date is unsupported.
+- rejected in review (date_unsupported, weak_source): MI Waterloo Township | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | A Hoodline roundup restating MLive mentions a January Waterloo moratorium only in passing; the year is not stated and is only inferred.
+- rejected in review (weak_source, date_unsupported): MI Pulaski Township | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/ | The Hoodline page mentions Pulaski Township only in passing, relaying MLive, with no date or terms, and the 12-month duration is presumed rather than stated.
+
+## Rejected in review
+
+36 changes reviewed, 16 accepted. A rejected change is not written; publish it by adding its row to this folder's CSVs, citing a page.
+
+- NY New York, new: duplicate. duplicate: nm-state-ny-executive-order-no-62-2026 (Executive Order No. 62 (2026), adopted 2026-07-14) | https://www.techtimes.com/articles/327991/20260924/chicago-introduces-moratorium-halt-data-centers-ai-grid-costs-hit-residential-bills.htm
+- OH St. Clair Township, new: weak_source. weak_source: the reading model's confidence is 0.55, below 0.6 | https://www.wcpo.com/news/local-news/saint-clair-township-moves-to-block-data-centers-after-neighboring-trenton-voters-reject-large-scale-projects
+- CO Kiowa County, new: weak_source. weak_source: the reading model's confidence is 0.50, below 0.6 | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- CO Palmer Lake, new: weak_source. weak_source: the reading model's confidence is 0.40, below 0.6 | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- MI Blackman Township, new: weak_source. weak_source: the reading model's confidence is 0.55, below 0.6 | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/
+- AK Fairbanks North Star Borough, new: duplicate. The dataset already tracks a pending Fairbanks North Star Borough moratorium, and this page describes the same proposed ordinance. | https://www.alaskasnewssource.com:443/2026/10/24/fairbanks-borough-mayor-proposes-temporary-data-center-moratorium/
+- IN Vermillion County (row nm-in-vermillion-county-undated), correction: wrong_status. The page reports commissioners voted 2-1 to reject the moratorium, so the status should be rejected, not withdrawn, as the dataset uses for Fort Wayne. | https://www.wthitv.com/2026/10/06/vermillion-county-commissioners-reject-data-center-moratorium-2-1-vote/
+- OH Defiance (row add-oh-defiance-2026), correction: wrong_status. The page reports Defiance's ban passed only in unofficial results, with certification pending and no effective date, so calling it active is not clearly supported. | https://www.securities.io/ohio-voters-back-data-center-limits-and-reject-edgeconnex-agreement/
+- OH Trenton (row add-oh-trenton-2026), correction: wrong_status, date_unsupported, other. The excerpt says Trenton held a vote but never gives the result, so active status is unsupported; adoption date and Issue 17 also do not appear on the page. | https://www.unite.ai/ohio-voters-back-local-data-center-limits-in-unofficial-results/
+- TX Texas, new: weak_source. A secondhand aggregator calls the Aug. 3 audit directive a pause; it may just be the audit behind the tracked Sept. 21 TCEQ order and needs a primary source. | https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/
+- CA San Francisco (row nm-ca-san-francisco-undated), extension: not_yet_happened, wrong_status. The page says San Francisco's committee only plans to vote next week on an extension, so no extension has been adopted yet. | https://www.kalw.org/bay-area-news/2026-11-12/bay-area-cities-extend-or-pass-new-moratoriums-on-data-centers
+- CO Phillips County (row nm-co-phillips-county-2026), correction: weak_source, date_unsupported. An opinion column's passing remark that Phillips moratorium expired cannot override the tracked extended status through 2026-12-31 or clear its dates. | https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- NC Pitt County, new: weak_source. An opinion column briefly mentions a Pitt County hearing on a proposed moratorium, with no terms; a new measure needs more specific reporting. | https://www.yahoo.com/news/articles/must-list-nc-cities-counties-100000527.html
+- NC Cumberland County (row nm-nc-cumberland-county-2026), extension: not_yet_happened, wrong_status. The page says the county only plans a hearing and vote on the extension for December 14, so the moratorium has not yet been extended. | https://www.cityviewnc.com/stories/cumberland-county-considers-extending-data-center-moratorium/
+- NC Fayetteville, new: weak_source. The page is about Cumberland County and mentions Fayetteville's planned hearing only briefly; the 180-day term comes from a sidebar teaser, not reporting. | https://www.cityviewnc.com/stories/cumberland-county-considers-extending-data-center-moratorium/
+- IN Vanderburgh County, new: duplicate. Vanderburgh County's pause on data center applications during the study is already tracked as an active temporary moratorium expiring 2026-12-31. | https://www.14news.com:443/2026/11/13/data-center-projects-moratoriums-proposed-rules-vary-by-county/
+- OH Weathersfield Township (row nm-oh-weathersfield-township-2026), correction: date_unsupported, wrong_status, weak_source. Page only says a six-month pause was approved in April; it doesn't address the tracked extension, so expiry 2026-10 and expired status are unsupported. | https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/
+- OH Shalersville Township (row nm-oh-shalersville-township-2025), extension: date_unsupported, date_less_precise, weak_source. The page confirms a six-month extension on Oct 20, but not that it runs from that date; the 2027-04-20 expiry is inferred and dropping the tracked 2025-11 adoption date is unsupported. | https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/
+- MI Waterloo Township, new: date_unsupported, weak_source. A Hoodline roundup restating MLive mentions a January Waterloo moratorium only in passing; the year is not stated and is only inferred. | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/
+- MI Pulaski Township, new: weak_source, date_unsupported. The Hoodline page mentions Pulaski Township only in passing, relaying MLive, with no date or terms, and the 12-month duration is presumed rather than stated. | https://hoodline.com/2026/11/hagar-township-hits-pause-on-data-centers-joins-michigan-moratorium-wave/
+
+## By state
+
+Leads (rejected changes included), new measures written, changes rejected in review.
+
+- AK: 1 leads, 0 new, 1 rejected
+- AR: 7 leads, 0 new, 0 rejected
+- AZ: 1 leads, 0 new, 0 rejected
+- CA: 14 leads, 2 new, 1 rejected
+- CO: 27 leads, 1 new, 3 rejected
+- FL: 1 leads, 0 new, 0 rejected
+- GA: 0 leads, 1 new, 0 rejected
+- IA: 1 leads, 0 new, 0 rejected
+- ID: 3 leads, 0 new, 0 rejected
+- IL: 8 leads, 0 new, 0 rejected
+- IN: 4 leads, 0 new, 2 rejected
+- KS: 7 leads, 0 new, 0 rejected
+- KY: 2 leads, 0 new, 0 rejected
+- MA: 4 leads, 0 new, 0 rejected
+- MD: 1 leads, 0 new, 0 rejected
+- ME: 2 leads, 0 new, 0 rejected
+- MI: 8 leads, 1 new, 3 rejected
+- MN: 3 leads, 0 new, 0 rejected
+- NC: 5 leads, 0 new, 3 rejected
+- ND: 2 leads, 0 new, 0 rejected
+- NM: 0 leads, 1 new, 0 rejected
+- NY: 3 leads, 0 new, 1 rejected
+- OH: 33 leads, 0 new, 5 rejected
+- OK: 1 leads, 0 new, 0 rejected
+- TN: 1 leads, 0 new, 0 rejected
+- TX: 16 leads, 0 new, 1 rejected
+
+## Utilities without an EIA id
+
+- none
+
+## Confirmed unchanged
+
+- nm-co-denver-2026: https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/
+- nm-co-larimer-county-2026: https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/
+- nm-co-jefferson-county-2026: https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/
+- nm-co-boulder-county-2026: https://thecherrycreeknews.com/anthropics-ipo-is-priced-at-1-4-trillion-one-week-after-voters-rejected-data-centers-40-to-1/
+- nm-id-bannock-county-2026: https://www.kivitv.com/wood-river-valley/blaine-county-passes-emergency-moratorium-on-data-centers-giving-the-county-182-days-to-craft-rules
+- nm-mn-chisago-county-2026: https://blandinonbroadband.org/2026/10/30/chicago-county-commissioners-approved-one-year-moratorium-on-data-centers-in-august-2026/
+- nm-il-lake-county-2026: https://patch.com/illinois/chicago/chicagos-data-center-fight-really-zoning-fight
+- nm-il-city-of-west-chicago-2026: https://patch.com/illinois/chicago/chicagos-data-center-fight-really-zoning-fight
+- nm-il-lake-county-2026: https://colocationscout.com/reports/chicago-data-center-permits-q3-2026.html
+- add-oh-pataskala-2026: https://dataphoenix.info/news/us-data-center-ballot-backlash-2026
+- nm-oh-fayette-county-2026: https://www.wlwt.com/article/ohio-community-data-centers-amazon-fayette-county-votes/74350646
+- nm-oh-grove-city-2026: https://www.statenews.org/section/the-ohio-newsroom/2026-11-02/from-trenton-to-grove-city-data-centers-are-on-ohio-ballots-this-election
+- add-oh-urbana-2026: https://hoodline.com/2026/11/urbana-voters-oust-15-year-mayor-ban-future-data-centers-in-landslide/
+- nm-oh-urbana-2026: https://hoodline.com/2026/11/urbana-voters-oust-15-year-mayor-ban-future-data-centers-in-landslide/
+- nm-oh-urbana-2026: https://www.springfieldnewssun.com/local/urbana-council-punts-thor-equities-data-center-decision-again/article_2c81f64c-4b98-517a-a13a-6e703bde37e0.html
+- add-ks-emporia-2026: https://kvoe.com/2026/11/03/10-year-ban-on-high-impact-data-centers-and-type-2-and-3-battery-energy-storage-systems-pass-on-election-night-quarter-percent-sales-tax-question-for-new-and-updated-emporia-rec-facilities-fail/
+- add-ks-emporia-2026: https://www.kake.com/news/el-dorado-emporia-voters-pass-bans-on-high-impact-data-centers/article_aaa685e6-bf3d-4995-b055-36b3e3a11af8.html
+- nm-ks-topeka-2026: https://www.wibw.com:443/2026/11/10/protect-kansas-circulating-3-part-petition-ban-hyperscale-data-centers/
+- nm-ks-shawnee-county-2026: https://www.wibw.com:443/2026/11/10/protect-kansas-circulating-3-part-petition-ban-hyperscale-data-centers/
+- nm-ky-scott-county-2026: https://www.wkyt.com:443/2026/10/09/georgetown-scott-county-planning-commission-reviews-draft-data-center-ordinance/
+- nm-nd-harmony-township-undated: https://kfgo.com/2026/10/20/1365860/
+- nm-nd-harmony-township-undated: https://kfgo.com/2026/10/13/geronimo-power-pushes-back-against-proposed-harmony-township-moratorium-with-140m-incentive-pitch/
+- nm-nd-harmony-township-undated: https://www.inforum.com/news/north-dakota/harmony-township-board-to-meet-twice-this-week
+- nm-tn-blount-county-undated: https://hoodline.com/2026/10/blount-county-freezes-data-centers-and-big-subdivisions-for-a-year/
+- nm-tx-lubbock-undated: https://texasstandard.org/stories/when-is-best-time-to-initiate-data-center-moratorium-texas/
+- nm-tx-lubbock-undated: https://www.thecooldown.com/green-tech/lubbock-texas-data-center-permit-pause/
+- nm-ca-san-francisco-undated: https://calmatters.org/economy/technology/2026/10/california-data-centers-hit-with-local-regulation-flood/
+- add-ca-alhambra-2026: https://www.pasadenastarnews.com/2026/11/03/election-results-data-center-ban-in-alhambra-measure-db-goes-to-voters/
+- nm-ca-san-francisco-undated: https://www.arkansasonline.com/news/2026/oct/24/california-cities-resisting-data-centers/
+- nm-co-denver-2026: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-co-boulder-county-2026: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-co-jefferson-county-2026: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-co-broomfield-2026: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-co-fort-collins-undated: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-co-monument-2026: https://completecolorado.com/2026/11/14/colorado-moratorium-madness-gets-data-centers-wrong/
+- nm-nc-cumberland-county-2026: https://www.cityviewnc.com/stories/cumberland-county-considers-extending-data-center-moratorium/
+- sweep-in-evansville-2026: https://www.14news.com:443/2026/11/13/data-center-projects-moratoriums-proposed-rules-vary-by-county/
+- nm-ky-daviess-county-2026: https://www.14news.com:443/2026/11/13/data-center-projects-moratoriums-proposed-rules-vary-by-county/
+- add-co-longmont-2026: https://boulderreportinglab.org/2026/11/12/boulder-county-passes-strict-data-center-restrictions-basically-bans-them/
+- nm-fl-palm-beach-county-2026: https://xaviermetalspinning.com/article/aoc-s-data-center-plan-sparks-debate-progress-or-political-posturing
+- nm-oh-jerome-township-2025: https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/
+- nm-oh-commercial-point-2026: https://kjk.com/2026/11/12/data-centers-and-ohio-townships-the-rise-of-the-local-moratorium/
