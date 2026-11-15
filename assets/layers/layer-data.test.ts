@@ -9,7 +9,7 @@ import { gzipSync, strToU8 } from 'fflate';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
 import { DATA } from '../constants.js';
-import { ensureLayerData, liveFeed } from './layer-data.js';
+import { ensureLayerData, fetchGeojson, liveFeed } from './layer-data.js';
 
 const fetchMock = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }));
 vi.stubGlobal('fetch', fetchMock);
@@ -148,5 +148,13 @@ describe('ensureLayerData layer:data emission', () => {
     });
     delete state.sourcesData['hifld-natgas-points'];
     delete state.liveFcMeta['hifld-natgas-points'];
+  });
+});
+
+describe('fetchGeojson', () => {
+  it('gunzips a .gz URL that carries a ?v= token', async () => {
+    const gz = gzipSync(strToU8(JSON.stringify({ type: 'FeatureCollection', features: [] })));
+    fetchMock.mockResolvedValueOnce(new Response(gz) as never);
+    expect(await fetchGeojson('https://h/x.geojson.gz?v=abc')).toEqual({ type: 'FeatureCollection', features: [] });
   });
 });

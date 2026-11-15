@@ -34,6 +34,9 @@ Each host's Cloudflare Cache Rule follows the object's `Cache-Control` and bypas
 | live feeds | `public, max-age=0, s-maxage=60` |
 | `dc_moratoriums.geojson` | `public, max-age=300` |
 
+The app reads each fixed-name object as `?v=<token>` from `src/registry/data-versions.json`,
+so a changed object has a new URL.
+
 `.pmtiles`, `.parquet` and `.gz` are served as `application/octet-stream`, never
 with a `Content-Encoding`.
 
@@ -154,9 +157,13 @@ the `data-wpptx-org` bucket from the owner's machine. The per-continent archives
 It uploads with `rclone copy --checksum`, one run per header set, objects first
 and manifests last, and never deletes: deployed bundles keep reading superseded
 objects. A fixed-name object that is about to change is first copied to
-`prev/<stamp>/`; `--rollback STAMP` restores it. The run prints the changed
-fixed-name URLs as the Cloudflare purge list. `--dry-run` needs no rclone or keys;
-`--prune-list` reports unreferenced objects.
+`prev/<stamp>/`; `--rollback STAMP` restores it. After every upload succeeded the
+run rewrites `src/registry/data-versions.json` in full (token = first 10 hex of each
+fixed file's sha256) and prints the changed names; a rollback gives each restored name
+the token `r<new stamp>`. Commit the table and deploy main for a publish or rollback to
+reach visitors; a deploy ships whatever else is on main. `--dry-run` needs no rclone or
+keys and prints the table entries that would change, writing nothing; `--prune-list`
+reports unreferenced objects.
 
 `bash scripts/publish_r2.sh --only route` publishes the route set alone (`ARGS=--only route` through
 make), under `data/route/<ROUTE_ID>/`: the cube (`250m/`), the report files (`report/`, with the

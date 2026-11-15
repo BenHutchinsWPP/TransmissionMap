@@ -48,6 +48,12 @@ describe('handleSample', () => {
     await handleSample({ id: 1, url: 'https://x/y.geojson.gz', box, cap: 10 }, m => out.push(m as never), reply(new Uint8Array(gz)));
     expect(out[0].outcome).toMatchObject({ kind: 'ok', props: [['A', '', '', '']] });
   });
+  it('unzips a .gz URL that carries a ?v= token', async () => {
+    const out: { outcome: unknown }[] = [];
+    const gz = gzipSync(JSON.stringify(fc(pt(-95, 35, { name: 'A' }))));
+    await handleSample({ id: 1, url: 'https://x/y.geojson.gz?v=abc', box, cap: 10 }, m => out.push(m as never), reply(new Uint8Array(gz)));
+    expect(out[0].outcome).toMatchObject({ kind: 'ok' });
+  });
   it('fails with a fixed outcome on a bad status or body', async () => {
     const out: { outcome: unknown }[] = [];
     await handleSample({ id: 1, url: 'https://x/y.geojson', box, cap: 10 }, m => out.push(m as never), reply('nope', false));

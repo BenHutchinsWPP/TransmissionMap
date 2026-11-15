@@ -18,9 +18,16 @@
 # Before any upload, geoparquet_common.check_analysis runs over the data/analysis
 # and data/layers being uploaded and any problem aborts the run. A fixed-name
 # object that is about to change is first copied server-side to prev/<stamp>/;
-# if that comparison cannot be completed, nothing is uploaded. After a publish
-# the changed fixed-name URLs are printed: that is the Cloudflare cache purge
-# list (the script itself does not purge and needs no zone token).
+# if that comparison cannot be completed, nothing is uploaded.
+#
+# Versioned URLs: the app reads each fixed-name object as <url>?v=<token> from
+# src/registry/data-versions.json (scripts/data_versions.py). After every upload
+# succeeded the table is rebuilt in full from the files published (token = first
+# 10 hex of the file's sha256) and written; a dry run prints the entries that
+# would change and writes nothing. A rollback gives each restored fixed name the
+# token r<new stamp>. Commit the table and deploy main for a publish or rollback
+# to reach visitors; a deploy ships whatever else is on main. No cache purge is
+# needed once main is deployed.
 #
 # Keys: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY from the
 # environment, else from the repo-root .env.r2 (local/r2-deploy.md; KEY=value
@@ -28,11 +35,13 @@
 # is built from them through RCLONE_CONFIG_R2_* variables.
 #
 # Usage:
-#   scripts/publish_r2.sh --dry-run            plan and commands; needs no rclone or keys
+#   scripts/publish_r2.sh --dry-run            plan, commands and the table entries that would change
+#                                              (hashes every fixed file); needs no rclone or keys
 #   scripts/publish_r2.sh                      upload
 #   scripts/publish_r2.sh --rollback STAMP     first save the current fixed names to a new
 #                                              prev/<stamp>/, then copy prev/<STAMP>/ back
-#                                              (files first, manifests last; STAMP required)
+#                                              (files first, manifests last; STAMP required), then
+#                                              give the restored names new tokens in the table
 #   scripts/publish_r2.sh --only route [--no-final] [--verify-sha] [--dry-run]
 #                                              the route planner's data under data/route/<ROUTE_ID>/
 #                                              and nothing else (scripts/route_publish_plan.py: the
@@ -140,8 +149,10 @@ if [ "$mode" != "dry-run" ]; then
   need_rclone
 fi
 
-purge_list() {  # $1 = file of keys → the URLs to purge
-  echo "Cloudflare cache purge list (Caching ▸ Configuration ▸ Custom Purge ▸ URL; the script does not purge):"
+VERSIONS_TABLE="src/registry/data-versions.json"
+
+changed_list() {  # $1 = file of keys → the changed fixed-name URLs
+  echo "Changed fixed names (new tokens in $VERSIONS_TABLE: commit it, then deploy main):"
   sed "s|^|  $PUBLIC_URL/|" "$1"
 }
 
@@ -168,7 +179,9 @@ if [ "$mode" = "rollback" ]; then
     fi
   done
   echo "Done; the state before the rollback is in prev/$newstamp/."
-  purge_list "$work/restore.list"
+  "$PY" scripts/data_versions.py rollback --files "$work/restore.list" --table "$VERSIONS_TABLE" \
+    --stamp "$newstamp" --write
+  changed_list "$work/restore.list"
   exit 0
 fi
 
@@ -321,9 +334,10 @@ EOF
 fi
 
 # ── The current set ──────────────────────────────────────────────────────────
-: > "$work/all.list"
+: > "$work/all.list"; : > "$work/skipped.list"
 while IFS= read -r f; do
-  if [ -f "$f" ]; then echo "$f" >> "$work/all.list"; else echo "missing (skipped): $f" >&2; fi
+  if [ -f "$f" ]; then echo "$f" >> "$work/all.list"
+  else echo "$f" >> "$work/skipped.list"; echo "missing (skipped): $f" >&2; fi
 done < "$work/expected.list"
 [ -d data/releases ] && find data/releases -maxdepth 1 -type f -name '*.zip' | LC_ALL=C sort >> "$work/all.list"
 [ -d data/analysis ] && find data/analysis -type f | LC_ALL=C sort >> "$work/all.list"
@@ -423,6 +437,9 @@ if [ "$mode" = "dry-run" ]; then
     echo "  $(printf '%q ' "${backup_copy[@]}")   # only when a fixed name differs"
   fi
   printf '  %s\n' "${cmds[@]}"
+  echo
+  echo "Version table (nothing written by a dry run):"
+  "$PY" scripts/data_versions.py publish --files "$work/fixed.list" --keep "$work/skipped.list" --table "$VERSIONS_TABLE"
   exit 0
 fi
 
@@ -455,12 +472,19 @@ if [ -s "$work/fixed.list" ]; then
 fi
 
 # ── Upload ───────────────────────────────────────────────────────────────────
+# Tokens are hashed before the upload, from the bytes about to go up, and the
+# table takes their place only once every upload has succeeded.
+if [ -f "$VERSIONS_TABLE" ]; then cp "$VERSIONS_TABLE" "$work/versions.json"; fi
+"$PY" scripts/data_versions.py publish --files "$work/fixed.list" --keep "$work/skipped.list" --table "$work/versions.json" --write
 for c in "${cmds[@]}"; do
   eval "$c"
 done
 echo "Published $(wc -l < "$work/all.list") files to $BUCKET."
+cp "$work/versions.json" "$VERSIONS_TABLE.tmp" && mv "$VERSIONS_TABLE.tmp" "$VERSIONS_TABLE"
 if [ -s "$work/changed.list" ]; then
-  purge_list "$work/changed.list"
+  changed_list "$work/changed.list"
 else
-  echo "No fixed-name object changed; nothing to purge."
+  echo "No fixed-name object changed."
 fi
+echo "Commit $VERSIONS_TABLE, then deploy main."
+

@@ -4,8 +4,9 @@
 //       {id, url, box, cap}; message out {id, outcome}: a SampleCut (sample.ts) or {kind: 'failed'}.
 //       No fetched value is put in the failure. handleSample is the testable part (fetch injected).
 //       Started only by sample-open.ts.
-// Deps: sample.ts.
+// Deps: sample.ts, utils/utils.ts (isGzipUrl; zero imports).
 
+import { isGzipUrl } from '../utils/utils.js';
 import { cutSample, type Box, type SampleCut } from './sample.js';
 
 export interface SampleRequest { id: number; url: string; box: Box; cap: number }
@@ -16,7 +17,7 @@ export async function handleSample(msg: SampleRequest, post: (m: unknown) => voi
   try {
     const resp = await fetchFn(msg.url);
     if (!resp.ok || !resp.body) throw new Error('bad response');
-    const body = msg.url.endsWith('.gz') ? resp.body.pipeThrough(new DecompressionStream('gzip')) : resp.body;
+    const body = isGzipUrl(msg.url) ? resp.body.pipeThrough(new DecompressionStream('gzip')) : resp.body;
     outcome = cutSample(await new Response(body).json(), msg.box, msg.cap);
   } catch {
     outcome = { kind: 'failed' };

@@ -6,6 +6,11 @@ export function escapeHtml(v: unknown) {
   }[c] ?? c));
 }
 
+/** True when a URL's path ends in .gz, with or without a query (`x.geojson.gz?v=abc`). */
+export function isGzipUrl(url: string): boolean {
+  return /\.gz(\?|#|$)/.test(url);
+}
+
 // True when `url` is a string holding an absolute http(s) URL. Browsers strip ASCII control
 // chars/whitespace when parsing a scheme ("java\tscript:" navigates as
 // javascript:), so the same range is stripped before the check.

@@ -9,7 +9,7 @@
 //       land), diag-log.ts (recordDiagEvent — records ensureLayerData failures
 //       for the diagnostics panel); registry/index.ts (layerById — reads a
 //       layer's fromZoom threshold); layer-source.ts (layerDataUrl,
-//       layerSourceId — which file, into which source).
+//       layerSourceId — which file, into which source); utils/utils.ts (isGzipUrl).
 // ensureLayerData's contract: "fetch this if the zoom allows" — a source
 // whose LayerDef sets fromZoom is withheld below that zoom (for every registry
 // id that shares it, per layerSourceId(), too), so every caller
@@ -26,6 +26,7 @@ import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from '../state.js';
 import { emit } from '../state-bus.js';
 import { recordDiagEvent } from '../diag-log.js';
+import { isGzipUrl } from '../utils/utils.js';
 import { layerById } from '../../src/registry/index.js';
 import { layerDataUrl, layerSourceId } from './layer-source.js';
 
@@ -138,7 +139,7 @@ function fetchSource(registryId: string): Promise<void> {
 export async function fetchGeojson(url: string, init?: RequestInit) {
   const resp = await fetch(url, init);
   if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText} for ${url}`);
-  if (url.endsWith(".gz")) {
+  if (isGzipUrl(url)) {
     const stream = resp.body!.pipeThrough(new DecompressionStream("gzip"));
     return new Response(stream).json();
   }

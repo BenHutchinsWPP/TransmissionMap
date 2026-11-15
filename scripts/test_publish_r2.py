@@ -191,6 +191,10 @@ class PublishR2(unittest.TestCase):
         shutil.copy(HERE / "publish_r2.sh", sd)
         shutil.copy(HERE / "geoparquet_common.py", sd)
         shutil.copy(HERE / "route_publish_plan.py", sd)
+        shutil.copy(HERE / "data_versions.py", sd)
+        (self.repo / "src/registry").mkdir(parents=True)
+        self.table = self.repo / "src/registry/data-versions.json"
+        self.table.write_text("{}\n")
         (sd / "validate_build.py").write_text(
             "import sys\nif '--list-expected' in sys.argv:\n    print(%r)\n" % "\n".join(LISTED))
         (self.repo / "scripts/release_manifest.yaml").write_text(RELEASE_YAML)
@@ -347,7 +351,7 @@ class PublishR2(unittest.TestCase):
         self.assertNotIn("data/releases/stray.txt", self.bucket_keys())
         self.assertNotIn("data/layers/lines_eu.pmtiles", self.bucket_keys())
 
-    def test_publish_prints_changed_fixed_urls_as_purge_list(self):
+    def test_publish_prints_changed_fixed_urls_with_the_commit_step(self):
         self.put("data/layers/lines.pmtiles", b"old archive")
         self.put("data/layers/plain.geojson", Path(self.repo / "data/layers/plain.geojson").read_bytes())
         r = self.run_script()
@@ -362,7 +366,71 @@ class PublishR2(unittest.TestCase):
         r = self.run_script()  # nothing changed now
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn("https://", r.stdout)
-        self.assertIn("nothing to purge", r.stdout)
+        self.assertIn("No fixed-name object changed", r.stdout)
+
+    # ── version table ───────────────────────────────────────────────────────
+    def table_now(self):
+        return json.loads(self.table.read_text())
+
+    def test_publish_writes_an_entry_for_every_fixed_name_sorted(self):
+        r = self.run_script()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        t = self.table_now()
+        fixed = {f for f, v in EXPECTED.items() if v[2] == FIXED}
+        self.assertEqual(set(t), fixed)
+        self.assertEqual(list(t), sorted(t))
+        self.assertFalse(any(k.startswith("data/route/") or k.endswith(".parquet") for k in t))
+        for k, v in t.items():
+            self.assertEqual(v, hashlib.sha256((self.repo / k).read_bytes()).hexdigest()[:10])
+        self.assertIn("Commit src/registry/data-versions.json, then deploy main.", r.stdout)
+
+    def test_changed_bytes_change_only_that_entry(self):
+        self.run_script()
+        before = self.table_now()
+        (self.repo / "data/layers/wind_lut.json").write_bytes(b"new bytes")
+        self.assertEqual(self.run_script().returncode, 0)
+        after = self.table_now()
+        self.assertEqual([k for k in after if after[k] != before[k]], ["data/layers/wind_lut.json"])
+
+    def test_dry_run_leaves_the_table_byte_identical_and_prints_entries(self):
+        self.table.write_text('{"data/layers/stale.json": "0123456789"}\n')
+        before = self.table.read_bytes()
+        r = self.run_script("--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.table.read_bytes(), before)
+        self.assertIn("data/layers/lines.pmtiles: (new) ->", r.stdout)
+        self.assertIn("data/layers/stale.json: 0123456789 -> (dropped)", r.stdout)
+
+    def test_failed_upload_leaves_the_table_byte_identical(self):
+        self.table.write_text('{"data/layers/stale.json": "0123456789"}\n')
+        before = self.table.read_bytes()
+        r = self.run_script(STUB_CHECK="fail")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertEqual(self.table.read_bytes(), before)
+        # an upload command that fails after the comparison also leaves it alone
+        (self.bucket / "x").mkdir()
+        bad = self.tmp / "bin" / "rclone"
+        bad.write_text(STUB_RCLONE.replace('if cmd == "lsf":', 'if cmd == "copy" and "--checksum" in argv and "--files-from" in argv and "--header-upload" in argv:\n    sys.exit(1)\nif cmd == "lsf":', 1))
+        r = self.run_script()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertEqual(self.table.read_bytes(), before)
+
+    def test_skipped_missing_file_keeps_its_old_entry(self):
+        self.table.write_text('{"data/layers/never_built.pmtiles": "0123456789"}\n')
+        self.assertEqual(self.run_script().returncode, 0)
+        self.assertEqual(self.table_now()["data/layers/never_built.pmtiles"], "0123456789")
+
+    def test_rollback_gives_restored_fixed_names_a_stamp_token(self):
+        self.seed_rollback()
+        self.table.write_text(json.dumps({"data/layers/lines.pmtiles": "aaaaaaaaaa", "data/layers/other.json": "bbbbbbbbbb"}))
+        r = self.run_script("--rollback", self.STAMP)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        t = self.table_now()
+        self.assertRegex(t["data/layers/lines.pmtiles"], r"^r\d{8}T\d{6}Z$")
+        self.assertNotEqual(t["data/layers/lines.pmtiles"], "r" + self.STAMP)
+        self.assertEqual(t["data/layers/other.json"], "bbbbbbbbbb")
+        self.assertNotIn("data/layers/only_now.pmtiles", t)
+        self.assertIn("deploy main", r.stdout)
 
     def test_failing_list_expected_aborts_before_any_rclone(self):
         (self.repo / "scripts/validate_build.py").write_text("print('data/layers/lines.pmtiles')\nimport sys\nsys.exit('boom')\n")

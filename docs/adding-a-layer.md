@@ -84,6 +84,8 @@ finds every expected layer by regexing `"data/layers/…"` out of this file, and
 template literal or a `.map()` is invisible to both, so the layer never gets
 pushed and `make validate` reports it as an orphan.
 
+A new layer's file is read as `?v=<token>` once `make publish-r2` has put its token in `src/registry/data-versions.json`; `assets/data-versions.test.ts` fails until it has.
+
 A layer split across several archives gets one `DATA` key each, and its builder
 opens each as a separate MapLibre source (`layerSource(id, { id: sourceId, key })`).
 Everything keyed off `LayerDef.mapLayerIds` then follows for free; the registries

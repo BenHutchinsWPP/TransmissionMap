@@ -171,3 +171,29 @@ describe('index', () => {
     expect((await loadIndex()).datasets).toEqual({});
   });
 });
+
+// With the data host's table naming index.json, the index URL carries ?v= and a
+// content-hashed file URL (built from BASE) carries no query.
+describe('versioned index URL in prod', () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); vi.doUnmock('../../src/registry/data-versions.json'); });
+
+  it('the index fetch has ?v=, a file range request does not', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/registry/data-versions.json', () => ({ default: { 'data/analysis/index.json': 'tok1234567' } }));
+    vi.stubEnv('PROD', true);
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      urls.push(url);
+      return url.includes('index.json')
+        ? new Response(JSON.stringify({ version: 1, datasets: {} }))
+        : rangeReply(init);
+    }));
+    const m = await import('./range-io.js');
+    await m.loadIndex();
+    expect(urls[0]).toBe('https://data.wpptx.org/data/analysis/index.json?v=tok1234567');
+    const file = m.openFile({ path: 'lines/', build_id: 'b' }, { name: 'f.abcdef12.parquet', bytes: 1000, footer_len: 10, rows: 1 });
+    void file.meta.catch(() => {});
+    await file.buf.slice(0, 10);
+    expect(urls.at(-1)).toBe('https://data.wpptx.org/data/analysis/lines/f.abcdef12.parquet');
+  });
+});

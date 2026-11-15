@@ -80,3 +80,39 @@ describe('RELEASES_ORIGIN — download pack host', () => {
     expect((await import('./constants.js')).RELEASES_ORIGIN).toBe('');
   });
 });
+
+// `versioned` adds ?v=<token> to a fixed-name object on the data host; the table
+// is src/registry/data-versions.json, written by publish_r2.sh.
+describe('versioned', () => {
+  const table = { 'data/layers/a.pmtiles': 'abc1234567', 'data/route/x/y.cog': 'zzzzzzzzzz' };
+  const H = 'https://data.wpptx.org/';
+
+  it('appends the token of a listed data-host path', async () => {
+    const { versioned } = await import('./constants.js');
+    expect(versioned(H + 'data/layers/a.pmtiles', table)).toBe(H + 'data/layers/a.pmtiles?v=abc1234567');
+  });
+
+  it('leaves unlisted, relative, live, moratorium and already-queried URLs alone', async () => {
+    const { versioned } = await import('./constants.js');
+    expect(versioned(H + 'data/layers/b.pmtiles', table)).toBe(H + 'data/layers/b.pmtiles');
+    expect(versioned('data/layers/a.pmtiles', table)).toBe('data/layers/a.pmtiles');
+    expect(versioned('https://live.wpptx.org/data/layers/a.pmtiles', table)).toBe('https://live.wpptx.org/data/layers/a.pmtiles');
+    expect(versioned('https://moratoriums.wpptx.org/data/layers/a.pmtiles', table)).toBe('https://moratoriums.wpptx.org/data/layers/a.pmtiles');
+    expect(versioned(H + 'data/layers/a.pmtiles?x=1', table)).toBe(H + 'data/layers/a.pmtiles?x=1');
+  });
+});
+
+describe('DATA in prod carries the table tokens', () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); vi.doUnmock('../src/registry/data-versions.json'); });
+
+  it('versions a listed data-host file and leaves a live feed alone', async () => {
+    vi.resetModules();
+    vi.doMock('../src/registry/data-versions.json', () => ({
+      default: { 'data/layers/usgs_seismic_pga_lut.json': 'fixture123', 'data/layers/odin_outages.json': 'nope' },
+    }));
+    vi.stubEnv('PROD', true);
+    const { DATA } = await import('./constants.js');
+    expect(DATA.usgs_seismic_pga_lut_meta).toBe('https://data.wpptx.org/data/layers/usgs_seismic_pga_lut.json?v=fixture123');
+    expect(DATA.odin_outages).toBe('https://live.wpptx.org/data/layers/odin_outages.json');
+  });
+});

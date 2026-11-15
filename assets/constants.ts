@@ -1,6 +1,6 @@
-// assets/constants.ts — Static constants shared across modules; imports nothing.
+// assets/constants.ts — Static constants shared across modules; imports only src/registry/data-versions.json.
 // Holds: where data lives (DATA, weatherLiveUrl and the origins behind them,
-// RELEASES_ORIGIN included), the external hosts more than one module reads
+// RELEASES_ORIGIN included; `versioned` adds ?v=<token> to a data-host URL), the external hosts more than one module reads
 // (basemap/terrain/radar/glyph/geocoder URLs, OPENROUTER_ORIGIN and PUDL_BASE_URL, which
 // diagnostics.ts also probes), CSP_HOSTS + CSP_POLICY (the production
 // page's Content Security Policy, rendered by vite.config.js), EMPTY_FC, the
@@ -10,6 +10,8 @@
 // in basemap.ts, terrain exaggeration and credit in terrain.ts.
 // Which registry layer reads which DATA file, and its map credit, is the layer's
 // own LayerDef.data (resolved by layers/layer-source.ts).
+
+import DATA_VERSIONS from '../src/registry/data-versions.json';
 
 // ─── Data URLs ────────────────────────────────────────────────────────────────
 // GeoJSON layers are hosted pre-gzipped (.geojson.gz) and decompressed in the
@@ -35,6 +37,19 @@ const LIVE_HOST = "https://live.wpptx.org/";
 const MORATORIUM_HOST = "https://moratoriums.wpptx.org/";
 /** The project's own data hosts (the CSP names them; the chat canvas frame does not). */
 export const DATA_HOSTS: readonly string[] = [DATA_HOST, LIVE_HOST, MORATORIUM_HOST];
+
+// A fixed-name object on the data host is read as <url>?v=<token>, the token
+// being its entry in src/registry/data-versions.json (written by
+// scripts/publish_r2.sh), so a changed object has a new URL. A URL off the data
+// host, one with a query already, or one the table does not name is unchanged.
+export function versioned(url: string, table: Readonly<Record<string, string>> = DATA_VERSIONS): string {
+  if (!url.startsWith(DATA_HOST) || url.includes("?")) return url;
+  const token = table[url.slice(DATA_HOST.length)];
+  return token ? url + "?v=" + token : url;
+}
+const versionAll = <T extends Record<string, string>>(o: T): T =>
+  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, versioned(v)])) as T;
+
 const DATA_ORIGIN = import.meta.env.PROD ? DATA_HOST : "";
 const LIVE_ORIGIN = import.meta.env.PROD ? LIVE_HOST : "";
 // Dev reads the local working copy of the data-moratoriums branch. Not a
@@ -50,7 +65,7 @@ const ROUTE_ORIGIN = import.meta.env.PROD ? DATA_HOST + "data/route/" + ROUTE_ID
 // need no CORS header. They sit beside the layers on the data host, under
 // data/releases/ (the keys publish_r2.sh uploads them to).
 export const RELEASES_ORIGIN = import.meta.env.PROD ? DATA_HOST + "data/releases/" : "";
-export const DATA = {
+export const DATA = versionAll({
   osm_transmission_lines: DATA_ORIGIN + "data/layers/osm_transmission_lines.pmtiles",
   hifld_transmission_lines: DATA_ORIGIN + "data/layers/hifld_transmission_lines.pmtiles",
   ogf_planned_transmission: DATA_ORIGIN + "data/layers/ogf_planned_transmission.geojson.gz",
@@ -142,7 +157,7 @@ export const DATA = {
   // (constants.test.ts NOT_SCRAPED); where the host has no index.json every
   // line tool stays hidden. docs/pipeline.md § Line geometry.
   line_index: DATA_ORIGIN + "data/analysis/index.json",
-};
+});
 
 // Live GFS weather mosaic (temperature, wind, humidity, dew point, cloud,
 // pressure), rebuilt every ~3h by scripts/fetch_weather_live.py. Dev: run that

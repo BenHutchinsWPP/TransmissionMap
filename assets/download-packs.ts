@@ -1,12 +1,12 @@
 // assets/download-packs.ts — a layer's `downloads` → the links its Download menu
 // offers: the continent table, pack naming and the Release URL. Pure; no DOM, no
 // i18n — a link carries its continent's label key and the row builder translates it.
-// Deps: constants.ts (RELEASES_ORIGIN), src/types.ts (LayerDef, type only).
+// Deps: constants.ts (RELEASES_ORIGIN, versioned), src/types.ts (LayerDef, type only).
 // Consumed by ui/ui-layer-rows.ts (the row's Download menu).
 // download-packs.test.ts holds the continent codes and continental packs to
 // scripts/build_releases.py and scripts/release_manifest.yaml.
 
-import { RELEASES_ORIGIN } from './constants.js';
+import { RELEASES_ORIGIN, versioned } from './constants.js';
 import type { LayerDef } from '../src/types.js';
 
 /** labelKey: the continent's i18n key, present only on a continental pack's links. */
@@ -32,7 +32,7 @@ const FORMATS = [['csv', 'CSV'], ['geojson', 'GeoJSON'], ['shp', 'SHP'], ['tif',
 // Registry entries name packs by repo-relative path. In prod that maps to its key
 // under data/releases/ on the data host; in dev (origin "") it stays a path the Vite server serves from disk.
 const packUrl = (path: string, origin: string) =>
-  origin ? origin + path.replace(/^data\/releases\//, '') : path;
+  origin ? versioned(origin + path.replace(/^data\/releases\//, '')) : path;
 
 // Every OSM-derived pack is built per continent: Geofabrik's continental
 // extracts are the pipeline's unit of work, and a download is a file someone

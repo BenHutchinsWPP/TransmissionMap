@@ -2,9 +2,13 @@
 // the registry's packs held to the pipeline that builds them
 // (scripts/build_releases.py, scripts/release_manifest.yaml).
 import { readFileSync } from 'node:fs';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { packLinks } from './download-packs.js';
 import { LAYERS } from '../src/registry/index.js';
+
+vi.mock('../src/registry/data-versions.json', () => ({
+  default: { 'data/releases/hifld-substations.zip': 'abcdef0123' },
+}));
 
 const lines = { geojson: 'data/releases/osm-transmission-lines.zip', shp: 'data/releases/osm-transmission-lines-shp.zip' };
 
@@ -17,6 +21,13 @@ describe('packLinks', () => {
   it('a flat pack maps to a flat Release asset name in prod', () => {
     expect(packLinks({ csv: 'data/releases/hifld-substations.zip' }, 'https://h/'))
       .toEqual([{ label: 'CSV', links: [{ url: 'https://h/hifld-substations.zip' }] }]);
+  });
+
+  it('a pack with a table entry carries its ?v= token, one without does not', () => {
+    const origin = 'https://data.wpptx.org/data/releases/';
+    expect(packLinks({ csv: 'data/releases/hifld-substations.zip' }, origin)[0].links[0].url)
+      .toBe(origin + 'hifld-substations.zip?v=abcdef0123');
+    expect(packLinks({ csv: 'data/releases/other.zip' }, origin)[0].links[0].url).toBe(origin + 'other.zip');
   });
 
   it('a continental pack expands to one labelled link per continent, code ahead of -shp', () => {

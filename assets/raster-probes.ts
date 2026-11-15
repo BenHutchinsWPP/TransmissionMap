@@ -5,11 +5,13 @@
 // Imported by: layers/add-all-layers.ts (ensureRasterLut in addAllLayers),
 //              visibility.ts (setLayerVisibility, updateRasterArrow),
 //              weather-live.ts (setWeatherLutStep, ensureRasterLut, updateRasterArrow)
-// Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave)
+// Depends on: src/units.ts (fmtSpeed, fmtDensity), map-input.ts (onMapPoint, onMapPointLeave),
+//             utils/utils.ts (isGzipUrl)
 // Exports the RasterMeta type (a LUT's georeferencing).
 // >>> ADD-LAYER: raster-probes — see docs/adding-a-layer.md §7
 
 import { state } from './state.js';
+import { isGzipUrl } from './utils/utils.js';
 import { DATA, weatherLiveUrl } from './constants.js';
 import { WEATHER_VARIABLES } from '../src/registry/conditions.js';
 import { fmtSpeed, fmtDensity } from '../src/units.js';
@@ -172,7 +174,7 @@ export async function ensureRasterLut(id: string) {
   try {
     const [rawMeta, buf] = await Promise.all([
       fetchOk(probe.meta()).then(r => r.json()),
-      fetchOk(lutUrl).then(r => /\.gz(\?|$)/.test(lutUrl)
+      fetchOk(lutUrl).then(r => isGzipUrl(lutUrl)
         ? new Response(r.body!.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()
         : r.arrayBuffer()),
     ]);
