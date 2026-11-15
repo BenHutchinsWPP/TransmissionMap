@@ -110,7 +110,7 @@ def plan_queries(dataset_rows, run_date, county_names=None, caps=None, refresh_s
         lo, hi = _parse(v), _parse(v, True)
         return r.get("status") in ACTIVE and lo is not None and lo <= run_date + w and hi >= run_date - w
 
-    pending = _oldest((r for r in rows if r.get("status") == "pending"), refresh_state)
+    pending = _oldest((r for r in rows if r.get("status") in ("pending", "unknown")), refresh_state)
     exp = sorted((r for r in rows if expiring(r)), key=lambda r: (r["date_expires"], r["id"]))
     util = _oldest((r for r in rows if r.get("level") == "utility"), refresh_state)
     open_ended = _oldest((r for r in rows if r.get("status") in ACTIVE and not (r.get("date_expires") or "").strip()),

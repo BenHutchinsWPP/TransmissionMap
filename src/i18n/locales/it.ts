@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'Scade',
   'popup.dcmRecent': 'Modifiche recenti',
   'popup.dcmUnconfirmed': 'non confermato',
+  'popup.dcmRejected': 'Respinto: proposta bocciata con un voto; mai entrata in vigore.',
+  'popup.dcmUnknown': 'Stato sconosciuto: la fonte non ha potuto confermare lo stato attuale. Verificare con la giurisdizione.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + ricerca TransmissionMap, al {date} · solo informativo — verificare con l\'ente competente',
   'legend.dcmUtility': 'Area servita dal distributore (tratteggiata)',
   'popup.weatherZone': 'Zona meteorologica',

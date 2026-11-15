@@ -360,10 +360,11 @@ def load_inputs(work: Path, dataset: Path, run_date: date) -> Inputs:
 
 # Status moves a change row may make; anything else (active -> pending, lifted -> active) is a lead.
 FORWARD = {"pending": {"active", "extended", "withdrawn", "lifted"},
+           "unknown": {"pending", "active", "extended", "withdrawn", "lifted", "expired", "replaced"},
            "active": {"extended", "expired", "lifted", "replaced"},
            "extended": {"extended", "expired", "lifted", "replaced"},
            "expired": {"extended", "replaced"}}
-OPEN_STATUSES = ("active", "extended", "pending")
+OPEN_STATUSES = ("active", "extended", "pending", "unknown")
 # Type families an extension, lift or correction is matched within (a "permit pause" page can extend a
 # tracked "temporary moratorium"); every type not listed is a moratorium.
 FAMILY = {"permanent ban": "ban", "interconnection pause": "utility", "service pause": "utility", "load cap": "utility"}

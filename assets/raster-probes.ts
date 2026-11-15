@@ -114,7 +114,7 @@ export const RASTER_PROBES: Record<string, {
   },
   "usgs-seismic-pga": {
     lut: () => DATA.usgs_seismic_pga_lut, meta: () => DATA.usgs_seismic_pga_lut_meta,
-    label: "Seismic", readout: (v) => `${v.toFixed(3)} g PGA`,
+    label: "Seismic", readout: (v) => { const m = Math.round(v * 1000); return `${((m - 5) / 1000).toFixed(2)}–${((m + 5) / 1000).toFixed(2)} g PGA`; },
   },
   // label/readout follow the currently-selected weather variable. lut() names
   // the variable, step and bake, so weather-live.ts's paint (setWeatherLutStep,

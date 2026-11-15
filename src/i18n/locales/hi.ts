@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'समाप्ति',
   'popup.dcmRecent': 'हाल के बदलाव',
   'popup.dcmUnconfirmed': 'अपुष्ट',
+  'popup.dcmRejected': 'अस्वीकृत: प्रस्ताव मतदान में गिर गया; कभी लागू नहीं हुआ।',
+  'popup.dcmUnknown': 'स्थिति अज्ञात: स्रोत वर्तमान स्थिति की पुष्टि नहीं कर सका। क्षेत्राधिकार से जाँच करें।',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap शोध, {date} तक · केवल जानकारी हेतु — संबंधित प्राधिकरण से पुष्टि करें',
   'legend.dcmUtility': 'बिजली कंपनी का सेवा क्षेत्र (धारीदार)',
   'popup.weatherZone': 'मौसम क्षेत्र',

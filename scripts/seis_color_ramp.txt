@@ -1,8 +1,8 @@
 # gdaldem color-relief ramp for USGS NSHM Seismic Hazard (PGA, 2% in 50yr).
 # Continuous raster, Peak Ground Acceleration in g. color-relief interpolates
 # between stops. Keep in sync with SEIS_RAMP_STOPS in src/colors/ramps.ts.
-# Columns: value(g) R G B A. nodata + 0 are transparent; CONUS data starts ~0.002 g
-# so the first opaque stop is set very low to avoid transparent CONUS edges.
+# Columns: value(g) R G B A. nodata + 0 are transparent; the lowest band is 0.01-0.02 g,
+# so the first opaque stop sits below it.
 nv     0    0    0    0
 0      255  255  178    0
 0.01   255  255  178  255

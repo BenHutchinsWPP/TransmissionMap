@@ -291,6 +291,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'تاريخ الانتهاء',
   'popup.dcmRecent': 'التغييرات الأخيرة',
   'popup.dcmUnconfirmed': 'غير مؤكد',
+  'popup.dcmRejected': 'مرفوض: تم التصويت ضد المقترح ولم يدخل حيز التنفيذ قط.',
+  'popup.dcmUnknown': 'الحالة غير معروفة: لم يتمكن المصدر من تأكيد الوضع الحالي. تحقق من الجهة المختصة.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + أبحاث TransmissionMap، حتى {date} · للعلم فقط — تحقق من الجهة المختصة',
   'legend.dcmUtility': 'منطقة خدمة شركة الكهرباء (مظللة بخطوط)',
   'popup.weatherZone': 'منطقة أرصاد جوية',

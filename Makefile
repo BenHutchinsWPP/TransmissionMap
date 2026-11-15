@@ -401,10 +401,10 @@ weather-live-dev:
 	@$(PY) $(SCRIPTS)/fetch_weather_live.py \
 		-o data/layers/weather_live
 
-# ── Seismic hazard raster (USGS NSHM 2018, PGA 2% in 50yr) ──────────────────
-# Self-contained raster pipeline (gdal + pmtiles, no venv). Reads the USGS NSHM
-# CSV grid in data/raw/usgs/ → gdal_grid nearest → baked color PMTiles + hover
-# LUT + COG download. Public domain (US Government work).
+# ── Seismic hazard raster (USGS 2023 NSHM, PGA 2% in 50yr) ──────────────────
+# Self-contained raster pipeline (gdal + pmtiles, no venv). Fetches the USGS 2023
+# NSHM contour-band shapefile into data/raw/usgs/nshm2023/ → rasterise at 0.05° →
+# baked color PMTiles + hover LUT + COG download. Public domain (US Government work).
 seismic:
 	@bash $(SCRIPTS)/build_seismic_hazard.sh
 

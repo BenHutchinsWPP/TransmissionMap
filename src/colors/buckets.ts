@@ -375,6 +375,6 @@ export const NRI_RATINGS: { code: number; label: string; labelKey: string; color
 export const DCM_CLASSES: BucketDef[] = [
   { id: "ban",     urlCode: "B", label: "Permanent ban",              color: "#7f1d1d" },
   { id: "active",  urlCode: "A", label: "Moratorium in effect",       color: "#dc2626" },
-  { id: "pending", urlCode: "P", label: "Proposed",                   color: "#f59e0b" },
-  { id: "ended",   urlCode: "E", label: "Expired, lifted or replaced", color: "#9ca3af" },
+  { id: "pending", urlCode: "P", label: "Pending or status unknown",  color: "#f59e0b" },
+  { id: "ended",   urlCode: "E", label: "Ended or rejected",        color: "#9ca3af" },
 ];

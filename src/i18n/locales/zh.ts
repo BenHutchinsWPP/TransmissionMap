@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': '截止日期',
   'popup.dcmRecent': '最近变更',
   'popup.dcmUnconfirmed': '未确认',
+  'popup.dcmRejected': '已否决：提案经投票被否决，从未生效。',
+  'popup.dcmUnknown': '状态未知：来源无法确认当前状态。请向管辖机构核实。',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap 研究，截至 {date} · 仅供参考 — 请向所在辖区核实',
   'legend.dcmUtility': '电力公司服务区域（斜线）',
   'popup.weatherZone': '气象分区',

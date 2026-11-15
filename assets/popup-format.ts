@@ -287,6 +287,8 @@ function renderDcMoratorium(p: Record<string, unknown>) {
       `${dot}<b>${escapeHtml(it.name)}</b>` +
       (it.verify ? ` ${small(`(${escapeHtml(t("popup.dcmUnconfirmed"))})`)}` : "") +
       `<br>${small(head)}</div>` +
+      (it.status === "rejected" ? `<div class="popup-row" style="font-size:0.85em">${escapeHtml(t("popup.dcmRejected"))}</div>` : "") +
+      (it.status === "unknown" ? `<div class="popup-row" style="font-size:0.85em">${escapeHtml(t("popup.dcmUnknown"))}</div>` : "") +
       row("popup.dcmAdopted", withRelativeDate(it.adopted)) +
       row("popup.dcmExpires", withRelativeDate(it.expires)) +
       (it.summary ? `<div class="popup-row" style="font-size:0.85em">${escapeHtml(it.summary)}</div>` : "") +

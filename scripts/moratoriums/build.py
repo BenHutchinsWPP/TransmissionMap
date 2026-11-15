@@ -11,7 +11,7 @@ expiry_from_duration, county_lookup, county_override) are exercised by scripts/t
 which loads them from this file's source because the script itself runs at import.
 TODAY is the pinned upstream snapshot's date, read from inputs/upstream_as_of; bump it together with inputs/upstream.sha.
 """
-import glob, json, re
+import calendar, glob, json, re
 from datetime import timedelta
 from collections import defaultdict
 import pandas as pd, geopandas as gpd
@@ -117,7 +117,7 @@ def level(r):
     return LEVEL.get(r.jurisdiction_type, r.jurisdiction_type.lower())
 
 STATUS = {"active": "active", "extended": "extended", "pending": "pending", "expired": "expired",
-          "rescinded": "lifted", "replaced": "replaced"}
+          "rescinded": "lifted", "replaced": "replaced", "rejected": "rejected", "unknown": "unknown"}
 
 def map_status(raw, row_id):
     """Upstream enacted_status -> published status; an unknown value is kept as given and named on stderr."""
@@ -125,11 +125,29 @@ def map_status(raw, row_id):
     print(f"WARNING: {row_id}: unknown enacted_status {raw!r}, kept as given", file=sys.stderr)
     return raw
 
-def expiry_from_duration(end, exp_src, anchor, days, extended):
-    """Fill a missing end date from adopted + duration. An extended row's original term says nothing
+TERM_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+              "ten": 10, "eleven": 11, "twelve": 12, "eighteen": 18, "twenty-four": 24, "thirty-six": 36}
+TERM_RE = re.compile(r"\b(\d+|" + "|".join(sorted(TERM_WORDS, key=len, reverse=True)) + r")(?:\s*\(\d+\))?[\s-]+(?:calendar[\s-]+)?(day|week|month|year)s?\b", re.I)
+
+def calendar_term(text):
+    """The one 'N days|weeks|months|years' (digits or a number word) an upstream duration text names, as (N, unit);
+    None when it names none, or several different ones (no date is better than a guessed one)."""
+    terms = {(int(n) if n.isdigit() else TERM_WORDS[n.lower()], u.lower()) for n, u in TERM_RE.findall(text)}
+    return terms.pop() if len(terms) == 1 else None
+
+def add_term(anchor, n, unit):
+    """anchor plus a term; months and years keep the day of month, clamped to the month's last day."""
+    if unit == "day": return anchor + timedelta(days=n)
+    if unit == "week": return anchor + timedelta(days=7 * n)
+    months = anchor.month - 1 + n * (12 if unit == "year" else 1)
+    y, m = anchor.year + months // 12, months % 12 + 1
+    return anchor.replace(year=y, month=m, day=min(anchor.day, calendar.monthrange(y, m)[1]))
+
+def expiry_from_duration(end, exp_src, anchor, term, extended):
+    """Fill a missing end date from adopted + term (N, unit). An extended row's original term says nothing
     about its current end, so it keeps only an explicit upstream date."""
     if end is None and anchor is not None and not extended:
-        return anchor + timedelta(days=days), "computed_adopted_plus_duration"
+        return add_term(anchor, *term), "computed_adopted_plus_duration"
     return end, exp_src
 
 def mtype(r):
@@ -167,9 +185,13 @@ for r in dc.itertuples():
     end = parse_date(r.current_end_date_iso)
     exp_src = "upstream_end_date" if end is not None else ""
     extended = r.enacted_status == "extended" or bool(re.search(r"\bextended\b", r.current_status, re.I) and "not extended" not in r.current_status.lower())
-    if end is None and adopted is not None and r.duration_kind == "fixed_days" and r.duration_days:
+    term = (float(r.duration_days), "day") if r.duration_kind == "fixed_days" and r.duration_days else (
+        calendar_term(r.duration) if r.duration_kind == "calendar_term" and not r.duration_days else None)
+    if r.duration_kind == "calendar_term" and term is None:
+        print(f"WARNING: nm-{r.moratorium_id}: no single calendar term in {r.duration[:80]!r}, no end date derived", file=sys.stderr)
+    if end is None and adopted is not None and term:
         a = adopted if r.date_enacted_uncertainty == "exact" else (adopted + pd.offsets.MonthEnd(0) if r.date_enacted_uncertainty == "month_only" else None)
-        end, exp_src = expiry_from_duration(end, exp_src, a, float(r.duration_days), extended)
+        end, exp_src = expiry_from_duration(end, exp_src, a, term, extended)
     status = map_status(r.enacted_status, f"nm-{r.moratorium_id}")
     inferred = False
     if status in ("active", "extended") and end is not None and end < TODAY:

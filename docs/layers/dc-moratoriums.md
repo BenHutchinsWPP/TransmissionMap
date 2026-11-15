@@ -25,12 +25,12 @@ measures, its colour is the strongest one, in this order:
 
 1. permanent ban;
 2. moratorium in effect;
-3. proposed;
-4. expired, lifted or replaced.
+3. pending or status unknown;
+4. ended or rejected.
 
 The legend's four status rows are filter checkboxes (URL group `a`, built
 from `DCM_CLASSES`). They filter on that strongest class, `cls`, so
-unticking "Expired, lifted or replaced" hides a jurisdiction only when all
+unticking "Ended or rejected" hides a jurisdiction only when all
 of its measures have ended.
 
 The popup lists every measure, newest first, followed by the jurisdiction's
@@ -46,8 +46,8 @@ jurisdiction whose newest dated event falls in the last 30 days
 |---|---|
 | **Provider** | Moratorium Nation (Michael Bommarito, Alea Institute), extended with TransmissionMap research (2026-10-03 and 2026-10-07) |
 | **Dataset** | [moratorium-data-2026](https://github.com/mjbommar/moratorium-data-2026): local moratorium inventory, plus its state-bill table filtered to enacted measures that pause something |
-| **Version** | Upstream commit `dbaab04` (2026-09-23); seeded 2026-10-04; research merged and rebuilt 2026-10-08 |
-| **Coverage** | 1,396 measures (414 county, 952 sub-county, 25 utility, 5 statewide) in 1,352 map features across 47 states: 400 counties, 927 points, 22 utility or grid-operator areas, and 3 states (AZ, NY, TX) |
+| **Version** | Upstream commit `3b6e904` (2026-11-13) |
+| **Coverage** | County, sub-county, utility and statewide measures; counties and points are drawn as map features, utility and grid-operator areas as polygons, and states as state outlines |
 | **License** | CC BY 4.0 (data); credit in the Data Credits dialog and the popup footer |
 | **Served** | `dc_moratoriums.geojson` at the root of the `data-moratoriums` branch → `DATA.dc_moratoriums` (`MORATORIUM_ORIGIN` in `assets/constants.ts`) |
 | **Utility geometry** | HIFLD Retail Service Territories, joined on `ID` = EIA-861 utility number (never on name); the ERCOT polygon from the EIA balancing authorities used by [`eia-ba`](eia-ba.md). Both are extracted once by `build_territories.py` |

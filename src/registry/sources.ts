@@ -109,7 +109,7 @@ export const LAYER_SOURCES: Record<string, LayerSourceDef> = {
   },
   "usgs-nshm": {
     label: "USGS NSHM",
-    tooltip: "Source: USGS 2018 National Seismic Hazard Model — Peak Ground Acceleration (PGA), 2% in 50yr (public domain)",
+    tooltip: "Source: USGS 2023 50-State National Seismic Hazard Model — Peak Ground Acceleration (PGA), 2% in 50yr (public domain)",
   },
   "nasa-firms-nifc": {
     label: "NASA FIRMS / NIFC WFIGS",

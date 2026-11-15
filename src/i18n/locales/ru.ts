@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'Действует до',
   'popup.dcmRecent': 'Последние изменения',
   'popup.dcmUnconfirmed': 'не подтверждено',
+  'popup.dcmRejected': 'Отклонено: предложение провалено голосованием; в силу не вступало.',
+  'popup.dcmUnknown': 'Статус неизвестен: источник не смог подтвердить текущее состояние. Уточните в юрисдикции.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + исследования TransmissionMap, на {date} · только для информации — уточняйте в органах власти',
   'legend.dcmUtility': 'Зона обслуживания энергокомпании (штриховка)',
   'popup.weatherZone': 'Метеозона',

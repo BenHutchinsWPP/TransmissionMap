@@ -249,7 +249,7 @@ export const conditionLayers: LayerDef[] = [
     titleKey:     "layer.seismicPga",
     group:        "conditions",
     sourceId:     "usgs-nshm",
-    data:         { kind: "raster", key: "usgs_seismic_pga", credit: '<a href="https://www.usgs.gov/programs/earthquake-hazards/science/2018-nshm">USGS NSHM</a>' },
+    data:         { kind: "raster", key: "usgs_seismic_pga", credit: '<a href="https://doi.org/10.5066/P9GNPCOD">USGS NSHM</a>' },
     swatch:       `rgb(${SEIS_RAMP_STOPS[3][1]})`,
     ramp:         { stops: SEIS_RAMP_STOPS, max: SEIS_RAMP_MAX, unit: "g" },
     defaultOn:    false,

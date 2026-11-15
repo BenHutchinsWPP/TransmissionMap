@@ -5,7 +5,8 @@ Raw input: `data/raw/mines/Mines.txt` + `MinesProdQuarterly.txt` (from the two
 MSHA zips; not committed)
 Built by: `scripts/extract_mines.py` (`make mines`)
 Stable id: `mine_id`, the MSHA mine ID (string, promoted) — [pipeline.md § Stable ids](../pipeline.md#stable-ids)
-Final output: `data/layers/mines.geojson.gz` (~70 KB gz, ~2.3k points)
+Vintage: MSHA file date 2026-11-13 (`Mines.zip`, `MinesProdQuarterly.zip`)
+Final output: `data/layers/mines.geojson.gz`
 
 ---
 

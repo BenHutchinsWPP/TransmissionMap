@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'Endet',
   'popup.dcmRecent': 'Letzte Änderungen',
   'popup.dcmUnconfirmed': 'unbestätigt',
+  'popup.dcmRejected': 'Abgelehnt: Vorschlag per Abstimmung abgelehnt; nie in Kraft getreten.',
+  'popup.dcmUnknown': 'Status unbekannt: Die Quelle konnte den aktuellen Stand nicht bestätigen. Bitte bei der Gebietskörperschaft nachfragen.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap-Recherche, Stand {date} · nur zur Information — bei der zuständigen Behörde prüfen',
   'legend.dcmUtility': 'Versorgungsgebiet des Energieversorgers (schraffiert)',
   'popup.weatherZone': 'Wetterzone',

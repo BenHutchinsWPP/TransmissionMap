@@ -65,7 +65,7 @@ def cls(r, status):
         return "ban"
     if status in ("active", "extended"):
         return "active"
-    if status == "pending":
+    if status in ("pending", "unknown"):
         return "pending"
     return "ended"
 

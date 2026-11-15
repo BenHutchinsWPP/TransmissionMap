@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'Kết thúc',
   'popup.dcmRecent': 'Thay đổi gần đây',
   'popup.dcmUnconfirmed': 'chưa xác nhận',
+  'popup.dcmRejected': 'Bị bác bỏ: đề xuất bị bỏ phiếu không thông qua; chưa từng có hiệu lực.',
+  'popup.dcmUnknown': 'Chưa rõ tình trạng: nguồn không thể xác nhận trạng thái hiện tại. Hãy kiểm tra với cơ quan có thẩm quyền.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + nghiên cứu TransmissionMap, tính đến {date} · chỉ để tham khảo — hãy xác nhận với cơ quan có thẩm quyền',
   'legend.dcmUtility': 'Khu vực phục vụ của công ty điện lực (gạch chéo)',
   'popup.weatherZone': 'Khu vực thời tiết',

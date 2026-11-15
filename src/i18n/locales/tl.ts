@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': 'Matatapos',
   'popup.dcmRecent': 'Mga kamakailang pagbabago',
   'popup.dcmUnconfirmed': 'hindi kumpirmado',
+  'popup.dcmRejected': 'Tinanggihan: ang panukala ay ibinasura sa botohan; hindi kailanman ipinatupad.',
+  'popup.dcmUnknown': 'Hindi alam ang katayuan: hindi makumpirma ng pinagmulan ang kasalukuyang kalagayan. Magtanong sa hurisdiksyon.',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + pananaliksik ng TransmissionMap, hanggang {date} · para sa impormasyon lamang — kumpirmahin sa hurisdiksyon',
   'legend.dcmUtility': 'Lugar na sineserbisyuhan ng utility (may guhit)',
   'popup.weatherZone': 'Sona ng Panahon',

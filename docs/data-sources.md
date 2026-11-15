@@ -35,7 +35,7 @@ security allowlist review), see [network-allowlist.md](network-allowlist.md).
 | **USFWS ECOS** | [Critical Habitat (ESA)](layers/crithab.md) | Public domain — US federal work, 17 U.S.C. § 105 | U.S. Fish & Wildlife Service |
 | **BTS / FRA** (NARN) | [Railroads](layers/railroads.md) | Public domain — US federal work, 17 U.S.C. § 105 | "US DOT BTS / FRA North American Rail Network" |
 | **USFS RMRS Fire Lab** | [Wildfire Hazard Potential](layers/wildfire-hazard.md) | Public domain — US federal work, 17 U.S.C. § 105 | "USFS RMRS Fire Lab — Wildfire Hazard Potential 2023" |
-| **USGS NSHM** | [Seismic hazard (PGA)](layers/seismic-hazard.md) | Public domain — US federal work, 17 U.S.C. § 105 | "USGS 2018 National Seismic Hazard Model" |
+| **USGS NSHM** | [Seismic hazard (PGA)](layers/seismic-hazard.md) | Public domain — US federal work, 17 U.S.C. § 105 | "USGS 2023 50-State National Seismic Hazard Model" |
 | **NASA FIRMS / NIFC WFIGS** | [Live wildfire (hotspots, perimeters, incidents)](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NASA FIRMS VIIRS + NIFC WFIGS" |
 | **NOAA HMS** | [Live wildfire smoke](layers/wildfire-live.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA Hazard Mapping System (HMS)" |
 | **NOAA / NWS** | [Live weather alerts](layers/nws-alerts.md) | Public domain — US federal work, 17 U.S.C. § 105 | "NOAA National Weather Service" |

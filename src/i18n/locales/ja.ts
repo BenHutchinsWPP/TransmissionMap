@@ -290,6 +290,8 @@ const locale: LocaleDictionary = {
   'popup.dcmExpires': '終了日',
   'popup.dcmRecent': '最近の変更',
   'popup.dcmUnconfirmed': '未確認',
+  'popup.dcmRejected': '否決: 提案は投票で否決され、発効しませんでした。',
+  'popup.dcmUnknown': '状況不明: 情報源は現在の状況を確認できませんでした。管轄機関に確認してください。',
   'popup.dcmFooter': 'Moratorium Nation (CC BY 4.0) + TransmissionMap 調査、{date} 時点 · 参考情報のみ — 各自治体に確認してください',
   'legend.dcmUtility': '電力会社の供給区域（斜線）',
   'popup.weatherZone': '気象警報区域',
