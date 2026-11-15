@@ -44,7 +44,7 @@
   "data/layers/ihfc_geo_heatflow.pmtiles": "270fd58802",
   "data/layers/ihfc_geo_heatflow_lut.i16.gz": "963482bf2d",
   "data/layers/ihfc_geo_heatflow_lut.json": "f98f688927",
-  "data/layers/manifest.json": "c821af28f2",
+  "data/layers/manifest.json": "b2a5509e14",
   "data/layers/mines.geojson.gz": "96f2ee360e",
   "data/layers/nerc_regions.geojson.gz": "b01ae254c3",
   "data/layers/nlr_wind_100m.pmtiles": "1c27516289",
@@ -74,7 +74,7 @@
   "data/layers/usgs_seismic_pga_lut.i16.gz": "c23e4dedd8",
   "data/layers/usgs_seismic_pga_lut.json": "f6cbec574b",
   "data/layers/wecc_path_lines.geojson.gz": "d4b3bf6928",
-  "data/layers/wecc_paths.geojson.gz": "23cc4e18f9",
+  "data/layers/wecc_paths.geojson.gz": "d43a23d1c8",
   "data/layers/westtec_10yr.geojson.gz": "f871c14155",
   "data/layers/wildfire_live.geojson.gz": "90165634af",
   "data/layers/worldpop_pop_density.pmtiles": "475e788d85",
@@ -206,6 +206,6 @@
   "data/releases/osm-transmission-lines-sa.zip": "e819d8a718",
   "data/releases/retail-territories-shp.zip": "56a93c69a9",
   "data/releases/retail-territories.zip": "ef6a3f74f0",
-  "data/releases/wecc-paths.zip": "ad8804f67c",
+  "data/releases/wecc-paths.zip": "a9e279cf0a",
   "data/releases/worldpop-pop-density.zip": "0983a0e8f0"
 }

@@ -16,14 +16,14 @@ and maintained by hand (see [Caveats](#caveats)).
 | | |
 |---|---|
 | Provider | Western Electricity Coordinating Council (WECC) |
-| Dataset | 2026 Path Rating Catalog — Public Version (V3, March 2026) |
+| Dataset | 2026 Path Rating Catalog — Public Version (V4, March 2026) |
 | License | Public Version, published by WECC for public use |
 | Attribution | WECC Path Rating Catalog |
 | Copy to My Data | the served feature, as it is (no geometry file) |
 | Table, chat, templates | the path markers; corridors appear on the map only |
 | Served | `data/layers/wecc_paths.geojson.gz` (markers) · `wecc_path_lines.geojson.gz` (matched lines) |
 | Built by | Maintained by hand |
-| Raw input | `2026 Path Rating Catalog Public_V3.pdf` |
+| Raw input | `2026 Path Rating Catalog Public_V4.pdf` |
 
 The catalog PDF is **authoritative** for path name, revision date, rating type,
 direction labels, transfer-limit MW, and the path's line list. The companion
@@ -58,7 +58,7 @@ the served GeoJSON is a derived extract.
 | `dir_fwd` / `dir_rev` | Abbreviated direction (opposite of each other) | `N-S` / `S-N` |
 | `mw_fwd` / `mw_rev` | Numeric MW (null when "Not Rated"/seasonal) | `4800` |
 | `mw_fwd_raw` / `mw_rev_raw` | Verbatim limit string (keeps range/Not-Rated) | `2,725 to 3,100 MW` |
-| `seasonal` | True when the catalog lists season/month-windowed limits | `true` (paths 14, 25, 45) |
+| `seasonal` | True when the catalog lists season/month-windowed limits | `true` (paths 5, 14, 25, 45) |
 | `rating_detail` | Hand-transcribed seasonal limit string (seasonal paths only) | `N-S: 100 MW (Winter), 80 MW (Summer) · S-N: 45 MW (both)` |
 | `note` | Optional hand-added clarification, shown as a popup row (present on a few paths) | `E-W rating is Non-Simultaneous; W-E is Simultaneous with Path 27.` |
 | `lines` | List of transmission lines defining the path | `["Malin to Round Mt. 500 kV", …]` |
@@ -117,11 +117,12 @@ kv, wecc_line, score:3.0}` — no rebuild needed.
   lacks them, recover from there before editing, and re-run `make publish-r2`
   after.
 - **Catalog vs CSV ratings drift.** Where the PDF and CSV disagree, the PDF wins
-  (e.g. EOR catalog 10,650 MW vs CSV 10,100; COI 4,800 vs 5,100). The CSV is an
+  (e.g. EOR catalog 10,650 MW vs CSV 10,100). The CSV is an
   older operational snapshot.
 - **Seasonal ratings are hand-transcribed.** `mw_fwd`/`mw_rev` hold the headline
-  figure per direction. The three paths with season-/month-windowed limits
-  (14 Idaho-to-Northwest, 25 PacifiCorp/PG&E, 45 SDG&E–CFE) set `seasonal: true`
+  figure per direction. The four paths with season-/month-windowed limits
+  (5 West of Cascades-South, 14 Idaho-to-Northwest, 25 PacifiCorp/PG&E,
+  45 SDG&E–CFE) set `seasonal: true`
   and carry a cleaned string in `rating_detail` (the popup's "Seasonal limits"
   row). These are transcribed by hand,
   verified against the catalog page images — the table layout can't be parsed
