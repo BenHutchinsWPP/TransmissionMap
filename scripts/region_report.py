@@ -2,7 +2,7 @@
 """
 region_report.py — Coverage and size report for the region tag fields.
 
-Two halves, both over paths given on the command line:
+Three parts, all over paths given on the command line:
 
   * Inputs (`--input`): tile-build inputs — GeoJSONSeq `.geojsonl`, `.gpkg`,
     `.csv` (region columns only), or a `.geojson`/`.geojson.gz` that ships as
@@ -16,20 +16,9 @@ Two halves, both over paths given on the command line:
     feature instances `tippecanoe-decode -z Z -Z Z` writes for one zoom (Z
     defaults to the archive's maxzoom), streamed, so what the tiles carry is
     measured rather than the build input.
-  * Archives (`--archive PATH[=PUBLISHED]`): built `.pmtiles` or shipped
-    `.geojson.gz`. Reports bytes, per-zoom tile p50/p95/max for PMTiles
-    (pmtiles_stats.entries — directories only, no tile payloads), and the
-    delta against the blob at PUBLISHED (default: PATH itself) on the local
-    `origin/data-static` ref, read with `git ls-tree -l` (no download).
-
-Repository headroom is publish_data.sh's estimate over the set it would push:
-every path `validate_build.py --list-expected` names, with each archive given
-here substituted at its PUBLISHED path (or added, when that path isn't
-listed). Blobs are deduped by hash, and any blob already anywhere in the
-`origin/data-static` tree costs nothing. The sum plus the current repository
-size (`gh api repos/<slug> --jq .size`, or `--repo-kb`) is checked against
-SIZE_CEILING_KB, read from publish_data.sh (or the environment, as that
-script does).
+  * Archives (`--archive PATH`): built `.pmtiles` or shipped `.geojson.gz`.
+    Reports bytes and, for PMTiles, per-zoom tile p50/p95/max
+    (pmtiles_stats.entries — directories only, no tile payloads).
 
 A missing or unreadable path exits 2 before any table prints.
 
@@ -39,19 +28,15 @@ A missing or unreadable path exits 2 before any table prints.
 
 Dependencies: stdlib only (sqlite3 reads `.gpkg` attributes, csv reads `.csv`);
 imports pmtiles_stats (entries) from
-this folder; `tippecanoe-decode` for `--sample-pmtiles`; runs validate_build.py
-(needs PyYAML, as publish_data.sh does) for the publish set; `git` for the
-published tree, `gh` (optional) for the repo size.
+this folder; `tippecanoe-decode` for `--sample-pmtiles`.
 """
 
 import argparse
 import collections
 import csv
 import gzip
-import hashlib
 import json
 import math
-import os
 import re
 import shutil
 import sqlite3
@@ -63,7 +48,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pmtiles_stats import entries  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-PUBLISHED_REF = "origin/data-static"
 REGION_FIELDS = ("countries", "admin1", "states", "counties", "zcta", "ba", "nerc", "retail")
 NONE = "none"
 NONE_LIST = f"|{NONE}|"
@@ -257,119 +241,14 @@ def tile_sizes(path):
     return by_zoom
 
 
-def _git(*args):
-    r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
-    return r.stdout.strip() if r.returncode == 0 else None
-
-
-def blob_sha(path):
-    """The sha git would store `path` under (`git hash-object`), streamed."""
-    h = hashlib.sha1(b"blob %d\0" % Path(path).stat().st_size)
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def published_blob(published):
-    """(sha, bytes) of the file PUBLISHED on origin/data-static, or None if no file is there."""
-    out = _git("ls-tree", "-l", PUBLISHED_REF, "--", published)
-    if not out:
-        return None
-    _mode, kind, sha, size = out.splitlines()[0].split("\t")[0].split()
-    return (sha, int(size)) if kind == "blob" else None
-
-
-def published_shas():
-    """Every blob sha anywhere in the origin/data-static tree."""
-    out = _git("ls-tree", "-r", PUBLISHED_REF)
-    if out is None:
-        print(f"WARNING: {PUBLISHED_REF} not found — every file counts as new (git fetch origin data-static)")
-    return {line.split()[2] for line in (out or "").splitlines()}
-
-
-def listed_layers():
-    """Paths publish_data.sh pushes (`validate_build.py --list-expected`), or None after printing why."""
-    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "validate_build.py"), "--list-expected"],
-                       cwd=ROOT, capture_output=True, text=True)
-    if r.returncode != 0:
-        print("validate_build.py --list-expected failed:\n" + r.stderr.strip())
-        return None
-    return r.stdout.split()
-
-
-def new_object_bytes(paths, on_branch):
-    """Bytes of distinct blobs among `paths` not already in `on_branch`."""
-    new = {}
-    for p in paths:
-        p = Path(p)
-        if not p.is_file():
-            continue
-        sha = blob_sha(p)
-        if sha not in on_branch:
-            new[sha] = p.stat().st_size
-    return sum(new.values())
-
-
-def parse_archive_arg(arg):
-    """PATH[=PUBLISHED]: split at the last `=`, unless the whole argument is an existing file."""
-    local, published = arg, ""
-    if not Path(arg).exists() and "=" in arg:
-        local, published = arg.rsplit("=", 1)
-    if not published:
-        p = Path(local).resolve()
-        try:
-            published = str(p.relative_to(ROOT))
-        except ValueError:
-            published = local
-    return local, published
-
-
-def size_ceiling_kb():
-    """SIZE_CEILING_KB as publish_data.sh resolves it: environment, else its default."""
-    if os.environ.get("SIZE_CEILING_KB"):
-        return int(os.environ["SIZE_CEILING_KB"])
-    text = (ROOT / "scripts" / "publish_data.sh").read_text()
-    return int(re.search(r'SIZE_CEILING_KB:-(\d+)', text).group(1))
-
-
-def repo_kb():
-    """Current repository size in KB the way publish_data.sh reads it, or None."""
-    url = _git("config", "--get", "remote.origin.url") or ""
-    slug = re.sub(r"\.git$", "", re.sub(r".*github\.com[:/]", "", url))
-    try:
-        r = subprocess.run(["gh", "api", f"repos/{slug}", "--jq", ".size"],
-                           capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    return int(r.stdout) if r.returncode == 0 and r.stdout.strip().isdigit() else None
-
-
-def report_archives(args_list, current_kb=None):
-    """Print the archive tables and the headroom estimate."""
-    substitutes = {}
+def report_archives(args_list):
+    """Print the archive size table and the per-zoom tile tables."""
     zoom_tables = []
-    ref = _git("rev-parse", "--short", PUBLISHED_REF) or "missing"
-    print(f"\n== Archives (published = local {PUBLISHED_REF} @ {ref}) ==")
-    print(f"{'archive':<44} {'bytes':>12} {'MiB':>7} {'published':>12} {'delta':>16}")
-    for arg in args_list:
-        local, published = parse_archive_arg(arg)
-        substitutes[published] = local
+    print("\n== Archives ==")
+    print(f"{'archive':<44} {'bytes':>12} {'MiB':>7}")
+    for local in args_list:
         size = Path(local).stat().st_size
-        blob = published_blob(published)
-        if blob is None:
-            pub, delta = "-", "not published"
-        else:
-            sha, pub_size = blob
-            pub = str(pub_size)
-            if blob_sha(local) == sha:
-                delta = "unchanged"
-            elif pub_size:
-                delta = f"{size - pub_size:+d} ({100 * (size - pub_size) / pub_size:+.2f}%)"
-            else:
-                delta = f"{size:+d} (from 0 B)"
-        print(f"{_short(local):<44} {size:>12} {size / 2**20:>7.1f} "
-              f"{pub:>12} {delta:>16}")
+        print(f"{_short(local):<44} {size:>12} {size / 2**20:>7.1f}")
         if local.endswith(".pmtiles"):
             zoom_tables.append((local, tile_sizes(local)))
 
@@ -380,26 +259,6 @@ def report_archives(args_list, current_kb=None):
             c = by_zoom[z]
             print(f"{z:>3} {sum(c.values()):>9} {percentile(c, 0.5):>8} "
                   f"{percentile(c, 0.95):>8} {max(c):>8}")
-
-    print("\n== Repository headroom (publish_data.sh estimate) ==")
-    listed = listed_layers()
-    if listed is None:
-        print("publish set: unknown")
-        return
-    files = {p: ROOT / p for p in listed}
-    added = sum(p not in files for p in substitutes)
-    files.update(substitutes)
-    added_kb = new_object_bytes(files.values(), published_shas()) // 1024
-    ceiling = size_ceiling_kb()
-    print(f"publish set: {len(listed)} listed paths, {len(substitutes) - added} substituted, {added} added")
-    print(f"new objects (not on {PUBLISHED_REF}): {added_kb} KB ({added_kb / 2**20:.2f} GB)")
-    print(f"ceiling SIZE_CEILING_KB: {ceiling} KB ({ceiling / 2**20:.2f} GB)")
-    if current_kb is None:
-        print("repo size: unknown — pass --repo-kb N (gh api repos/<slug> --jq .size)")
-    else:
-        projected = current_kb + added_kb
-        verdict = "fits" if projected <= ceiling else "OVER the publish ceiling"
-        print(f"repo {current_kb} KB + new {added_kb} KB = {projected} KB ({projected / 2**20:.2f} GB): {verdict}")
 
 
 def _short(path):
@@ -415,7 +274,7 @@ def check_paths(inputs, archives, samples=()):
     if samples and not shutil.which("tippecanoe-decode"):
         return "tippecanoe-decode is not on PATH (needed by --sample-pmtiles)"
     sample_paths = [parse_sample_arg(a)[0] for a in samples]
-    for path in [*inputs, *(parse_archive_arg(a)[0] for a in archives), *sample_paths]:
+    for path in [*inputs, *archives, *sample_paths]:
         if not Path(path).is_file():
             return f"{path}: no such file"
         if str(path).endswith(".gpkg"):
@@ -435,14 +294,11 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0].strip())
     ap.add_argument("--input", nargs="+", action="extend", default=[], metavar="PATH",
                     help=".geojsonl / .gpkg / .geojson[.gz] tile input")
-    ap.add_argument("--archive", nargs="+", action="extend", default=[], metavar="PATH[=PUBLISHED]",
-                    help=f".pmtiles / .geojson.gz archive; PUBLISHED is the path it replaces on "
-                         f"{PUBLISHED_REF}. Split at the last '='; an argument that is an existing "
-                         f"file is taken whole")
+    ap.add_argument("--archive", nargs="+", action="extend", default=[], metavar="PATH",
+                    help=".pmtiles / .geojson.gz archive")
     ap.add_argument("--sample-pmtiles", nargs="+", action="extend", default=[], metavar="PATH[:Z]",
                     help="PMTiles archive whose features tippecanoe-decode writes at zoom Z "
                          "(default: the archive's maxzoom); split at the last ':'")
-    ap.add_argument("--repo-kb", type=int, help="current repo size in KB (default: ask gh)")
     a = ap.parse_args(argv)
     if not (a.input or a.archive or a.sample_pmtiles):
         ap.error("give at least one --input, --sample-pmtiles or --archive")
@@ -455,7 +311,7 @@ def main(argv=None):
     if a.sample_pmtiles:
         print_samples(a.sample_pmtiles)
     if a.archive:
-        report_archives(a.archive, a.repo_kb if a.repo_kb is not None else repo_kb())
+        report_archives(a.archive)
     return 0
 
 

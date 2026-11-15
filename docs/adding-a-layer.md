@@ -80,7 +80,7 @@ my_layer: "data/layers/my_layer.pmtiles",        // PMTiles
 
 Write the path as a plain double-quoted literal. `scripts/validate_build.py`
 finds every expected layer by regexing `"data/layers/…"` out of this file, and
-`scripts/publish_data.sh` publishes exactly that list — a path built with a
+`scripts/publish_r2.sh` uploads exactly that list — a path built with a
 template literal or a `.map()` is invisible to both, so the layer never gets
 pushed and `make validate` reports it as an orphan.
 

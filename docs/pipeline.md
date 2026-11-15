@@ -67,7 +67,7 @@ than failing, so `make data-manifest` is always safe to run.
 `make data-manifest` is chained into the normal flow rather than a step you run
 by hand: `validate` depends on it (so `data/layers/manifest.json` — one of the
 `assets/constants.ts`-declared outputs `make validate` checks for — is always
-current instead of reported absent) and `publish-data` depends on it too (so the
+current instead of reported absent) and `publish-r2` depends on it too (so the
 manifest that ships is freshly built, built-artifact sizes included once `make
 tiles`/`make global-tiles` have run, rather than stale or missing). Run it
 directly only to inspect `data/layers/manifest.json` on its own.
@@ -171,7 +171,7 @@ The report measures the region fields over paths you pass in:
 ```bash
 python3 scripts/region_report.py \
   --input data/build/<layer>.geojsonl data/layers/eia_generators.geojson.gz \
-  --archive tmp/<build>/transmission.pmtiles=data/layers/osm_transmission_lines.pmtiles
+  --archive tmp/<build>/transmission.pmtiles
 ```
 
 - **`--input`** (`.geojsonl`, `.gpkg`, `.csv` (region columns only), or a
@@ -183,11 +183,8 @@ python3 scripts/region_report.py \
 - **`--sample-pmtiles PATH[:Z]`**: the same table over the features
   `tippecanoe-decode` writes for one zoom, so what the tiles carry is measured.
   Z defaults to the archive's maxzoom; the decode is streamed.
-- **`--archive PATH[=PUBLISHED]`** (`.pmtiles` or a shipped `.geojson.gz`):
-  bytes, per-zoom tile p50/p95/max for PMTiles, and the size
-  delta against the file at `PUBLISHED` (default: `PATH`) on the local
-  `origin/data-static` ref — `git fetch` first for a current comparison.
-  `PATH` is split at the last `=` unless the whole argument is an existing file.
+- **`--archive PATH`** (`.pmtiles` or a shipped `.geojson.gz`):
+  bytes, and per-zoom tile p50/p95/max for PMTiles.
 
 The script exits 2 — before printing any table — when a path is missing or a `.gpkg` is not a GeoPackage.
 

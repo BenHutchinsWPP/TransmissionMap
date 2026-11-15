@@ -131,7 +131,7 @@ keep each tagged archive within about 20% of the untagged build (hifld_natgas_li
 Stable feature ids ride in the tile's native id slot on the large OSM archives. The
 largest archives are the ones to watch: a new tagged field, or a year of OSM
 growth, grows what each publish uploads. `scripts/region_report.py --archive`
-prints each archive's size against the untagged build.
+prints each archive's size and per-zoom tile sizes.
 
 ## Substation zoom floor
 

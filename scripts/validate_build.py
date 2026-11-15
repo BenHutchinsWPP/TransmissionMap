@@ -156,7 +156,7 @@ def is_continental_build(path: str, expected: set[str]) -> bool:
 def list_expected() -> int:
     """Print every data/layers path assets/constants.ts fetches, one per line.
 
-    scripts/publish_data.sh reads this so the push carries only what the
+    scripts/publish_r2.sh reads this so the upload carries only what the
     frontend actually loads — the per-continent archives stay local.
     """
     for want in sorted(expected_layers(CONSTANTS.read_text())):

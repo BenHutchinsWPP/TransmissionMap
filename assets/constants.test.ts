@@ -1,7 +1,7 @@
 // The data paths scripts/validate_build.py sees. Its expected_layers() regexes
 // every double-quoted "data/layers/…" literal out of this file's source text,
 // and that list decides what `make validate` checks and what
-// scripts/publish_data.sh publishes (via --list-expected). A DATA path written
+// scripts/publish_r2.sh uploads (via --list-expected). A DATA path written
 // any other way (a template literal, a .map()) is invisible to both, so this
 // test holds the regex's view equal to DATA itself.
 import { readFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ const PATH_LITERAL = /"(data\/layers\/[^"]+)"/g;
 
 // DATA entries that are deliberately not data/layers/ paths: the moratorium
 // layer is served from its own branch (MORATORIUM_ORIGIN), which
-// validate_build.py and publish_data.sh leave alone; the Routing constraints
+// validate_build.py and publish_r2.sh leave alone; the Routing constraints
 // rasters and the route cube are served from data/route/ (versioned by ROUTE_ID on the data host).
 const NOT_SCRAPED = new Set<keyof typeof DATA>(['dc_moratoriums', 'route_cube', 'route_constraints', 'line_index']);
 

@@ -10,7 +10,7 @@ EPSG:3857 with -r near on the z9 pixel grid -> `gdal raster tile` z3-z9 (nearest
 `max` overviews so thin features survive; `mode` for the land manager and nominal classes,
 whose codes are not a precedence) -> each code tile recoloured to a paletted PNG (index 0 transparent) -> MBTiles
 (stdlib sqlite3, TMS rows) -> `pmtiles convert`. Output data/route/constraints/<id>.pmtiles +
-manifest.json; never data/layers/ (publish_data.sh ships that). Reads pd_ files, and osm_ files
+manifest.json; never data/layers/ (publish_r2.sh ships that). Reads pd_ files, and osm_ files
 only for OSM concerns (credited ODbL); the overview and land manager never read osm_.
 
 Usage: build_route_constraints.py [--only id1,id2] [--force] [--no-spot-checks]

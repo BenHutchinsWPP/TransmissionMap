@@ -34,7 +34,7 @@ PBF_GLOB    := $(RAW_OSM)/*.osm.pbf
 HIFLD_DIR   := data/raw/hifld
 EIA_DIR     := data/raw/eia
 
-.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids route-cube route-structures route-buildings route-buildings-national route-wetland route-cube-assemble route-constraints line-parquet columns-parquet columns-check geometry-check region-domains eia930-bas test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-data publish-r2 web clean clean-build distclean check
+.PHONY: help install pipeline region-tags continental-osm continental-all global-tiles land regions natgas wind solar geo hydro-pts popden mines wildfire-dev nws-alerts-dev weather-live-dev outages-dev seismic boundaries fema-nri nws-zones boem-wind validate stable-ids route-cube route-structures route-buildings route-buildings-national route-wetland route-cube-assemble route-constraints line-parquet columns-parquet columns-check geometry-check region-domains eia930-bas test-pipeline admin-lines census-boundaries world-boundaries tiles releases data-manifest publish-r2 web clean clean-build distclean check
 
 help:
 	@echo "TransmissionMap targets:"
@@ -80,7 +80,6 @@ help:
 	@echo "  make releases    build per-layer download ZIPs → data/releases/"
 	@echo "  make data-manifest  build per-layer provenance → data/layers/manifest.json (Data Credits page)"
 	@echo "  make publish-r2   copy layers, pack zips and data/analysis to the R2 bucket data-wpptx-org (ARGS=--dry-run first; needs rclone + .env.r2)"
-	@echo "  make publish-data publish a build: layers constants.ts names → orphan 'data-static' branch, download packs → 'data-latest' GitHub Release (needs public repo + gh)"
 	@echo "  make web         serve the static site on http://localhost:$(PORT)"
 	@echo "  make clean-build remove $(BUILD)/ (keep data/layers + data/releases)"
 	@echo "  make clean       remove $(BUILD)/ AND data/layers + data/releases"
@@ -536,7 +535,7 @@ route-constraints:
 
 # ── Line geometry: transmission lines as GeoParquet → data/analysis/ ──────
 # OSM reads the merged world input `make global-tiles` keeps, so run that first.
-# publish_data.sh does not ship data/analysis/; publish_r2.sh does. docs/pipeline.md § Line geometry.
+# publish_r2.sh ships data/analysis/. docs/pipeline.md § Line geometry.
 line-parquet:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@mkdir -p tmp/logs tmp/build-tmp
@@ -580,14 +579,6 @@ releases:
 data-manifest:
 	@if [ ! -d "$(VENV)" ]; then echo "ERROR: venv missing. Run 'make install' first."; exit 1; fi
 	@$(PY) $(SCRIPTS)/build_data_manifest.py
-
-# ── Publish built data to the raw-hosted 'data-static' branch ───────────────
-# Depends on data-manifest so data/layers/manifest.json — a published layer
-# like any other DATA.* entry — is always freshly built (built-artifact
-# sizes included, once `make tiles`/`make global-tiles` have run) before the
-# push, instead of shipping a stale file or a 404.
-publish-data: data-manifest
-	@bash $(SCRIPTS)/publish_data.sh
 
 # Static data → R2 (data.wpptx.org); keys and dashboard steps in local/r2-deploy.md.
 publish-r2: data-manifest

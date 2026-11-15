@@ -174,7 +174,7 @@ Gates move only for a sourced difference in inputs.
 not a ranking of the land; no visitor-facing text should present it as one. Its other rules are
 in the `AGENTS.md` task table.
 - **Concern switch:** a pick sets `state.routeConcern` through `setRouteConcern()` (`assets/route-constraints.ts`), which swaps the one raster source's url with `setRasterUrl()` (`assets/layers/layer-plan.ts`).
-- **Zoom range and hosting:** the tiles are z3–z9, and z3–z8 for land cover and slope, which exceed 20 MiB at z9 (see `manifest.json`). `DATA.route_constraints` is in `NOT_SCRAPED` (`assets/constants.test.ts`), so `publish_data.sh` and `make validate` never see them; they ship in the route set (*Hosting* below).
+- **Zoom range and hosting:** the tiles are z3–z9, and z3–z8 for land cover and slope, which exceed 20 MiB at z9 (see `manifest.json`). `DATA.route_constraints` is in `NOT_SCRAPED` (`assets/constants.test.ts`), so `make validate` never sees them; they ship in the route set (*Hosting* below).
 
 ## Hosting
 

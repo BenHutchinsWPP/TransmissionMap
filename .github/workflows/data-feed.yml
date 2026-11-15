@@ -52,8 +52,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           # Fully qualified on purpose: an unqualified `data` makes checkout
-          # fetch with a `refs/heads/data*` glob, which also pulls the ~1 GB
-          # `data-static` tiles branch every run (~80 s of dead time).
+          # fetch with a `refs/heads/data*` glob, which also pulls the sibling
+          # data branches.
           ref: refs/heads/data             # orphan branch — only the data files
           token: ${{ secrets.GITHUB_TOKEN }}
 

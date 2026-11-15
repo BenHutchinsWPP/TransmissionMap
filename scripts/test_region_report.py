@@ -4,7 +4,7 @@ The contract this guards: `|`-delimited lists and scalars count the same way
 across every input format (.geojsonl, .geojson.gz, .gpkg); absent, blank,
 `none` and malformed values are told apart and every share is over all
 features; per-zoom tile sizes come out of PMTiles root and leaf directories;
-the headroom estimate costs only blobs not already published, in whole KB. Synthetic
+the archive table reports bytes and per-zoom tile sizes. Synthetic
 files only — no data/, no network.
 """
 import collections
@@ -21,7 +21,7 @@ from unittest import mock
 
 import region_report
 from region_report import (
-    blob_sha, classify, field_stats, iter_properties, iter_sampled, parse_archive_arg,
+    classify, field_stats, iter_properties, iter_sampled,
     parse_sample_arg, percentile, pmtiles_maxzoom, tile_sizes,
 )
 
@@ -203,74 +203,13 @@ class Archives(unittest.TestCase):
         self.assertEqual(dict(z[1]), {100: 2, 300: 1})
         self.assertEqual(dict(z[2]), {50: 1})
 
-    def _run(self, on_branch=(), repo_kb=0, ceiling_kb=10**6, blob=None, extra=(),
-             listed=(), archive=None):
+    def test_archive_table_lists_bytes_and_zoom_tiles(self):
         out = io.StringIO()
-        with mock.patch.object(region_report, "published_blob", return_value=blob), \
-             mock.patch.object(region_report, "listed_layers", return_value=list(listed)), \
-             mock.patch.object(region_report, "published_shas", return_value=set(on_branch)), \
-             mock.patch.dict("os.environ", {"SIZE_CEILING_KB": str(ceiling_kb)}), \
-             contextlib.redirect_stdout(out):
-            code = region_report.main(["--archive", archive or str(self.pm), *map(str, extra),
-                                       "--repo-kb", str(repo_kb)])
-        return code, out.getvalue()
-
-    def test_headroom_counts_unpublished_blob_once_in_whole_kb(self):
-        self.pm.write_bytes(self.pm.read_bytes().ljust(3000, b"\0"))
-        twin = self.dir / "twin.pmtiles"
-        twin.write_bytes(self.pm.read_bytes())
-        _, out = self._run(extra=[twin])
-        self.assertIn("2 added", out)
-        self.assertIn("new objects (not on origin/data-static): 2 KB", out)
-
-    def test_headroom_substitutes_archive_for_listed_path(self):
-        self.pm.write_bytes(self.pm.read_bytes().ljust(3000, b"\0"))
-        listed = self.dir / "listed.pmtiles"
-        listed.write_bytes(b"x" * 5000)
-        missing = self.dir / "missing.pmtiles"
-        _, out = self._run(listed=[str(listed), str(missing)])
-        self.assertIn("2 listed paths, 0 substituted, 1 added", out)
-        self.assertIn("new objects (not on origin/data-static): 7 KB", out)  # 8000 B
-        _, out = self._run(listed=[str(listed), str(missing)], archive=f"{self.pm}={listed}")
-        self.assertIn("2 listed paths, 1 substituted, 0 added", out)
-        self.assertIn("new objects (not on origin/data-static): 2 KB", out)
-
-    def test_headroom_skips_published_blob(self):
-        _, out = self._run(on_branch={blob_sha(self.pm)})
-        self.assertIn("new objects (not on origin/data-static): 0 KB", out)
-
-    def test_headroom_ceiling_is_inclusive(self):
-        self.pm.write_bytes(self.pm.read_bytes().ljust(2048, b"\0"))
-        _, out = self._run(repo_kb=8, ceiling_kb=10)
-        self.assertIn("= 10 KB", out)
-        self.assertIn("fits", out)
-        _, out = self._run(repo_kb=9, ceiling_kb=10)
-        self.assertIn("OVER the publish ceiling", out)
-
-    def test_delta_against_published_blob(self):
-        _, out = self._run(blob=(blob_sha(self.pm), self.size))
-        self.assertIn("unchanged", out)
-        _, out = self._run(blob=("0" * 40, self.size - 10))
-        self.assertIn("+10 (", out)
-        _, out = self._run(blob=("0" * 40, 0))
-        self.assertIn("(from 0 B)", out)
-
-    def test_published_path_that_is_a_directory(self):
-        with mock.patch.object(region_report, "_git", return_value="040000 tree abc -\tdata/layers"):
-            self.assertIsNone(region_report.published_blob("data/layers"))
-        with mock.patch.object(region_report, "_git", return_value="100644 blob abc 42\tdata/x"):
-            self.assertEqual(region_report.published_blob("data/x"), ("abc", 42))
-
-    def test_ceiling_env_overrides_publish_script_default(self):
-        with mock.patch.dict("os.environ", {"SIZE_CEILING_KB": "123"}):
-            self.assertEqual(region_report.size_ceiling_kb(), 123)
-        with mock.patch.dict("os.environ", {"SIZE_CEILING_KB": ""}):
-            self.assertGreater(region_report.size_ceiling_kb(), 0)
-
-    def test_blob_sha_matches_git(self):
-        empty = self.dir / "empty"
-        empty.write_bytes(b"")
-        self.assertEqual(blob_sha(empty), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391")
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(region_report.main(["--archive", str(self.pm)]), 0)
+        text = out.getvalue()
+        self.assertIn(str(self.size), text)
+        self.assertIn("tile bytes per zoom", text)
 
     def test_unusable_path_exits_before_any_table(self):
         not_gpkg = self.dir / "x.gpkg"
@@ -335,13 +274,6 @@ class Archives(unittest.TestCase):
         self.assertEqual(row[1], "z0")                       # zoom after the archive path
         self.assertEqual(row[2:4], ["states", "1"])          # field, feature instances
         self.assertEqual(row[-1], str(len("|TX|")))          # maxlen
-
-    def test_archive_arg_split(self):
-        self.assertEqual(parse_archive_arg("x/a.pmtiles=data/layers/b.pmtiles"),
-                         ("x/a.pmtiles", "data/layers/b.pmtiles"))
-        odd = self.dir / "a=b.pmtiles"
-        odd.write_bytes(b"")
-        self.assertEqual(parse_archive_arg(str(odd))[0], str(odd))
 
 
 if __name__ == "__main__":

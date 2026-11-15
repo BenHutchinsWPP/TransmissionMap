@@ -17,15 +17,13 @@ The map draws transmission lines, substations, power plants, pipelines, renewabl
 ```bash
 git clone https://github.com/benhutchinswpp/TransmissionMap.git
 cd TransmissionMap
-# prebuilt map data (not in main) — see docs/hosting-plan.md
-curl -L https://github.com/BenHutchinsWPP/TransmissionMap/archive/data-static.tar.gz \
-  | tar xz --strip-components=1
 npm install
-npm run dev
-# open http://localhost:5173
+npm run build
+npm run preview
+# open the URL it prints
 ```
 
-The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — prod fetches them from `data.wpptx.org`; local dev uses your `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md); for where each asset class is hosted, [docs/hosting-plan.md](docs/hosting-plan.md).
+The app is Vite-bundled TypeScript + MapLibre GL JS. PMTiles and GeoJSON are not in `main` — a production build (`npm run preview`) reads them from `data.wpptx.org`, and `npm run dev` reads a local `data/layers/` build. To regenerate data from upstream sources, see [docs/pipeline.md](docs/pipeline.md); for where each asset class is hosted, [docs/hosting-plan.md](docs/hosting-plan.md).
 
 ---
 
