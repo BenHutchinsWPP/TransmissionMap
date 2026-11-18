@@ -49,7 +49,6 @@ export function chatSummary(r: RouteResult, preset: RoutePreset, methodLabel: st
   if (r.altSkipped) notes.push(`alternatives: ${r.altSkipped}`);
   notes.splice(2);
   notes.push('cost is a rough early estimate range (−30 % / +50 %)');
-  if (r.cost.userCosts?.items.length) notes.push(`the cost uses figures entered by the visitor (${r.cost.userCosts.basis === 'all-in' ? 'all-in cost per mile' : 'base cost per mile'})`);
   return {
     a: end(a), b: end(b),
     method: cleanName(methodLabel) ?? '',

@@ -28,11 +28,8 @@
 //       entries by hash (route-request.ts `mergePatch`); `hold()` refuses a layer that takes the
 //       session past UPLOAD_TOTAL_VERTICES. The invalid-cell count goes to the input column
 //       (ctx.setMethodErrors). Tall drawer while mounted.
-//       "Your own costs" (cost-inputs.ts): the card between the table and the uploaded layers writes `cost_inputs` into the
-//       session patch through validatePresetPatch; the table and the stacked table never see it (`rowsOnly`), and a table
-//       edit that clashes with an all-in basis is shown in the card and held like an invalid cell. `countEdits` and
-//       `changedRows` count it; Save and Save to file carry it. `solvedPresetOf` is the preset a solve used (method + patch).
-// Deps: route-tabs/method-grid.ts, route-tabs/method-rows.ts, route-tabs/cost-inputs.ts, route-tabs/weights-table.ts, route/preset-patch.ts, route/upload-layer.ts, route/route-open.ts (registerUpload, unregisterUpload), ui/route-request.ts (mergePatch), route/custom-presets.ts, user-data/user-data-export.ts (downloadFile),
+//       `solvedPresetOf` is the preset a solve used (method + patch).
+// Deps: route-tabs/method-grid.ts, route-tabs/method-rows.ts, route-tabs/weights-table.ts, route/preset-patch.ts, route/upload-layer.ts, route/route-open.ts (registerUpload, unregisterUpload), ui/route-request.ts (mergePatch), route/custom-presets.ts, user-data/user-data-export.ts (downloadFile),
 //       registry/route-presets.ts, route/route.ts (types), route-tabs/types.ts (types),
 //       i18n (t), ./method.css.
 
@@ -50,7 +47,6 @@ import { UPLOAD_MAX_BYTES, validateUpload, type UploadLayer } from '../../route/
 import { registerUpload, unregisterUpload } from '../../route/route-open.js';
 import { mergePatch } from '../route-request.js';
 import { mountMethodGrid, type MethodGrid } from './method-grid.js';
-import { mountCostInputs, type CostInputsCard } from './cost-inputs.js';
 import type { RouteInputs, RouteSession, RouteTab, RouteTabContext, SolveSpec } from './types.js';
 import { h } from '../../utils/utils-dom.js';
 
@@ -118,12 +114,11 @@ function combined(stored: PresetPatch | null, session: PresetPatch | null): Pres
 }
 const dropRemove = (p: PresetPatch | null): PresetPatch | undefined =>
   !p ? undefined : p.add_rows?.some((r) => r.remove) ? { ...p, add_rows: p.add_rows.filter((r) => !r.remove) } : p;
-/** The patch the tables edit: no uploaded-layer rows and no cost inputs (each has its own section). */
+/** The patch the tables edit: no uploaded-layer rows (they have their own section). */
 const rowsOnly = (p: PresetPatch | null): PresetPatch | null => {
-  if (!p?.add_rows && !p?.cost_inputs) return p;
+  if (!p?.add_rows) return p;
   const rest = { ...p };
   delete rest.add_rows;
-  delete rest.cost_inputs;
   return Object.keys(rest).length ? rest : null;
 };
 
@@ -135,13 +130,9 @@ export function solvedPresetOf(inp: RouteInputs): RoutePreset | null {
   return v.ok ? v.result : null;
 }
 
-/** Entered figures plus ends that are not auto. */
-const costInputEdits = (ci: PresetPatch['cost_inputs']): number =>
-  !ci ? 0 : Object.values(ci.line_types ?? {}).reduce((n, e) => n + Object.keys(e).length, 0) + (ci.ends ?? []).filter((e) => e !== 'auto').length;
-
 export const countEdits = (p: PresetPatch | null) =>
   (p?.rows ?? []).reduce((n, r) => n + (r.route_w !== undefined ? 1 : 0) + (r.cost_x !== undefined ? 1 : 0) + (r.except ? 1 : 0), 0)
-  + (p?.contingency !== undefined ? 1 : 0) + (p?.add_rows?.length ?? 0) + costInputEdits(p?.cost_inputs);
+  + (p?.contingency !== undefined ? 1 : 0) + (p?.add_rows?.length ?? 0);
 
 /** Labels of the rows (and contingency) whose patch entry differs between a and b. */
 function changedRows(preset: RoutePreset, a: PresetPatch | null, b: PresetPatch | null): string[] {
@@ -149,7 +140,6 @@ function changedRows(preset: RoutePreset, a: PresetPatch | null, b: PresetPatch 
   const out = [...new Set([...ra.keys(), ...rb.keys()])].sort((x, y) => x - y)
     .filter((i) => !sameJson(ra.get(i), rb.get(i)) && preset.rows[i]).map((i) => rowLabel(preset.rows[i]));
   if (a?.contingency !== b?.contingency) out.push(t('route.meth.contingency'));
-  if (!sameJson(a?.cost_inputs, b?.cost_inputs)) out.push(t('route.ci.h'));
   return out;
 }
 
@@ -251,9 +241,7 @@ interface St {
   sensBody: HTMLElement | null;
   uplBody: HTMLElement | null;
   uplMsg: string;
-  ci: CostInputsCard | null;
-  ciLine: string;           // the line type the card shows
-  heldRows: PresetPatch | null;   // table edits held back by an all-in clash, re-applied when the card resolves it
+  shownId: string;          // the method id the table was built for
 }
 let states = new WeakMap<RouteSession, St>();
 let mounted: St | null = null;
@@ -265,7 +253,7 @@ function stateFor(ctx: RouteTabContext): St {
   const s = ctx.session;
   let st = states.get(s);
   if (!st) {
-    st = { ctx, ends: endsOf(s), table: null, mqOff: null, errors: 0, edits: 0, timer: undefined, saving: false, renaming: false, sens: null, delta: null, refreshHead: null, sensBody: null, uplBody: null, uplMsg: '', ci: null, ciLine: '', heldRows: null };
+    st = { ctx, ends: endsOf(s), table: null, mqOff: null, errors: 0, edits: 0, timer: undefined, saving: false, renaming: false, sens: null, delta: null, refreshHead: null, sensBody: null, uplBody: null, uplMsg: '', shownId: '' };
     states.set(s, st);
   }
   st.ctx = ctx;
@@ -343,7 +331,6 @@ function header(st: St, m: Method): HTMLElement {
     st.errors = 0;
     st.edits = 0;
     st.table?.setPatch(null);
-    st.ci?.refresh();
     syncUploads(m, s);
     st.uplMsg = '';
     paintUploads(st);
@@ -758,6 +745,7 @@ const tab: RouteTab = {
     mounted = st;
     ctx.setTall(true);
     const s = ctx.session, m = methodFor(s);
+    st.shownId = s.inputs.presetId;
     const root = h('div', 'rm');
     if (!m) { root.append(h('p', 'rp-hint', t('route.err.preset'))); el.replaceChildren(root); return; }
     syncUploads(m, s);
@@ -765,20 +753,12 @@ const tab: RouteTab = {
     const host = h('div', 'rm-table');
     const foot = h('div', 'rm-foot');
     foot.append(fixedNote(), h('p', 'rm-fixed', t('route.report.method.class5')), sensCard(st));
-    const base = routePreset(m.base) ?? m.preset;
-    st.ci = mountCostInputs({ session: s, base, stored: m.stored, onPatch: (p) => { applyUploadEdit(st, m, p); if (st.heldRows) onChange(st.heldRows, 0); } });
-    st.ciLine = s.inputs.lineType;
-    root.append(head, host, st.ci.el, uploadSection(st), foot);
+    root.append(head, host, uploadSection(st), foot);
     el.replaceChildren(root);
     const onChange = (rowsPatch: PresetPatch | null, n: number) => {
-      // the table knows rows, not uploaded layers or cost inputs: keep the session's
-      const add = s.inputs.patch?.add_rows, ci = s.inputs.patch?.cost_inputs;
-      const patch: PresetPatch | null = add?.length || ci ? { ...rowsPatch, ...(add?.length ? { add_rows: add } : {}), ...(ci ? { cost_inputs: ci } : {}) } : rowsPatch;
-      st.heldRows = null;
-      if (n === 0 && ci) {
-        const v = validatePresetPatch(base, mergePatch(m.stored, patch) ?? undefined);
-        if (!v.ok) { n = 1; st.heldRows = rowsPatch; st.ci?.say(v.reason); } else st.ci?.say('');
-      }
+      // the table knows rows, not uploaded layers: keep the session's
+      const add = s.inputs.patch?.add_rows;
+      const patch: PresetPatch | null = add?.length ? { ...rowsPatch, add_rows: add } : rowsPatch;
       st.errors = n;
       st.edits = countEdits(patch);
       ctx.setMethodErrors(n);
@@ -816,7 +796,6 @@ const tab: RouteTab = {
       st.mqOff = () => mq.removeEventListener('change', again);
     }
     st.errors = 0;
-    st.heldRows = null;
     st.edits = countEdits(s.inputs.patch);
     ctx.setMethodErrors(0);
     st.refreshHead?.();
@@ -826,9 +805,8 @@ const tab: RouteTab = {
   /** A re-solve landed: the header (delta chip, buttons) and the sensitivity card only. */
   update(el, ctx) {
     const st = stateFor(ctx);
-    if (mounted !== st || !st.table || !el.querySelector('.rm')) { tab.render(el, ctx); return; }
+    if (mounted !== st || !st.table || !el.querySelector('.rm') || st.shownId !== ctx.session.inputs.presetId) { tab.render(el, ctx); return; }
     st.table.setRegionM(ctx.session.result?.cost.regionM);
-    if (st.ciLine !== ctx.session.inputs.lineType) { st.ciLine = ctx.session.inputs.lineType; st.ci?.refresh(); }
     if ('setHighlight' in st.table) st.table.setHighlight(ctx.session.highlight, !!ctx.highlightRows && canHighlight(ctx.session));
     st.refreshHead?.();
     paintSens(st);
@@ -846,7 +824,6 @@ const tab: RouteTab = {
     st.refreshHead = null;
     st.sensBody = null;
     st.uplBody = null;
-    st.ci = null;
     if (st.errors) { st.errors = 0; st.ctx.setMethodErrors(0); }
     st.ctx.setTall(false);
   },

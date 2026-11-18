@@ -193,53 +193,22 @@ describe('buildReportModel', () => {
     expect(buildReportModel(s, money, '1/2/2026')!.endpoints.a).toMatch(/, terminal: terminal as the method prices it$/);
   });
 
-  it('the method section lists the figures the visitor entered, with year and basis, and the ends set', () => {
-    const s = FIXTURE_SESSION();
-    s.resultInputs = { ...s.resultInputs!, patch: { cost_inputs: { basis: 'all-in', year: 2024, line_types: { ac500: { usd_per_mi: 4_500_000, station_usd: 30_000_000, position_usd: 9_000_000 }, ac345: { usd_per_mi: 1e6 } }, ends: ['none', 'position'] } } };
-    const m = buildReportModel(s, fmtMoney, '1/2/2026')!;
-    expect(m.method.editsSummary).toBe('6 edits for this route:');   // 4 figures (3 for ac500, 1 for ac345) + 2 ends
-    expect(m.method.edits).toEqual([
-      'Line cost entered: $4.5\u00a0M per mile, 2024 dollars (all-in cost per mile)',
-      'New station entered: $30.0\u00a0M, 2024 dollars',
-      'Line position entered: $9.0\u00a0M, 2024 dollars',
-      'Terminals set: end A none, end B line position at an existing station',
-    ]);
-    // the report text carries them in print order, after the summary
-    const text = reportText(m);
-    expect(text.indexOf(m.method.edits[0])).toBeGreaterThan(text.indexOf(m.method.editsSummary!));
-  });
-
-  it('a saved method\'s figures are listed without any session edit', () => {
-    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify({ v: 1, items: [{ id: 'own', name: 'Own', base: 'tm-default', savedAt: '2026-11-04',
-      patch: { cost_inputs: { basis: 'bare', year: 2023, line_types: { ac500: { usd_per_mi: 3_300_000 } } } } }] }));
-    const s = FIXTURE_SESSION();
-    s.resultInputs = { ...s.resultInputs!, presetId: 'custom:own', patch: null };
-    const m = buildReportModel(s, fmtMoney, '1/2/2026')!;
-    expect(m.method.editsSummary).toBe('Your cost entries:');
-    expect(m.method.edits).toEqual(['Line cost entered: $3.3\u00a0M per mile, 2023 dollars (base cost per mile, multipliers still apply)']);
-    localStorage.clear();
-  });
-
-  it('the DOM report prints the entered-figure lines and the terminal kinds as the model has them', () => {
+  it('the DOM report prints the terminal kinds as the model has them', () => {
     const s = FIXTURE_SESSION();
     s.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'new']) };
-    s.resultInputs = { ...s.resultInputs!, patch: { cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { usd_per_mi: 3_000_000 } } } } };
     const ctx = fakeTabContext(s);
     openRouteReport(ctx);
     const m = buildReportModel(s, (v) => ctx.money(v, v))!;
     expect(document.getElementById('route-report')!.textContent).toBe(reportText(m).join(''));
-    expect(document.getElementById('route-report')!.textContent).toContain('Line cost entered');
   });
 
-  it('cost.csv has one row per terminal kind, its sums match the total, and cites an entered figure as entered', () => {
-    const cost = { ...fixtureCost(1, undefined, ['position', 'new']), userCosts: { basis: 'bare' as const, year: 2024, items: ['line' as const], line_types: ['ac500'] } };
+  it('cost.csv has one row per terminal kind and its sums match the total', () => {
+    const cost = fixtureCost(1, undefined, ['position', 'new']);
     const r = { ...FIXTURE_RESULT, cost };
-    const inputs = { ...FIXTURE_SESSION().inputs, patch: { cost_inputs: { basis: 'bare' as const, year: 2024, line_types: { ac500: { usd_per_mi: 3e6 } } } } };
-    const csv = costCsv(r, 'y2025', inputs);
+    const csv = costCsv(r, 'y2025', FIXTURE_SESSION().inputs);
     const lines = csv.split('\r\n').filter(Boolean);
     expect(lines.find((l) => l.startsWith('Line positions (1)'))).toBeDefined();
     expect(lines.find((l) => l.startsWith('Terminals (1 stations)'))).toBeDefined();
-    expect(lines.find((l) => l.startsWith('Base'))).toContain('entered by you (2024 dollars, base cost per mile, multipliers still apply)');
     const usd = lines.slice(1).map((l) => l.split(',')).filter((c) => c[1] !== 'subtotal' && c[1] !== 'total' && /^-?\d+$/.test(c[2] ?? '')).reduce((a, c) => a + Number(c[2]), 0);
     expect(Math.abs(usd - Math.round(cost.total2025))).toBeLessThanOrEqual(12);
   });

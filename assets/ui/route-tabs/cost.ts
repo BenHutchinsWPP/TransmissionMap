@@ -3,9 +3,8 @@
 //       (left), headline KPIs, the rough-early-estimate range bar and a line-item table (right) whose 2025$ column (and the
 //       method-year column, behind a checkbox) sum to the totals. Renders from ctx.session; the toggle sets
 //       session.dollars and calls ctx.rerender(). Source text is set through textContent. Terminals are one
-//       row per kind (stations, line positions: `terminalSplit`, "n × each"), and a figure the visitor entered
-//       reads "entered by you" (`costSrc`). The rows read the preset as the solve used it (`solvedPresetOf`:
-//       the method with its patch), so an all-in estimate shows no markup rows.
+//       row per kind (stations, line positions: `terminalSplit`, "n × each"). The rows read the preset as the solve used it
+//       (`solvedPresetOf`: the method with its patch).
 // Deps: route-tabs/widgets.ts, route-tabs/method.ts (solvedPresetOf), route-tabs/types.ts (types), route/cost.ts (types),
 //       registry/route-presets.ts, i18n (t), ./cost.css.
 
@@ -13,7 +12,7 @@ import './cost.css';
 import { t } from '../../../src/i18n/index.js';
 import { ROUTE_PRESETS, routePreset, type RoutePreset } from '../../../src/registry/route-presets.js';
 import type { CostResult } from '../../route/cost.js';
-import { costSrc, kpis, rangeBar, sourceInfo, terminalSplit, waterfall, waterfallLines } from './widgets.js';
+import { kpis, rangeBar, sourceInfo, terminalSplit, waterfall, waterfallLines } from './widgets.js';
 import { solvedPresetOf } from './method.js';
 import type { DollarYear, RouteSession, RouteTab, RouteTabContext } from './types.js';
 
@@ -43,16 +42,16 @@ export function costItems(cost: CostResult, preset: RoutePreset): CostItem[] {
   const items: CostItem[] = [];
   const add = (key: string, label: string, basis: string, nominal: number, src = '') => items.push({ key, label, basis, nominal, src });
 
-  add('base', t('route.cost.base'), t('route.cost.base.basis', { perMi: m1(mi ? cost.baseUsd / mi : 0), year: cost.dollarYear, mi: mi.toFixed(1) }), cost.baseUsd, costSrc(line?.base_per_mi.src, cost));
+  add('base', t('route.cost.base'), t('route.cost.base.basis', { perMi: m1(mi ? cost.baseUsd / mi : 0), year: cost.dollarYear, mi: mi.toFixed(1) }), cost.baseUsd, line?.base_per_mi.src);
   add('mult', t('route.cost.mult'), t('route.cost.mult.basis', { x: cost.meanCostX.toFixed(2) }), raw - cost.baseUsd, t('route.cost.mult.src'));
   if (lf !== 1) add('short', t('route.cost.shortLine'), t('route.cost.shortLine.basis', { x: lf.toFixed(2) }), cost.lineUsdNominal - raw, preset.length_factor?.src);
   const split = terminalSplit(cost);
   if (!split) {
-    if (cost.terminalsUsd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: cost.terminalCount, each: m1(cost.terminalsUsd / (cost.terminalCount || 1)) }), cost.terminalsUsd, costSrc(line?.terminals.src, cost, true));
+    if (cost.terminalsUsd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: cost.terminalCount, each: m1(cost.terminalsUsd / (cost.terminalCount || 1)) }), cost.terminalsUsd, line?.terminals.src);
   } else {
     const { stations: st, positions: po } = split;
-    if (st?.usd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: st.n, each: m1(st.each) }), st.usd, costSrc(line?.terminals.src, cost, true));
-    if (po?.usd) add('positions', t('route.cost.positions'), t('route.cost.terminals.basis', { n: po.n, each: m1(po.each) }), po.usd, costSrc(line?.terminals.position?.src, cost, true));
+    if (st?.usd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: st.n, each: m1(st.each) }), st.usd, line?.terminals.src);
+    if (po?.usd) add('positions', t('route.cost.positions'), t('route.cost.terminals.basis', { n: po.n, each: m1(po.each) }), po.usd, line?.terminals.position?.src);
   }
   if (cost.mitigationUsd.mid) {
     add('mitigation', t('route.cost.mitigation'), t('route.cost.mitigation.basis', { lo: m1(cost.mitigationUsd.low), hi: m1(cost.mitigationUsd.high) }), cost.mitigationUsd.mid, preset.mitigation?.src);

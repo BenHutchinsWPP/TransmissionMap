@@ -10,21 +10,18 @@
 //       `observations` carries the shown path's aviation data as given; their tables and notes stay
 //       with route-observations.ts and are not in `reportText`. `method.uploads` lists the method's uploaded layers
 //       (a saved method's stored patch with the session patch on top, `mergePatch`; label, routing weight, cost
-//       multiplier, barrier) as templates whose label is visitor text. The method's edit list also carries the figures the
-//       visitor entered for the line type shown (`cost_inputs`: amount, dollar year, basis) and the ends they set; each
+//       multiplier, barrier) as templates whose label is visitor text. Each
 //       endpoint line names its terminal (new station, line position, none) from the result's `terminalItems`.
-//       The waterfall and the sources read the preset as the solve used it (`solvedPresetOf`), so an entered figure
-//       is cited as such. `costCsv` is the cost.csv text (pane download and batch ZIP).
+//       The waterfall and the sources read the preset as the solve used it (`solvedPresetOf`). `costCsv` is the cost.csv text (pane download and batch ZIP).
 // Deps: route-tabs/widgets.ts (waterfallLines, bandLabel, approxCount, kpiTiles, fmtMoneyHead), route-tabs/method.ts (methodOf, countEdits, solvedPresetOf),
-//       route-tabs/cost-inputs.ts (effectiveInputs),
-//       route-tabs/crossings.ts (shownExact), route-tabs/weights-table.ts (rowLabel, fmtFactor), route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel, CostInputs type), ./route-request.ts (mergePatch),
+//       route-tabs/crossings.ts (shownExact), route-tabs/weights-table.ts (rowLabel, fmtFactor), route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel, PresetPatch type), ./route-request.ts (mergePatch),
 //       registry/route-presets.ts, registry/route-band-data.ts (methodSources), user-data/user-data-export.ts (toCsv), i18n.
 
 import { t } from '../../src/i18n/index.js';
 import { ROUTE_PRESETS, routePreset } from '../../src/registry/route-presets.js';
 import type { RoutePreset } from '../../src/registry/route-presets.js';
 import type { CrossingPoint, RouteProfile } from '../route/profile.js';
-import { uploadLabel, type CostInputs, type PresetPatch } from '../route/preset-patch.js';
+import { uploadLabel, type PresetPatch } from '../route/preset-patch.js';
 import type { RouteScreening } from '../route/screening.js';
 import type { RouteResult } from '../route/route.js';
 import { methodSources } from '../../src/registry/route-band-data.js';
@@ -32,7 +29,6 @@ import { presetLabel } from '../route/custom-presets.js';
 import type { DollarYear, RouteInputs, RouteSession } from './route-tabs/types.js';
 import { toCsv } from '../user-data/user-data-export.js';
 import { countEdits, methodOf, solvedPresetOf } from './route-tabs/method.js';
-import { effectiveInputs } from './route-tabs/cost-inputs.js';
 import { shownExact } from './route-tabs/crossings.js';
 import { aviationMiles, aviationNote } from './route-observations.js';
 import { mergePatch } from './route-request.js';
@@ -130,23 +126,8 @@ function endName(end: End): string {
   return end.hit?.name || `${end.lngLat[1].toFixed(3)}, ${end.lngLat[0].toFixed(3)}`;
 }
 
-/** The figures entered for `lineType` (amount, dollar year, basis) and the ends set, one line each. */
-export function costInputLines(ci: CostInputs | undefined, lineType: string): string[] {
-  const out: string[] = [];
-  if (!ci) return out;
-  const e = ci.line_types?.[lineType];
-  const basis = t(ci.basis === 'all-in' ? 'route.ci.basis.allin.short' : 'route.ci.basis.bare.short');
-  if (e?.usd_per_mi !== undefined) out.push(t('route.report.edit.userLine', { usd: fmtMoney(e.usd_per_mi), year: ci.year, basis }));
-  if (e?.station_usd !== undefined) out.push(t('route.report.edit.userStation', { usd: fmtMoney(e.station_usd), year: ci.year }));
-  if (e?.position_usd !== undefined) out.push(t('route.report.edit.userPosition', { usd: fmtMoney(e.position_usd), year: ci.year }));
-  const [a, b] = ci.ends ?? ['auto', 'auto'];
-  const kind = (c: string) => t(c === 'auto' ? 'route.ci.end.autoShort' : `route.report.term.${c}`);
-  if (a !== 'auto' || b !== 'auto') out.push(t('route.report.edit.ends', { a: kind(a), b: kind(b) }));
-  return out;
-}
-
-/** One line per edited row (and contingency): "Slope — mountain, ≥ 4°: routing ×1.75→2, cost ×1→1.5"; then the cost inputs' lines. */
-export function editLines(preset: RoutePreset, patch: PresetPatch | null, ci?: CostInputs, lineType = ''): string[] {
+/** One line per edited row (and contingency): "Slope — mountain, ≥ 4°: routing ×1.75→2, cost ×1→1.5". */
+export function editLines(preset: RoutePreset, patch: PresetPatch | null): string[] {
   const out: string[] = [];
   for (const e of patch?.rows ?? []) {
     const row = preset.rows[e.row];
@@ -161,7 +142,6 @@ export function editLines(preset: RoutePreset, patch: PresetPatch | null, ci?: C
     const pct = (x: number) => String(+(x * 100).toFixed(6));
     out.push(t('route.report.edit.contingency', { a: pct(preset.contingency.pct), b: pct(patch.contingency) }));
   }
-  out.push(...costInputLines(ci, lineType));
   return out;
 }
 
@@ -261,10 +241,7 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
   const profile = result.profile;
   const edits: string[] = [];
   const n = countEdits(inp.patch);
-  const ci = effectiveInputs(custom?.stored ?? null, inp.patch);
-  const own = costInputLines(ci, cost.lineType);
-  if (n > 0) edits.push(...editLines(custom?.preset ?? preset, inp.patch, ci, cost.lineType));
-  else edits.push(...own);
+  if (n > 0) edits.push(...editLines(custom?.preset ?? preset, inp.patch));
 
   return {
     parts,
@@ -292,7 +269,7 @@ export function buildReportModel(session: RouteSession, money: (v: number) => st
     ...(profile ? crossingsOf(session, profile) : { crossings: null, observations: null }),
     method: {
       heading: t('route.report.method'), preset: fillTpl(parts.methodPreset),
-      editsSummary: n > 0 ? t(`route.report.method.edits.${n === 1 ? 'one' : 'other'}`, { n }) : own.length ? t('route.report.method.own') : null, edits, uploads: uploadLines(mergePatch(custom?.stored ?? null, inp.patch) ?? null),
+      editsSummary: n > 0 ? t(`route.report.method.edits.${n === 1 ? 'one' : 'other'}`, { n }) : null, edits, uploads: uploadLines(mergePatch(custom?.stored ?? null, inp.patch) ?? null),
       attribution: result.preset.attribution, caveat: result.preset.caveat,
       class5: t('route.report.method.class5'), grid: t('route.report.method.grid'),
       sourcesHeading: t('route.report.sources'), sources: methodSources(solved, cost.lineType).join('; '),

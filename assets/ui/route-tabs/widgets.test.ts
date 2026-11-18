@@ -70,15 +70,6 @@ describe('waterfallLines', () => {
       const lines = waterfallLines(old, preset, { dollars: 'preset' });
       expect(lines.filter((l) => /^Terminals/.test(l.label))).toHaveLength(1);
     });
-    it('a figure the visitor entered is cited as entered, with its year and basis; no line shows a registry source for it', () => {
-      const cost = { ...fixtureCost(), userCosts: { basis: 'all-in' as const, year: 2024, items: ['line' as const, 'station' as const], line_types: ['ac500'] } };
-      const entered = structuredClone(preset);
-      entered.line_types.ac500.base_per_mi = { usd: 4e6, year: 2024, src: 'user-entered' };
-      entered.line_types.ac500.terminals.src = 'user-entered';
-      const lines = waterfallLines(cost, entered, { dollars: 'preset' });
-      expect(lines[0].src).toBe('entered by you (2024 dollars, all-in cost per mile)');
-      expect(lines.find((l) => /^Terminals/.test(l.label))!.src).toBe('entered by you (2024 dollars)');
-    });
   });
   it('adds a short-line line only when the factor is not 1', () => {
     expect(waterfallLines(fixtureCost(1), preset, { dollars: 'preset' }).some((l) => l.label === 'Short-line factor')).toBe(false);

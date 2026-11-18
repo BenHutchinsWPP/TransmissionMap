@@ -72,17 +72,6 @@ describe('Cost tab', () => {
     expect(none.querySelector('tr[data-item="terminals"], tr[data-item="positions"]')).toBeNull();
   });
 
-  it('an all-in estimate shows no markup rows and cites an entered figure as entered', () => {
-    const cost = { ...fixtureCost(), markupsUsd: 0, userCosts: { basis: 'all-in' as const, year: 2024, items: ['line' as const], line_types: ['ac500'] } };
-    const s = FIXTURE_SESSION();
-    s.result = { ...FIXTURE_RESULT, cost };
-    s.resultInputs = { ...s.inputs, patch: { cost_inputs: { basis: 'all-in', year: 2024, line_types: { ac500: { usd_per_mi: 3e6 } } } } };
-    const el = document.createElement('div');
-    tab.render(el, fakeTabContext(s));
-    expect(el.querySelector('tr[data-item^="markup"]')).toBeNull();
-    expect(el.querySelector('tr[data-item="base"]')!.lastElementChild!.textContent).toContain('entered by you (2024 dollars, all-in cost per mile)');
-  });
-
   it('the toggle sets dollars and re-renders', () => {
     const { el, ctx, s } = render();
     const group = el.querySelector('[role="radiogroup"]')!;

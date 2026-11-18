@@ -172,8 +172,6 @@ export interface RoutePreset {
   length_factor?: { tiers: LengthTier[]; src: string };
   tribal: { band: BandName; match: Match; note: string; src: string };
   notes: string[];
-  /** Set only by validatePresetPatch from `cost_inputs`; never present on a registry preset. */
-  user_costs?: { basis: 'bare' | 'all-in'; year: number; items: ('line' | 'station' | 'position')[]; line_types: string[] };
 }
 
 // ─── shared values ────────────────────────────────────────────────────────────

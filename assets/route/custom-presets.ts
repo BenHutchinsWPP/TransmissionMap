@@ -12,7 +12,8 @@
 //       buildMethodFile() writes one; readMethodFile() is the trust boundary for one opened from
 //       disk — size, shape and name checked, the patch through validatePresetPatch like storage.
 //       A patch may hold uploaded-layer rows (`add_rows`: hash, label, weights); the geometry is never
-//       stored, and validatePresetPatch refuses any field beyond those.
+//       stored, and validatePresetPatch refuses any field beyond those. A `cost_inputs` key in a stored patch or a
+//       method file is dropped on read (`dropCostInputs`); the method loads without it.
 // Deps: preset-patch.ts (validatePresetPatch), src/registry/route-presets.ts, i18n (t), dataset-query.ts (Outcome, type only).
 
 import type { Outcome } from '../dataset-query.js';
@@ -47,6 +48,14 @@ const isStored = (v: unknown): v is StoredCustom =>
 // eslint-disable-next-line no-control-regex
 const cleanName = (s: string) => s.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim();
 
+/** `patch` without a `cost_inputs` key; anything else as it is. */
+export function dropCostInputs(patch: unknown): unknown {
+  if (!isObj(patch) || !('cost_inputs' in patch)) return patch;
+  const rest = { ...patch };
+  delete rest.cost_inputs;
+  return rest;
+}
+
 function check(base: string, patch: unknown): Outcome<RoutePreset> {
   const preset = ROUTE_PRESETS.find((p) => p.id === base);
   if (!preset) return { ok: false, reason: `unknown base preset "${base}"` };
@@ -75,8 +84,9 @@ export function readMethodFile(text: string): Outcome<{ name: string; base: stri
   if (typeof o.name !== 'string' || typeof o.base !== 'string') return { ok: false, reason: 'method file has no name or base method' };
   const name = cleanName(o.name);
   if (!name || name.length > MAX_NAME_LENGTH) return { ok: false, reason: `name must be 1-${MAX_NAME_LENGTH} characters` };
-  const r = check(o.base, o.patch ?? {});
-  return r.ok ? { ok: true, result: { name, base: o.base, patch: o.patch ?? {} } } : r;
+  const patch = dropCostInputs(o.patch ?? {});
+  const r = check(o.base, patch);
+  return r.ok ? { ok: true, result: { name, base: o.base, patch } } : r;
 }
 
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 10);
@@ -90,7 +100,7 @@ export function createCustomPresetStore(storage: PresetStorage) {
       if (raw === null) return [];
       const p: unknown = JSON.parse(raw);
       if (!isObj(p) || p.v !== 1 || !Array.isArray(p.items)) return [];
-      return p.items.filter(isStored).map(({ id, name, base, patch, savedAt }) => ({ id, name, base, patch, savedAt }));
+      return p.items.filter(isStored).map(({ id, name, base, patch, savedAt }) => ({ id, name, base, patch: dropCostInputs(patch), savedAt }));
     } catch {
       return [];
     }

@@ -55,17 +55,15 @@
 //       line item on line + markups + mitigation + terminals + ROW land. Each end is a
 //       new station, line position(s) at an existing station, or none (`kinds`, default
 //       both new); mid-line stations of a count rule are priced as new stations; each figure
-//       escalates from its own year (terminalItems). A preset carrying `user_costs` (preset-patch.ts)
-//       is the visitor's own figures.
+//       escalates from its own year (terminalItems).
 //       Pure: no DOM, runs in a worker and in Node.
-// Deps: dijkstra.ts (traverse); preset-patch.ts (USER_COST_SRC); sandbox/geo-kit.ts (haversineKm); src/registry/route-presets.ts (types only);
+// Deps: dijkstra.ts (traverse); sandbox/geo-kit.ts (haversineKm); src/registry/route-presets.ts (types only);
 //       src/registry/escalation-index.json (the BLS year index, built by scripts/build_escalation_index.py).
 
 import type {
   BandName, Combine, EndKind, Factor, LineType, Match, RoutePreset, TerminalRule,
 } from '../../src/registry/route-presets.js';
 import { traverse } from './dijkstra.js';
-import { USER_COST_SRC } from './preset-patch.js';
 import { haversineKm } from '../sandbox/geo-kit.js';
 import ESCALATION_INDEX from '../../src/registry/escalation-index.json';
 
@@ -637,8 +635,6 @@ export interface CostResult {
   /** Each terminal in the method's dollar year, A then B then the mid-line stations; `none` ends and
    *  figures that are null are left out. */
   terminalItems?: { kind: EndKind | 'mid'; end: 'A' | 'B' | null; usd: number }[];
-  /** The preset's `user_costs`, when the figures are the visitor's. */
-  userCosts?: RoutePreset['user_costs'];
   contingency: { usd: number; pct: number; label: string } | null;
   totalNominal: number;
   total2025: number;
@@ -684,9 +680,6 @@ function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost, kinds: [E
   const total2025 = totalNominal * escalationFactor(preset.dollar_year, to_year);
   const notes = [preset.caveat, ...preset.notes, ...lc.notes];
   if (terminalsUsd === null) notes.push(`Terminals not costed: ${t.arithmetic ?? t.src}`);
-  const uc = preset.user_costs;
-  if (uc?.basis === 'all-in' && slots.some((x) => (x.kind === 'position' ? t.position?.src : t.src) !== USER_COST_SRC))
-    notes.push("Terminals use the method's figures as it states them; no contingency is added.");
   if (t.report_only) notes.push(`Terminal count rule is unsourced (report only): ${t.src}`);
   if (lc.tribalM > 0) notes.push(preset.tribal.note);
   if (lc.rowLandMissingM > 0) notes.push(`ROW land: ${(lc.rowLandMissingM / METRES_PER_MILE).toFixed(1)} mi on cells without a county land value, charged $0.`);
@@ -699,7 +692,7 @@ function finish(preset: RoutePreset, lineTypeId: string, lc: LineCost, kinds: [E
     mitigationUsd: { low: mid * (1 + u.low), mid, high: mid * (1 + u.high) },
     rowLand: preset.row_land && lc.rowLandUsd !== null
       ? { usd: lc.rowLandUsd, note: preset.row_land.note, missingMi: lc.rowLandMissingM / METRES_PER_MILE } : null,
-    terminalCount: terminalCountN, terminalsUsd, terminalItems, ...(uc ? { userCosts: uc } : {}), contingency, totalNominal, total2025,
+    terminalCount: terminalCountN, terminalsUsd, terminalItems, contingency, totalNominal, total2025,
     band: { low: total2025 * (1 + u.low), high: total2025 * (1 + u.high), label: u.label },
     meanCostX: lc.meanCostX, perBand: lc.perBand, segments: lc.segments,
     tribalMiles: lc.tribalM / METRES_PER_MILE, barrierM: lc.barrierM, ...(lc.regionM ? { regionM: lc.regionM } : {}), notes,

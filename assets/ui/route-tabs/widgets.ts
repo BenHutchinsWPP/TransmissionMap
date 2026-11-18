@@ -1,18 +1,16 @@
 // ─── Route panel widgets ─────────────────────────────────────────────────────
 // Role: pure DOM builders the route tabs share — cost waterfall (+ `waterfallLines`, which
 //       turns a CostResult into its lines, summing exactly to the total in either dollar
-//       year; terminals as one line per kind, from `terminalSplit`; a figure the visitor entered shows
-//       as such through `costSrc`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, optimality badge, source
+//       year; terminals as one line per kind, from `terminalSplit`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, optimality badge, source
 //       ⓘ button, headline KPI tiles (`kpiTiles`, shared with the report model). Each returns an element; all text goes in through
 //       textContent, so data is never parsed as HTML. Styling: widgets.css (rp-* classes,
 //       app tokens only).
-// Deps: route/cost.ts (greatCircleM, types), route/preset-patch.ts (USER_COST_SRC), route/categories.ts, route/route.ts and
+// Deps: route/cost.ts (greatCircleM, types), route/categories.ts, route/route.ts and
 //       route/profile.ts (types only), registry/route-presets.ts (types), i18n/index.ts, ./widgets.css.
 
 import './widgets.css';
 import { t } from '../../../src/i18n/index.js';
 import { greatCircleM, type CostResult } from '../../route/cost.js';
-import { USER_COST_SRC } from '../../route/preset-patch.js';
 import { categoryLabelKey, routeCategory } from '../../route/categories.js';
 import type { RouteResult } from '../../route/route.js';
 import type { RouteCrossings } from '../../route/profile.js';
@@ -92,15 +90,6 @@ export function waterfall(lines: WaterfallLine[], opts: WaterfallOpts): HTMLElem
   return wrap;
 }
 
-/** A figure's source as shown: what the method cites, or "entered by you" for a figure from `cost_inputs` (a line figure with
- *  its year and basis; a terminal figure, `terminal`, with its year only: the basis is the line figure's). */
-export function costSrc(src: string | undefined, cost: CostResult, terminal = false): string | undefined {
-  if (src !== USER_COST_SRC) return src;
-  const uc = cost.userCosts;
-  if (terminal) return t('route.src.user.terminal', { year: uc?.year ?? '' });
-  return t('route.src.user', { year: uc?.year ?? '', basis: t(uc?.basis === 'all-in' ? 'route.ci.basis.allin.short' : 'route.ci.basis.bare.short') });
-}
-
 export interface TerminalGroup { n: number; each: number; usd: number }
 /** The terminals of a cost as stations (new and mid-line) and line positions, in method-year dollars. `usd` of a group
  *  is its items' sum, except that with both kinds the stations take what `terminalsUsd` leaves, so the two sum to
@@ -127,7 +116,7 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   const out: WaterfallLine[] = [];
   const add = (label: string, usd: number, group: WaterfallGroup, src?: string) => out.push({ label, value: usd * k, group, src });
 
-  add(t('route.wf.base'), cost.baseUsd, 'base', costSrc(line?.base_per_mi.src, cost));
+  add(t('route.wf.base'), cost.baseUsd, 'base', line?.base_per_mi.src);
   const cats = new Map<string, { usd: number; src: string }>();
   for (const r of cost.perRow) {
     const row = preset.rows[r.row];
@@ -143,10 +132,10 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   const lf = cost.lengthFactor || 1;
   if (lf !== 1) add(t('route.wf.shortLine'), cost.lineUsdNominal * (1 - 1 / lf), 'multipliers');
   const split = terminalSplit(cost);
-  if (!split) { if (cost.terminalsUsd) add(t('route.wf.terminals', { n: cost.terminalCount }), cost.terminalsUsd, 'terminals', costSrc(line?.terminals.src, cost, true)); }
+  if (!split) { if (cost.terminalsUsd) add(t('route.wf.terminals', { n: cost.terminalCount }), cost.terminalsUsd, 'terminals', line?.terminals.src); }
   else {
-    if (split.stations?.usd) add(t('route.wf.terminals', { n: split.stations.n }), split.stations.usd, 'terminals', costSrc(line?.terminals.src, cost, true));
-    if (split.positions?.usd) add(t('route.wf.terminals.position', { n: split.positions.n }), split.positions.usd, 'terminals', costSrc(line?.terminals.position?.src, cost, true));
+    if (split.stations?.usd) add(t('route.wf.terminals', { n: split.stations.n }), split.stations.usd, 'terminals', line?.terminals.src);
+    if (split.positions?.usd) add(t('route.wf.terminals.position', { n: split.positions.n }), split.positions.usd, 'terminals', line?.terminals.position?.src);
   }
   if (cost.mitigationUsd.mid) add(t('route.wf.mitigation'), cost.mitigationUsd.mid, 'terminals', preset.mitigation?.src);
   if (cost.rowLand && cost.rowLand.usd) add(t('route.wf.rowLand'), cost.rowLand.usd, 'other', cost.rowLand.note);

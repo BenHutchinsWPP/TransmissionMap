@@ -26,7 +26,7 @@ import { validateUpload, type UploadLayer } from '../../route/upload-layer.js';
 import tab, { _resetMethodTab, countEdits, solvedPresetOf, uploadReason, uploads, dropUploads, sensitivityRows, sensitivitySpecs, LIVE_DEBOUNCE_MS } from './method.js';
 import { FIXTURE_RESULT, FIXTURE_SESSION, fakeTabContext } from './fixture.js';
 import { UPLOAD_TOTAL_VERTICES, validatePresetPatch } from '../../route/preset-patch.js';
-import { CUSTOM_PRESETS_KEY, createCustomPresetStore } from '../../route/custom-presets.js';
+import { CUSTOM_PRESETS_KEY, createCustomPresetStore, presetLabel } from '../../route/custom-presets.js';
 import { installDrawerEnv, resetDrawerEnv } from '../test-drawer-env.js';
 import { routePreset } from '../../../src/registry/route-presets.js';
 import type { RouteResult } from '../../route/route.js';
@@ -484,6 +484,16 @@ describe('grid or stacked table', () => {
     tab.update!(el, ctx);
     expect(el.querySelector('.rm-grid')).toBe(grid);
   });
+
+  it('update() after a solve on another method rebuilds the tab for that method', () => {
+    installDrawerEnv();
+    const { el, ctx } = setup();
+    const grid = el.querySelector('.rm-grid');
+    ctx.session.inputs.presetId = 'nrel-revx';
+    tab.update!(el, ctx);
+    expect(el.querySelector('.rm-grid')).not.toBe(grid);
+    expect(el.querySelector('.rm-based')?.textContent).toContain(presetLabel(routePreset('nrel-revx')!));
+  });
 });
 
 // ─── uploaded layers ───────────────────────────────────────────────────
@@ -759,104 +769,17 @@ describe('upload and patch validator reasons are worded', () => {
   it('text that matches none passes through', () => { expect(uploadReason('something else')).toBe('something else'); });
 });
 
-describe('method tab: your own costs', () => {
-  const figure = (el: HTMLElement, i: number) => el.querySelectorAll<HTMLInputElement>('.rm-ci-figs input')[i];
-  const change = (i: HTMLInputElement | HTMLSelectElement, v: string) => { i.value = v; i.dispatchEvent(new Event('change', { bubbles: true })); };
-  const basis = (el: HTMLElement, v: string) => { const r = el.querySelector<HTMLInputElement>(`input[type=radio][value="${v}"]`)!; r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); };
-
-  it('mounts the card between the table and the uploaded layers; an entered figure is a counted session edit, previewed', () => {
-    const { session, ctx, el } = setup((c) => { c.previewPatch = (p) => { c.calls.push(`previewPatch(${JSON.stringify(p)})`); }; });
-    const kids = [...el.querySelector('.rm')!.children].map((c) => c.className.split(' ')[0]);
-    expect(kids.indexOf('rm-ci')).toBe(kids.indexOf('rm-table') + 1);
-    expect(kids.indexOf('rm-upl')).toBe(kids.indexOf('rm-ci') + 1);
-    basis(el, 'bare');
-    change(figure(el, 1), '3.2');
-    expect(session.inputs.patch).toEqual({ cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { usd_per_mi: 3_200_000 } } } });
-    expect(el.querySelector('.rm-chip')!.textContent).toBe('1 edit');
-    expect(ctx.calls.some((c) => c.startsWith('previewPatch({"cost_inputs"'))).toBe(true);
-    expect(el.querySelector<HTMLButtonElement>('.rm-resolve')!.disabled).toBe(false);
-  });
-
-  it('a cost edit in the table under an all-in basis is held like an invalid cell, and the card says why', () => {
-    const { session, ctx, el, input, type } = setup();
-    basis(el, 'all-in');
-    change(figure(el, 1), '5');
-    expect(session.inputs.patch?.cost_inputs?.basis).toBe('all-in');
-    type(input(9, 'cost_x'), '2');
-    expect(session.inputs.patch).toEqual({ cost_inputs: { basis: 'all-in', year: 2025, line_types: { ac500: { usd_per_mi: 5e6 } } } });   // the edit did not land
-    expect(el.querySelector('.rm-ci-msg')!.textContent).toMatch(/^All-in takes no cost multiplier/);
-    expect(ctx.calls).toContain('setMethodErrors(1)');
-    // a routing weight is fine under all-in, and clears the message
-    type(input(9, 'cost_x'), '1');
-    type(input(9, 'route_w'), '3');
-    expect(session.inputs.patch).toMatchObject({ cost_inputs: { basis: 'all-in' }, rows: [{ row: 9, route_w: 3 }] });
-    expect(el.querySelector('.rm-ci-msg')!.textContent).toBe('');
-  });
-
-  it('a clash fixed from the card (Base) re-applies the held table edit and clears the error count', () => {
-    const { session, ctx, el, input, type } = setup();
-    basis(el, 'all-in');
-    change(figure(el, 1), '5');
-    type(input(9, 'cost_x'), '2');
-    expect(ctx.calls.filter((c) => c.startsWith('setMethodErrors')).pop()).toBe('setMethodErrors(1)');
-    basis(el, 'bare');
-    expect(ctx.calls.filter((c) => c.startsWith('setMethodErrors')).pop()).toBe('setMethodErrors(0)');
-    expect(session.inputs.patch).toMatchObject({ cost_inputs: { basis: 'bare' }, rows: [{ row: 9, cost_x: 2 }] });
-    expect(el.querySelector<HTMLButtonElement>('.rm-resolve')!.disabled).toBe(false);
-    expect(el.querySelector('.rm-ci-msg')!.textContent).toBe('');
-  });
-
-  it('a table edit keeps the entered figures (the table never sees them)', () => {
-    const { session, el, input, type } = setup();
-    basis(el, 'bare');
-    change(figure(el, 1), '3');
-    type(input(9, 'cost_x'), '2');
-    expect(session.inputs.patch).toMatchObject({ cost_inputs: { line_types: { ac500: { usd_per_mi: 3e6 } } }, rows: [{ row: 9, cost_x: 2 }] });
-    expect(el.querySelector('.rm-chip')!.textContent).toBe('2 edits');
-  });
-
-  it('Reset to preset clears the figures and turns the card inert again', () => {
-    const { session, el, click } = setup();
-    basis(el, 'bare');
-    change(figure(el, 1), '3');
-    click('.rm-reset');
-    expect(session.inputs.patch).toBeNull();
-    expect(figure(el, 1).value).toBe('');
-    expect(figure(el, 1).disabled).toBe(true);
-  });
-
-  it('Save as custom carries cost_inputs, and the saved method\'s figures are the card\'s starting point', () => {
-    const { session, ctx, el, click } = setup();
-    basis(el, 'bare');
-    change(figure(el, 1), '3');
-    click('.rm-save');
-    const form = el.querySelector<HTMLFormElement>('.rm-saveform')!;
-    form.querySelector<HTMLInputElement>('.rm-name')!.value = 'Mine';
-    form.dispatchEvent(new Event('submit', { cancelable: true }));
-    const stored = JSON.parse(localStorage.getItem(CUSTOM_PRESETS_KEY)!);
-    expect(stored.items[0].patch).toEqual({ cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { usd_per_mi: 3e6 } } } });
-    expect(session.inputs.patch).toBeNull();
-    const el2 = document.createElement('div');
-    tab.render(el2, ctx);
-    expect(figure(el2, 1).value).toBe('3');
-    expect(figure(el2, 1).disabled).toBe(false);
-    // the session's own object replaces the saved one whole
-    basis(el2, 'bare');
-    change(figure(el2, 1), '');
-    expect(session.inputs.patch).toEqual({ cost_inputs: { basis: 'bare', year: 2025 } });
-  });
-
+describe('method tab: solved method and edit count', () => {
   it('solvedPresetOf is the method with its patch applied, and null for a refused patch', () => {
-    const inp = { ...FIXTURE_SESSION().inputs, patch: { cost_inputs: { basis: 'all-in' as const, year: 2024, line_types: { ac500: { usd_per_mi: 4e6 } } } } };
+    const inp = { ...FIXTURE_SESSION().inputs, patch: { contingency: 0.2 } };
     const p = solvedPresetOf(inp)!;
-    expect(p.markups).toEqual([]);
-    expect(p.user_costs).toMatchObject({ basis: 'all-in', year: 2024 });
-    expect(solvedPresetOf({ ...inp, patch: { cost_inputs: { basis: 'all-in' as const, year: 2024 } } })).toBeNull();
+    expect(p.contingency?.pct).toBe(0.2);
+    expect(solvedPresetOf({ ...inp, patch: { contingency: 99 } })).toBeNull();
     expect(solvedPresetOf({ ...inp, presetId: 'custom:gone' })).toBeNull();
   });
 
-  it('countEdits counts the entered figures and the ends that are not auto', () => {
-    expect(countEdits({ cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { usd_per_mi: 1, station_usd: 2 } }, ends: ['auto', 'none'] } })).toBe(3);
-    expect(countEdits({ cost_inputs: { basis: 'bare', year: 2025 } })).toBe(0);
+  it('countEdits counts row weights, cost multipliers, contingency and added rows', () => {
+    expect(countEdits({ rows: [{ row: 1, band: 'x', note: 'n', route_w: 2, cost_x: 3 }], contingency: 0.2 })).toBe(3);
+    expect(countEdits({})).toBe(0);
   });
 });

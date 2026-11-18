@@ -331,9 +331,6 @@ describe('route', () => {
       expect(out.ok).toBe(false);
       expect(!out.ok && out.reason).toMatch(re);
     }
-    const cost = { basis: 'all-in', year: 2020, line_types: { ac345: { usd_per_mi: 5e6 } } } as const;
-    const allIn = await route(req({ presetPatch: { cost_inputs: cost } }), fakeIO());
-    expect(!allIn.ok && allIn.reason).toMatch(/ac500/);
   });
 
   it('prices the alternatives with the same end kinds', async () => {
@@ -344,19 +341,6 @@ describe('route', () => {
     expect(out.result.alternatives?.length).toBeGreaterThan(0);
     expect(out.result.cost.terminalsUsd).toBe(10_524_963);
     for (const a of out.result.alternatives!) expect(a.cost.terminalsUsd).toBe(10_524_963);
-  });
-
-  it('an all-in estimate takes the bare route, costs line $ = entered $/mi × miles, and says its terminals are the method\'s', async () => {
-    const bare = await route(req({ presetPatch: { cost_inputs: { basis: 'bare', year: 2014, line_types: { ac500: { usd_per_mi: 4e6 } } } } }), fakeIO());
-    const all = await route(req({ presetPatch: { cost_inputs: { basis: 'all-in', year: 2014, line_types: { ac500: { usd_per_mi: 4e6 } } } } }), fakeIO());
-    if (!bare.ok || !all.ok) throw new Error('solve failed');
-    expect(all.result.path).toEqual(bare.result.path);
-    expect(all.result.cost.lineUsdNominal).toBeCloseTo(all.result.lengthMi * 4e6, 2);
-    expect(all.result.cost.markupsUsd).toBe(0);
-    expect(all.result.cost.contingency).toBeNull();
-    expect(all.result.cost.userCosts).toMatchObject({ basis: 'all-in', items: ['line'] });
-    expect(all.result.cost.notes).toContain("Terminals use the method's figures as it states them; no contingency is added.");
-    expect(all.result.cost.terminalsUsd).toBe(2 * 34_582_007);
   });
 
   it('costs the straight-line preset as two points, reading no data', async () => {

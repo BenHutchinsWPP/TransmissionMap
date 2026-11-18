@@ -951,7 +951,6 @@ describe('terminal kinds', () => {
     expect(r(['none', 'none']).terminalCount).toBe(0);
     expect(r(['new', 'position']).terminalItems).toEqual([{ kind: 'new', end: 'A', usd: ST230 }, { kind: 'position', end: 'B', usd: POS230 }]);
     expect(r(['none', 'new']).terminalItems).toEqual([{ kind: 'new', end: 'B', usd: ST230 }]);
-    expect(r(['new', 'new']).userCosts).toBeUndefined();
   });
   it('positions escalate from their own year; totals follow the items', () => {
     const p = { ...TM, dollar_year: 2018, line_types: { ...TM.line_types, ac230: { ...TM.line_types.ac230, terminals: { ...TM.line_types.ac230.terminals, usd_each: 10e6, year: 2016, position: { usd_each: 3e6, year: 2012, arithmetic: '', src: 'x' } } } } };
@@ -995,82 +994,5 @@ describe('terminal kinds', () => {
   it('tm-default and straight-line-quick 500 kV: the B&V T4-6 station × 1.175, 2 × $34,582,007 (2014$)', () => {
     expect(straightLine(A, B, TM, 'ac500').terminalsUsd).toBe(2 * ST500);
     expect(straightLine(A, B, P('straight-line-quick'), 'ac500').terminalsUsd).toBe(2 * ST500);
-  });
-});
-
-describe('entered cost figures', () => {
-  const N = 400;                                    // 100 km ≈ 62 mi of uniform cells
-  const path = cellsToCoords(Array.from({ length: N }, (_, i) => i), N, 250);
-  const flat = { landcover: new Uint8Array(N).fill(71), state: new Uint8Array(N).fill(6) } as BandMap;
-  const woods = { landcover: new Uint8Array(N).fill(41), state: new Uint8Array(N).fill(6) } as BandMap;
-  const apply = (cost_inputs: unknown, extra: object = {}) => {
-    const r = validatePresetPatch(TM, { cost_inputs, ...extra });
-    if (!r.ok) throw new Error(r.reason);
-    return r.result;
-  };
-  const E = escalationFactor(2020, 2014);                             // 2020 → 2014 dollars
-
-  it('bare, mixed years to the cent: entered line and station (2020$) with the method\'s own position (2014$)', () => {
-    const p = apply({ basis: 'bare', year: 2020, line_types: { ac230: { usd_per_mi: 2_000_000, station_usd: 10_000_000 } } });
-    const r = costPath(path, p, 'ac230', gridSampler(flat, N, 1, 250), {}, ['new', 'position']);
-    const mi = r.lengthM / METRES_PER_MILE;
-    const line = mi * 2_000_000 * E, terminals = 10_000_000 * E + POS230;
-    expect(r.lineUsdNominal).toBeCloseTo(line, 2);
-    expect(r.markupsUsd).toBeCloseTo(line * 0.175, 2);
-    expect(r.terminalsUsd).toBeCloseTo(terminals, 2);
-    expect(r.totalNominal).toBeCloseTo((line * 1.175 + terminals) * 1.3, 2);
-    expect(r.total2025).toBeCloseTo((line * 1.175 + terminals) * 1.3 * escalationFactor(2014, 2025), 2);
-    expect(r.userCosts).toEqual({ basis: 'bare', year: 2020, items: ['line', 'station'], line_types: ['ac230'] });
-    expect(r.terminalItems).toEqual([{ kind: 'new', end: 'A', usd: expect.closeTo(10_000_000 * E, 2) }, { kind: 'position', end: 'B', usd: POS230 }]);
-  });
-  it('bare keeps the cell multipliers and the short-line factor', () => {
-    const p = apply({ basis: 'bare', year: 2014, line_types: { ac230: { usd_per_mi: 1_000_000 } } });
-    const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(woods, N, 1, 250), {}); // ≈ 5 mi, forest 2.25 (TEPPC)
-    const mi = r.lengthM / METRES_PER_MILE;
-    expect(r.lengthFactor).toBe(1.2);
-    expect(r.lineUsdNominal).toBeCloseTo(mi * 1_000_000 * 2.25 * 1.2, 2);
-  });
-  it('all-in: line $ = entered $/mi × miles, escalated; no multipliers, markups, mitigation, ROW land, contingency or short-line factor', () => {
-    const p = apply({ basis: 'all-in', year: 2020, line_types: { ac230: { usd_per_mi: 5_000_000 } } });
-    const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(woods, N, 1, 250), CONSTS);  // ≈ 5 mi of forest
-    const mi = r.lengthM / METRES_PER_MILE;
-    expect(r.lengthFactor).toBe(1);
-    expect(r.lineUsdNominal).toBeCloseTo(mi * 5_000_000 * E, 2);
-    expect(r.baseUsd).toBeCloseTo(mi * 5_000_000 * E, 2);
-    expect(r.markupsUsd).toBe(0);
-    expect(r.mitigationUsd.mid).toBe(0);
-    expect(r.rowLand).toBeNull();
-    expect(r.contingency).toBeNull();
-    expect(r.meanCostX).toBeCloseTo(1, 12);
-    // the method's own stations as it states them, said in a note
-    expect(r.terminalsUsd).toBe(2 * ST230);
-    expect(r.totalNominal).toBeCloseTo(mi * 5_000_000 * E + 2 * ST230, 2);
-    expect(r.notes).toContain("Terminals use the method's figures as it states them; no contingency is added.");
-    expect(r.userCosts).toEqual({ basis: 'all-in', year: 2020, items: ['line'], line_types: ['ac230'] });
-  });
-  it('all-in with every terminal entered carries no terminals note', () => {
-    const p = apply({ basis: 'all-in', year: 2014, line_types: { ac230: { usd_per_mi: 5e6, station_usd: 7e6, position_usd: 2e6 } } });
-    for (const k of [['new', 'new'], ['position', 'position'], ['new', 'position']] as [EndKind, EndKind][]) {
-      const r = costPath(path.slice(0, 33), p, 'ac230', gridSampler(flat, N, 1, 250), {}, k);
-      expect(r.notes.some((n) => n.startsWith('Terminals use'))).toBe(false);
-    }
-    expect(costPath(path.slice(0, 33), p, 'ac230', gridSampler(flat, N, 1, 250), {}, ['position', 'position']).terminalsUsd).toBe(4e6);
-  });
-  it('all-in takes the same route as bare: routing weights and barriers are untouched', () => {
-    const bare = apply({ basis: 'bare', year: 2014, line_types: { ac230: { usd_per_mi: 5e6 } } });
-    const all = apply({ basis: 'all-in', year: 2014, line_types: { ac230: { usd_per_mi: 5e6 } } });
-    const bands: BandMap = { landcover: u8(41, 22, 90, 71, 31, 82), slope: u8(1, 2, 4, 8, 1, 3), state: u8(6, 6, 6, 6, 6, 0), flags: u8(0, 1, 2, 8, 16, 32) };
-    const a = buildSurfaces(bare, 'ac230', bands, 6, 1), b = buildSurfaces(all, 'ac230', bands, 6, 1);
-    expect(Array.from(b.route)).toEqual(Array.from(a.route));
-    expect(Array.from(b.barrier)).toEqual(Array.from(a.barrier));
-    expect(minRouteWeight(all, 'ac230')).toBe(minRouteWeight(bare, 'ac230'));
-  });
-  it('baseUsd + Σ perRow + otherUsd = line $ before the short-line factor, bare and all-in', () => {
-    const mix = { landcover: u8(...Array.from({ length: 40 }, (_, i) => [41, 22, 71, 90][i % 4])), state: new Uint8Array(40).fill(6) } as BandMap;
-    for (const basis of ['bare', 'all-in'] as const) {
-      const p = apply({ basis, year: 2014, line_types: { ac230: { usd_per_mi: 3e6 } } });
-      const r = costPath(cellsToCoords(Array.from({ length: 40 }, (_, i) => i), 40, 250), p, 'ac230', gridSampler(mix, 40, 1, 250), {});
-      expect(r.baseUsd + r.perRow.reduce((t, x) => t + x.usd, 0) + r.otherUsd).toBeCloseTo(r.lineUsdNominal / r.lengthFactor, 4);
-    }
   });
 });

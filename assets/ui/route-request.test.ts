@@ -151,27 +151,11 @@ describe('requestFor: terminal kinds (auto resolves at request time)', () => {
   it('an HVDC line has no position figure: new', () => {
     expect(kinds(at('dc500', 500, 500))).toEqual(['new', 'new']);
   });
-  it('a study method with no position figure is new, and a figure the visitor enters makes auto a position', () => {
+  it('a study method with no position figure is new', () => {
     expect(kinds(at('ac500', 500, 500, 'pnas-wu2023'))).toEqual(['new', 'new']);
-    const entered: PresetPatch = { cost_inputs: { basis: 'bare', year: 2025, line_types: { ac500: { position_usd: 5e6 } } } };
-    expect(kinds(at('ac500', 500, 500, 'pnas-wu2023', entered))).toEqual(['position', 'position']);
   });
-  it('an explicit choice goes through as given, per end', () => {
-    const ends: PresetPatch = { cost_inputs: { basis: 'bare', year: 2025, ends: ['none', 'new'] } };
-    expect(kinds(at('ac345', 500, 500, 'tm-default', ends))).toEqual(['none', 'new']);
-    const pos: PresetPatch = { cost_inputs: { basis: 'bare', year: 2025, ends: ['auto', 'position'] } };
-    expect(kinds(at('ac345', 'raw', 'raw', 'tm-default', pos))).toEqual(['new', 'position']);
-  });
-  it('a saved method\'s ends apply until the session patch replaces its cost inputs', () => {
-    const saved = custom({ cost_inputs: { basis: 'bare', year: 2025, ends: ['none', 'none'] } });
-    const b = makeRequestBuilder(() => [saved]);
-    const r = b.requestFor(at('ac345', 500, 500, 'custom:c1'), spec());
-    expect(typeof r === 'string' ? r : r.terminals).toEqual(['none', 'none']);
-    const over = b.requestFor(at('ac345', 500, 500, 'custom:c1'), spec({ patch: { cost_inputs: { basis: 'bare', year: 2025 } } }));
-    expect(typeof over === 'string' ? over : over.terminals).toEqual(['position', 'position']);
-  });
-  it('the request carries the patch with its cost inputs, which route() validates', () => {
-    const patch: PresetPatch = { cost_inputs: { basis: 'all-in', year: 2024, line_types: { ac345: { usd_per_mi: 4e6 } } } };
+  it('the request carries the patch, which route() validates', () => {
+    const patch: PresetPatch = { contingency: 0.2 };
     const r = none.requestFor(at('ac345', 500, 500, 'tm-default', patch), spec({ patch }));
     expect(typeof r === 'string' ? r : r.presetPatch).toEqual(patch);
   });

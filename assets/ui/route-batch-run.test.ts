@@ -173,7 +173,7 @@ describe('runBatch over the mini cube', () => {
     expect(out.rows[0].a?.hit?.name).toBe('East Sub');
     const [shead, srow] = summaryLines(t.zip).map((l) => l.split(','));
     const col = (name: string) => srow[shead.indexOf(name)];
-    expect([col('terminal_a'), col('terminal_b'), col('user_costs')]).toEqual(['position', 'new', '']);
+    expect([col('terminal_a'), col('terminal_b')]).toEqual(['position', 'new']);
     for (const f of ['rows/001-plain/report.pdf', 'rows/001-plain/cost.csv', 'rows/002-saved/crossings.csv', 'rows/003-upload/report.pdf', 'batch.json'])
       expect(t.zip.files.has(f), f).toBe(true);
     expect(String(t.zip.files.get('rows/001-plain/cost.csv')).startsWith('\uFEFF')).toBe(true);

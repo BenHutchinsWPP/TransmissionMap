@@ -184,21 +184,8 @@ estimate     = 2025 total × 0.70 to 1.50
 
 `auto`, the default for both ends, takes a line position when the end is snapped to a substation
 whose highest voltage is at least the line's and the method has a position figure for the line
-type, and a new station otherwise (a raw point, a lower-voltage substation, HVDC). The Method tab
-can set either end to a kind. The study methods carry no position figure: an end there is a new
-station priced as that method prices it, or a figure the visitor enters.
-
-**Visitor cost figures.** On any method, the Method tab accepts a line cost per mile, a station
-figure and a line-position figure per line type, with the dollar year they are in, escalated from that
-year by the BLS year index. The basis is stated with them:
-
-- **Bare:** the entered $/mi replaces the method's base $/mi on flat, open land; cell multipliers,
-  the short-line factor, mitigation, right-of-way land, markups and contingency apply as in the
-  method. Entered station and position figures replace the method's.
-- **All-in:** the entered $/mi is the whole line cost per mile: line $ = $/mi × routed miles, with
-  no cell multipliers, short-line factor, mitigation, right-of-way land, markups or contingency.
-  Terminals are the entered figures, or the method's own figures as the method states them, with
-  no contingency added; the estimate says so.
+type, and a new station otherwise (a raw point, a lower-voltage substation, HVDC). The study
+methods carry no position figure: an end there is a new station priced as that method prices it.
 
 Besides the all-in $/mi, the summary shows the line-only $/mi: the total less the terminals and
 their contingency, per mile, in the dollars shown.

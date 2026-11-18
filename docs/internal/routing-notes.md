@@ -130,20 +130,15 @@ Gates move only for a sourced difference in inputs.
   floor (`assets/route/snap.ts`); otherwise the raw point. A snapped end carries the substation's
   highest voltage (`hit.maxKv`).
 - **Terminal kinds:** each end is `new`, `position` or `none` (`EndKind`, `RoutePreset` line type
-  `terminals.position`); a request without kinds is `['new', 'new']`. The patch's
-  `cost_inputs.ends` (default `auto`, `auto`) is resolved at request time by `resolveEnds`
-  (`assets/ui/route-request.ts`), which the panel, batch and chat all use: `auto` is `position`
+  `terminals.position`); a request without kinds is `['new', 'new']`. The panel, batch and chat
+  set the kinds at request time through `resolveEnds` (`assets/ui/route-request.ts`): `position`
   only for a snapped end with `maxKv` ≥ the line type's kV and a position figure on the patched line
   type, else `new`. `validateTerminals` checks the kinds a request carries. `cost.ts` costs
   mid-line stations of the 500 kV rule as `new`; the waterfall reads `terminalsUsd`, never the sum
   of `terminalItems`.
-- **Cost inputs:** `cost_inputs` (`basis` `bare` or `all-in`, `year`, per line type `usd_per_mi`,
-  `station_usd`, `position_usd`, `ends`) is validated and applied by `validatePresetPatch`, which
-  records `user_costs`. `all-in` clears markups, contingency, mitigation, ROW land, the short-line
-  factor and every cost multiplier, and needs a `usd_per_mi` for each line type it names. A session
-  patch's `cost_inputs` replaces a saved method's whole object (`mergePatch`); the panel starts the
-  session object from the saved one. Line-only $/mi is (total − terminals × (1 + contingency pct)) ÷
-  miles (`kpiTiles`).
+- **Line-only $/mi** is the KPI tile beside the all-in $/mi: (total − terminals × (1 + contingency pct)) ÷
+  miles (`kpiTiles`). A `cost_inputs` key in a saved method or method file is dropped on read
+  (`custom-presets.ts` `dropCostInputs`); `validatePresetPatch` refuses it.
 - **Cost waterfall:** in each cell, the line cost above base is split over the rows that set the
   cell's factor, in proportion to ln(factor), so a factor below 1 is a negative bar. Bars and line
   items sum exactly to the total.

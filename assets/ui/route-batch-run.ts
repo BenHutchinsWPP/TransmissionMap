@@ -18,8 +18,7 @@
 //       summary.csv carries the worded reason plus `reason_code`; each PDF picture has its `route.batch.pic.<id>`
 //       caption (an Alternatives picture without alternatives says why in it) and each overlay picture its colour
 //       legend (causeLegend / classLegend / similarLegend); a snap to a substation without a name
-//       says so; summary.csv also names what each end was priced as (`terminal_a`, `terminal_b`) and, when the cost
-//       used the visitor's own figures, `user_costs` as `<basis>:<year>`; an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
+//       says so; summary.csv also names what each end was priced as (`terminal_a`, `terminal_b`); an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
 //       The solver, capture, PDF renderer and ZIP sink are injected (route-batch-types.ts); `workerSolver()` is the route
 //       worker under the solver lock (owner 'batch').
 // Deps: i18n (t), route/route-open.ts (lock and calls), route/route.ts (NO_WINDOW_REASONS; types), route/snap.ts (snapAt), route/grid.ts (albersForward),
@@ -132,7 +131,7 @@ export interface RowReport {
   method?: string; lineType?: string; a?: RouteEnd; b?: RouteEnd;
   lengthMi?: number; total2025?: number; optimality?: RouteResult['optimality'];
   /** What each end was priced as (`new`, `position`, `none`), and `<basis>:<year>` when the cost used figures the visitor entered. */
-  terminalA?: string; terminalB?: string; userCosts?: string;
+  terminalA?: string; terminalB?: string;
   /** One entry per picture: the capture's note, or null for a JPEG; `code` when the engine gave none. */
   pictures?: { picture: PictureId; note: string | null; code?: string }[];
 }
@@ -197,14 +196,14 @@ function costFile(r: RouteResult, dollars: DollarYear, inp: RouteInputs): string
   return BOM + costCsv(r, dollars, inp);
 }
 
-/** summary.csv's terminal and entered-figure columns of a result's cost. */
-function costColumns(c: RouteResult['cost']): Pick<RowReport, 'terminalA' | 'terminalB' | 'userCosts'> {
+/** summary.csv's terminal columns of a result's cost. */
+function costColumns(c: RouteResult['cost']): Pick<RowReport, 'terminalA' | 'terminalB'> {
   const kind = (side: 'A' | 'B') => (c.terminalItems ? c.terminalItems.find((i) => i.end === side)?.kind ?? 'none' : '');
-  return { terminalA: kind('A'), terminalB: kind('B'), userCosts: c.userCosts?.items.length ? `${c.userCosts.basis}:${c.userCosts.year}` : '' };
+  return { terminalA: kind('A'), terminalB: kind('B') };
 }
 
 const SUMMARY_FIELDS = ['line', 'key', 'status', 'reason', 'reason_code', 'folder', 'method', 'line_type', 'a_lon', 'a_lat', 'a_substation',
-  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'terminal_a', 'terminal_b', 'user_costs', 'lowest_score_proof', 'pictures'];
+  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'terminal_a', 'terminal_b', 'lowest_score_proof', 'pictures'];
 
 /** A snapped end's substation name; a snap to a substation without one says so. */
 const subName = (e: RouteEnd | undefined): string => (e?.hit ? e.hit.name || t('route.report.endUnnamedSub') : '');
@@ -215,7 +214,7 @@ function summaryRow(r: RowReport): Record<string, unknown> {
     line_type: r.lineType ?? '', a_lon: r.a?.lngLat[0] ?? '', a_lat: r.a?.lngLat[1] ?? '', a_substation: subName(r.a),
     b_lon: r.b?.lngLat[0] ?? '', b_lat: r.b?.lngLat[1] ?? '', b_substation: subName(r.b),
     length_mi: r.lengthMi === undefined ? '' : +r.lengthMi.toFixed(2), total_usd_2025: r.total2025 === undefined ? '' : Math.round(r.total2025),
-    terminal_a: r.terminalA ?? '', terminal_b: r.terminalB ?? '', user_costs: r.userCosts ?? '',
+    terminal_a: r.terminalA ?? '', terminal_b: r.terminalB ?? '',
     lowest_score_proof: r.optimality ?? '',
     pictures: (r.pictures ?? []).map((p) => `${p.picture}: ${p.note ?? 'ok'}${p.code ? ` (${reasonText(p.code)})` : ''}`).join('; '),
   };
