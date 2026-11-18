@@ -201,7 +201,7 @@ function renderOdinAge() {
 // document-level delegation.
 //
 // The shipped fields (from CARD_FIELDS in the fetch script): name, cause,
-// causekind, metersaffected, customersrestored, reportedstarttime,
+// causekind, metersaffected, reportedstarttime,
 // estimatedrestorationtime, statuskind.
 
 // "cause" is free text from each utility's outage system; these placeholder
@@ -255,8 +255,7 @@ function renderRaw(wrap: HTMLElement) {
     rowIf("Cause", cause) +
     rowIf("Status", rec.statuskind) +
     rowIf("Started", fmtCardTime(rec.reportedstarttime)) +
-    rowIf("Est. rest.", parseErt(rec.estimatedrestorationtime)) +
-    rowIf("Restored", numOrNull(rec.customersrestored));
+    rowIf("Est. rest.", parseErt(rec.estimatedrestorationtime));
   const disabled = recs.length < 2 ? " disabled" : "";
   // Nav sits BELOW the card, and the card area has a CSS min-height, so the
   // ‹ › buttons stay put while paging across cards with more/fewer rows.

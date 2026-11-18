@@ -59,7 +59,7 @@ ODIN_BASE = "https://ornl.opendatasoft.com/api/explore/v2.1/catalog/datasets/odi
 # The per-record display fields are shipped verbatim so the frontend never has
 # to hit ODIN itself (no per-browser CORS call, no per-IP quota exposure).
 ODIN_RECORD_FIELDS = (
-    "communitydescriptor,name,cause,causekind,metersaffected,customersrestored,"
+    "communitydescriptor,name,cause,causekind,metersaffected,"
     "reportedstarttime,estimatedrestorationtime,statuskind"
 )
 ODIN_RECORDS_URL = (
@@ -73,7 +73,7 @@ ODIN_METADATA_URL = ODIN_BASE
 # `select` above also pulls communitydescriptor/name/metersaffected/
 # reportedstarttime, which the aggregation consumes; only these reach `records`).
 CARD_FIELDS = (
-    "name", "cause", "causekind", "metersaffected", "customersrestored",
+    "name", "cause", "causekind", "metersaffected",
     "reportedstarttime", "estimatedrestorationtime", "statuskind",
 )
 
@@ -217,7 +217,7 @@ def _self_check():
     def rec(fips, name, out, since=None, cause=None, status=None):
         return {"communitydescriptor": fips, "name": name, "metersaffected": out,
                 "reportedstarttime": since, "cause": cause, "causekind": None,
-                "customersrestored": None, "estimatedrestorationtime": None,
+                "estimatedrestorationtime": None,
                 "statuskind": status}
 
     # Normal case: FIPS filtering + total sum + multi-utility aggregation.

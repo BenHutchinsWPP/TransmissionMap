@@ -32,7 +32,7 @@ provider, different pipeline.
 {"generated_utc":"2026-07-09T00:20:23Z","source_modified":null,
  "county_count":242,"total_customers_out":17707,"dropped":0,"legacy_fips":0,
  "counties":{"48201":[3208,167,[["CENTERPOINT ENERGY",3100,160],["FOO, BAR COOP",108,7]]],"41033":[2367,8]},
- "records":{"48201":[{"name":"CENTERPOINT ENERGY,8901","cause":"Storm","causekind":null,"metersaffected":3100,"customersrestored":null,"reportedstarttime":"2026-07-08T18:55:00+00:00","estimatedrestorationtime":"{\"ert\": \"2026-07-09T04:00:00Z\"}","statuskind":null}]}}
+ "records":{"48201":[{"name":"CENTERPOINT ENERGY,8901","cause":"Storm","causekind":null,"metersaffected":3100,"reportedstarttime":"2026-07-08T18:55:00+00:00","estimatedrestorationtime":"{\"ert\": \"2026-07-09T04:00:00Z\"}","statuskind":null}]}}
 ```
 
 `records` (added 2026-07) maps each FIPS to its per-incident outage records

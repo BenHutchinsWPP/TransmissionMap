@@ -16,7 +16,6 @@ def _rec(fips, name, out, since=None, cause=None, status=None):
         "reportedstarttime": since,
         "cause": cause,
         "causekind": None,
-        "customersrestored": None,
         "estimatedrestorationtime": None,
         "statuskind": status,
     }
