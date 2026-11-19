@@ -1,8 +1,9 @@
-// ─── OSM substation names and points by stable id (lazy) ─────────────────────
-// Role: two reads of a points archive by stable id, whether or not the map has
-//   its tiles loaded. Names: the OSM substation at a chain end (line-read.ts Chain
-//   startSub / endSub, an OSM fid). Points: the max-zoom point of a feature, for
-//   copy-rows.ts (any point archive, by DATA key). Names:
+// ─── OSM substation names and points by stable id or place (lazy) ────────────
+// Role: reads of a points archive, whether or not the map has its tiles loaded.
+//   Names: the OSM substation at a chain end (line-read.ts Chain startSub /
+//   endSub, an OSM fid). Points: the max-zoom point of a feature, for
+//   copy-rows.ts (any point archive, by DATA key). Near: every substation point
+//   around a place, for the route planner's OSM snap. Names:
 //   Reads the substation points archive (DATA.osm_substations_points: every
 //   substation at every zoom, each substation way as its centroid under the
 //   way's own fid) at its max zoom, only the tiles within NEAR_M of the chain
@@ -17,9 +18,16 @@
 //                                around its drawn point, at most MAX_COPY_TILES distinct
 //                                tiles per call; the rest are left out
 //   pointIn(tile, x, y, z, fid)  the [lng, lat] of point feature `fid` in a decoded tile (pure)
+//   substationPointsIn(tile, x, y, z)  every point feature of a decoded tile as an OsmPoint (pure)
+//   substationPointsNear(at, m)  the substation points within the box m metres around `at`,
+//                                read at the highest zoom (≤ the archive's max) whose box needs
+//                                ≤ NEAR_TILES tiles (the archive keeps every point at every zoom),
+//                                at most MAX_SNAP_TILES tiles; decoded tiles held in a cache of
+//                                SNAP_CACHE tiles, oldest out; rejects when the archive cannot be read
 // Deps: pmtiles, @mapbox/vector-tile + pbf (the tile decoder, this chunk only),
-//   constants.ts (DATA), elevation/terrarium.ts (tileForLngLat).
-//   Imported by: ui/ui-line.ts (names), user-data/copy-rows.ts (points), both dynamically.
+//   constants.ts (DATA), elevation/terrarium.ts (tileForLngLat), route/snap.ts (osmKv, OsmPoint).
+//   Imported by: ui/ui-line.ts (names), user-data/copy-rows.ts (points),
+//   ui/substation-index.ts (near), all dynamically.
 
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
@@ -27,6 +35,7 @@ import { PbfReader } from 'pbf';
 import { DATA } from '../constants.js';
 import type { DataKey } from '../../src/types.js';
 import { tileForLngLat } from '../elevation/terrarium.js';
+import { osmKv, type OsmPoint } from '../route/snap.js';
 
 export const NEAR_M = 1500;
 
@@ -84,7 +93,7 @@ export function osmSubstationName(fid: number, at: number[]): Promise<string | n
 }
 
 interface PointTile { layers: Record<string, { length: number; feature(i: number): { id?: number; type: number;
-  toGeoJSON(x: number, y: number, z: number): { geometry: { type: string; coordinates: unknown } } } }> }
+  properties?: Record<string, unknown>; toGeoJSON(x: number, y: number, z: number): { geometry: { type: string; coordinates: unknown } } } }> }
 
 /** The [lng, lat] of the point feature with id `fid` in the decoded tile z/x/y, or null. Pure. */
 export function pointIn(tile: PointTile, x: number, y: number, z: number, fid: string | number): [number, number] | null {
@@ -135,4 +144,56 @@ export async function pointsByFid(key: DataKey, wanted: { fid: string | number; 
     }
   }
   return out;
+}
+
+export const NEAR_TILES = 4;
+export const MAX_SNAP_TILES = 16;
+export const SNAP_CACHE = 64;
+const snapTiles = new Map<string, Promise<OsmPoint[]>>();
+
+/** Every point feature of the decoded tile z/x/y with a feature id, as an OsmPoint. Pure. */
+export function substationPointsIn(tile: PointTile, x: number, y: number, z: number): OsmPoint[] {
+  const out: OsmPoint[] = [];
+  for (const layer of Object.values(tile.layers)) {
+    for (let i = 0; i < layer.length; i++) {
+      const f = layer.feature(i);
+      if (f.id === undefined || f.type !== 1) continue;
+      const g = f.toGeoJSON(x, y, z).geometry;
+      if (g.type !== 'Point') continue;
+      const p = f.properties ?? {};
+      const str = (v: unknown) => (typeof v === 'string' ? v : null);
+      out.push({
+        fid: f.id, lngLat: g.coordinates as [number, number], name: str(p.name), kv: osmKv(p.nominal_kv),
+        subType: str(p.sub_type), countries: str(p.countries),
+      });
+    }
+  }
+  return out;
+}
+
+/** Test support: forget the decoded snap tiles. */
+export function _resetSnapTiles(): void { snapTiles.clear(); }
+
+function snapTile(archive: PMTiles, z: number, x: number, y: number): Promise<OsmPoint[]> {
+  const k = `${z}/${x}/${y}`;
+  const held = snapTiles.get(k);
+  if (held) { snapTiles.delete(k); snapTiles.set(k, held); return held; }
+  const p = archive.getZxy(z, x, y).then((got) =>
+    got?.data ? substationPointsIn(new VectorTile(new PbfReader(new Uint8Array(got.data))) as unknown as PointTile, x, y, z) : []);
+  p.catch(() => { if (snapTiles.get(k) === p) snapTiles.delete(k); });
+  snapTiles.set(k, p);
+  while (snapTiles.size > SNAP_CACHE) snapTiles.delete(snapTiles.keys().next().value!);
+  return p;
+}
+
+/** The OSM substation points in the tiles meeting the box m metres around `at`. Rejects when the archive
+ *  cannot be read. */
+export async function substationPointsNear(at: [number, number], m: number): Promise<OsmPoint[]> {
+  const archive = archiveOf('osm_substations_points');
+  const h = await archive.getHeader();
+  const lo = Math.max(0, h.minZoom ?? 0);
+  let z = Math.max(lo, h.maxZoom);
+  while (z > lo && tilesAround(at, z, m).length > NEAR_TILES) z--;
+  const tiles = tilesAround(at, z, m).slice(0, MAX_SNAP_TILES);
+  return (await Promise.all(tiles.map(([tz, x, y]) => snapTile(archive, tz, x, y)))).flat();
 }

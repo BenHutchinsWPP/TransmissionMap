@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Chọn A và B — nhập tên trạm biến áp hoặc chọn từng điểm trên bản đồ — rồi nhấn Tìm tuyến.",
   'route.error.title': "Không có tuyến",
   'route.err.ends': "Hãy chọn cả hai điểm đầu cuối trước.",
+  'route.err.termPosition': "Đầu {end}: phương pháp này không có giá cho một ngăn lộ đường dây tại trạm hiện có với loại đường dây này. Hãy chọn Tự động hoặc Trạm mới.",
   'route.err.preset': "Phương pháp đã lưu này cần được xem lại; hãy chọn phương pháp khác.",
   'route.err.uploadBudget': "Các lớp đã tải lên vượt giới hạn bộ nhớ: {n} lớp trên vùng tìm kiếm của tuyến này cần {mib} MiB, tối đa {max} MiB. Hãy gỡ một lớp hoặc rút ngắn đường dây.",
   'route.solve.title': "Đang tìm tuyến có điểm định tuyến thấp nhất",

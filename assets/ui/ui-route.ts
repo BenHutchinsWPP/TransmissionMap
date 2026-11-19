@@ -2111,7 +2111,7 @@ function planEnd(end: End, v: string | [number, number], idx: SubstationIndex | 
   const floor = kvFloor(kv);
   const exact = idx.subs.filter((x) => !x.isPlaceholder && x.lname === q);
   const toHit = (x: (typeof exact)[number]): SnapHit =>
-    ({ id: x.id, name: x.name, lngLat: [x.lng, x.lat], maxKv: x.maxKv, kvUnknown: x.maxKv === null, distanceKm: NaN, states: x.states, ba: x.ba });
+    ({ id: x.id, name: x.name, lngLat: [x.lng, x.lat], maxKv: x.maxKv, kvUnknown: x.maxKv === null, distanceKm: NaN, states: x.states, ba: x.ba, source: 'hifld' });
   if (exact.length === 1) {
     const x = exact[0];
     if (x.maxKv !== null && x.maxKv >= floor) return { hit: toHit(x) };

@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "选择 A 和 B — 输入变电站名称或在地图上分别选取 — 然后点击“查找路径”。",
   'route.error.title': "无路径",
   'route.err.ends': "请先选择两个端点。",
+  'route.err.termPosition': "端点 {end}：此方法没有该线路类型在现有变电站的出线间隔价格。请选择“自动”或“新建变电站”。",
   'route.err.preset': "此已保存的方法需要复核；请选择其他方法。",
   'route.err.uploadBudget': "上传图层超出内存预算:此路线搜索区域上的 {n} 个图层需要 {mib} MiB,上限 {max} MiB。请移除一个图层或缩短线路。",
   'route.solve.title': "正在寻找路由评分最低的路线",

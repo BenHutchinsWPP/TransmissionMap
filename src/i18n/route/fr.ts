@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Choisissez A et B — saisissez le nom d’un poste ou choisissez chacun sur la carte — puis cliquez sur Trouver le tracé.",
   'route.error.title': "Aucun tracé",
   'route.err.ends': "Choisissez d’abord les deux extrémités.",
+  'route.err.termPosition': "Extrémité {end} : cette méthode n’a pas de prix pour une cellule de ligne dans un poste existant pour ce type de ligne. Choisissez Automatique ou Nouveau poste.",
   'route.err.preset': "Cette méthode enregistrée doit être vérifiée ; choisissez-en une autre.",
   'route.err.uploadBudget': "Les couches importées dépassent le budget mémoire : {n} couches sur la zone de recherche de ce tracé demandent {mib} Mio, au plus {max} Mio. Retirez une couche ou raccourcissez la ligne.",
   'route.solve.title': "Recherche du tracé au score de routage le plus bas",

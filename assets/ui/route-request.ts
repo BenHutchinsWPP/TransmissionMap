@@ -5,15 +5,18 @@
 //       names its uploaded layers by hash only (`uploads`, in band order), never by geometry.
 //       `makeRequestBuilder(list)` binds the saved-method list and returns
 //       `methodFor` / `requestFor`; every failure is a message string, never a throw.
-//       `requestFor` also names each end's terminal kind (`resolveEnds`): `position` only for an end snapped to a
-//       substation whose highest voltage is known and at least the line type's, when the patched method
-//       prices a line position for that line type, else `new`. Batch and chat share it.
-//       No DOM, no map, no storage.
+//       `requestFor` also names each end's terminal kind (`explainEnds`, `resolveEnds`): an end's explicit
+//       choice (`RouteEnd.term`) is kept, but an explicit `position` on a line type the patched method has no
+//       position figure for refuses the request (`route.err.termPosition`, naming every such end: "A", "B" or "A, B"); Auto is `position` only for an end
+//       snapped to a substation whose highest voltage is known and at least the line type's, when the patched
+//       method prices a line position for that line type, else `new`, with the reason as a code.
+//       Batch and chat share it. No DOM, no map, no storage.
 // Deps: route/preset-patch.ts (uploadHashes, validatePresetPatch; PresetPatch, AddRow types), route/route.ts (RouteRequest, OverlayMode,
-//       types only), route/custom-presets.ts (CustomPreset, type only), registry/route-presets.ts (routePreset, EndKind),
-//       route-tabs/types.ts (types), i18n (t).
+//       types only), route/custom-presets.ts (CustomPreset, type only), route/snap.ts (kvFloor),
+//       registry/route-presets.ts (routePreset, EndKind), route-tabs/types.ts (types), i18n (t).
 
 import { uploadHashes, validatePresetPatch, type AddRow, type PresetPatch } from '../route/preset-patch.js';
+import { kvFloor } from '../route/snap.js';
 import { routePreset, type EndKind } from '../../src/registry/route-presets.js';
 import type { OverlayMode, RouteRequest } from '../route/route.js';
 import type { CustomPreset } from '../route/custom-presets.js';
@@ -53,14 +56,42 @@ export function mergePatch(base: PresetPatch | null | undefined, top: PresetPatc
   return out;
 }
 
-/** Each end's terminal kind for a solve of `lineType` with `patch` on `presetId`'s base, resolved at request time. */
-export function resolveEnds(base: string, patch: PresetPatch | undefined, lineType: string, a: RouteEnd, b: RouteEnd): [EndKind, EndKind] {
+/** Why an end gets its kind. Explicit: `chosen`, or `positionUnavailable` (an explicit Existing on a line type
+ *  with no position figure; the request is refused). Auto, tested in this order: `noPositionFigure`,
+ *  `noSub` (a raw point), `kvUnknown`, `lowKv` (below the line type's kV), `snapped` (a line position). */
+export type EndWhy = 'chosen' | 'positionUnavailable' | 'noPositionFigure' | 'noSub' | 'kvUnknown' | 'lowKv' | 'snapped';
+
+/** `kv`: the substation's highest kV for `snapped`, `lowKv` and `chosen` (null when unknown or no substation);
+ *  the snap floor for the line type for `noSub`; null otherwise. `positionUnavailable` carries kind `new`, so a
+ *  position never reaches the engine without a figure even if the refusal were skipped. */
+export interface EndExplain { kind: EndKind; why: EndWhy; kv: number | null }
+
+/** Each end's terminal kind and the reason, for a solve of `lineType` with `patch` on `base`. A null end
+ *  reads as a raw point on Auto. */
+export function explainEnds(base: string, patch: PresetPatch | undefined, lineType: string,
+  a: RouteEnd | null, b: RouteEnd | null): [EndExplain, EndExplain] {
   const p = routePreset(base);
   const v = p ? validatePresetPatch(p, patch) : null;
   const line = v?.ok && Object.hasOwn(v.result.line_types, lineType) ? v.result.line_types[lineType] : null;
-  const auto = (e: RouteEnd): EndKind =>
-    e.hit !== null && e.hit.maxKv !== null && line && e.hit.maxKv >= line.kv.value && line.terminals.position ? 'position' : 'new';
-  return [auto(a), auto(b)];
+  const figure = !!line?.terminals.position;
+  const one = (e: RouteEnd | null): EndExplain => {
+    const kv = e?.hit?.maxKv ?? null;
+    const term = e?.term ?? 'auto';
+    if (term === 'new' || term === 'none') return { kind: term, why: 'chosen', kv };
+    if (term === 'position') return figure ? { kind: 'position', why: 'chosen', kv } : { kind: 'new', why: 'positionUnavailable', kv: null };
+    if (!line || !figure) return { kind: 'new', why: 'noPositionFigure', kv: null };
+    if (!e?.hit) return { kind: 'new', why: 'noSub', kv: kvFloor(line.kv.value) };
+    if (kv === null) return { kind: 'new', why: 'kvUnknown', kv: null };
+    if (kv < line.kv.value) return { kind: 'new', why: 'lowKv', kv };
+    return { kind: 'position', why: 'snapped', kv };
+  };
+  return [one(a), one(b)];
+}
+
+/** Each end's terminal kind for a solve of `lineType` with `patch` on `base`'s preset, resolved at request time. */
+export function resolveEnds(base: string, patch: PresetPatch | undefined, lineType: string, a: RouteEnd, b: RouteEnd): [EndKind, EndKind] {
+  const [x, y] = explainEnds(base, patch, lineType, a, b);
+  return [x.kind, y.kind];
 }
 
 export function makeRequestBuilder(list: () => CustomPreset[]) {
@@ -76,10 +107,13 @@ export function makeRequestBuilder(list: () => CustomPreset[]) {
     if (!inp.a || !inp.b) return t('route.err.ends');
     const m = methodFor(inp.presetId, spec.patch);
     if (typeof m === 'string') return m;
+    const ends = explainEnds(m.preset, m.patch, inp.lineType, inp.a, inp.b);
+    const stuck = (['A', 'B'] as const).filter((_, i) => ends[i].why === 'positionUnavailable');
+    if (stuck.length) return t('route.err.termPosition', { end: stuck.join(', ') });
     return {
       from: inp.a.lngLat, to: inp.b.lngLat, preset: m.preset, lineType: inp.lineType,
       ...(m.patch ? { presetPatch: m.patch } : {}),
-      terminals: resolveEnds(m.preset, m.patch, inp.lineType, inp.a, inp.b),
+      terminals: [ends[0].kind, ends[1].kind],
       ...(uploadHashes(m.patch).length ? { uploads: uploadHashes(m.patch) } : {}),
       profile: spec.profile, surface: spec.surface, alternatives: spec.alternatives,
       ...(weight ? { weightImage: true, weightMode: weight === 'rows' ? 'route' : weight } : {}),

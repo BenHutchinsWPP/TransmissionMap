@@ -1,10 +1,17 @@
 // ─── Substation snapping + name search for the route planner ─────────────────
 // Role: pure. Builds an in-memory index over HIFLD substation points (CONUS
-//       only) and answers two questions: which substation does a clicked point
-//       snap to for a line of a given nominal kV (`snapAt`), and which
-//       substations match a typed name (`searchSubstations`). No fetching, no
-//       DOM, no app state. The caller supplies the line type's nominal kV.
-// Deps: none (GeoJSON types are ambient).
+//       only) and answers three questions: which HIFLD substation does a clicked
+//       point snap to for a line of a given nominal kV (`snapAt`; known kV ≥ the
+//       floor first, then unknown kV), which OpenStreetMap substation point it
+//       snaps to (`snapAmong`; known kV ≥ the floor only, US points on the 250 m
+//       routing grid, traction/industrial dropped), and which substations match a
+//       typed name (`searchSubstations`, HIFLD only). `osmKv` reads an OSM point's
+//       `nominal_kv` (a numeric string, empty when unknown). Every hit names its
+//       `source`. No fetching, no DOM, no app state. The caller supplies the line
+//       type's nominal kV.
+// Deps: route/grid.ts (GRID_250, cellOfLngLat). GeoJSON types are ambient.
+
+import { GRID_250, cellOfLngLat } from './grid.js';
 
 export interface SnapHit {
   id: string;
@@ -15,6 +22,17 @@ export interface SnapHit {
   distanceKm: number;
   states: string[];
   ba: string[];
+  source: 'hifld' | 'osm';
+}
+
+/** One OSM substation point as read from the points archive (osm-substation.ts). */
+export interface OsmPoint {
+  fid: number | string;
+  lngLat: [number, number];
+  name: string | null;
+  kv: number | null;
+  subType?: string | null;
+  countries?: string | null;
 }
 
 interface Sub {
@@ -103,7 +121,50 @@ function hit(s: Sub, distanceKm: number): SnapHit {
     distanceKm,
     states: s.states,
     ba: s.ba,
+    source: 'hifld',
   };
+}
+
+/** An OSM point's `nominal_kv` as kV: a finite number > 0 (number or numeric string), else null. */
+export function osmKv(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Items within `radiusKm` of `at` whose kV is unknown or ≥ the floor for a `kv` line,
+ *  split into known and unknown kV, each nearest first. The one eligibility and ranking
+ *  rule snapAt and snapAmong share. */
+function ranked<T>(
+  items: Iterable<T>,
+  at: [number, number],
+  kv: number,
+  radiusKm: number,
+  pos: (t: T) => [number, number],
+  kvOf: (t: T) => number | null,
+): { known: { item: T; d: number }[]; unknown: { item: T; d: number }[] } {
+  const floor = kvFloor(kv);
+  const known: { item: T; d: number }[] = [];
+  const unknown: { item: T; d: number }[] = [];
+  for (const t of items) {
+    const k = kvOf(t);
+    if (k !== null && k < floor) continue;
+    const [lng, lat] = pos(t);
+    const d = km(at[0], at[1], lng, lat);
+    if (!(d <= radiusKm)) continue;
+    (k === null ? unknown : known).push({ item: t, d });
+  }
+  const byDist = (a: { d: number }, b: { d: number }) => a.d - b.d;
+  return { known: known.sort(byDist), unknown: unknown.sort(byDist) };
+}
+
+function* near(index: SubstationIndex, lng: number, lat: number, radiusKm: number): Generator<Sub> {
+  const dLat = radiusKm / 111;
+  const dLng = radiusKm / (111 * Math.max(0.01, Math.cos((lat * Math.PI) / 180)));
+  for (let x = Math.floor((lng - dLng) / CELL); x <= Math.floor((lng + dLng) / CELL); x++) {
+    for (let y = Math.floor((lat - dLat) / CELL); y <= Math.floor((lat + dLat) / CELL); y++) {
+      yield* index.grid.get(`${x},${y}`) ?? [];
+    }
+  }
 }
 
 export function snapAt(
@@ -112,25 +173,40 @@ export function snapAt(
   kv: number,
   radiusKm = 3,
 ): { best: SnapHit | null; others: SnapHit[] } {
-  const [lng, lat] = lngLat;
-  const floor = kvFloor(kv);
-  const dLat = radiusKm / 111;
-  const dLng = radiusKm / (111 * Math.max(0.01, Math.cos((lat * Math.PI) / 180)));
-  const known: SnapHit[] = [];
-  const unknown: SnapHit[] = [];
-  for (let x = Math.floor((lng - dLng) / CELL); x <= Math.floor((lng + dLng) / CELL); x++) {
-    for (let y = Math.floor((lat - dLat) / CELL); y <= Math.floor((lat + dLat) / CELL); y++) {
-      for (const s of index.grid.get(`${x},${y}`) ?? []) {
-        if (s.maxKv !== null && s.maxKv < floor) continue;
-        const d = km(lng, lat, s.lng, s.lat);
-        if (d > radiusKm) continue;
-        (s.maxKv === null ? unknown : known).push(hit(s, d));
-      }
-    }
-  }
-  const byDist = (a: SnapHit, b: SnapHit) => a.distanceKm - b.distanceKm;
-  const all = [...known.sort(byDist), ...unknown.sort(byDist)];
+  const r = ranked(near(index, lngLat[0], lngLat[1], radiusKm), lngLat, kv, radiusKm, (s) => [s.lng, s.lat], (s) => s.maxKv);
+  const all = [...r.known, ...r.unknown].map(({ item, d }) => hit(item, d));
   return { best: all[0] ?? null, others: all.slice(1, 4) };
+}
+
+const OSM_EXCLUDED = new Set(['minor_distribution', 'traction', 'industrial']);   // minor_distribution: dropped at build; kept as a guard
+const onGrid = ([lng, lat]: [number, number]): boolean => {
+  const [c, r] = cellOfLngLat(GRID_250, lng, lat);
+  return c >= 0 && r >= 0 && c < GRID_250.cols && r < GRID_250.rows;
+};
+
+/** The nearest OSM substation point within `radiusKm` of `at` for a `kv` line: known kV ≥ the floor only,
+ *  tagged in the US (`countries` holds USA) and on the 250 m routing grid, sub type not traction or industrial.
+ *  A blank name keeps the hit with `name: null`. */
+export function snapAmong(points: Iterable<OsmPoint>, at: [number, number], kv: number, radiusKm = 3): SnapHit | null {
+  const usable = [...points].filter((p) =>
+    tags(p.countries).includes('USA') &&
+    !OSM_EXCLUDED.has(String(p.subType ?? '').trim().toLowerCase()) &&
+    onGrid(p.lngLat));
+  const best = ranked(usable, at, kv, radiusKm, (p) => p.lngLat, (p) => p.kv).known[0];
+  if (!best) return null;
+  const p = best.item;
+  const name = typeof p.name === 'string' ? p.name.trim() : '';
+  return {
+    id: `osm:${p.fid}`,
+    name: name || null,
+    lngLat: [p.lngLat[0], p.lngLat[1]],
+    maxKv: p.kv,
+    kvUnknown: false,
+    distanceKm: best.d,
+    states: [],
+    ba: [],
+    source: 'osm',
+  };
 }
 
 export function searchSubstations(index: SubstationIndex, query: string, kv: number, limit = 8): SnapHit[] {

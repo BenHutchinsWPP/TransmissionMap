@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Escolha A e B — digite o nome de uma subestação ou escolha cada uma no mapa — e depois clique em Encontrar rota.",
   'route.error.title': "Nenhuma rota",
   'route.err.ends': "Escolha primeiro os dois pontos extremos.",
+  'route.err.termPosition': "Extremidade {end}: este método não tem preço para uma posição de linha numa subestação existente para este tipo de linha. Escolha Automático ou Nova subestação.",
   'route.err.preset': "Este método salvo requer revisão; escolha outro método.",
   'route.err.uploadBudget': "As camadas carregadas excedem o orçamento de memória: {n} camadas sobre a área de busca desta rota precisam de {mib} MiB, no máximo {max} MiB. Remova uma camada ou encurte a linha.",
   'route.solve.title': "Buscando o traçado com a menor pontuação de roteamento",

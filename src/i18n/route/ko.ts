@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "A와 B를 선택하세요. 변전소 이름을 입력하거나 지도에서 각각 지정한 다음 경로 찾기를 누르세요.",
   'route.error.title': "경로 없음",
   'route.err.ends': "먼저 두 끝점을 모두 선택하세요.",
+  'route.err.termPosition': "끝점 {end}: 이 방법에는 이 선로 유형에 대한 기존 변전소의 선로 베이 가격이 없습니다. 자동 또는 신규 변전소를 선택하세요.",
   'route.err.preset': "저장된 이 방식은 검토가 필요합니다. 다른 방식을 선택하세요.",
   'route.err.uploadBudget': "업로드 레이어가 메모리 한도를 넘었습니다. 이 경로의 검색 영역에서 레이어 {n}개에 {mib} MiB가 필요하며 최대 {max} MiB입니다. 레이어를 제거하거나 선을 줄이세요.",
   'route.solve.title': "라우팅 점수가 가장 낮은 경로를 찾는 중",

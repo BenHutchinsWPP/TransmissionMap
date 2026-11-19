@@ -4,14 +4,18 @@
 //       RouteTabContext and renders from `ctx.session`; it never imports ui-route.ts
 //       (no import cycle) and changes the map only through the context's calls.
 //       Session only: nothing here goes in the link or on the undo stack.
-// Deps: route/route.ts, route/snap.ts, route/preset-patch.ts (types only).
+// Deps: route/route.ts, route/snap.ts, route/preset-patch.ts, registry/route-presets.ts (types only).
 
 import type { ExactCrossingsResult, RouteResult, RowPick } from '../../route/route.js';
 import type { SnapHit } from '../../route/snap.js';
 import type { PresetPatch } from '../../route/preset-patch.js';
+import type { TermChoice } from '../../../src/registry/route-presets.js';
 
-/** One endpoint: a snapped substation, or a raw point (hit null). */
-export interface RouteEnd { lngLat: [number, number]; hit: SnapHit | null }
+export type { TermChoice };
+
+/** One endpoint: a snapped substation, or a raw point (hit null). `term` is the visitor's
+ *  terminal choice for this end; absent = auto. */
+export interface RouteEnd { lngLat: [number, number]; hit: SnapHit | null; term?: TermChoice }
 
 /** What the input column edits. `presetId` is a built-in preset id or `custom:<id>`. */
 export interface RouteInputs {

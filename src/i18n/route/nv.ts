@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Choose A and B — type a substation name or pick each on the map — then Find route.",
   'route.error.title': "No route",
   'route.err.ends': "Choose both endpoints first.",
+  'route.err.termPosition': "End {end}: this method has no price for a line position at an existing station on this line type. Choose Auto or New station.",
   'route.err.preset': "This saved method needs review; choose another method.",
   'route.err.uploadBudget': "Uploaded layers exceed the memory budget: {n} layers over this route's search area need {mib} MiB, at most {max} MiB. Remove a layer or shorten the line.",
   'route.solve.title': "Finding the route with the lowest routing score",

@@ -83,6 +83,9 @@ export interface RowExcept {
 /** What one end of a line is: a new station, line position(s) at an existing station, or nothing costed. */
 export type EndKind = 'new' | 'position' | 'none';
 
+/** A visitor's terminal choice for one end: `auto` resolves at request time (route-request.ts explainEnds). */
+export type TermChoice = 'auto' | EndKind;
+
 export interface Money { usd: number; year: number; src: string }
 
 export interface TerminalRule {

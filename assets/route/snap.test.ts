@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSubstationIndex, kvFloor, searchSubstations, snapAt } from "./snap.js";
+import { buildSubstationIndex, kvFloor, osmKv, searchSubstations, snapAmong, snapAt, type OsmPoint } from "./snap.js";
 
 const pt = (id: string, name: string, kv: number | null, states: string, lng: number, lat: number) => ({
   type: "Feature" as const,
@@ -49,6 +49,15 @@ describe("snapAt", () => {
     expect(r.best?.name).toBeNull();
     expect(snapAt(idx, [-123.002, 44], 345).best?.id).toBe("2");
   });
+  it("every hit is HIFLD; the rest of the hit is as before", () => {
+    const r = snapAt(idx, [-123, 44], 345);
+    expect([r.best, ...r.others].every((h) => h?.source === "hifld")).toBe(true);
+    expect(r.best).toEqual({
+      id: "1", name: "Alvey", lngLat: [-123, 44], maxKv: 500, kvUnknown: false, distanceKm: 0,
+      states: ["OR"], ba: ["BPAT"], source: "hifld",
+    });
+    expect(searchSubstations(idx, "alv", 345).every((h) => h.source === "hifld")).toBe(true);
+  });
   it("radius boundary", () => {
     expect(snapAt(idx, [-123, 44.03], 500, 1).best?.id).toBe("7");
     expect(snapAt(idx, [-123, 44.02], 500, 1).best).toBeNull();
@@ -91,5 +100,67 @@ describe("searchSubstations", () => {
     const r = searchSubstations(idx, "ALV", 345);
     expect(r.map((h) => h.id)).toEqual(["1", "3", "4", "2"]);
     expect(Number.isNaN(r[0].distanceKm)).toBe(true);
+  });
+});
+
+describe("osmKv", () => {
+  it("numeric > 0, number or string; anything else unknown", () => {
+    const table: [unknown, number | null][] = [
+      [345, 345], ["345", 345], [" 230 ", 230], ["69.0", 69],
+      ["", null], [" ", null], [undefined, null], [null, null], [0, null], ["0", null], [-1, null], ["-1", null],
+      ["345;115", null], ["abc", null], [NaN, null], [Infinity, null], [true, null], [{}, null],
+    ];
+    for (const [v, kv] of table) expect([v, osmKv(v)]).toEqual([v, kv]);
+  });
+});
+
+describe("snapAmong (OSM points)", () => {
+  // Reno, NV: on the routing grid, in the US.
+  const at: [number, number] = [-119.8, 39.5];
+  const p = (fid: number, kv: number | null, dLng: number, o: Partial<OsmPoint> = {}): OsmPoint =>
+    ({ fid, lngLat: [at[0] + dLng, at[1]], name: `S${fid}`, kv, subType: "transmission", countries: "|USA|", ...o });
+
+  it("nearest known kV at or above the floor (500 kV line → 345 floor)", () => {
+    const pts = [p(1, 230, 0.001), p(2, 345, 0.01), p(3, 500, 0.02)];
+    const h = snapAmong(pts, at, 500);
+    expect(h).toMatchObject({ id: "osm:2", name: "S2", maxKv: 345, kvUnknown: false, states: [], ba: [], source: "osm" });
+    expect(h?.lngLat).toEqual([at[0] + 0.01, at[1]]);
+    expect(h?.distanceKm).toBeCloseTo(0.86, 1);
+    expect(snapAmong(pts, at, 230)?.id).toBe("osm:1");   // 230 line → 115 floor
+  });
+
+  it("refuses unknown kV (no fall-back to an unknown point)", () => {
+    expect(snapAmong([p(1, null, 0.001)], at, 345)).toBeNull();
+    expect(snapAmong([p(1, null, 0.001), p(2, 345, 0.02)], at, 345)?.id).toBe("osm:2");
+  });
+
+  it("drops traction and industrial (any case, padded) and minor_distribution", () => {
+    const pts = [
+      p(1, 500, 0.001, { subType: "traction" }), p(2, 500, 0.002, { subType: " Industrial " }),
+      p(3, 500, 0.003, { subType: "minor_distribution" }), p(4, 500, 0.004, { subType: null }),
+    ];
+    expect(snapAmong(pts, at, 345)?.id).toBe("osm:4");
+    expect(snapAmong(pts.slice(0, 3), at, 345)).toBeNull();
+  });
+
+  it("radius edge", () => {
+    const one = [p(1, 345, 0.0347)];   // ≈ 2.98 km east at 39.5° N
+    expect(snapAmong(one, at, 345, 3)?.id).toBe("osm:1");
+    expect(snapAmong(one, at, 345, 2.9)).toBeNull();
+    expect(snapAmong([p(1, 345, 0.04)], at, 345, 3)).toBeNull();
+  });
+
+  it("a blank name keeps the hit with name null", () => {
+    expect(snapAmong([p(1, 345, 0.001, { name: "  " })], at, 345)).toMatchObject({ id: "osm:1", name: null });
+    expect(snapAmong([p(1, 345, 0.001, { name: null })], at, 345)).toMatchObject({ id: "osm:1", name: null });
+  });
+
+  it("US points on the routing grid only", () => {
+    expect(snapAmong([p(1, 345, 0.001, { countries: "|CAN|" })], at, 345)).toBeNull();
+    expect(snapAmong([p(1, 345, 0.001, { countries: null })], at, 345)).toBeNull();
+    expect(snapAmong([p(1, 345, 0.001, { countries: "|CAN|USA|" })], at, 345)?.id).toBe("osm:1");
+    // A US-tagged point off the grid (Hawaii) is refused.
+    const hi: [number, number] = [-157.85, 21.3];
+    expect(snapAmong([{ fid: 9, lngLat: [hi[0] + 0.001, hi[1]], name: "H", kv: 138, countries: "|USA|" }], hi, 138)).toBeNull();
   });
 });

@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "A と B を選択してください(変電所名を入力するか、地図上でそれぞれ指定)。その後「ルートを探索」を押します。",
   'route.error.title': "ルートなし",
   'route.err.ends': "先に両方の端点を選択してください。",
+  'route.err.termPosition': "端点 {end}: この手法には、この線種で既設変電所の線路ベイの価格がありません。「自動」または「新設変電所」を選んでください。",
   'route.err.preset': "保存された手法は確認が必要です。別の手法を選択してください。",
   'route.err.uploadBudget': "アップロードレイヤーがメモリ予算を超えています。このルートの探索範囲では {n} レイヤーに {mib} MiB が必要で、上限は {max} MiB です。レイヤーを削除するか、線を短くしてください。",
   'route.solve.title': "ルーティングスコアが最も低いルートを探索中",

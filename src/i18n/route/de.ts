@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "A und B wählen — Namen eines Umspannwerks eingeben oder jeweils auf der Karte wählen — und dann „Route finden“.",
   'route.error.title': "Keine Route",
   'route.err.ends': "Wählen Sie zuerst beide Endpunkte.",
+  'route.err.termPosition': "Ende {end}: Diese Methode hat für diesen Leitungstyp keinen Preis für ein Leitungsfeld in einem bestehenden Umspannwerk. Wählen Sie Automatisch oder Neues Umspannwerk.",
   'route.err.preset': "Diese gespeicherte Methode muss geprüft werden; wählen Sie eine andere Methode.",
   'route.err.uploadBudget': "Die hochgeladenen Ebenen überschreiten das Speicherbudget: {n} Ebenen über dem Suchgebiet dieser Route brauchen {mib} MiB, höchstens {max} MiB. Entfernen Sie eine Ebene oder verkürzen Sie die Leitung.",
   'route.solve.title': "Trasse mit dem niedrigsten Routing-Score wird gesucht",

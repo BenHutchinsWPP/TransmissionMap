@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Scegli A e B — digita il nome di una sottostazione o selezionale sulla mappa — poi premi Trova percorso.",
   'route.error.title': "Nessun percorso",
   'route.err.ends': "Scegli prima entrambi gli estremi.",
+  'route.err.termPosition': "Estremo {end}: questo metodo non ha un prezzo per uno stallo di linea in una stazione esistente per questo tipo di linea. Scegli Automatico o Nuova stazione.",
   'route.err.preset': "Questo metodo salvato va rivisto; scegli un altro metodo.",
   'route.err.uploadBudget': "I livelli caricati superano il budget di memoria: {n} livelli sull'area di ricerca di questo percorso richiedono {mib} MiB, al massimo {max} MiB. Rimuovi un livello o accorcia la linea.",
   'route.solve.title': "Ricerca del percorso con il punteggio di instradamento più basso",

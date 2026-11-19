@@ -1,11 +1,13 @@
-// Tests for route-request.ts: requests equal hand-written RouteRequest literals; mergePatch cases, add_rows by hash.
+// Tests for route-request.ts: requests equal hand-written RouteRequest literals; mergePatch cases, add_rows by hash;
+// explainEnds' codes in their order and the explicit terminal choice (refusal of Existing without a figure).
 // Deps: route-request.ts; preset-patch.ts (validatePresetPatch, uploadHashes); route-presets.ts; custom-presets.ts (CustomPreset, type only).
-import { describe, it, expect } from 'vitest';
-import { makeRequestBuilder, mergePatch } from './route-request.js';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { explainEnds, makeRequestBuilder, mergePatch } from './route-request.js';
 import type { CustomPreset } from '../route/custom-presets.js';
-import type { RouteInputs, SolveSpec } from './route-tabs/types.js';
+import type { RouteEnd, RouteInputs, SolveSpec, TermChoice } from './route-tabs/types.js';
 import { uploadHashes, validatePresetPatch, type AddRow, type PresetPatch } from '../route/preset-patch.js';
 import { routePreset } from '../../src/registry/route-presets.js';
+import { loadRouteStrings, t } from '../../src/i18n/index.js';
 import type { SnapHit } from '../route/snap.js';
 
 const custom = (patch: unknown, status: 'ok' | 'needs-review' = 'ok'): CustomPreset =>
@@ -123,7 +125,7 @@ const none = () => makeRequestBuilder(() => []);
 
 describe('requestFor: terminal kinds (auto resolves at request time)', () => {
   const none = makeRequestBuilder(() => []);
-  const hit = (maxKv: number | null): SnapHit => ({ id: 'S', name: 'S', lngLat: [-119.8, 39.5], maxKv, kvUnknown: maxKv === null, distanceKm: 0.2, states: [], ba: [] });
+  const hit = (maxKv: number | null): SnapHit => ({ id: 'S', name: 'S', lngLat: [-119.8, 39.5], maxKv, kvUnknown: maxKv === null, distanceKm: 0.2, states: [], ba: [], source: 'hifld' });
   const at = (lineType: string, a: number | null | 'raw', b: number | null | 'raw', presetId = 'tm-default', patch: PresetPatch | null = null): RouteInputs => ({
     a: { lngLat: [-119.8, 39.5], hit: a === 'raw' ? null : hit(a) }, b: { lngLat: [-119.2, 39.9], hit: b === 'raw' ? null : hit(b) },
     lineType, presetId, patch,
@@ -158,5 +160,68 @@ describe('requestFor: terminal kinds (auto resolves at request time)', () => {
     const patch: PresetPatch = { contingency: 0.2 };
     const r = none.requestFor(at('ac345', 500, 500, 'tm-default', patch), spec({ patch }));
     expect(typeof r === 'string' ? r : r.presetPatch).toEqual(patch);
+  });
+});
+
+describe('explainEnds', () => {
+  const hit = (maxKv: number | null): SnapHit => ({ id: 'S', name: 'S', lngLat: [-119.8, 39.5], maxKv, kvUnknown: maxKv === null, distanceKm: 0.2, states: [], ba: [], source: 'hifld' });
+  const end = (kv: number | null | 'raw', term?: TermChoice): RouteEnd =>
+    ({ lngLat: [-119.8, 39.5], hit: kv === 'raw' ? null : hit(kv), ...(term ? { term } : {}) });
+  const ex = (lineType: string, a: RouteEnd | null, preset = 'tm-default', patch?: PresetPatch) =>
+    explainEnds(preset, patch, lineType, a, end('raw'))[0];
+
+  it('auto codes', () => {
+    expect(ex('ac345', end(500))).toEqual({ kind: 'position', why: 'snapped', kv: 500 });
+    expect(ex('ac345', end(345))).toEqual({ kind: 'position', why: 'snapped', kv: 345 });
+    expect(ex('ac345', end(230))).toEqual({ kind: 'new', why: 'lowKv', kv: 230 });
+    expect(ex('ac345', end(null))).toEqual({ kind: 'new', why: 'kvUnknown', kv: null });
+    expect(ex('ac500', end('raw'))).toEqual({ kind: 'new', why: 'noSub', kv: 345 });
+    expect(ex('ac345', null)).toEqual({ kind: 'new', why: 'noSub', kv: 230 });
+    expect(ex('dc500', end(500))).toEqual({ kind: 'new', why: 'noPositionFigure', kv: null });
+    expect(ex('nope', end(500))).toEqual({ kind: 'new', why: 'noPositionFigure', kv: null });
+    expect(ex('ac500', end(500), 'pnas-wu2023')).toEqual({ kind: 'new', why: 'noPositionFigure', kv: null });
+    expect(ex('ac345', end(500), 'no-such-preset')).toEqual({ kind: 'new', why: 'noPositionFigure', kv: null });
+  });
+
+  it('auto order: no figure comes before no substation and before unknown kV', () => {
+    expect(ex('dc500', end('raw')).why).toBe('noPositionFigure');
+    expect(ex('dc500', end(null)).why).toBe('noPositionFigure');
+  });
+
+  it('explicit new and none are kept, whatever the substation', () => {
+    expect(ex('ac345', end(500, 'new'))).toEqual({ kind: 'new', why: 'chosen', kv: 500 });
+    expect(ex('ac345', end('raw', 'none'))).toEqual({ kind: 'none', why: 'chosen', kv: null });
+    expect(ex('ac500', end(500, 'none'), 'pnas-wu2023')).toEqual({ kind: 'none', why: 'chosen', kv: 500 });
+  });
+
+  it('explicit position: kept with a figure even with no substation or a low kV; unavailable without one', () => {
+    expect(ex('ac345', end('raw', 'position'))).toEqual({ kind: 'position', why: 'chosen', kv: null });
+    expect(ex('ac345', end(69, 'position'))).toEqual({ kind: 'position', why: 'chosen', kv: 69 });
+    expect(ex('ac500', end(500, 'position'), 'pnas-wu2023')).toEqual({ kind: 'new', why: 'positionUnavailable', kv: null });
+    expect(ex('dc500', end(500, 'position'))).toEqual({ kind: 'new', why: 'positionUnavailable', kv: null });
+  });
+});
+
+describe('requestFor: explicit terminal choice', () => {
+  beforeAll(() => loadRouteStrings());
+  const b = makeRequestBuilder(() => []);
+  const inp = (lineType: string, ta: TermChoice | undefined, tb: TermChoice | undefined, presetId = 'tm-default'): RouteInputs => ({
+    a: { lngLat: [-119.8, 39.5], hit: null, ...(ta ? { term: ta } : {}) },
+    b: { lngLat: [-119.2, 39.9], hit: null, ...(tb ? { term: tb } : {}) },
+    lineType, presetId, patch: null,
+  });
+  const kinds = (i: RouteInputs) => { const r = b.requestFor(i, spec()); if (typeof r === 'string') throw new Error(r); return r.terminals; };
+
+  it('carries explicit kinds to the engine', () => {
+    expect(kinds(inp('ac345', 'position', 'none'))).toEqual(['position', 'none']);
+    expect(kinds(inp('ac345', 'new', 'auto'))).toEqual(['new', 'new']);
+    expect(kinds(inp('ac500', 'none', 'new', 'pnas-wu2023'))).toEqual(['none', 'new']);
+  });
+
+  it('refuses an explicit Existing on a method or line type with no position figure, naming the end', () => {
+    expect(b.requestFor(inp('ac500', 'auto', 'position', 'pnas-wu2023'), spec())).toBe(t('route.err.termPosition', { end: 'B' }));
+    expect(b.requestFor(inp('dc500', 'position', 'auto'), spec())).toBe(t('route.err.termPosition', { end: 'A' }));
+    expect(b.requestFor(inp('dc500', 'position', 'position'), spec())).toBe(t('route.err.termPosition', { end: 'A, B' }));
+    expect(t('route.err.termPosition', { end: 'A' })).toMatch(/^End A: /);
   });
 });

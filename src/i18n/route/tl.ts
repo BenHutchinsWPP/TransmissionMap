@@ -145,6 +145,7 @@ const locale: LocaleDictionary = {
   'route.idle': "Piliin ang A at B — mag-type ng pangalan ng substation o piliin ang bawat isa sa mapa — saka Hanapin ang ruta.",
   'route.error.title': "Walang ruta",
   'route.err.ends': "Piliin muna ang dalawang endpoint.",
+  'route.err.termPosition': "Dulo {end}: walang presyo ang paraang ito para sa line position sa umiiral na istasyon para sa uri ng linyang ito. Piliin ang Awtomatiko o Bagong istasyon.",
   'route.err.preset': "Kailangang suriin ang naka-save na paraang ito; pumili ng ibang paraan.",
   'route.err.uploadBudget': "Lumampas ang mga na-upload na layer sa badyet ng memorya: ang {n} layer sa lugar ng paghahanap ng rutang ito ay nangangailangan ng {mib} MiB, hanggang {max} MiB lang. Mag-alis ng layer o paikliin ang linya.",
   'route.solve.title': "Hinahanap ang ruta na may pinakamababang routing score",
