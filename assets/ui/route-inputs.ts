@@ -16,6 +16,12 @@
 //       pending its row reads route.in.snapping and Find waits. The pick callout shows the HIFLD
 //       snap at once and, with no known-kV HIFLD hit, reads route.in.snapping and asks snapEnd after
 //       HOVER_REST_MS of rest (its own counter). An OSM hit shows the text credit route.in.osmCredit.
+//       Under each set end a terminal picker (`select.ri-term`: Auto / New station / Existing station / None) and a
+//       `small.ri-term-why` line that words Auto's reason from `cb.explainEnds()` (the shell's request builder; this
+//       file holds no method logic). A change replaces the end object (`{ ...end, term }`), never bumps its generation
+//       (an in-flight re-snap still lands, carrying the choice) and calls `cb.onChange()`. Existing station is disabled
+//       when the method prices no line position; a leftover choice stays selected with a warning, never changed
+//       silently. `renderTerms()` redraws them on a method, patch, line type or language change.
 //       For the map chat (ui-route.ts routeForChat): substationIndex() (a load failure is a
 //       refusal and is not cached, so the next call retries), setEnd()/setEndHit() with
 //       `{ resetTerm, osm: false }` (setEndHit places exactly that substation, no re-snap) and
@@ -23,7 +29,7 @@
 // Deps: route/snap.ts (snapAt, searchSubstations), route/custom-presets.ts, dataset-query.ts (Outcome, type only),
 //       src/registry/route-presets.ts, map-input.ts (onMapTap, onMapHover),
 //       tool-mode.ts (toolHooks), state.ts, substation-index.ts (ensureSubstationIndex, snapEnd), i18n (t), state-bus.ts (lang:changed), units.ts (fmtDistanceMi),
-//       route-tabs/types.ts (types), maplibre-gl (Marker), route-panel.css.
+//       route-tabs/types.ts (types), route-request.ts (EndExplain, type only), maplibre-gl (Marker), route-panel.css.
 
 import { Marker } from 'maplibre-gl';
 import type { MapMouseEvent } from 'maplibre-gl';
@@ -39,11 +45,16 @@ import { on } from '../state-bus.js';
 import { fmtDistanceMi } from '../../src/units.js';
 import type { RouteEnd, RouteSession, RouteStatus } from './route-tabs/types.js';
 import type { Outcome } from '../dataset-query.js';
+import type { EndExplain } from './route-request.js';
+import type { TermChoice } from '../../src/registry/route-presets.js';
 import './route-panel.css';
 import { h, ht } from '../utils/utils-dom.js';
 
 export type End = 'A' | 'B';
-export interface InputsCallbacks { onFind(): void; onChange(): void; onEditMethod(): void }
+/** What the terminal pickers say: each end's kind and why (route-request.ts `explainEnds` for the current inputs), and
+ *  whether the patched line type prices a line position at all. */
+export interface TermExplain { ends: [EndExplain, EndExplain]; position: boolean }
+export interface InputsCallbacks { onFind(): void; onChange(): void; onEditMethod(): void; explainEnds?(): TermExplain | null }
 export interface InputsHandle {
   destroy(): void;
   setBusy(b: boolean): void;
@@ -51,6 +62,8 @@ export interface InputsHandle {
   setFolded(f: boolean): void;
   /** Re-read the session's method, line type and ends (saved defaults arrived, or the chat set them). */
   refresh(): void;
+  /** Redraw the terminal pickers and their reason lines (the method, its patch or the line type changed). */
+  renderTerms(): void;
   startPick(end: End): void;
   /** Snap `lngLat` and fill `end`; `osm: false` keeps the snap to HIFLD (the chat); `resetTerm` drops the end's terminal choice. */
   setEnd(end: End, lngLat: [number, number], opts?: { resetTerm?: boolean; osm?: boolean }): Promise<void>;
@@ -115,6 +128,8 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
   const gen: Record<End, number> = { A: 0, B: 0 };
   /** The point an end's pending snap is for (its row reads "Looking for a substation…"). */
   const pending: Record<End, [number, number] | null> = { A: null, B: null };
+  /** An end placed as an exact point on purpose (Alt-tap or drag, "use the raw point"): no snap was attempted. */
+  const exact: Record<End, boolean> = { A: false, B: false };
   let hoverGen = 0;
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -209,6 +224,67 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
   }
   const endOf = (end: End): RouteEnd | null => (end === 'A' ? inputs.a : inputs.b);
 
+  // ── terminal pickers ───────────────────────────────────────────────────────
+  const TERMS: [TermChoice, string][] = [['auto', 'route.in.termAuto'], ['new', 'route.in.termNew'], ['position', 'route.in.termPosition'], ['none', 'route.in.termNone']];
+  const terms = {} as Record<End, { wrap: HTMLElement; label: HTMLLabelElement; select: HTMLSelectElement; why: HTMLElement }>;
+  for (const end of ['A', 'B'] as const) {
+    const wrap = h('div', 'ri-term-wrap');
+    const label = h('label', 'ri-term-label');
+    const sel = h('select', 'ri-term');
+    sel.id = `${id}-${end}-term`;
+    label.htmlFor = sel.id;
+    for (const [v] of TERMS) { const o = h('option'); o.value = v; sel.append(o); }
+    const why = h('small', 'ri-term-why');
+    why.id = `${id}-${end}-term-why`;
+    wrap.append(label, sel, why);
+    wrap.hidden = true;
+    sel.addEventListener('change', () => {
+      const re = endOf(end);
+      if (!re) return;
+      const next = { ...re, term: sel.value as TermChoice };
+      if (end === 'A') inputs.a = next; else inputs.b = next;
+      renderTerms();
+      cb.onChange();
+    });
+    fields[end].wrap.append(wrap);
+    terms[end] = { wrap, label, select: sel, why };
+  }
+
+  /** The reason line for an end's Auto (or the warning for a leftover Existing station). */
+  function whyText(e: EndExplain, term: TermChoice, position: boolean, end: End): string {
+    if (term === 'position') return position ? '' : t('route.in.termWarn', { auto: t('route.in.termAuto'), new: t('route.in.termNew') });
+    if (term !== 'auto') return '';
+    switch (e.why) {
+      case 'snapped': return t('route.in.termWhy.snapped', { kv: Math.round(e.kv ?? 0) });
+      case 'lowKv': return t('route.in.termWhy.lowKv', { kv: Math.round(e.kv ?? 0) });
+      case 'noSub': return exact[end] ? t('route.in.termWhy.exact') : t('route.in.termWhy.noSub', { kv: Math.round(e.kv ?? 0), d: miles(session.snapKm ?? 3) });
+      case 'kvUnknown': return t('route.in.termWhy.kvUnknown');
+      case 'noPositionFigure': return t('route.in.termWhy.noFigure');
+      default: return '';
+    }
+  }
+
+  function renderTerms(): void {
+    const x = cb.explainEnds?.() ?? null;
+    for (const [i, end] of (['A', 'B'] as const).entries()) {
+      const { wrap, label, select: sel, why } = terms[end];
+      const re = endOf(end);
+      wrap.hidden = !re;
+      if (!re) continue;
+      const term = re.term ?? 'auto';
+      const position = x?.position ?? true;
+      label.textContent = t('route.in.termLabel', { end });
+      [...sel.options].forEach((o, k) => {
+        o.textContent = t(TERMS[k][1]);
+        if (o.value === 'position') { o.disabled = !position; o.title = position ? '' : t('route.in.termNoFigure'); }
+      });
+      sel.value = term;
+      why.textContent = x ? whyText(x.ends[i], term, position, end) : '';
+      sel.setAttribute('aria-describedby', why.id);
+    why.classList.toggle('ri-term-why--warn', term === 'position' && !position);
+    }
+  }
+
   function renderField(end: End): void {
     const f = fields[end];
     const re = endOf(end);
@@ -216,6 +292,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     f.box.classList.toggle('ri-ep--active', picking === end);
     f.input = null;
     closeList(end);
+    renderTerms();
     const wait = pending[end];
     if (re || wait) {
       const txt = h('span', 'ri-ep-txt');
@@ -342,7 +419,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     const f = fields[end];
     const s = f.hits[i];
     if (s) setInput(end, { lngLat: s.lngLat, hit: s }, null);
-    else if (i === f.hits.length && clickAt[end]) setInput(end, { lngLat: clickAt[end]!, hit: null }, clickAt[end]);
+    else if (i === f.hits.length && clickAt[end]) setInput(end, { lngLat: clickAt[end]!, hit: null }, clickAt[end], false, true);
     else return;
     f.box.querySelector<HTMLElement>('.ri-ep-x')?.focus();
   }
@@ -364,8 +441,9 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
   }
 
   // ── set an endpoint ────────────────────────────────────────────────────────
-  function setInput(end: End, re: RouteEnd | null, click: [number, number] | null, resetTerm = false): void {
+  function setInput(end: End, re: RouteEnd | null, click: [number, number] | null, resetTerm = false, onPurpose = false): void {
     gen[end]++;
+    exact[end] = onPurpose && !!re;
     pending[end] = null;
     if (picking === end && re) stopPick();
     const term = endOf(end)?.term;
@@ -392,7 +470,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       hit = await snap(idx, lngLat, kv(), session.snapKm ?? 3, { osm: o.osm ?? true }).catch(() => null);
     }
     if (destroyed || gen[end] !== g) return;
-    setInput(end, hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null }, lngLat, o.resetTerm);
+    setInput(end, hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null }, lngLat, o.resetTerm, raw);
   }
 
   // ── pins ───────────────────────────────────────────────────────────────────
@@ -565,6 +643,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     if (ltId === inputs.lineType) return;
     inputs.lineType = ltId;
     renderSeg();
+    renderTerms();
     seg.querySelector<HTMLElement>(`[aria-checked="true"]`)?.focus();
     cb.onChange();
   }
@@ -602,10 +681,12 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       fitLineType();
       renderSeg();
       renderSelect();
+      renderTerms();
       cb.onChange();
       return;
     }
     renderSelect();
+    renderTerms();
   };
   document.addEventListener('route:presets', onPresets);
   select.addEventListener('change', () => {
@@ -614,6 +695,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     inputs.patch = null;
     fitLineType();
     renderSeg();
+    renderTerms();
     cb.onChange();
   });
 
@@ -706,9 +788,11 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       renderSeg();
       renderSelect();
       for (const end of ['A', 'B'] as const) { renderField(end); placePin(end); }
+      renderTerms();
       renderStrip();
       updateFind();
     },
+    renderTerms,
     startPick,
     setEnd(end, lngLat, o) { return fill(end, lngLat, false, o); },
     substationIndex: loadIndex,

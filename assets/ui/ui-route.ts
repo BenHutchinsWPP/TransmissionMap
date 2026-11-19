@@ -59,6 +59,8 @@
 //         choice reset to Auto; a name only by exact
 //         case-insensitive match, else ≤ 5 candidates), solves on the visitor's path,
 //         never saves prefs (chatDriving), and returns chat-summary.ts's summary.
+//       The input column's terminal pickers read their reasons through `explainEnds` (termExplain: methodFor + route-request.ts's
+//       explainEnds for the session's inputs); a Method tab patch change calls `inputs.renderTerms()`.
 //       Closing the pane (× / Esc in the drawer) disposes all of it. Session only:
 //       nothing goes in the link or on the undo stack.
 // Deps: ui-table.ts (openRoute, routePanel, routeActions, setRouteTall, drawerPadding),
@@ -79,7 +81,7 @@
 import type { CanvasSource, FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import './route-panel.css';
 import { openRoute, routePanel, routeActions, setRouteTall, drawerPadding } from './ui-table.js';
-import { mountInputs, type End, type InputsHandle } from './route-inputs.js';
+import { mountInputs, type End, type InputsHandle, type TermExplain } from './route-inputs.js';
 import type { ChatRouteRequest } from './route-panel-open.js';
 import { chatSummary, cleanName, type ChatRouteEnd, type RouteSummary } from './route-tabs/chat-summary.js';
 import { kvFloor, searchSubstations, type SnapHit, type SubstationIndex } from '../route/snap.js';
@@ -97,7 +99,7 @@ import { greatCircleM } from '../route/cost.js';
 import { createCustomPresetStore, presetLabel } from '../route/custom-presets.js';
 import { categoryLabelKey } from '../route/categories.js';
 import { localBudget, parseUploadBudget, uploadHashes, type PresetPatch } from '../route/preset-patch.js';
-import { makeRequestBuilder } from './route-request.js';
+import { makeRequestBuilder, explainEnds } from './route-request.js';
 import { loadRoutePrefs, localStorageAdapter, saveRoutePrefs, type RoutePrefs } from '../route/route-prefs.js';
 import { ROUTE_PRESETS, routePreset } from '../../src/registry/route-presets.js';
 import { setRouteTapClaims } from '../popup.js';
@@ -417,6 +419,7 @@ function createPane(background = false): Pane {
     },
     onChange: () => { rememberPrefs(p); syncHighlightBase(p); renderMain(p); renderStrip(p); },
     onEditMethod: () => { session.tab = 'method'; if (session.result) renderMain(p, true); },
+    explainEnds: () => termExplain(session),
   });
   renderMain(p, true);
   renderActions(p);
@@ -471,6 +474,19 @@ function dispose(): void {
 // ─── solving ─────────────────────────────────────────────────────────────────
 
 const { methodFor, requestFor } = makeRequestBuilder(() => presetStore.list());
+
+/** What the input column's terminal pickers say for the session's current method, patch, line type and ends;
+ *  `position`: whether that line type prices a line position (probed with an explicit Existing station). */
+function termExplain(s: RouteSession): TermExplain | null {
+  const inp = s.inputs;
+  const m = methodFor(inp.presetId, inp.patch);
+  if (typeof m === 'string') return null;
+  const probe = { lngLat: [0, 0] as [number, number], hit: null, term: 'position' as const };
+  return {
+    ends: explainEnds(m.preset, m.patch, inp.lineType, inp.a, inp.b),
+    position: explainEnds(m.preset, m.patch, inp.lineType, probe, probe)[0].why !== 'positionUnavailable',
+  };
+}
 
 const endsKey = (i: RouteInputs) => JSON.stringify([i.a?.lngLat, i.b?.lngLat, i.lineType]);
 /** A new highlight, mode or route (ends or line type) earns one window fetch; a re-solve of the same route does not. */
@@ -1974,6 +1990,7 @@ function makeContext(p: Pane): RouteTabContext {
     },
     async resolve(patch) {
       s.inputs.patch = patch;
+      if (live()) p.inputs.renderTerms();
       await solve(p, { patch, profile: true, alternatives: 0, surface: false });
     },
     runSolves(specs, onEach) {
@@ -2005,7 +2022,7 @@ function makeContext(p: Pane): RouteTabContext {
     setTall(onOff) { setRouteTall(onOff); },
     setMethodErrors(n) { if (live()) p.inputs.setErrors(n); },
     rerender() { if (live()) { syncHighlightBase(p); renderMain(p, true); renderActions(p); renderStrip(p); } },
-    previewPatch(patch) { if (live()) previewPatch(p, patch); },
+    previewPatch(patch) { if (live()) { p.inputs.renderTerms(); previewPatch(p, patch); } },
     highlightRows(picks) { if (live()) highlightRows(p, picks); },
   };
 }

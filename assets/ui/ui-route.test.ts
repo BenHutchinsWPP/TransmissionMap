@@ -186,6 +186,39 @@ describe('route pane shell', () => {
     expect(map.layers.has('rp-area-fill')).toBe(true);
   });
 
+  it('the terminal pickers read the shell\'s explanation, reach the request and follow a method change', async () => {
+    await openWithEnds();
+    const sels = () => routePanel().querySelectorAll<HTMLSelectElement>('select.ri-term');
+    const whys = () => [...routePanel().querySelectorAll('.ri-term-why')].map((e) => e.textContent);
+    expect(sels()).toHaveLength(2);
+    expect(whys()[0]).toBe(t('route.in.termWhy.snapped', { kv: 500 }));
+    sels()[1].value = 'none';
+    sels()[1].dispatchEvent(new Event('change', { bubbles: true }));
+    findBtn().click();
+    expect(solver.calls[0].req.terminals).toEqual(['position', 'none']);
+    const method = routePanel().querySelector<HTMLSelectElement>('.ri-select')!;
+    method.value = 'pnas-wu2023';
+    method.dispatchEvent(new Event('change', { bubbles: true }));
+    expect([...sels()[0].options].find((o) => o.value === 'position')!.disabled).toBe(true);
+    expect(whys()[0]).toBe(t('route.in.termWhy.noFigure'));
+  });
+
+  it('a Method tab patch change (previewPatch) and a re-solve (resolve) redraw the terminal pickers', async () => {
+    await openWithEnds();
+    const existing = () => [...routePanel().querySelectorAll<HTMLSelectElement>('select.ri-term')[0].options].find((o) => o.value === 'position')!;
+    const ses = _pane()!.session;
+    ses.inputs.presetId = 'pnas-wu2023';
+    expect(existing().disabled).toBe(false);          // nothing told the column yet
+    _pane()!.ctx.previewPatch?.(null);
+    expect(existing().disabled).toBe(true);
+    ses.inputs.presetId = 'tm-default';
+    _pane()!.ctx.previewPatch?.(null);
+    expect(existing().disabled).toBe(false);
+    ses.inputs.presetId = 'pnas-wu2023';
+    void _pane()!.ctx.resolve(null);
+    expect(existing().disabled).toBe(true);
+  });
+
   it('shows the five steps and restarts them when "read" comes again', async () => {
     await openWithEnds();
     findBtn().click();

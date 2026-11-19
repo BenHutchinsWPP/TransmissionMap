@@ -56,7 +56,7 @@
 .ri-seg-btn { flex: 1 1 auto; border: 0; background: var(--ri-surface); padding: 5px 9px; font: var(--text-sm) var(--font); color: var(--text-mid); cursor: pointer; white-space: nowrap; }
 .ri-seg-btn.on { background: var(--ri-tint); color: var(--ri-tint-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
 
-.ri-select { width: 100%; padding: 5px 6px; border: 1px solid var(--panel-border); border-radius: 6px; font: var(--text-sm) var(--font); background: var(--ri-surface); color: var(--text); }
+.ri-select, .ri-term { width: 100%; padding: 5px 6px; border: 1px solid var(--panel-border); border-radius: 6px; font: var(--text-sm) var(--font); background: var(--ri-surface); color: var(--text); }
 
 .ri-primary { display: block; width: 100%; margin-top: 12px; background: var(--accent); color: #fff; border: 1px solid var(--accent-hover); border-radius: var(--radius-sm); padding: 7px 14px; font: 600 var(--text-sm) var(--font); cursor: pointer; }
 .ri-primary:hover:not(:disabled) { background: var(--accent-hover); }
@@ -243,3 +243,15 @@
 .rp .ri-method-row { margin-bottom: 4px; }
 /* The pin's tip sits on its point: the rotated head's corner ends at the marker's foot. */
 .ri-pin .ri-pin-head { top: 5px; }
+
+/* terminal picker under a set end */
+.ri-term-wrap { margin-top: 4px; padding-left: 4px; }
+.ri-term-wrap[hidden] { display: none; }
+.ri-term-label { display: block; font-size: var(--text-xs); color: var(--text-light); margin-bottom: 2px; }
+.ri-term { min-width: 0; }
+.ri-term-why { display: block; margin-top: 3px; color: var(--text-light); font-size: var(--text-xs); line-height: 1.35; }
+.ri-term-why:empty { display: none; }
+.ri-term-why--warn { color: #b91c1c; }
+@media (max-width: 640px), (max-height: 500px) {
+  .ri-term { font-size: 16px; padding: 7px 6px; }
+}

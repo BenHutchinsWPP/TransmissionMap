@@ -3,7 +3,9 @@
 // preset, pick mode (tap snaps, Alt-tap raw, Esc stops), pin drag re-snap, the
 // Find button's gating and the error line; the OpenStreetMap fallback through a fake reader
 // (row, callout and strip credit), stale snaps dropped after a newer write, and `term` carried
-// over a drag or re-pick, dropped on clear and on `resetTerm`.
+// over a drag or re-pick, dropped on clear and on `resetTerm`; the terminal pickers (shown for a set end, replace
+// the end without bumping its generation, Existing station disabled without a line position figure, reason lines
+// per code, redraw on a method change and `lang:changed`).
 // Deps: route-inputs.js, substation-index.js (reset per test; snapEnd with a fake OSM reader), map-input.js / layer-data.js / maplibre-gl (mocked),
 //       test-drawer-env.js, state.js, tool-mode.js, i18n (t).
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
@@ -56,6 +58,8 @@ import type { RouteSession } from './route-tabs/types.js';
 import { snapEnd } from './substation-index.js';
 import type { OsmPoint, SnapHit } from '../route/snap.js';
 import type { SnapFn } from './route-inputs.js';
+import { explainEnds } from './route-request.js';
+import { fmtDistanceMi } from '../../src/units.js';
 
 type MockM = { lngLat: [number, number]; emit(n: string): void; el: HTMLElement };
 const markers = () => (Marker as unknown as { instances: MockM[] }).instances;
@@ -177,7 +181,7 @@ describe('route inputs', () => {
     expect(labels()).toEqual(['500 AC', `500 AC ${sc}`, '345 AC', `345 AC ${sc}`, '230 AC', `230 AC ${sc}`, '161 AC', '138 AC', '115 AC', '69 AC', '500 DC']);
     el.querySelector<HTMLButtonElement>('[role=radio][data-id=ac345]')!.click();
     expect(session.inputs.lineType).toBe('ac345');
-    const sel = el.querySelector('select')!;
+    const sel = el.querySelector<HTMLSelectElement>('.ri-select')!;
     sel.value = 'pnas-wu2023';
     sel.dispatchEvent(new Event('change'));
     expect(session.inputs.presetId).toBe('pnas-wu2023');
@@ -559,5 +563,147 @@ describe('route inputs', () => {
     session.inputs.a = { ...session.inputs.a!, term: 'position' };
     await handle.setEndHit('A', session.inputs.a.hit!, { resetTerm: true });
     expect(session.inputs.a?.term).toBeUndefined();
+  });
+});
+
+describe('terminal pickers', () => {
+  const probe = { lngLat: [0, 0] as [number, number], hit: null, term: 'position' as const };
+  /** The shell's explainEnds callback, over the real request-builder function. */
+  function explaining() {
+    return () => {
+      const i = session.inputs;
+      const patch = i.patch ?? undefined;
+      return {
+        ends: explainEnds(i.presetId, patch, i.lineType, i.a, i.b),
+        position: explainEnds(i.presetId, patch, i.lineType, probe, probe)[0].why !== 'positionUnavailable',
+      };
+    };
+  }
+  function remount(): void {
+    handle.destroy();
+    cb = { ...cb, explainEnds: explaining() } as typeof cb;
+    handle = mountInputs(el, session, cb, { snap });
+  }
+  const sel = (end: 'A' | 'B') => el.querySelectorAll<HTMLSelectElement>('select.ri-term')[end === 'A' ? 0 : 1];
+  const whyOf = (end: 'A' | 'B') => el.querySelectorAll<HTMLElement>('.ri-term-why')[end === 'A' ? 0 : 1].textContent;
+  const opt = (end: 'A' | 'B', v: string) => [...sel(end).options].find((o) => o.value === v)!;
+  const choose = (end: 'A' | 'B', v: string) => { sel(end).value = v; sel(end).dispatchEvent(new Event('change', { bubbles: true })); };
+  const MCNARY: [number, number] = [-119.31, 45.95];
+
+  it('shows for a set end only, with the four options labelled', async () => {
+    remount();
+    const wrap = (end: 'A' | 'B') => sel(end).closest<HTMLElement>('.ri-term-wrap')!;
+    expect(wrap('A').hidden).toBe(true);
+    await handle.setEnd('A', MCNARY);
+    expect(wrap('A').hidden).toBe(false);
+    expect(wrap('B').hidden).toBe(true);
+    expect([...sel('A').options].map((o) => o.textContent)).toEqual([t('route.in.termAuto'), t('route.in.termNew'), t('route.in.termPosition'), t('route.in.termNone')]);
+    expect(sel('A').value).toBe('auto');
+    expect(el.querySelector('label.ri-term-label')!.getAttribute('for')).toBe(sel('A').id);
+    el.querySelector<HTMLButtonElement>('.ri-ep-x')!.click();
+    expect(wrap('A').hidden).toBe(true);
+  });
+
+  it('a change replaces the end object, keeps its generation and calls onChange; resultInputs is untouched', async () => {
+    remount();
+    await handle.setEnd('A', MCNARY);
+    const before = session.inputs.a!;
+    session.resultInputs = { ...session.inputs };
+    const frozen = session.resultInputs.a;
+    cb.onChange.mockClear();
+    choose('A', 'none');
+    expect(session.inputs.a).not.toBe(before);
+    expect(session.inputs.a).toMatchObject({ term: 'none', hit: { name: 'McNary' } });
+    expect(before.term).toBeUndefined();
+    expect(session.resultInputs.a).toBe(frozen);
+    expect(session.resultInputs.a?.term).toBeUndefined();
+    expect(cb.onChange).toHaveBeenCalledOnce();
+    expect(whyOf('A')).toBe('');
+  });
+
+  it('a change does not drop an in-flight re-snap of that end, which lands with the choice', async () => {
+    remount();
+    await handle.setEnd('A', MCNARY);
+    const held: ((h: SnapHit | null) => void)[] = [];
+    snapImpl = () => new Promise((r) => held.push(r));
+    const m = markers()[0];
+    m.lngLat = [-116.79, 43.19];
+    m.emit('dragend');
+    await flush();
+    expect(held).toHaveLength(1);
+    choose('A', 'new');
+    const hit: SnapHit = { id: 'h:2', name: 'Hemingway', lngLat: [-116.8, 43.2], maxKv: 500, kvUnknown: false, distanceKm: 0.1, states: [], ba: [], source: 'hifld' };
+    held[0](hit);
+    await flush();
+    expect(session.inputs.a).toMatchObject({ hit: { name: 'Hemingway' }, term: 'new' });
+  });
+
+  it('Existing station is disabled on a study method with the reason; Auto says why', async () => {
+    session.inputs.presetId = 'pnas-wu2023';
+    remount();
+    await handle.setEnd('A', MCNARY);
+    expect(opt('A', 'position').disabled).toBe(true);
+    expect(opt('A', 'position').title).toBe(t('route.in.termNoFigure'));
+    expect(whyOf('A')).toBe(t('route.in.termWhy.noFigure'));
+    choose('A', 'new');
+    expect(whyOf('A')).toBe('');
+    expect(sel('A').getAttribute('aria-describedby')).toBe(el.querySelector('.ri-term-why')!.id);
+  });
+
+  it('a deliberate exact point says so instead of "no substation within"', async () => {
+    remount();
+    handle.startPick('A');
+    await flush();
+    tap({ ...ptr(-119.31, 45.95, true), lngLat: { lng: -119.31, lat: 45.95 } });
+    await flush();
+    expect(session.inputs.a?.hit).toBeNull();
+    expect(whyOf('A')).toBe(t('route.in.termWhy.exact'));
+    await handle.setEnd('A', [-100, 30]);
+    expect(whyOf('A')).toBe(t('route.in.termWhy.noSub', { kv: 345, d: fmtDistanceMi(3 / 1.609344) }));
+  });
+
+  it('a leftover Existing station stays selected after a method switch, with a warning', async () => {
+    remount();
+    await handle.setEnd('A', MCNARY);
+    expect(opt('A', 'position').disabled).toBe(false);
+    choose('A', 'position');
+    expect(whyOf('A')).toBe('');
+    const method = el.querySelector<HTMLSelectElement>('.ri-select')!;
+    method.value = 'pnas-wu2023';
+    method.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(session.inputs.a?.term).toBe('position');
+    expect(sel('A').value).toBe('position');
+    expect(opt('A', 'position').disabled).toBe(true);
+    expect(whyOf('A')).toBe(t('route.in.termWarn', { auto: t('route.in.termAuto'), new: t('route.in.termNew') }));
+    expect(el.querySelector('.ri-term-why--warn')).not.toBeNull();
+  });
+
+  it('words each Auto reason', async () => {
+    remount();
+    await handle.setEnd('A', MCNARY);
+    expect(whyOf('A')).toBe(t('route.in.termWhy.snapped', { kv: 500 }));
+    const withHit = (hit: Partial<SnapHit> | null) => {
+      session.inputs.a = { ...session.inputs.a!, hit: hit && { ...session.inputs.a!.hit!, ...hit } };
+      handle.renderTerms();
+    };
+    withHit({ maxKv: null, kvUnknown: true });
+    expect(whyOf('A')).toBe(t('route.in.termWhy.kvUnknown'));
+    withHit({ maxKv: 230, kvUnknown: false });
+    expect(whyOf('A')).toBe(t('route.in.termWhy.lowKv', { kv: 230 }));
+    withHit(null);
+    expect(whyOf('A')).toBe(t('route.in.termWhy.noSub', { kv: 345, d: fmtDistanceMi(3 / 1.609344) }));
+  });
+
+  it('renderTerms follows a method change made outside the column and lang:changed redraws', async () => {
+    remount();
+    await handle.setEnd('A', MCNARY);
+    expect(opt('A', 'position').disabled).toBe(false);
+    session.inputs.presetId = 'pnas-wu2023';
+    handle.renderTerms();
+    expect(opt('A', 'position').disabled).toBe(true);
+    sel('A').parentElement!.querySelector('.ri-term-label')!.textContent = 'stale';
+    const { emit } = await import('../state-bus.js');
+    emit('lang:changed', { locale: 'en' });
+    expect(sel('A').parentElement!.querySelector('.ri-term-label')!.textContent).toBe(t('route.in.termLabel', { end: 'A' }));
   });
 });
