@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "تعديلات أخرى",
   'route.wf.otherItems': "أخرى ({n} بنود)",
   'route.wf.shortLine': "عامل الخط القصير",
-  'route.wf.terminals': "المحطات الطرفية ({n})",
   'route.wf.mitigation': "التخفيف (متوسط)",
   'route.wf.rowLand': "أرض حق المرور",
   'route.wf.markups': "الزيادات",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "خريطة FEMA سارية، خارج منطقة الفيضان الخاصة (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "منطقة الفيضان الخاصة (Special Flood Hazard Area) (نصف الخلية على الأقل)",
   "route.insp.nfhl.3": "لا توجد خريطة فيضانات سارية من FEMA",
-  'route.wf.terminals.position': "مواضع الخط ({n})",
-  'route.cost.positions': "مواضع الخط",
   'route.report.term.new': "محطة جديدة",
   'route.report.term.newStudy': "محطة طرفية كما تسعّرها الطريقة",
   'route.report.term.position': "موضع خط في محطة قائمة",
   'route.report.term.none': "لا شيء",
   'route.report.endTerminal': "، المحطة الطرفية: {kind}",
+  'route.term.stations': "محطات جديدة ({ends})",
+  'route.term.positions': "مواضع الخط في محطات قائمة ({ends})",
+  'route.term.study': "المحطات الطرفية كما تسعّرها الطريقة ({ends})",
+  'route.term.midLine': "{n} في منتصف الخط",
+  'route.term.sep': "، ",
 };
 
 export default locale;

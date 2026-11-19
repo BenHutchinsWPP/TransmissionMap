@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Other adjustments",
   'route.wf.otherItems': "Other ({n} items)",
   'route.wf.shortLine': "Short-line factor",
-  'route.wf.terminals': "Terminals ({n} stations)",
   'route.wf.mitigation': "Mitigation (mid)",
   'route.wf.rowLand': "Right-of-way land",
   'route.wf.markups': "Markups",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA map in effect, outside the Special Flood Hazard Area",
   "route.insp.nfhl.2": "Special Flood Hazard Area (at least half of the cell)",
   "route.insp.nfhl.3": "No effective FEMA flood map",
-  'route.wf.terminals.position': "Line positions ({n})",
-  'route.cost.positions': "Line positions",
   'route.report.term.new': "new station",
   'route.report.term.newStudy': "terminal as the method prices it",
   'route.report.term.position': "line position at an existing station",
   'route.report.term.none': "none",
   'route.report.endTerminal': ", terminal: {kind}",
+  'route.term.stations': "New stations ({ends})",
+  'route.term.positions': "Line positions at existing stations ({ends})",
+  'route.term.study': "Terminals as the method prices them ({ends})",
+  'route.term.midLine': "{n} mid-line",
+  'route.term.sep': ", ",
 };
 
 export default locale;

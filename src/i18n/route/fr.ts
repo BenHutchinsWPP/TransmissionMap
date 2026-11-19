@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Autres ajustements",
   'route.wf.otherItems': "Autres ({n} éléments)",
   'route.wf.shortLine': "Facteur de ligne courte",
-  'route.wf.terminals': "Postes d’extrémité ({n})",
   'route.wf.mitigation': "Atténuation (moyenne)",
   'route.wf.rowLand': "Terrains d’emprise",
   'route.wf.markups': "Majorations",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "Carte FEMA en vigueur, hors de la Zone inondable spéciale (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "Zone inondable spéciale (Special Flood Hazard Area) (au moins la moitié de la cellule)",
   "route.insp.nfhl.3": "Aucune carte des inondations FEMA en vigueur",
-  'route.wf.terminals.position': "Cellules de ligne ({n})",
-  'route.cost.positions': "Cellules de ligne",
   'route.report.term.new': "nouveau poste",
   'route.report.term.newStudy': "poste d’extrémité tel que la méthode le chiffre",
   'route.report.term.position': "cellule de ligne dans un poste existant",
   'route.report.term.none': "aucun",
   'route.report.endTerminal': ", poste d’extrémité : {kind}",
+  'route.term.stations': "Nouveaux postes ({ends})",
+  'route.term.positions': "Cellules de ligne dans des postes existants ({ends})",
+  'route.term.study': "Postes d’extrémité tels que la méthode les chiffre ({ends})",
+  'route.term.midLine': "{n} en milieu de ligne",
+  'route.term.sep': ", ",
 };
 
 export default locale;

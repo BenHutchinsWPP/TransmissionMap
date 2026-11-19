@@ -12,7 +12,7 @@ import './cost.css';
 import { t } from '../../../src/i18n/index.js';
 import { ROUTE_PRESETS, routePreset, type RoutePreset } from '../../../src/registry/route-presets.js';
 import type { CostResult } from '../../route/cost.js';
-import { kpis, rangeBar, sourceInfo, terminalSplit, waterfall, waterfallLines } from './widgets.js';
+import { kpis, rangeBar, sourceInfo, terminalLabel, terminalSplit, waterfall, waterfallLines } from './widgets.js';
 import { solvedPresetOf } from './method.js';
 import type { DollarYear, RouteSession, RouteTab, RouteTabContext } from './types.js';
 
@@ -50,8 +50,8 @@ export function costItems(cost: CostResult, preset: RoutePreset): CostItem[] {
     if (cost.terminalsUsd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: cost.terminalCount, each: m1(cost.terminalsUsd / (cost.terminalCount || 1)) }), cost.terminalsUsd, line?.terminals.src);
   } else {
     const { stations: st, positions: po } = split;
-    if (st?.usd) add('terminals', t('route.cost.terminals'), t('route.cost.terminals.basis', { n: st.n, each: m1(st.each) }), st.usd, line?.terminals.src);
-    if (po?.usd) add('positions', t('route.cost.positions'), t('route.cost.terminals.basis', { n: po.n, each: m1(po.each) }), po.usd, line?.terminals.position?.src);
+    if (st?.usd) add('terminals', terminalLabel('stations', st, preset), t('route.cost.terminals.basis', { n: st.n, each: m1(st.each) }), st.usd, line?.terminals.src);
+    if (po?.usd) add('positions', terminalLabel('positions', po, preset), t('route.cost.terminals.basis', { n: po.n, each: m1(po.each) }), po.usd, line?.terminals.position?.src);
   }
   if (cost.mitigationUsd.mid) {
     add('mitigation', t('route.cost.mitigation'), t('route.cost.mitigation.basis', { lo: m1(cost.mitigationUsd.low), hi: m1(cost.mitigationUsd.high) }), cost.mitigationUsd.mid, preset.mitigation?.src);

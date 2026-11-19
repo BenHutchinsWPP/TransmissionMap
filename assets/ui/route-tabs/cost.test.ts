@@ -57,11 +57,29 @@ describe('Cost tab', () => {
     const { el, s } = render((x) => { x.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['position', 'new']) }; });
     expect(el.querySelector('tr[data-item="terminals"]')!.children[1].textContent).toBe('1 × $34.6 M');
     expect(el.querySelector('tr[data-item="positions"]')!.children[1].textContent).toBe('1 × $10.5 M');
-    expect(el.querySelector('tr[data-item="positions"]')!.children[0].textContent).toBe('Line positions');
+    expect(el.querySelector('tr[data-item="positions"]')!.children[0].textContent).toBe('Line positions at existing stations (A)');
+    expect(el.querySelector('tr[data-item="terminals"]')!.children[0].textContent).toBe('New stations (B)');
     const items = [...el.querySelectorAll<HTMLElement>('tr[data-item]')].filter((r) => r.dataset.item !== 'total');
     const c = s.result!.cost;
     expect(Math.abs(items.reduce((a, r) => a + Number(r.dataset.nominal), 0) - c.totalNominal)).toBeLessThan(0.05e6);
     expect(Math.abs(items.reduce((a, r) => a + Number(r.dataset.usd2025), 0) - c.total2025)).toBeLessThan(0.05e6);
+  });
+
+  it('a study method reads its new-station row as the method prices it, and mid-line stations are counted', () => {
+    const { el } = render((x) => {
+      const cost = { ...fixtureCost(1, undefined, ['new', 'new']) };
+      cost.terminalItems = [...cost.terminalItems!, { kind: 'mid' as const, end: null, usd: cost.terminalItems![0].usd }];
+      x.result = { ...FIXTURE_RESULT, preset: { ...FIXTURE_RESULT.preset, id: 'nrel-revx' }, cost: { ...cost, preset: 'nrel-revx' } };
+      x.resultInputs = { ...x.inputs, presetId: 'nrel-revx' };
+    });
+    const label = el.querySelector('tr[data-item="terminals"]')!.children[0].textContent!;
+    expect(label).toBe('Terminals as the method prices them (A, B, 1 mid-line)');
+  });
+
+  it('none + new shows only the new end', () => {
+    const el = render((x) => { x.result = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['none', 'new']) }; }).el;
+    expect(el.querySelector('tr[data-item="terminals"]')!.children[0].textContent).toBe('New stations (B)');
+    expect(el.querySelector('tr[data-item="positions"]')).toBeNull();
   });
 
   it('two line positions show no station row; no terminal at all shows neither', () => {

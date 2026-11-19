@@ -103,7 +103,7 @@ export interface RouteReportModel {
   caveats: { heading: string; screening: string; credit: string };
 }
 
-type End = { lngLat: [number, number]; hit: { name: string | null; maxKv: number | null } | null } | null;
+type End = { lngLat: [number, number]; hit: { name: string | null; maxKv: number | null; source?: 'hifld' | 'osm' } | null } | null;
 
 /** ", terminal: new station" for an end of a result whose terminals are known; '' otherwise. */
 function terminalOf(cost: RouteResult['cost'], side: 'A' | 'B', preset: RoutePreset): string {
@@ -118,7 +118,8 @@ function endpoint(label: string, end: End, terminal = ''): Tpl {
   const named = !!end.hit?.name;
   const name = end.hit?.name || t(end.hit ? 'route.report.endUnnamedSub' : 'route.report.endUnnamed');
   const kv = end.hit?.maxKv ? `, ${t('route.report.endKv', { kv: end.hit.maxKv })}` : '';
-  return { template: '{label}: {name}{kv} ({lng}, {lat}){terminal}', params: { label, name, kv, lng: end.lngLat[0].toFixed(4), lat: end.lngLat[1].toFixed(4), terminal }, ...(named ? { visitor: ['name'] } : {}) };
+  const credit = end.hit?.source === 'osm' ? `, ${t('route.in.osmCredit')}` : '';
+  return { template: '{label}: {name}{kv} ({lng}, {lat}){credit}{terminal}', params: { label, name, kv, credit, lng: end.lngLat[0].toFixed(4), lat: end.lngLat[1].toFixed(4), terminal }, ...(named ? { visitor: ['name'] } : {}) };
 }
 
 function endName(end: End): string {

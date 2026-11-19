@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Прочие поправки",
   'route.wf.otherItems': "Прочее ({n} поз.)",
   'route.wf.shortLine': "Коэффициент короткой линии",
-  'route.wf.terminals': "Терминалы ({n} подстанций)",
   'route.wf.mitigation': "Компенсационные меры (средн.)",
   'route.wf.rowLand': "Земля под полосу отвода",
   'route.wf.markups': "Наценки",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "Карта FEMA действует, вне Особая зона затопления (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "Особая зона затопления (Special Flood Hazard Area) (не менее половины ячейки)",
   "route.insp.nfhl.3": "Нет действующей карты затопления FEMA",
-  'route.wf.terminals.position': "Линейные ячейки ({n})",
-  'route.cost.positions': "Линейные ячейки",
   'route.report.term.new': "новая подстанция",
   'route.report.term.newStudy': "терминал, как его оценивает метод",
   'route.report.term.position': "линейная ячейка на существующей подстанции",
   'route.report.term.none': "нет",
   'route.report.endTerminal': ", терминал: {kind}",
+  'route.term.stations': "Новые подстанции ({ends})",
+  'route.term.positions': "Линейные ячейки на существующих подстанциях ({ends})",
+  'route.term.study': "Терминалы, как их оценивает метод ({ends})",
+  'route.term.midLine': "{n} на трассе",
+  'route.term.sep': ", ",
 };
 
 export default locale;

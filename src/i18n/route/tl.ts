@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Iba pang adjustment",
   'route.wf.otherItems': "Iba pa ({n} item)",
   'route.wf.shortLine': "Short-line factor",
-  'route.wf.terminals': "Mga terminal ({n} istasyon)",
   'route.wf.mitigation': "Mitigation (gitna)",
   'route.wf.rowLand': "Lupa ng right-of-way",
   'route.wf.markups': "Mga markup",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "May umiiral na mapa ng FEMA, nasa labas ng Espesyal na sona ng baha (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "Espesyal na sona ng baha (Special Flood Hazard Area) (hindi bababa sa kalahati ng cell)",
   "route.insp.nfhl.3": "Walang umiiral na mapa ng baha ng FEMA",
-  'route.wf.terminals.position': "Mga posisyon ng linya ({n})",
-  'route.cost.positions': "Mga posisyon ng linya",
   'route.report.term.new': "bagong istasyon",
   'route.report.term.newStudy': "terminal ayon sa pagpepresyo ng pamamaraan",
   'route.report.term.position': "posisyon ng linya sa umiiral na istasyon",
   'route.report.term.none': "wala",
   'route.report.endTerminal': ", terminal sa dulo: {kind}",
+  'route.term.stations': "Mga bagong istasyon ({ends})",
+  'route.term.positions': "Mga posisyon ng linya sa umiiral na istasyon ({ends})",
+  'route.term.study': "Mga terminal ayon sa pagpepresyo ng pamamaraan ({ends})",
+  'route.term.midLine': "{n} sa gitna ng linya",
+  'route.term.sep': ", ",
 };
 
 export default locale;

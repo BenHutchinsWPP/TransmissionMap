@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Sonstige Anpassungen",
   'route.wf.otherItems': "Sonstiges ({n} Posten)",
   'route.wf.shortLine': "Kurzleitungsfaktor",
-  'route.wf.terminals': "Anschlüsse ({n} Stationen)",
   'route.wf.mitigation': "Ausgleichsmaßnahmen (mittel)",
   'route.wf.rowLand': "Trassengrundstücke",
   'route.wf.markups': "Aufschläge",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA-Karte gültig, außerhalb der Hochwassergebiet (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "Hochwassergebiet (Special Flood Hazard Area) (mindestens die Hälfte der Zelle)",
   "route.insp.nfhl.3": "Keine gültige FEMA-Hochwasserkarte",
-  'route.wf.terminals.position': "Leitungsfelder ({n})",
-  'route.cost.positions': "Leitungsfelder",
   'route.report.term.new': "neue Station",
   'route.report.term.newStudy': "Anschluss, wie ihn die Methode bepreist",
   'route.report.term.position': "Leitungsfeld in einer bestehenden Station",
   'route.report.term.none': "keiner",
   'route.report.endTerminal': ", Anschluss: {kind}",
+  'route.term.stations': "Neue Stationen ({ends})",
+  'route.term.positions': "Leitungsfelder in bestehenden Stationen ({ends})",
+  'route.term.study': "Anschlüsse, wie die Methode sie bepreist ({ends})",
+  'route.term.midLine': "{n} auf der Strecke",
+  'route.term.sep': ", ",
 };
 
 export default locale;

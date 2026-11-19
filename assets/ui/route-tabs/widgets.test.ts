@@ -14,7 +14,7 @@ vi.mock('../../../src/i18n/index.js', async () => {
   return { t: (k: string, p?: Record<string, string | number>) => (en[k] ?? k).replace(/\{(\w+)\}/g, (m, n) => (p && n in p ? String(p[n]) : m)) };
 });
 
-import { terminalSplit, waterfall, waterfallLines, rangeBar, crossingPills, badge, sourceInfo, kpis, kpiTiles, fmtMoneyHead, type WaterfallLine } from './widgets.js';
+import { endsText, terminalSplit, waterfall, waterfallLines, rangeBar, crossingPills, badge, sourceInfo, kpis, kpiTiles, fmtMoneyHead, type WaterfallLine } from './widgets.js';
 import { FIXTURE_RESULT, fixtureCost } from './fixture.js';
 import { routePreset } from '../../../src/registry/route-presets.js';
 
@@ -47,9 +47,10 @@ describe('waterfallLines', () => {
           const lines = waterfallLines(cost, preset, { dollars });
           expect(lines.find((l) => l.group === 'total')!.value).toBeCloseTo(cost[key], 3);
           expect(sumBefore(lines, 'total')).toBeCloseTo(cost[key], 3);
-          const t = lines.filter((l) => l.group === 'terminals' && /^(Terminals|Line positions)/.test(l.label));
+          const t = lines.filter((l) => l.group === 'terminals' && /^(New stations|Line positions)/.test(l.label));
           const nPos = kinds.filter((k) => k === 'position').length, nSt = kinds.filter((k) => k === 'new').length;
-          expect(t.map((l) => l.label)).toEqual([...(nSt ? [`Terminals (${nSt} stations)`] : []), ...(nPos ? [`Line positions (${nPos})`] : [])]);
+          const endsOf = (k: string) => kinds.flatMap((x, i) => (x === k ? ['AB'[i]] : [])).join(', ');
+          expect(t.map((l) => l.label)).toEqual([...(nSt ? [`New stations (${endsOf('new')})`] : []), ...(nPos ? [`Line positions at existing stations (${endsOf('position')})`] : [])]);
           // the terminal lines sum to terminalsUsd itself (never the items' own sum, which may differ by an ulp)
           const k = dollars === 'y2025' ? cost.total2025 / cost.totalNominal : 1;
           expect(t.reduce((s, l) => s + l.value, 0)).toBeCloseTo((cost.terminalsUsd ?? 0) * k, 3);
@@ -59,10 +60,34 @@ describe('waterfallLines', () => {
     it('terminalSplit takes the group totals from terminalsUsd, not from the items\' own sum', () => {
       const c = { ...fixtureCost(), terminalCount: 3, terminalsUsd: 0.6, terminalItems: [{ kind: 'new' as const, end: 'A' as const, usd: 0.1 }, { kind: 'new' as const, end: 'B' as const, usd: 0.2 }, { kind: 'mid' as const, end: null, usd: 0.3 }] };
       expect(0.1 + 0.2 + 0.3).not.toBe(0.6);
-      expect(terminalSplit(c)).toEqual({ stations: { n: 3, each: 0.1, usd: 0.6 }, positions: null });
+      expect(terminalSplit(c)).toEqual({ stations: { n: 3, each: 0.1, usd: 0.6, ends: ['A', 'B'], mid: 1 }, positions: null });
       const mixed = { ...c, terminalsUsd: 5.5, terminalItems: [{ kind: 'position' as const, end: 'A' as const, usd: 2 }, ...c.terminalItems.slice(1)] };
       const sp = terminalSplit(mixed)!;
       expect(sp.positions!.usd + sp.stations!.usd).toBe(5.5);
+    });
+    it('a mid-line station joins the new-station line and the bars still sum to the total', () => {
+      const base = fixtureCost(1, undefined, ['new', 'new']);
+      const items = [...base.terminalItems!, { kind: 'mid' as const, end: null, usd: base.terminalItems![0].usd }];
+      const extra = base.terminalItems![0].usd;
+      const c = { ...base, terminalItems: items, terminalCount: 3, terminalsUsd: (base.terminalsUsd ?? 0) + extra, totalNominal: base.totalNominal + extra, total2025: base.total2025 + extra };
+      const lines = waterfallLines(c, preset, { dollars: 'preset' });
+      expect(lines.filter((l) => l.group === 'terminals' && /^New/.test(l.label)).map((l) => l.label)).toEqual(['New stations (A, B, 1 mid-line)']);
+      expect(lines.find((l) => l.label.startsWith('New stations'))!.value).toBeCloseTo(c.terminalsUsd!, 3);
+    });
+    it('terminalsUsd null with items gives no terminal line', () => {
+      const c = { ...fixtureCost(1, undefined, ['new', 'new']), terminalsUsd: null };
+      expect(waterfallLines(c, preset, { dollars: 'preset' }).some((l) => /^(New stations|Terminals|Line positions)/.test(l.label))).toBe(false);
+    });
+    it('endsText lists ends then mid-line stations', () => {
+      expect(endsText(['A', 'B'], 0)).toBe('A, B');
+      expect(endsText(['A'], 2)).toBe('A, 2 mid-line');
+      expect(endsText([], 1)).toBe('1 mid-line');
+    });
+    it('a study method\'s new-station line reads as the method prices it; positions keep their label', () => {
+      const c = { ...fixtureCost(1, undefined, ['new', 'position']) };
+      const study = { ...preset, study_terminals: true } as typeof preset;
+      const labels = waterfallLines(c, study, { dollars: 'preset' }).filter((l) => l.group === 'terminals' && /^(Terminals|New|Line)/.test(l.label)).map((l) => l.label);
+      expect(labels).toEqual(['Terminals as the method prices them (A)', 'Line positions at existing stations (B)']);
     });
     it('a result without terminalItems keeps the one Terminals line', () => {
       const old = fixtureCost();

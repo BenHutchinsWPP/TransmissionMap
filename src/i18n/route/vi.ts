@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "Điều chỉnh khác",
   'route.wf.otherItems': "Khác ({n} mục)",
   'route.wf.shortLine': "Hệ số đường dây ngắn",
-  'route.wf.terminals': "Đầu cuối ({n} trạm)",
   'route.wf.mitigation': "Giảm thiểu (trung bình)",
   'route.wf.rowLand': "Đất hành lang tuyến",
   'route.wf.markups': "Phụ phí",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "Bản đồ FEMA còn hiệu lực, ngoài Vùng ngập lụt đặc biệt (Special Flood Hazard Area)",
   "route.insp.nfhl.2": "Vùng ngập lụt đặc biệt (Special Flood Hazard Area) (ít nhất một nửa ô)",
   "route.insp.nfhl.3": "Không có bản đồ lũ FEMA còn hiệu lực",
-  'route.wf.terminals.position': "Ngăn lộ đường dây ({n})",
-  'route.cost.positions': "Ngăn lộ đường dây",
   'route.report.term.new': "trạm mới",
   'route.report.term.newStudy': "đầu cuối theo cách phương pháp tính giá",
   'route.report.term.position': "ngăn lộ đường dây tại trạm hiện có",
   'route.report.term.none': "không có",
   'route.report.endTerminal': ", đầu cuối: {kind}",
+  'route.term.stations': "Trạm mới ({ends})",
+  'route.term.positions': "Ngăn lộ đường dây tại trạm hiện có ({ends})",
+  'route.term.study': "Đầu cuối theo cách phương pháp tính giá ({ends})",
+  'route.term.midLine': "{n} giữa tuyến",
+  'route.term.sep': ", ",
 };
 
 export default locale;

@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "기타 조정",
   'route.wf.otherItems': "기타 ({n}개 항목)",
   'route.wf.shortLine': "단거리 선로 계수",
-  'route.wf.terminals': "단자 ({n}개 변전소)",
   'route.wf.mitigation': "완화 비용 (중간값)",
   'route.wf.rowLand': "선로 용지(ROW)",
   'route.wf.markups': "가산액",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA 지도 유효, 특별 홍수 구역 (Special Flood Hazard Area) 밖",
   "route.insp.nfhl.2": "특별 홍수 구역 (Special Flood Hazard Area)(셀의 절반 이상)",
   "route.insp.nfhl.3": "유효한 FEMA 홍수 지도 없음",
-  'route.wf.terminals.position': "선로 베이 ({n})",
-  'route.cost.positions': "선로 베이",
   'route.report.term.new': "신설 변전소",
   'route.report.term.newStudy': "방법이 가격을 매기는 대로의 단자",
   'route.report.term.position': "기존 변전소의 선로 베이",
   'route.report.term.none': "없음",
   'route.report.endTerminal': ", 단자: {kind}",
+  'route.term.stations': "신설 변전소 ({ends})",
+  'route.term.positions': "기존 변전소의 선로 베이 ({ends})",
+  'route.term.study': "방법이 가격을 매기는 대로의 단자 ({ends})",
+  'route.term.midLine': "선로 중간 {n}",
+  'route.term.sep': ", ",
 };
 
 export default locale;

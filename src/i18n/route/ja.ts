@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "その他の調整",
   'route.wf.otherItems': "その他({n} 項目)",
   'route.wf.shortLine': "短距離線係数",
-  'route.wf.terminals': "端末({n} 変電所)",
   'route.wf.mitigation': "緩和措置(中央値)",
   'route.wf.rowLand': "通行権用地",
   'route.wf.markups': "上乗せ",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA マップあり、特別洪水区域 (Special Flood Hazard Area) の外",
   "route.insp.nfhl.2": "特別洪水区域 (Special Flood Hazard Area)（セルの半分以上）",
   "route.insp.nfhl.3": "有効な FEMA 洪水マップなし",
-  'route.wf.terminals.position': "線路ベイ({n})",
-  'route.cost.positions': "線路ベイ",
   'route.report.term.new': "新設変電所",
   'route.report.term.newStudy': "手法の価格設定による端末",
   'route.report.term.position': "既設変電所の線路ベイ",
   'route.report.term.none': "なし",
   'route.report.endTerminal': "、端末:{kind}",
+  'route.term.stations': "新設変電所({ends})",
+  'route.term.positions': "既設変電所の線路ベイ({ends})",
+  'route.term.study': "手法の価格設定による端末({ends})",
+  'route.term.midLine': "線路途中 {n}",
+  'route.term.sep': "、",
 };
 
 export default locale;

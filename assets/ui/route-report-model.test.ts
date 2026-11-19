@@ -187,6 +187,15 @@ describe('buildReportModel', () => {
     expect(buildReportModel(s, money, '1/2/2026')!.endpoints.a).toMatch(/\)$/);
   });
 
+  it('an OSM-snapped end carries the OpenStreetMap credit; a HIFLD one does not', () => {
+    const s = FIXTURE_SESSION();
+    s.resultInputs = { ...s.inputs, a: { ...s.inputs.a!, hit: { name: 'X', maxKv: 230, source: 'osm' } } } as typeof s.inputs;
+    const m = buildReportModel(s, money, '1/2/2026')!;
+    expect(m.endpoints.a).toMatch(/\), © OpenStreetMap contributors, terminal: new station$/);
+    expect(m.endpoints.b).not.toMatch(/OpenStreetMap/);
+    expect(fillTpl(m.parts.endpointA)).toBe(m.endpoints.a);
+  });
+
   it('a study method\'s new end reads as the method prices it', () => {
     const s = FIXTURE_SESSION();
     s.result = { ...FIXTURE_RESULT, preset: { ...FIXTURE_RESULT.preset, id: 'nrel-revx' }, cost: { ...fixtureCost(), preset: 'nrel-revx' } };
@@ -202,13 +211,20 @@ describe('buildReportModel', () => {
     expect(document.getElementById('route-report')!.textContent).toBe(reportText(m).join(''));
   });
 
+  it('cost.csv names only the ends that carry a terminal', () => {
+    const r = { ...FIXTURE_RESULT, cost: fixtureCost(1, undefined, ['none', 'new']) };
+    const csv = costCsv(r, 'y2025', FIXTURE_SESSION().inputs);
+    expect(csv).toContain('New stations (B)');
+    expect(csv).not.toContain('New stations (A');
+  });
+
   it('cost.csv has one row per terminal kind and its sums match the total', () => {
     const cost = fixtureCost(1, undefined, ['position', 'new']);
     const r = { ...FIXTURE_RESULT, cost };
     const csv = costCsv(r, 'y2025', FIXTURE_SESSION().inputs);
     const lines = csv.split('\r\n').filter(Boolean);
-    expect(lines.find((l) => l.startsWith('Line positions (1)'))).toBeDefined();
-    expect(lines.find((l) => l.startsWith('Terminals (1 stations)'))).toBeDefined();
+    expect(lines.find((l) => l.startsWith('Line positions at existing stations (A)'))).toBeDefined();
+    expect(lines.find((l) => l.startsWith('New stations (B)'))).toBeDefined();
     const usd = lines.slice(1).map((l) => l.split(',')).filter((c) => c[1] !== 'subtotal' && c[1] !== 'total' && /^-?\d+$/.test(c[2] ?? '')).reduce((a, c) => a + Number(c[2]), 0);
     expect(Math.abs(usd - Math.round(cost.total2025))).toBeLessThanOrEqual(12);
   });

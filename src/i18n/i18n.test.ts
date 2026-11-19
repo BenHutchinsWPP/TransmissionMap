@@ -372,7 +372,7 @@ describe('i18n Core Engine', () => {
 
   describe("Route panel strings", () => {
     // English values that stay identical in every locale: symbols, units, numbers, proper names.
-    const SAME_AS_ENGLISH = new Set<string>([
+    const SAME_AS_ENGLISH = new Set<string>([', ', 
       "{band}: {value}",
       "TEPPC", "CAISO", "MISO", "SPP", "ERCOT", "PJM", "NYISO", "ISO-NE",   // ISO / RTO names
       "Routing ×{x}",

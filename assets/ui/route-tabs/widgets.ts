@@ -1,7 +1,7 @@
 // ─── Route panel widgets ─────────────────────────────────────────────────────
 // Role: pure DOM builders the route tabs share — cost waterfall (+ `waterfallLines`, which
 //       turns a CostResult into its lines, summing exactly to the total in either dollar
-//       year; terminals as one line per kind, from `terminalSplit`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, optimality badge, source
+//       year; terminals as one line per kind, from `terminalSplit`, labelled with their ends by `endsText`), `fmtMoneyHead` (two-figure headline dollars), rough-early-estimate range bar, crossing pills, optimality badge, source
 //       ⓘ button, headline KPI tiles (`kpiTiles`, shared with the report model). Each returns an element; all text goes in through
 //       textContent, so data is never parsed as HTML. Styling: widgets.css (rp-* classes,
 //       app tokens only).
@@ -90,8 +90,17 @@ export function waterfall(lines: WaterfallLine[], opts: WaterfallOpts): HTMLElem
   return wrap;
 }
 
-export interface TerminalGroup { n: number; each: number; usd: number }
-/** The terminals of a cost as stations (new and mid-line) and line positions, in method-year dollars. `usd` of a group
+export interface TerminalGroup { n: number; each: number; usd: number; ends: ('A' | 'B')[]; mid: number }
+/** "A, B" or "A, 2 mid-line": the ends of a terminal group and its mid-line stations. */
+export function endsText(ends: ('A' | 'B')[], mid: number): string {
+  return [...ends, ...(mid ? [t('route.term.midLine', { n: mid })] : [])].join(t('route.term.sep'));
+}
+/** The label of a terminal group: new stations (a study method's read as the method prices them) or line positions. */
+export function terminalLabel(kind: 'stations' | 'positions', g: TerminalGroup, preset: RoutePreset): string {
+  const key = kind === 'positions' ? 'route.term.positions' : preset.study_terminals ? 'route.term.study' : 'route.term.stations';
+  return t(key, { ends: endsText(g.ends, g.mid) });
+}
+/** The terminals of a cost as stations (new and mid-line) and line positions; a `none` end is in neither group, in method-year dollars. `usd` of a group
  *  is its items' sum, except that with both kinds the stations take what `terminalsUsd` leaves, so the two sum to
  *  `terminalsUsd` exactly. Null without `terminalItems` (a result from before kinds). */
 export function terminalSplit(cost: CostResult): { stations: TerminalGroup | null; positions: TerminalGroup | null } | null {
@@ -99,7 +108,10 @@ export function terminalSplit(cost: CostResult): { stations: TerminalGroup | nul
   if (!items) return null;
   const total = cost.terminalsUsd ?? 0;
   const st = items.filter((i) => i.kind !== 'position'), po = items.filter((i) => i.kind === 'position');
-  const group = (xs: typeof items, usd: number): TerminalGroup | null => (xs.length ? { n: xs.length, each: xs[0].usd, usd } : null);
+  const group = (xs: typeof items, usd: number): TerminalGroup | null => (xs.length ? {
+    n: xs.length, each: xs[0].usd, usd,
+    ends: xs.flatMap((i) => (i.end ? [i.end] : [])), mid: xs.filter((i) => i.kind === 'mid').length,
+  } : null);
   const posUsd = po.reduce((s, i) => s + i.usd, 0);
   return {
     stations: group(st, po.length ? total - posUsd : total),
@@ -132,10 +144,10 @@ export function waterfallLines(cost: CostResult, preset: RoutePreset, opts: { do
   const lf = cost.lengthFactor || 1;
   if (lf !== 1) add(t('route.wf.shortLine'), cost.lineUsdNominal * (1 - 1 / lf), 'multipliers');
   const split = terminalSplit(cost);
-  if (!split) { if (cost.terminalsUsd) add(t('route.wf.terminals', { n: cost.terminalCount }), cost.terminalsUsd, 'terminals', line?.terminals.src); }
+  if (!split) { if (cost.terminalsUsd) add(t('route.cost.terminals'), cost.terminalsUsd, 'terminals', line?.terminals.src); }
   else {
-    if (split.stations?.usd) add(t('route.wf.terminals', { n: split.stations.n }), split.stations.usd, 'terminals', line?.terminals.src);
-    if (split.positions?.usd) add(t('route.wf.terminals.position', { n: split.positions.n }), split.positions.usd, 'terminals', line?.terminals.position?.src);
+    if (split.stations?.usd) add(terminalLabel('stations', split.stations, preset), split.stations.usd, 'terminals', line?.terminals.src);
+    if (split.positions?.usd) add(terminalLabel('positions', split.positions, preset), split.positions.usd, 'terminals', line?.terminals.position?.src);
   }
   if (cost.mitigationUsd.mid) add(t('route.wf.mitigation'), cost.mitigationUsd.mid, 'terminals', preset.mitigation?.src);
   if (cost.rowLand && cost.rowLand.usd) add(t('route.wf.rowLand'), cost.rowLand.usd, 'other', cost.rowLand.note);

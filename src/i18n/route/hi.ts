@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "अन्य समायोजन",
   'route.wf.otherItems': "अन्य ({n} मद)",
   'route.wf.shortLine': "छोटी-लाइन गुणक",
-  'route.wf.terminals': "टर्मिनल ({n} स्टेशन)",
   'route.wf.mitigation': "शमन (मध्य)",
   'route.wf.rowLand': "राइट-ऑफ़-वे भूमि",
   'route.wf.markups': "मार्कअप",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA नक्शा प्रभावी, विशेष बाढ़ क्षेत्र (Special Flood Hazard Area) के बाहर",
   "route.insp.nfhl.2": "विशेष बाढ़ क्षेत्र (Special Flood Hazard Area) (कम से कम आधा सेल)",
   "route.insp.nfhl.3": "कोई प्रभावी FEMA बाढ़ नक्शा नहीं",
-  'route.wf.terminals.position': "लाइन पोज़ीशन ({n})",
-  'route.cost.positions': "लाइन पोज़ीशन",
   'route.report.term.new': "नया स्टेशन",
   'route.report.term.newStudy': "टर्मिनल, जैसा विधि उसका मूल्य लगाती है",
   'route.report.term.position': "मौजूदा स्टेशन में लाइन पोज़ीशन",
   'route.report.term.none': "कोई नहीं",
   'route.report.endTerminal': ", टर्मिनल: {kind}",
+  'route.term.stations': "नए स्टेशन ({ends})",
+  'route.term.positions': "मौजूदा स्टेशनों में लाइन पोज़ीशन ({ends})",
+  'route.term.study': "टर्मिनल, जैसा विधि उनका मूल्य लगाती है ({ends})",
+  'route.term.midLine': "{n} लाइन के बीच",
+  'route.term.sep': ", ",
 };
 
 export default locale;

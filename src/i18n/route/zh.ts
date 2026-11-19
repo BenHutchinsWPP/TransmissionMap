@@ -71,7 +71,6 @@ const locale: LocaleDictionary = {
   'route.wf.other': "其他调整",
   'route.wf.otherItems': "其他（{n} 项）",
   'route.wf.shortLine': "短线路系数",
-  'route.wf.terminals': "终端（{n} 座站）",
   'route.wf.mitigation': "缓解措施（中值）",
   'route.wf.rowLand': "路权用地",
   'route.wf.markups': "加成",
@@ -817,13 +816,16 @@ const locale: LocaleDictionary = {
   "route.insp.nfhl.1": "FEMA 图有效，位于 特别洪水区 (Special Flood Hazard Area) 之外",
   "route.insp.nfhl.2": "特别洪水区 (Special Flood Hazard Area)（至少占单元格一半）",
   "route.insp.nfhl.3": "无有效的 FEMA 洪水图",
-  'route.wf.terminals.position': "线路间隔（{n}）",
-  'route.cost.positions': "线路间隔",
   'route.report.term.new': "新建站",
   'route.report.term.newStudy': "按方法定价的终端",
   'route.report.term.position': "现有站内的线路间隔",
   'route.report.term.none': "无",
   'route.report.endTerminal': "，终端：{kind}",
+  'route.term.stations': "新建站（{ends}）",
+  'route.term.positions': "现有站内的线路间隔（{ends}）",
+  'route.term.study': "按方法定价的终端（{ends}）",
+  'route.term.midLine': "线路中段 {n}",
+  'route.term.sep': "、",
 };
 
 export default locale;
