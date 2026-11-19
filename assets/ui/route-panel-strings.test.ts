@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The real route panel with the real dictionaries: opened from the Tools item or the right-click menu,
 // it shows English route text and no raw `route.*` key, and a language switch with it open reaches the
-// Spanish text. Only the solver, popup, batch, map input, MapLibre and the layer loader are mocked.
+// Spanish text. Only the solver, popup, batch, map input, MapLibre, the layer loader and the OSM substation reader are mocked.
 // Deps: route-panel-open.js, ui-route.js (real), ui-table.js, i18n (real), test-drawer-env.js, route-tabs/fixture.js.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -29,6 +29,8 @@ vi.mock('maplibre-gl', async () => {
   return { Marker, default: { Marker } };
 });
 vi.mock('../layers/layer-data.js', () => ({ loadSource: async () => {} }));
+// A raw end tries the OSM snap: fake points, never the archive.
+vi.mock('../lines/osm-substation.js', () => ({ substationPointsNear: async () => [] }));
 
 import { wireRouteEntry } from './route-panel-open.js';
 import { closeRoute } from './ui-table.js';

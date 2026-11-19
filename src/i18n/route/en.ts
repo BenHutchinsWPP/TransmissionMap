@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "Loading substations…",
   'route.in.noMatch': "No matching substation",
   'route.in.unnamed': "Unnamed substation",
+  'route.in.snapping': "Looking for a substation…",
+  'route.in.osmCredit': "© OpenStreetMap contributors",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV unknown",
   'route.in.snapped': "snapped · {d}",

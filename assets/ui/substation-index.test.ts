@@ -1,5 +1,5 @@
 // Tests for substation-index.ts: one shared load, a failed or empty load is forgotten and retried;
-// snapEnd's order (HIFLD known kV → OSM known kV → HIFLD unknown kV → null) and its OSM failure path.
+// snapEnd's order (HIFLD known kV → OSM known kV → HIFLD unknown kV → null), its OSM failure path and its OSM timeout.
 // Deps: substation-index.ts, route/snap.ts; layer-data.js and lines/osm-substation.js are mocked;
 //       state.sourcesData is filled by hand.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,7 +10,7 @@ vi.mock('../lines/osm-substation.js', () => ({ substationPointsNear: vi.fn() }))
 import { loadSource } from '../layers/layer-data.js';
 import { state } from '../state.js';
 import { layerSourceId } from '../layers/layer-source.js';
-import { ensureSubstationIndex, cachedSubstationIndex, _resetSubstationIndex, snapEnd } from './substation-index.js';
+import { ensureSubstationIndex, cachedSubstationIndex, _resetSubstationIndex, snapEnd, OSM_SNAP_TIMEOUT_MS } from './substation-index.js';
 import { substationPointsNear } from '../lines/osm-substation.js';
 import { buildSubstationIndex, type OsmPoint } from '../route/snap.js';
 
@@ -109,6 +109,24 @@ describe('snapEnd', () => {
     const read = vi.fn(async () => { throw new Error('net'); });
     expect(await snapEnd(idx(), at, 345, 3, { osm: true, read })).toBeNull();
     expect(await snapEnd(idx(hifld('U', null, 0.001)), at, 345, 3, { osm: true, read })).toMatchObject({ id: 'U' });
+  });
+
+  it('an OSM read with no answer within the timeout falls back to the HIFLD unknown-kV hit, then null', async () => {
+    const read = vi.fn(() => new Promise<OsmPoint[]>(() => {}));
+    vi.useFakeTimers();
+    try {
+      const p1 = snapEnd(idx(hifld('U', null, 0.001)), at, 345, 3, { osm: true, read });
+      const p2 = snapEnd(idx(), at, 345, 3, { osm: true, read });
+      await vi.advanceTimersByTimeAsync(OSM_SNAP_TIMEOUT_MS - 1);
+      let settled = false;
+      void p2.then(() => { settled = true; });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await p1).toMatchObject({ id: 'U' });
+      expect(await p2).toBeNull();
+      expect(OSM_SNAP_TIMEOUT_MS).toBe(4000);
+    } finally { vi.useRealTimers(); }
   });
 
   it('the default reader is osm-substation.ts substationPointsNear', async () => {

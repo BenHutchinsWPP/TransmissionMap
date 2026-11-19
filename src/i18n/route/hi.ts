@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "सबस्टेशन लोड हो रहे हैं…",
   'route.in.noMatch': "कोई मेल खाता सबस्टेशन नहीं",
   'route.in.unnamed': "बिना नाम का सबस्टेशन",
+  'route.in.snapping': "सबस्टेशन खोजा जा रहा है…",
+  'route.in.osmCredit': "© OpenStreetMap योगदानकर्ता",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV अज्ञात",
   'route.in.snapped': "जुड़ा · {d}",

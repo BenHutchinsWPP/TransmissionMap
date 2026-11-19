@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "جارٍ تحميل المحطات الفرعية…",
   'route.in.noMatch': "لا توجد محطة فرعية مطابقة",
   'route.in.unnamed': "محطة فرعية بلا اسم",
+  'route.in.snapping': "جارٍ البحث عن محطة فرعية…",
+  'route.in.osmCredit': "© مساهمو OpenStreetMap",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV غير معروف",
   'route.in.snapped': "مُلتقطة · {d}",

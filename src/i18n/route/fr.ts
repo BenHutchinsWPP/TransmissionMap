@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "Chargement des postes…",
   'route.in.noMatch': "Aucun poste correspondant",
   'route.in.unnamed': "Poste sans nom",
+  'route.in.snapping': "Recherche d’un poste…",
+  'route.in.osmCredit': "© contributeurs d’OpenStreetMap",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV inconnu",
   'route.in.snapped': "accroché · {d}",

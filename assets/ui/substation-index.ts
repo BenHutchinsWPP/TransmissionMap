@@ -6,7 +6,8 @@
 //       `snapEnd()` is the one end snap: a HIFLD substation of known kV ≥ the floor, else (when
 //       `osm` is on) the nearest OpenStreetMap substation of known kV ≥ the floor, else a HIFLD
 //       substation of unknown kV, else null (the raw point). The OSM points come from
-//       lines/osm-substation.ts, imported dynamically on first use; any OSM failure reads as no OSM hit.
+//       lines/osm-substation.ts, imported dynamically on first use; any OSM failure, or no answer within
+//       OSM_SNAP_TIMEOUT_MS, reads as no OSM hit.
 //       The chat passes `osm: false` (the chat trust model admits HIFLD names only).
 // Deps: route/snap.ts (buildSubstationIndex, snapAt, snapAmong), dataset-query.ts (Outcome, type only), state.ts,
 //       layers/layer-data.ts (loadSource), layers/layer-source.ts (layerSourceId),
@@ -45,25 +46,31 @@ export function ensureSubstationIndex(): Promise<Outcome<SubstationIndex>> {
 /** The OSM substation points within the box `m` metres around `at`. */
 export type OsmPointsRead = (at: [number, number], m: number) => Promise<OsmPoint[]>;
 
+/** How long an end snap waits for the OSM points before it falls back. */
+export const OSM_SNAP_TIMEOUT_MS = 4000;
+
 const readOsmPoints: OsmPointsRead = async (at, m) =>
   (await import('../lines/osm-substation.js')).substationPointsNear(at, m);
 
 /** Snap an end at `lngLat` for a `kv` line within `km`: HIFLD known kV → OSM known kV (when `opts.osm`)
- *  → HIFLD unknown kV → null. `index` null skips HIFLD. Never rejects. */
+ *  → HIFLD unknown kV → null. `index` null skips HIFLD. The OSM read gets `timeoutMs` (OSM_SNAP_TIMEOUT_MS). Never rejects. */
 export async function snapEnd(
   index: SubstationIndex | null,
   lngLat: [number, number],
   kv: number,
   km: number,
-  opts: { osm: boolean; read?: OsmPointsRead },
+  opts: { osm: boolean; read?: OsmPointsRead; timeoutMs?: number },
 ): Promise<SnapHit | null> {
   const hifld = index ? snapAt(index, lngLat, kv, km).best : null;
   if (hifld && !hifld.kvUnknown) return hifld;
   if (opts.osm) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const osm = snapAmong(await (opts.read ?? readOsmPoints)(lngLat, km * 1000), lngLat, kv, km);
+      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), opts.timeoutMs ?? OSM_SNAP_TIMEOUT_MS); });
+      const points = await Promise.race([(opts.read ?? readOsmPoints)(lngLat, km * 1000), late]);
+      const osm = snapAmong(points, lngLat, kv, km);
       if (osm) return osm;
-    } catch { /* no OSM hit */ }
+    } catch { /* no OSM hit */ } finally { clearTimeout(timer); }
   }
   return hifld;
 }

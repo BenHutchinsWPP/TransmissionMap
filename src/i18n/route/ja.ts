@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "変電所を読み込み中…",
   'route.in.noMatch': "一致する変電所はありません",
   'route.in.unnamed': "名称不明の変電所",
+  'route.in.snapping': "変電所を探しています…",
+  'route.in.osmCredit': "© OpenStreetMap の貢献者",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV 不明",
   'route.in.snapped': "スナップ済み · {d}",

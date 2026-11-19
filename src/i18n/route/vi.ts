@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "Đang tải trạm biến áp…",
   'route.in.noMatch': "Không có trạm biến áp khớp",
   'route.in.unnamed': "Trạm biến áp không tên",
+  'route.in.snapping': "Đang tìm trạm biến áp…",
+  'route.in.osmCredit': "© Những người đóng góp OpenStreetMap",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "Chưa rõ kV",
   'route.in.snapped': "đã gắn · {d}",

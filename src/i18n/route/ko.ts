@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "변전소 불러오는 중…",
   'route.in.noMatch': "일치하는 변전소 없음",
   'route.in.unnamed': "이름 없는 변전소",
+  'route.in.snapping': "변전소를 찾는 중…",
+  'route.in.osmCredit': "© OpenStreetMap 기여자",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV 미상",
   'route.in.snapped': "스냅됨 · {d}",

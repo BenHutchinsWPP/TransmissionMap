@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "正在加载变电站…",
   'route.in.noMatch': "没有匹配的变电站",
   'route.in.unnamed': "未命名变电站",
+  'route.in.snapping': "正在查找变电站…",
+  'route.in.osmCredit': "© OpenStreetMap 贡献者",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV 未知",
   'route.in.snapped': "已吸附 · {d}",

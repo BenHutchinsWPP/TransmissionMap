@@ -2,8 +2,11 @@
 // Tests for the map chat's route path (ui-route.ts routeForChat): end resolution (exact names,
 // ambiguity with candidates, a below-floor note, swapped and outside points, an eastern point),
 // the one-end refusal, busy and replaced-by-visitor refusals, Stop cancelling only the chat's own
-// solve, prefs left unsaved, Ask staying in view, an index load failure then a retry, and recall.
-// Deps: ui-route.js, ui-table.js; route-open.js / map-input.js / layer-data.js / popup.js /
+// solve, prefs left unsaved, Ask staying in view, an index load failure then a retry, and recall;
+// the chat snaps a point to HIFLD only (snapEnd with osm: false), resets each end's terminal choice, and
+// a recalled visitor route never sends an OpenStreetMap name.
+// Deps: ui-route.js, ui-table.js; substation-index.js (snapEnd spied); route-open.js / map-input.js / layer-data.js / popup.js /
+//       lines/osm-substation.js (fake points) /
 //       maplibre-gl (mocked), test-drawer-env.js, route-tabs/fixture.js, route-prefs.js, state.js.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { RouteRequest, RouteResult } from '../route/route.js';
@@ -46,8 +49,16 @@ vi.mock('../layers/layer-data.js', async () => {
   };
 });
 
+// The real snapEnd, spied; the OSM reader returns fake points (never the archive).
+vi.mock('./substation-index.js', async (orig) => {
+  const m = await orig<typeof import('./substation-index.js')>();
+  return { ...m, snapEnd: vi.fn(m.snapEnd) };
+});
+const osm = vi.hoisted(() => ({ points: [] as unknown[] }));
+vi.mock('../lines/osm-substation.js', () => ({ substationPointsNear: async () => osm.points }));
+
 import { routeForChat, openRoutePanel, _pane } from './ui-route.js';
-import { _resetSubstationIndex } from './substation-index.js';
+import { _resetSubstationIndex, snapEnd } from './substation-index.js';
 import { closeRoute, closeAsk, openAsk, askPanel } from './ui-table.js';
 import { routeLine, cancelRoute } from '../route/route-open.js';
 import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
@@ -101,6 +112,8 @@ beforeEach(() => {
   );
   vi.mocked(routeLine).mockClear();
   vi.mocked(cancelRoute).mockClear();
+  vi.mocked(snapEnd).mockClear();
+  osm.points = [];
   localStorage.removeItem(ROUTE_PREFS_KEY);
 });
 afterEach(() => { closeRoute(); closeAsk(); resetDrawerEnv(); localStorage.removeItem(ROUTE_PREFS_KEY); });
@@ -347,5 +360,46 @@ describe('route usage notice', () => {
     void routeForChat({ from: 'MIDWAY', to: 'Hemingway' });
     await flush();
     expect(dlg()).not.toBeNull();
+  });
+});
+
+describe('routeForChat: HIFLD only, terminal choice reset', () => {
+  const AT: [number, number] = [-110.0, 40.0];
+  const juniper = { fid: 77, lngLat: [-110.001, 40.001], name: 'Juniper', kv: 500, subType: 'transmission', countries: '|USA|' };
+
+  it('a point end snaps with osm: false (stays raw beside an OSM substation) and both ends start on Auto', async () => {
+    osm.points = [juniper];
+    openRoutePanel();
+    await flush();
+    const s = _pane()!.session;
+    s.inputs.a = { lngLat: [-119.4, 35.4], hit: null, term: 'new' };
+    s.inputs.b = { lngLat: [-116.8, 43.2], hit: null, term: 'none' };
+    const { out } = await started({ from: AT, to: 'Hemingway' });
+    expect(vi.mocked(snapEnd)).toHaveBeenCalled();
+    for (const c of vi.mocked(snapEnd).mock.calls) expect(c[4]).toMatchObject({ osm: false });
+    expect(s.inputs.a).toEqual({ lngLat: AT, hit: null });
+    expect(s.inputs.b?.hit?.name).toBe('Hemingway');
+    expect(s.inputs.b?.term).toBeUndefined();
+    await answer();
+    expect((await out).ok).toBe(true);
+  });
+
+  it('recalling a visitor route with an OSM end sends no OSM name', async () => {
+    osm.points = [juniper];
+    openRoutePanel({ lngLat: AT, end: 'A' });
+    await flush();
+    openRoutePanel({ lngLat: [-116.81, 43.21], end: 'B' });
+    await flush();
+    const s = _pane()!.session;
+    expect(s.inputs.a?.hit).toMatchObject({ source: 'osm', name: 'Juniper' });
+    document.querySelector<HTMLButtonElement>('.ri-primary')!.click();
+    await flush();
+    await answer();
+    const o = await routeForChat({});
+    expect(o.ok).toBe(true);
+    if (!o.ok) return;
+    expect(o.result.a.name).toBeNull();
+    expect(o.result.b.name).toBe('Hemingway');
+    expect(JSON.stringify(o.result)).not.toContain('Juniper');
   });
 });

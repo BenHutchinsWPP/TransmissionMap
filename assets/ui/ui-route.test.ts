@@ -4,8 +4,10 @@
 // are dropped, Cancel returns quietly, a refusal shows its reason, a result shows the
 // sub-tabs and badge, the colour mode rewrites the route's data, Find alternatives
 // merges only the alternatives, closing the pane removes every rp- layer/source, and "List crossings by
-// name" keeps its reply only for the shown route (markers move to its points; a refusal is one line, a cancel none).
-// Deps: ui-route.js, ui-table.js; route-open.js / map-input.js / layer-data.js /
+// name" keeps its reply only for the shown route (markers move to its points; a refusal is one line, a cancel none);
+// right-click "Route from here" snaps to OpenStreetMap and keeps the end's terminal choice; the GeoJSON export
+// names each end's substation source and credits OpenStreetMap.
+// Deps: ui-route.js, ui-table.js; route-open.js / map-input.js / layer-data.js / lines/osm-substation.js (fake points) / user-data-export.js (downloadFile) /
 //       maplibre-gl (mocked), test-drawer-env.js, route-tabs/fixture.js, state.js, i18n.
 import { UPLOAD_BUDGET_MSG } from '../route/preset-patch.js';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi, onTestFinished } from 'vitest';
@@ -59,6 +61,11 @@ vi.mock('../layers/layer-data.js', async () => {
   const { layerSourceId } = await import('../layers/layer-source.js');
   return { loadSource: async () => { state.sourcesData[layerSourceId('hifld-substations')] = SUBS; } };
 });
+// The OSM snap reads these points, never the archive.
+const osm = vi.hoisted(() => ({ points: [] as unknown[] }));
+vi.mock('../lines/osm-substation.js', () => ({ substationPointsNear: async () => osm.points }));
+const dl = vi.hoisted(() => vi.fn());
+vi.mock('../user-data/user-data-export.js', async (orig) => ({ ...(await orig<typeof import('../user-data/user-data-export.js')>()), downloadFile: dl }));
 
 import { mergePatch } from './route-request.js';
 import { openRoutePanel, _pane, routeFeatures, maskSurface, pixelClasses } from './ui-route.js';
@@ -137,6 +144,8 @@ beforeEach(() => {
   vi.mocked(dropWindow).mockClear();
   vi.mocked(routeLine).mockClear();
   vi.mocked(cancelRoute).mockClear();
+  osm.points = [];
+  dl.mockClear();
 });
 afterEach(() => { closeRoute(); resetDrawerEnv(); localStorage.removeItem(ROUTE_PREFS_KEY); });
 
@@ -1642,5 +1651,37 @@ describe('route pane Method-grid row highlight', () => {
     s.inputs.presetId = 'pnas-wu2023';
     pn.ctx.rerender();
     expect(s.highlight).toEqual([]);
+  });
+});
+
+describe('route pane: OpenStreetMap ends', () => {
+  const AT: [number, number] = [-110.0, 40.0];
+  const juniper = { fid: 77, lngLat: [-110.001, 40.001], name: 'Juniper', kv: 500, subType: 'transmission', countries: '|USA|' };
+
+  it('right-click "Route from here" snaps to OSM with no HIFLD hit and keeps the end\'s terminal choice', async () => {
+    osm.points = [juniper];
+    await openWithEnds();
+    const s = _pane()!.session;
+    s.inputs.a = { ...s.inputs.a!, term: 'new' };
+    openRoutePanel({ lngLat: AT, end: 'A' });
+    await flush();
+    expect(s.inputs.a).toMatchObject({ hit: { source: 'osm', name: 'Juniper' }, term: 'new' });
+    expect(routePanel().querySelector('.ri-credit')?.textContent).toBe(t('route.in.osmCredit'));
+  });
+
+  it('the GeoJSON export names each end\'s substation source and credits OpenStreetMap', async () => {
+    osm.points = [juniper];
+    openRoutePanel({ lngLat: AT, end: 'A' });
+    await flush();
+    openRoutePanel({ lngLat: [-116.81, 43.21], end: 'B' });
+    await flush();
+    findBtn().click();
+    solver.calls[0].res({ ok: true, result: FIXTURE_RESULT });
+    await flush();
+    routeActions().querySelector<HTMLButtonElement>('.rp-export')!.click();
+    [...document.querySelectorAll<HTMLButtonElement>('.rp-menu-item')].find((b) => b.textContent === t('route.act.geojson'))!.click();
+    const fc = JSON.parse(dl.mock.calls[0][0] as string) as GeoJSON.FeatureCollection;
+    expect(fc.features[0].properties).toMatchObject({ substation_source_a: 'osm', substation_source_b: 'hifld' });
+    expect(fc.features[0].properties!.credit).toMatch(/© OpenStreetMap contributors/);
   });
 });

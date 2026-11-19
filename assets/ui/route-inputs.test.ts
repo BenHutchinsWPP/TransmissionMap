@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 // Tests for the route input column: substation combobox, line type following the
 // preset, pick mode (tap snaps, Alt-tap raw, Esc stops), pin drag re-snap, the
-// Find button's gating and the error line.
-// Deps: route-inputs.js, substation-index.js (reset per test), map-input.js / layer-data.js / maplibre-gl (mocked),
+// Find button's gating and the error line; the OpenStreetMap fallback through a fake reader
+// (row, callout and strip credit), stale snaps dropped after a newer write, and `term` carried
+// over a drag or re-pick, dropped on clear and on `resetTerm`.
+// Deps: route-inputs.js, substation-index.js (reset per test; snapEnd with a fake OSM reader), map-input.js / layer-data.js / maplibre-gl (mocked),
 //       test-drawer-env.js, state.js, tool-mode.js, i18n (t).
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 
 const input = vi.hoisted(() => ({
   tap: new Set<(e: unknown) => void>(),
@@ -48,9 +50,12 @@ import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
 import { _resetSubstationIndex } from './substation-index.js';
 import { state } from '../state.js';
 import { toolHooks } from '../tool-mode.js';
-import { t } from '../../src/i18n/index.js';
+import { t, loadRouteStrings } from '../../src/i18n/index.js';
 import { Marker } from 'maplibre-gl';
 import type { RouteSession } from './route-tabs/types.js';
+import { snapEnd } from './substation-index.js';
+import type { OsmPoint, SnapHit } from '../route/snap.js';
+import type { SnapFn } from './route-inputs.js';
 
 type MockM = { lngLat: [number, number]; emit(n: string): void; el: HTMLElement };
 const markers = () => (Marker as unknown as { instances: MockM[] }).instances;
@@ -75,7 +80,17 @@ type Fn = ReturnType<typeof vi.fn<() => void>>;
 let cb: { onFind: Fn; onChange: Fn; onEditMethod: Fn };
 let dcz: { disable: Fn; enable: Fn };
 let handle: ReturnType<typeof mountInputs>;
+/** The OSM points the fake reader returns; never a real archive read. */
+let osmPoints: OsmPoint[];
+const osmRead = vi.fn(async () => osmPoints);
+/** The snap the column gets: real snapEnd over the fake OSM reader, unless a test swaps it. */
+let snapImpl: SnapFn;
+const snap: SnapFn = (...a) => snapImpl(...a);
+const fakeSnap: SnapFn = (i, l, k, km, o) => snapEnd(i, l, k, km, { ...o, read: osmRead });
+const OSM_AT: [number, number] = [-110.0, 40.0];
+const osmPt = (name: string | null): OsmPoint => ({ fid: 77, lngLat: [-110.001, 40.001], name, kv: 345, subType: 'transmission', countries: '|USA|' });
 
+beforeAll(() => loadRouteStrings());
 beforeEach(() => {
   document.body.innerHTML = '';
   _resetSubstationIndex();
@@ -93,7 +108,10 @@ beforeEach(() => {
   document.body.append(el);
   session = newSession();
   cb = { onFind: vi.fn<() => void>(), onChange: vi.fn<() => void>(), onEditMethod: vi.fn<() => void>() };
-  handle = mountInputs(el, session, cb);
+  osmPoints = [];
+  osmRead.mockClear();
+  snapImpl = fakeSnap;
+  handle = mountInputs(el, session, cb, { snap });
 });
 afterEach(() => { handle.destroy(); resetDrawerEnv(); });
 
@@ -131,7 +149,7 @@ describe('route inputs', () => {
   it('a failed substation load shows no matches (not Loading) and fetches once; substationIndex() retries', async () => {
     handle.destroy();
     load.fail = true;
-    handle = mountInputs(el, session, cb);
+    handle = mountInputs(el, session, cb, { snap });
     const a = combo('A');
     a.focus();
     a.value = 'mcn';
@@ -352,5 +370,194 @@ describe('route inputs', () => {
     store.save('Again', 'tm-default', {});
     document.dispatchEvent(new CustomEvent('route:presets'));
     expect(select.options.length).toBe(n);
+  });
+
+  // ── OpenStreetMap fallback, stale replies, terminal choice ──────────────────
+  it('with no HIFLD hit an end snaps to an OSM substation, credited in the row and the strip', async () => {
+    osmPoints = [osmPt('Juniper')];
+    await handle.setEnd('A', OSM_AT);
+    expect(session.inputs.a?.hit).toMatchObject({ source: 'osm', name: 'Juniper', id: 'osm:77' });
+    expect(osmRead).toHaveBeenCalledOnce();
+    const row = el.querySelector('.ri-ep-txt')!;
+    expect(row.textContent).toContain('Juniper');
+    expect(row.querySelector('.ri-credit')?.textContent).toBe(t('route.in.osmCredit'));
+    expect(t('route.in.osmCredit')).toBe('© OpenStreetMap contributors');
+    handle.setFolded(true);
+    expect(el.querySelector('.ri-strip')!.textContent).toContain(`Juniper 345 kV ${t('route.in.osmCredit')}`);
+  });
+
+  it('a HIFLD hit wins without reading OSM; an unnamed OSM hit says so', async () => {
+    await handle.setEnd('A', [-119.31, 45.95]);
+    expect(session.inputs.a?.hit?.source).toBe('hifld');
+    expect(osmRead).not.toHaveBeenCalled();
+    expect(el.querySelector('.ri-credit')).toBeNull();
+    osmPoints = [osmPt(null)];
+    await handle.setEnd('B', OSM_AT);
+    const row = el.querySelectorAll('.ri-ep-txt')[1];
+    expect(row.textContent).toContain(t('route.in.unnamed'));
+    expect(row.querySelector('.ri-credit')?.textContent).toBe(t('route.in.osmCredit'));
+    expect(row.textContent!.match(/OpenStreetMap/g)).toHaveLength(1);
+  });
+
+  it('osm: false keeps the snap to HIFLD (the chat) and the point stays raw', async () => {
+    osmPoints = [osmPt('Juniper')];
+    await handle.setEnd('A', OSM_AT, { osm: false });
+    expect(osmRead).not.toHaveBeenCalled();
+    expect(session.inputs.a).toEqual({ lngLat: OSM_AT, hit: null });
+  });
+
+  it('the pick callout shows the OSM hit after a rest, with the credit', async () => {
+    osmPoints = [osmPt('Juniper')];
+    handle.startPick('A');
+    await flush();
+    [...input.hover].forEach((f) => f(ptr(...OSM_AT)));
+    const callout = () => document.querySelector('.ri-callout')!;
+    expect(callout().textContent).toBe(t('route.in.snapping'));
+    await wait(200);
+    expect(callout().textContent).toContain('Juniper');
+    expect(callout().querySelector('.ri-credit')?.textContent).toBe(t('route.in.osmCredit'));
+  });
+
+  /** A snap held until the test releases it. */
+  function slowSnap(): { release(h: SnapHit | null): void; calls: number } {
+    const held: ((h: SnapHit | null) => void)[] = [];
+    const ctl = { calls: 0, release: (hit: SnapHit | null) => held.splice(0).forEach((r) => r(hit)) };
+    snapImpl = () => { ctl.calls++; return new Promise((r) => held.push(r)); };
+    return ctl;
+  }
+  const osmHit = (): SnapHit => ({ id: 'osm:9', name: 'Late', lngLat: [-110, 40], maxKv: 345, kvUnknown: false, distanceKm: 0.1, states: [], ba: [], source: 'osm' });
+  const hoverAt = (lng: number, lat: number) => [...input.hover].forEach((f) => f(ptr(lng, lat)));
+  const calloutText = () => document.querySelector('.ri-callout')?.textContent ?? '';
+
+  it('a pending callout snap is dropped when the pointer moves on', async () => {
+    handle.startPick('A');
+    await flush();
+    const s = slowSnap();
+    hoverAt(...OSM_AT);
+    await wait(200);
+    expect(s.calls).toBe(1);   // the rest timer fired; the snap is pending
+    expect(calloutText()).toBe(t('route.in.snapping'));
+    hoverAt(-116.81, 43.21);   // Hemingway, HIFLD: shown at once, no new snap
+    expect(calloutText()).toContain('Hemingway');
+    s.release(osmHit());
+    await flush();
+    expect(calloutText()).toContain('Hemingway');
+    expect(calloutText()).not.toContain('Late');
+  });
+
+  it('a pending callout snap is dropped when the pick ends and restarts', async () => {
+    handle.startPick('A');
+    await flush();
+    const s = slowSnap();
+    hoverAt(...OSM_AT);
+    await wait(200);
+    expect(s.calls).toBe(1);
+    key(document.body, 'Escape');
+    handle.startPick('A');
+    hoverAt(-116.81, 43.21);
+    expect(calloutText()).toContain('Hemingway');
+    s.release(osmHit());
+    await flush();
+    expect(calloutText()).not.toContain('Late');
+  });
+
+  it('a pending end snap shows "Looking for a substation…" with ×, holds Find, and a rejecting snap reads as a raw point', async () => {
+    await handle.setEnd('B', [-116.81, 43.21]);
+    const s = slowSnap();
+    const p = handle.setEnd('A', OSM_AT);
+    await flush();
+    const row = el.querySelector('.ri-ep-txt')!;
+    expect(row.textContent).toContain(t('route.in.snapping'));
+    expect(t('route.in.snapping')).toBe('Looking for a substation…');
+    expect(el.querySelector('.ri-ep-x')).not.toBeNull();
+    expect(el.querySelector<HTMLButtonElement>('.ri-primary')!.disabled).toBe(true);
+    s.release(null);
+    await p;
+    expect(session.inputs.a).toEqual({ lngLat: OSM_AT, hit: null });
+    expect(el.querySelector<HTMLButtonElement>('.ri-primary')!.disabled).toBe(false);
+    snapImpl = () => Promise.reject(new Error('boom'));
+    await handle.setEnd('A', [-110.5, 40.5]);
+    expect(session.inputs.a).toEqual({ lngLat: [-110.5, 40.5], hit: null });
+  });
+
+  it('a slow snap overtaken by a list pick is dropped', async () => {
+    const s = slowSnap();
+    const p = handle.setEnd('A', OSM_AT);
+    await flush();
+    expect(s.calls).toBe(1);
+    el.querySelector<HTMLButtonElement>('.ri-ep-x')!.click();   // the pending row's ×, then a list pick
+    const a = combo('A');
+    a.focus();
+    a.value = 'mcn';
+    a.dispatchEvent(new Event('input'));
+    await wait(150);
+    key(a, 'Enter');
+    expect(session.inputs.a?.hit?.name).toBe('McNary');
+    s.release(osmHit());
+    await p;
+    expect(session.inputs.a?.hit?.name).toBe('McNary');
+  });
+
+  it('a slow snap overtaken by a clear is dropped', async () => {
+    snapImpl = fakeSnap;
+    await handle.setEnd('A', [-119.31, 45.95]);
+    const s = slowSnap();
+    const p = handle.setEnd('A', OSM_AT);
+    await flush();
+    el.querySelector<HTMLButtonElement>('.ri-ep-x')!.click();
+    expect(session.inputs.a).toBeNull();
+    s.release(osmHit());
+    await p;
+    expect(session.inputs.a).toBeNull();
+    expect(document.querySelectorAll('.ri-pin').length).toBe(0);
+  });
+
+  it('a slow snap overtaken by a newer fill is dropped (setEndHit too)', async () => {
+    const s = slowSnap();
+    const p1 = handle.setEnd('A', OSM_AT);
+    await flush();
+    const p2 = handle.setEnd('A', [-110.5, 40.5]);
+    await flush();
+    s.release(null);   // both answer; only the second applies
+    await Promise.all([p1, p2]);
+    expect(session.inputs.a?.lngLat).toEqual([-110.5, 40.5]);
+    const p3 = handle.setEnd('A', OSM_AT);
+    await flush();
+    await handle.setEndHit('A', { ...osmHit(), name: 'Chosen', source: 'hifld' });
+    s.release(osmHit());
+    await p3;
+    expect(session.inputs.a?.hit?.name).toBe('Chosen');
+  });
+
+  it('term survives a drag, is replaced not mutated, and a clear drops it', async () => {
+    await handle.setEnd('A', [-119.31, 45.95]);
+    const first = session.inputs.a!;
+    session.inputs.a = { ...first, term: 'new' };
+    const withTerm = session.inputs.a;
+    const m = markers()[0];
+    m.lngLat = [-116.79, 43.19];
+    m.emit('dragend');
+    await flush();
+    expect(session.inputs.a).toMatchObject({ hit: { name: 'Hemingway' }, term: 'new' });
+    expect(session.inputs.a).not.toBe(withTerm);
+    expect(withTerm.hit?.name).toBe('McNary');
+    // A set end has no combobox (a list pick needs a clear first, which drops the term).
+    expect(el.querySelectorAll('.ri-ep-in')).toHaveLength(1);
+    el.querySelector<HTMLButtonElement>('.ri-ep-x')!.click();
+    expect(session.inputs.a).toBeNull();
+    await handle.setEnd('A', [-119.31, 45.95]);
+    expect(session.inputs.a?.term).toBeUndefined();
+  });
+
+  it('resetTerm drops the choice on setEnd and setEndHit; a plain setEnd keeps it', async () => {
+    await handle.setEnd('A', [-119.31, 45.95]);
+    session.inputs.a = { ...session.inputs.a!, term: 'none' };
+    await handle.setEnd('A', [-119.31, 45.95]);
+    expect(session.inputs.a?.term).toBe('none');
+    await handle.setEnd('A', [-119.31, 45.95], { resetTerm: true });
+    expect(session.inputs.a?.term).toBeUndefined();
+    session.inputs.a = { ...session.inputs.a!, term: 'position' };
+    await handle.setEndHit('A', session.inputs.a.hit!, { resetTerm: true });
+    expect(session.inputs.a?.term).toBeUndefined();
   });
 });

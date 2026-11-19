@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "Загрузка подстанций…",
   'route.in.noMatch': "Подходящих подстанций нет",
   'route.in.unnamed': "Подстанция без названия",
+  'route.in.snapping': "Поиск подстанции…",
+  'route.in.osmCredit': "© участники OpenStreetMap",
   'route.in.kv': "{kv} кВ",
   'route.in.kvUnknown': "кВ неизвестно",
   'route.in.snapped': "привязано · {d}",

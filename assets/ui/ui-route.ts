@@ -16,7 +16,8 @@
 //         dispose + render); a refusal then shows in that chip over the kept route. New
 //         ends get the full progress view, a camera fit to A–B, and clear the map, ghost
 //         and `previous`. solve() is true only when a new result landed;
-//       - the drawer header actions (Export ▾ GeoJSON / CSV, Report, ＋ My Data, Batch…;
+//       - the drawer header actions (Export ▾ GeoJSON — each end's `substation_source_a`/`_b`, and a
+//         `credit` when one is OpenStreetMap — / CSV, Report, ＋ My Data, Batch…;
 //         on a phone one ⋯ menu). Batch… opens route-batch.ts (dynamic import only) in
 //         `.rp-main`; `p.batch` holds its disposer and closing the pane or the view
 //         cancels a running batch;
@@ -54,7 +55,8 @@
 //       - RouteTabContext, the only way the tabs reach any of this;
 //       - routeForChat, the map chat's planRoute (through route-panel-open.ts): opens the
 //         pane in the background, refuses while a solve of ours runs, checks the line type
-//         and the ends ([lng, lat] in the contiguous US; a name only by exact
+//         and the ends ([lng, lat] in the contiguous US, snapped to HIFLD only, each end's terminal
+//         choice reset to Auto; a name only by exact
 //         case-insensitive match, else ≤ 5 candidates), solves on the visitor's path,
 //         never saves prefs (chatDriving), and returns chat-summary.ts's summary.
 //       Closing the pane (× / Esc in the drawer) disposes all of it. Session only:
@@ -987,6 +989,15 @@ function fileBase(p: Pane): string {
   return `route-${slug(endName(inp, 'a'))}-${slug(endName(inp, 'b'))}`;
 }
 
+const OSM_TEXT_CREDIT = '© OpenStreetMap contributors, ODbL';
+/** Where each end's substation came from (`substation_source_a`/`_b`: hifld | osm), with the OSM credit when one is OSM. */
+function endSources(inp: RouteInputs | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const e of ['a', 'b'] as const) { const src = inp?.[e]?.hit?.source; if (src) out[`substation_source_${e}`] = src; }
+  if (Object.values(out).includes('osm')) out.credit = OSM_TEXT_CREDIT;
+  return out;
+}
+
 /** The route and its alternatives as GeoJSON, with summary properties; `style` adds stroke colours. */
 function resultGeojson(s: RouteSession, style = false): FC {
   const r = s.result!, c = r.cost, inp = s.resultInputs;
@@ -996,6 +1007,7 @@ function resultGeojson(s: RouteSession, style = false): FC {
       lengthMi: +r.lengthMi.toFixed(2), dollarYear: c.dollarYear, totalNominalUsd: Math.round(c.totalNominal),
       total2025Usd: Math.round(c.total2025), low2025Usd: Math.round(c.band.low), high2025Usd: Math.round(c.band.high),
       tribalMiles: +r.tribalMiles.toFixed(2), lowestScoreProof: r.optimality,
+      ...endSources(inp),
       ...(style ? { stroke: PLAIN, 'stroke-width': 4 } : {}),
     },
   }];
@@ -2073,8 +2085,9 @@ function methodLabelOf(presetId: string): string {
   const b = routePreset(presetId);
   return b ? presetLabel(b) : presetId;
 }
+/** An end for the chat's summary: an OpenStreetMap name never reaches the model (a visitor's route recalled). */
 const chatEnd = (re: RouteInputs['a']): ChatRouteEnd =>
-  ({ name: re?.hit?.name ?? null, kv: re?.hit?.maxKv ?? null, lngLat: re?.lngLat ?? [0, 0] });
+  ({ name: re?.hit?.source === 'osm' ? null : re?.hit?.name ?? null, kv: re?.hit?.maxKv ?? null, lngLat: re?.lngLat ?? [0, 0] });
 
 /** The shown route as the chat's summary; `extra` notes go first (≤ 3 notes, the estimate-range one kept last). */
 function summaryOf(p: Pane, extra: string[] = []): ChatOutcome {
@@ -2173,8 +2186,9 @@ export async function routeForChat(req: ChatRouteRequest, signal?: AbortSignal):
     s.inputs.lineType = lineType;
     p.inputs.refresh();
     for (const [end, plan] of [['A', a], ['B', b]] as const) {
-      if ('at' in plan) await p.inputs.setEnd(end, plan.at);
-      else await p.inputs.setEndHit(end, plan.hit);
+      // The chat snaps to HIFLD only (its summary may carry HIFLD names alone) and starts each end on Auto.
+      if ('at' in plan) await p.inputs.setEnd(end, plan.at, { resetTerm: true, osm: false });
+      else await p.inputs.setEndHit(end, plan.hit, { resetTerm: true });
       if (pane !== p) return refuse(CLOSED);
     }
   } finally { p.chatDriving = false; }

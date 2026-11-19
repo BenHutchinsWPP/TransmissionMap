@@ -8,12 +8,21 @@
 //       shell's). The fields scroll in `.ri-fields` above Find. A `lang:changed` redraws the
 //       endpoint rows, the method list and the strip. Substations load lazily on first focus or pick. The method <select>
 //       is rebuilt on focus and on a `route:presets` event on document. Session only.
+//       Ends snap through substation-index.ts snapEnd (HIFLD, else OpenStreetMap when `osm`; the
+//       snap function is injectable through mount opts for tests). Each end has a generation
+//       counter bumped by every write to it, so a snap reply applies only while still current.
+//       A rewrite of an end keeps its `term` (the visitor's terminal choice) unless `resetTerm`;
+//       a clear drops it; the end object is always replaced, never mutated. While an end's snap is
+//       pending its row reads route.in.snapping and Find waits. The pick callout shows the HIFLD
+//       snap at once and, with no known-kV HIFLD hit, reads route.in.snapping and asks snapEnd after
+//       HOVER_REST_MS of rest (its own counter). An OSM hit shows the text credit route.in.osmCredit.
 //       For the map chat (ui-route.ts routeForChat): substationIndex() (a load failure is a
-//       refusal and is not cached, so the next call retries), setEndHit() (places exactly that
-//       substation, no re-snap) and refresh() (redraws line type, method, fields, pins, strip).
+//       refusal and is not cached, so the next call retries), setEnd()/setEndHit() with
+//       `{ resetTerm, osm: false }` (setEndHit places exactly that substation, no re-snap) and
+//       refresh() (redraws line type, method, fields, pins, strip).
 // Deps: route/snap.ts (snapAt, searchSubstations), route/custom-presets.ts, dataset-query.ts (Outcome, type only),
 //       src/registry/route-presets.ts, map-input.ts (onMapTap, onMapHover),
-//       tool-mode.ts (toolHooks), state.ts, substation-index.ts (ensureSubstationIndex), i18n (t), state-bus.ts (lang:changed), units.ts (fmtDistanceMi),
+//       tool-mode.ts (toolHooks), state.ts, substation-index.ts (ensureSubstationIndex, snapEnd), i18n (t), state-bus.ts (lang:changed), units.ts (fmtDistanceMi),
 //       route-tabs/types.ts (types), maplibre-gl (Marker), route-panel.css.
 
 import { Marker } from 'maplibre-gl';
@@ -24,7 +33,7 @@ import { ROUTE_PRESETS, type RoutePreset } from '../../src/registry/route-preset
 import { onMapTap, onMapHover, type MapPointerEvent, type Unsubscribe } from '../map-input.js';
 import { toolHooks } from '../tool-mode.js';
 import { state } from '../state.js';
-import { ensureSubstationIndex } from './substation-index.js';
+import { ensureSubstationIndex, snapEnd } from './substation-index.js';
 import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
 import { fmtDistanceMi } from '../../src/units.js';
@@ -43,14 +52,19 @@ export interface InputsHandle {
   /** Re-read the session's method, line type and ends (saved defaults arrived, or the chat set them). */
   refresh(): void;
   startPick(end: End): void;
-  setEnd(end: End, lngLat: [number, number]): Promise<void>;
+  /** Snap `lngLat` and fill `end`; `osm: false` keeps the snap to HIFLD (the chat); `resetTerm` drops the end's terminal choice. */
+  setEnd(end: End, lngLat: [number, number], opts?: { resetTerm?: boolean; osm?: boolean }): Promise<void>;
   /** The HIFLD substation index; a load failure is a refusal and is not kept (the next call retries). */
   substationIndex(): Promise<Outcome<SubstationIndex>>;
   /** Place exactly this substation at `end` (no re-snap). */
-  setEndHit(end: End, hit: SnapHit): Promise<void>;
+  setEndHit(end: End, hit: SnapHit, opts?: { resetTerm?: boolean }): Promise<void>;
 }
+/** The end snap (substation-index.ts snapEnd); tests pass a fake. */
+export type SnapFn = typeof snapEnd;
+export interface InputsOptions { snap?: SnapFn }
 
 const NUDGE_M = 100;
+const HOVER_REST_MS = 150;
 const COMPACT = '(max-width: 640px), (max-height: 500px)';
 const FOLD_W = 900;
 const KM_PER_MI = 1.609344;
@@ -64,6 +78,8 @@ const presetStore = createCustomPresetStore({
 const coords = ([lng, lat]: [number, number]) =>
   `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(2)}° ${lng >= 0 ? 'E' : 'W'}`;
 const subName = (s: SnapHit) => s.name ?? t('route.in.unnamed');
+/** The OSM credit after an OpenStreetMap hit's name (text, never HTML). */
+const credit = (s: SnapHit): (string | HTMLElement)[] => (s.source === 'osm' ? [' ', h('small', 'ri-credit', t('route.in.osmCredit'))] : []);
 const kvText = (s: SnapHit) => (s.kvUnknown || s.maxKv === null ? t('route.in.kvUnknown') : t('route.in.kv', { kv: Math.round(s.maxKv) }));
 const kvClass = (s: SnapHit) =>
   'ri-kv' + (s.maxKv === null ? ' ri-kv--unknown' : s.maxKv >= 345 ? '' : s.maxKv >= 161 ? ' ri-kv--mid' : ' ri-kv--low');
@@ -78,8 +94,9 @@ function lineTypeLabel(id: string, lt: RoutePreset['line_types'][string]): strin
   return /single circuit/i.test(lt.label) ? `${base} ${t('route.in.singleCircuit')}` : base;
 }
 
-export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCallbacks): InputsHandle {
+export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCallbacks, opts: InputsOptions = {}): InputsHandle {
   const id = `ri${++uid}`;
+  const snap: SnapFn = (...a) => (opts.snap ?? snapEnd)(...a);
   const inputs = session.inputs;
   let index: SubstationIndex | null = null;
   let busy = false;
@@ -94,6 +111,12 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
   const clickAt: Record<End, [number, number] | null> = { A: null, B: null };
   const markers: Record<End, Marker | null> = { A: null, B: null };
   const nudgeTimers: Record<End, ReturnType<typeof setTimeout> | undefined> = { A: undefined, B: undefined };
+  /** Bumped by every write to an end; a snap reply applies only while its generation is current. */
+  const gen: Record<End, number> = { A: 0, B: 0 };
+  /** The point an end's pending snap is for (its row reads "Looking for a substation…"). */
+  const pending: Record<End, [number, number] | null> = { A: null, B: null };
+  let hoverGen = 0;
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   // ── presets ────────────────────────────────────────────────────────────────
   function customs(): CustomPreset[] { return presetStore.list(); }
@@ -193,16 +216,17 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     f.box.classList.toggle('ri-ep--active', picking === end);
     f.input = null;
     closeList(end);
-    if (re) {
+    const wait = pending[end];
+    if (re || wait) {
       const txt = h('span', 'ri-ep-txt');
-      if (re.hit) {
-        txt.append(h('b', '', subName(re.hit)), ' ', kvBadge(re.hit));
-        const sub = Number.isFinite(re.hit.distanceKm)
-          ? t('route.in.snapped', { d: miles(re.hit.distanceKm) })
-          : place(re.hit);
-        txt.append(h('small', '', sub));
+      if (wait) txt.append(h('b', '', t('route.in.snapping')), h('small', '', coords(wait)));
+      else if (re!.hit) {
+        const hit = re!.hit;
+        txt.append(h('b', '', subName(hit)), ' ', kvBadge(hit));
+        const sub = Number.isFinite(hit.distanceKm) ? t('route.in.snapped', { d: miles(hit.distanceKm) }) : place(hit);
+        txt.append(h('small', '', sub), ...credit(hit));
       } else {
-        txt.append(h('b', '', t('route.in.rawPoint')), h('small', '', coords(re.lngLat)));
+        txt.append(h('b', '', t('route.in.rawPoint')), h('small', '', coords(re!.lngLat)));
       }
       const x = h('button', 'ri-ep-x', '×');
       x.type = 'button';
@@ -340,9 +364,13 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
   }
 
   // ── set an endpoint ────────────────────────────────────────────────────────
-  function setInput(end: End, re: RouteEnd | null, click: [number, number] | null): void {
+  function setInput(end: End, re: RouteEnd | null, click: [number, number] | null, resetTerm = false): void {
+    gen[end]++;
+    pending[end] = null;
     if (picking === end && re) stopPick();
-    if (end === 'A') inputs.a = re; else inputs.b = re;
+    const term = endOf(end)?.term;
+    const next = re && term && !resetTerm ? { ...re, term } : re;
+    if (end === 'A') inputs.a = next; else inputs.b = next;
     clickAt[end] = click;
     renderField(end);
     placePin(end);
@@ -351,12 +379,20 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     cb.onChange();
   }
 
-  /** Snap `lngLat` for the current line type (or keep it raw) and fill `end`. */
-  async function fill(end: End, lngLat: [number, number], raw: boolean): Promise<void> {
+  /** Snap `lngLat` for the current line type (or keep it raw) and fill `end`; a newer write to `end` drops this one. */
+  async function fill(end: End, lngLat: [number, number], raw: boolean, o: { resetTerm?: boolean; osm?: boolean } = {}): Promise<void> {
+    const g = ++gen[end];
     const idx = await ensureIndex();
-    if (destroyed) return;
-    const hit = raw ? null : snapAt(idx, lngLat, kv(), session.snapKm ?? 3).best;
-    setInput(end, hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null }, lngLat);
+    if (destroyed || gen[end] !== g) return;
+    let hit: SnapHit | null = null;
+    if (!raw) {
+      pending[end] = lngLat;
+      renderField(end);
+      updateFind();
+      hit = await snap(idx, lngLat, kv(), session.snapKm ?? 3, { osm: o.osm ?? true }).catch(() => null);
+    }
+    if (destroyed || gen[end] !== g) return;
+    setInput(end, hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null }, lngLat, o.resetTerm);
   }
 
   // ── pins ───────────────────────────────────────────────────────────────────
@@ -440,6 +476,8 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     }
     toast?.remove();
     toast = null;
+    clearTimeout(hoverTimer);
+    hoverGen++;
     callout?.remove();
     callout = null;
     if (session.status.kind === 'picking') session.status = statusBeforePick ?? { kind: 'idle' };
@@ -466,17 +504,35 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       callout.setAttribute('aria-hidden', 'true');
       map.getContainer().append(callout);
     }
-    const hit = !index || altOf(e) ? null : snapAt(index, [e.lngLat.lng, e.lngLat.lat], kv(), session.snapKm ?? 3).best;
-    if (!index) callout.replaceChildren(t('route.in.loading'));
+    clearTimeout(hoverTimer);
+    const g = ++hoverGen;
+    const at: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+    const idx = index;
+    const hit = !idx || altOf(e) ? null : snapAt(idx, at, kv(), session.snapKm ?? 3).best;
+    if (!idx) callout.replaceChildren(t('route.in.loading'));
     else if (altOf(e)) callout.replaceChildren(t('route.in.clickRaw'));
-    else if (!hit) callout.replaceChildren(t('route.in.noSnap'));
-    else callout.replaceChildren(h('b', '', subName(hit)), ' ', kvBadge(hit), h('small', '', t('route.in.clickToSnap', { d: miles(hit.distanceKm) })));
+    else {
+      // No known-kV HIFLD hit: after a rest, ask the full snap (OpenStreetMap), as a tap would.
+      if (!hit || hit.kvUnknown) {
+        callout.replaceChildren(t('route.in.snapping'));
+        hoverTimer = setTimeout(() => {
+          void snap(idx, at, kv(), session.snapKm ?? 3, { osm: true }).catch(() => null).then((s) => {
+            if (g === hoverGen && picking && callout) showSnap(callout, s);
+          });
+        }, HOVER_REST_MS);
+      } else showSnap(callout, hit);
+    }
     // Follow the pointer, but keep the callout inside the map's edges.
     const box = map.getContainer();
     const maxL = box.clientWidth - callout.offsetWidth - 4, maxT = box.clientHeight - callout.offsetHeight - 4;
     const left = e.point.x + 14, top = e.point.y + 14;
     callout.style.left = `${box.clientWidth > 0 ? Math.max(4, Math.min(left, maxL)) : left}px`;
     callout.style.top = `${box.clientHeight > 0 ? Math.max(4, Math.min(top, maxT)) : top}px`;
+  }
+
+  function showSnap(box: HTMLElement, hit: SnapHit | null): void {
+    if (!hit) box.replaceChildren(t('route.in.noSnap'));
+    else box.replaceChildren(h('b', '', subName(hit)), ' ', kvBadge(hit), h('small', '', t('route.in.clickToSnap', { d: miles(hit.distanceKm) })), ...credit(hit));
   }
 
   function onPickTap(e: MapPointerEvent): void {
@@ -566,7 +622,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     const findKey = session.result ? 'route.in.resolve' : 'route.in.find';
     find.textContent = t(findKey);
     find.dataset.i18n = findKey;
-    find.disabled = !inputs.a || !inputs.b || busy || errors > 0;
+    find.disabled = !inputs.a || !inputs.b || !!pending.A || !!pending.B || busy || errors > 0;
     find.setAttribute('aria-busy', String(busy));
     errLine.hidden = errors <= 0;
     errLine.textContent = errors > 0 ? t(errors === 1 ? 'route.in.fixError' : 'route.in.fixErrors', { n: errors }) : '';
@@ -576,7 +632,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
     const re = endOf(end);
     span.replaceChildren(h('b', 'ri-strip-pin', end), ' ');
     if (!re) span.append('—');
-    else if (re.hit) span.append(subName(re.hit), ' ', re.hit.kvUnknown ? '' : kvText(re.hit));
+    else if (re.hit) span.append(subName(re.hit), ' ', re.hit.kvUnknown ? '' : kvText(re.hit), ...credit(re.hit));
     else span.append(t('route.in.rawPoint'));
   }
   function renderStrip(): void { stripEnd(stripA, 'A'); stripEnd(stripB, 'B'); }
@@ -631,6 +687,7 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       document.removeEventListener('route:presets', onPresets);
       stopPick();
       ro?.disconnect();
+      clearTimeout(hoverTimer);
       for (const end of ['A', 'B'] as const) {
         clearTimeout(nudgeTimers[end]);
         clearTimeout(fields[end].timer);
@@ -653,11 +710,11 @@ export function mountInputs(el: HTMLElement, session: RouteSession, cb: InputsCa
       updateFind();
     },
     startPick,
-    setEnd(end, lngLat) { return fill(end, lngLat, false); },
+    setEnd(end, lngLat, o) { return fill(end, lngLat, false, o); },
     substationIndex: loadIndex,
-    async setEndHit(end, hit) {
+    async setEndHit(end, hit, o) {
       if (destroyed) return;
-      setInput(end, { lngLat: hit.lngLat, hit }, null);
+      setInput(end, { lngLat: hit.lngLat, hit }, null, o?.resetTerm);
     },
   };
 }

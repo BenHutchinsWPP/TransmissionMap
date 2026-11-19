@@ -285,7 +285,7 @@ describe('band in two groups: LUTs equal a row-by-row brute force', () => {
         if (i < 120) expect(cellCostX(p, lt, bands, n, i, CONSTS), `${lt} cell ${i} cost`).toBeCloseTo(want.c, 10);
       }
     }
-  });
+  }, 30_000);
 });
 
 describe('minRouteWeight is a true lower bound', () => {

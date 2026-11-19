@@ -120,6 +120,8 @@ const locale: LocaleDictionary = {
   'route.in.loading': "Umspannwerke werden geladen…",
   'route.in.noMatch': "Kein passendes Umspannwerk",
   'route.in.unnamed': "Unbenanntes Umspannwerk",
+  'route.in.snapping': "Umspannwerk wird gesucht…",
+  'route.in.osmCredit': "© OpenStreetMap-Mitwirkende",
   'route.in.kv': "{kv} kV",
   'route.in.kvUnknown': "kV unbekannt",
   'route.in.snapped': "eingerastet · {d}",

@@ -27,6 +27,7 @@ vi.mock('./route-batch-map.js', () => ({ createBatchCapture: () => Object.assign
 const index = vi.hoisted(() => ({ ok: true }));
 vi.mock('./substation-index.js', () => ({
   ensureSubstationIndex: async () => index.ok ? { ok: true, result: { subs: [] } } : { ok: false, reason: 'nope' },
+  snapEnd: async () => null,
 }));
 vi.mock('./route-batch-pdf.js', () => ({ renderPdf: async () => new Uint8Array() }));
 const dl = vi.hoisted(() => vi.fn());
