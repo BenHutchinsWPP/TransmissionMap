@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for the Batch view: a refused file and skipped rows are said in words; the options reach runBatch (alternatives,
-// exact points, snap radius, cube version and sha256 from grid.json); progress rows land as the runner reports them with
+// exact points, snap radius, the end snap, cube version and sha256 from grid.json); progress rows land as the runner reports them with
 // worded reasons; Cancel and Back reach the runner; the busy refusal is worded; Download ZIP builds the archive on click;
 // ui-route.ts never imports this module statically (the production bundle takes no batch/jsPDF chunk).
 // Deps: route-batch.js; route-batch-run.js (runBatch mocked, wording real), route-batch-map.js / substation-index.js /
@@ -25,9 +25,10 @@ vi.mock('./route-batch-run.js', async (orig) => ({
 const capClose = vi.hoisted(() => vi.fn());
 vi.mock('./route-batch-map.js', () => ({ createBatchCapture: () => Object.assign(async () => ({ note: 'x' }), { close: capClose }) }));
 const index = vi.hoisted(() => ({ ok: true }));
+const snapEndMock = vi.hoisted(() => async () => null);
 vi.mock('./substation-index.js', () => ({
   ensureSubstationIndex: async () => index.ok ? { ok: true, result: { subs: [] } } : { ok: false, reason: 'nope' },
-  snapEnd: async () => null,
+  snapEnd: snapEndMock,
 }));
 vi.mock('./route-batch-pdf.js', () => ({ renderPdf: async () => new Uint8Array() }));
 const dl = vi.hoisted(() => vi.fn());
@@ -93,6 +94,7 @@ describe('Batch view', () => {
     expect(run.opts!.rows.map((r) => r.key)).toEqual(['Reno', 'Boise']);
     expect(run.opts!.skipped).toHaveLength(1);
     expect(run.opts!.index).not.toBeNull();
+    expect(run.opts!.snap).toBe(snapEndMock);   // the real snapEnd in the app
     expect(run.opts!.cube?.version).toBe(8);
     expect(run.opts!.cube?.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(root.querySelector<HTMLButtonElement>('.rb-pick')!.disabled).toBe(true);

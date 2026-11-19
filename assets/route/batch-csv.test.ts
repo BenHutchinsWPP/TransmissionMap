@@ -86,4 +86,52 @@ describe('parseBatchCsv', () => {
   it('does not accept a saved name when none are given', () => {
     expect(ok(`key,a_lat,a_lon,b_lat,b_lon,method\nx,39.5,-119.8,39,-119.5,My method`).rows).toHaveLength(0);
   });
+  it('reads a_terminal / b_terminal: trimmed, any case, existing = position, empty = auto', () => {
+    const t = `${H},a_terminal,b_terminal\n` +
+      `1,39.5,-119.8,39,-119.5,auto,new\n` +
+      `2,39.5,-119.8,39,-119.4, EXISTING ,None\n` +
+      `3,39.5,-119.8,39,-119.3,,\n` +
+      `4,39.5,-119.8,39,-119.2,New,Auto\n`;
+    const r = ok(t);
+    expect(r.skipped).toEqual([]);
+    expect(r.rows.map((x) => x.terminals)).toEqual([['auto', 'new'], ['position', 'none'], ['auto', 'auto'], ['new', 'auto']]);
+  });
+  it('a header with only one terminal column still sets both ends (the other auto)', () => {
+    const r = ok(`${H},B_Terminal\nx,39.5,-119.8,39,-119.5,existing\n`);
+    expect(r.rows[0].terminals).toEqual(['auto', 'position']);
+    const a = ok(`a_terminal,${H}\nnone,y,39.5,-119.8,39,-119.5\n`);
+    expect(a.rows[0].terminals).toEqual(['none', 'auto']);
+  });
+  it('no terminal column: no terminals on the row', () => {
+    expect(ok(`${H}\nx,39.5,-119.8,39,-119.5`).rows[0]).not.toHaveProperty('terminals');
+  });
+  it('skips a row with any other terminal value, naming the column and a cleaned, bounded value', () => {
+    const t = `${H},a_terminal,b_terminal\n` +
+      `1,39.5,-119.8,39,-119.5,position,new\n` +
+      `2,39.5,-119.8,39,-119.4,auto,"=cmd|' /C calc'!A0 and then some more"\n` +
+      `3,39.5,-119.8,39,-119.3,"ne\u0007w",auto\n` +
+      `4,39.5,-119.8,39,-119.2,existing station,\n` +
+      `5,39.5,-119.8,39,-119.1,existing,none\n`;
+    const r = ok(t);
+    expect(r.rows.map((x) => x.key)).toEqual(['5']);
+    expect(r.skipped).toEqual([
+      { line: 2, reason: 'route.batch.csv.terminal', params: { name: 'a_terminal', value: 'position' } },
+      { line: 3, reason: 'route.batch.csv.terminal', params: { name: 'b_terminal', value: "=cmd|' /C calc'!A0 a" } },
+      { line: 4, reason: 'route.batch.csv.terminal', params: { name: 'a_terminal', value: 'ne\uFFFDw' } },
+      { line: 5, reason: 'route.batch.csv.terminal', params: { name: 'a_terminal', value: 'existing station' } },
+    ]);
+    for (const s of r.skipped) expect([...String(s.params!.value)].length).toBeLessThanOrEqual(20);
+  });
+  it('refuses prototype keys as terminal values', () => {
+    const vals = ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
+    const r = ok(`${H},a_terminal\n` + vals.map((v, i) => `k${i},39.5,-119.8,39,-119.${i + 1},${v}`).join('\n'));
+    expect(r.rows).toEqual([]);
+    expect(r.skipped.map((x) => [x.reason, x.params!.value])).toEqual(vals.map((v) => ['route.batch.csv.terminal', v]));
+  });
+  it('cuts an echoed terminal value at 20 code points, never inside a surrogate pair', () => {
+    const r = ok(`${H},a_terminal\nx,39.5,-119.8,39,-119.5,${'a' + '😀'.repeat(30)}`);
+    const v = String(r.skipped[0].params!.value);
+    expect(v).toBe('a' + '😀'.repeat(19));
+    expect(v).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  });
 });

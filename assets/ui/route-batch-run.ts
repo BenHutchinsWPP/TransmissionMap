@@ -1,8 +1,11 @@
 // ─── Route batch runner ──────────────────────────────────────────────────────
 // Role: runs a parsed batch CSV (route/batch-csv.ts rows) one row at a time and fills a ZIP.
 //       Per row: method (built-in id, `custom:<id>` or a saved method's exact name; the pane's session
-//       patch applies to rows on the pane's method), line type, ends snapped as a map click (`snapAt`;
-//       null = "Use the exact points"); solve 1 = the panel's Find request with `weightImage` in the mode
+//       patch applies to rows on the pane's method), line type, ends snapped as a map click through the injected
+//       `opts.snap` (substation-index.ts `snapEnd` with `osm: true`: HIFLD, else OpenStreetMap; null radius = "Use the exact
+//       points", no snap; a cancel does not wait for the OSM read), each end's terminal choice from the row
+//       (`a_terminal`/`b_terminal`; a row asking Existing on a line type the method has no position figure for fails
+//       with 'no position figure' before any snap or solve); solve 1 = the panel's Find request with `weightImage` in the mode
 //       of the first overlay picture, the other overlay pictures repainted from the held window (a
 //       NO_WINDOW_REASONS refusal leaves the picture without an overlay, which the capture marks); JPEGs;
 //       solve 2 = findAlternatives, only when alternatives > 0 or `similar` is wanted; then exact crossings
@@ -18,12 +21,14 @@
 //       summary.csv carries the worded reason plus `reason_code`; each PDF picture has its `route.batch.pic.<id>`
 //       caption (an Alternatives picture without alternatives says why in it) and each overlay picture its colour
 //       legend (causeLegend / classLegend / similarLegend); a snap to a substation without a name
-//       says so; summary.csv also names what each end was priced as (`terminal_a`, `terminal_b`); an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
+//       says so; summary.csv also names what each end was priced as (`terminal_a`, `terminal_b`) and where each end's
+//       substation came from (`substation_source_a`/`_b`, the last two columns: hifld, osm or empty); CREDITS.txt (the OpenStreetMap credit) is
+//       added only when some row's end snapped to an OSM substation; an overlay that failed for a reason other than the area size gets its own note. No DOM of its own.
 //       The solver, capture, PDF renderer and ZIP sink are injected (route-batch-types.ts); `workerSolver()` is the route
 //       worker under the solver lock (owner 'batch').
-// Deps: i18n (t), route/route-open.ts (lock and calls), route/route.ts (NO_WINDOW_REASONS; types), route/snap.ts (snapAt), route/grid.ts (albersForward),
+// Deps: i18n (t), route/route-open.ts (lock and calls), route/route.ts (NO_WINDOW_REASONS; types), route/snap.ts (types only), route/grid.ts (albersForward),
 //       route/batch-csv.ts, route/custom-presets.ts, route/preset-patch.ts, dataset-query.ts (types only),
-//       registry/route-presets.ts, ./route-request.ts, ./route-report-model.ts (buildReportModel, costCsv, fmtMoney), ./route-batch-pdf.ts (causeLegend, classLegend, similarLegend), ./route-batch-zip.ts (rowSlug, csvFile, BOM),
+//       registry/route-presets.ts, ./route-request.ts (makeRequestBuilder, explainEnds), ./substation-index.ts (snapEnd, type only), ./route-report-model.ts (buildReportModel, costCsv, fmtMoney), ./route-batch-pdf.ts (causeLegend, classLegend, similarLegend), ./route-batch-zip.ts (rowSlug, csvFile, BOM),
 //       ./route-tabs/crossings.ts (crossingsCsv, pathKey, shownExact), ./route-batch-types.ts
 //       and ./route-tabs/types.ts (types only).
 
@@ -32,12 +37,13 @@ import { getLocale, t } from '../../src/i18n/index.js';
 import { NO_WINDOW_REASONS, type ExactCrossingsRequest, type ExactCrossingsResult, type RepaintRequest, type RepaintResult, type RouteRequest, type RouteResult, type WeightImage, type WeightMode } from '../route/route.js';
 import { acquireRoute, cancelRoute, dropWindow, exactCrossings, hasUpload, recycleWorker, releaseRoute, repaintWeight, routeLine } from '../route/route-open.js';
 import { albersForward } from '../route/grid.js';
-import { snapAt, type SubstationIndex } from '../route/snap.js';
+import type { SubstationIndex } from '../route/snap.js';
 import type { BatchRow, BatchSkip } from '../route/batch-csv.js';
 import type { CustomPreset } from '../route/custom-presets.js';
 import { localBudget, parseUploadBudget, type PresetPatch } from '../route/preset-patch.js';
 import { routePreset, type RoutePreset } from '../../src/registry/route-presets.js';
-import { makeRequestBuilder } from './route-request.js';
+import { explainEnds, makeRequestBuilder } from './route-request.js';
+import type { snapEnd } from './substation-index.js';
 import { buildReportModel, costCsv, fmtMoney } from './route-report-model.js';
 import { causeLegend, classLegend, similarLegend } from './route-batch-pdf.js';
 import { BOM, csvFile, rowSlug } from './route-batch-zip.js';
@@ -53,6 +59,7 @@ export const ZIP_CAP_BYTES = 2 ** 30;
 export const ZIP_CAP = 'zip-over-1gib';
 export const CANCELLED = 'cancelled';
 export const UPLOAD_NOT_LOADED = 'upload not loaded';
+export const NO_POSITION_FIGURE = 'no position figure';
 
 /** The engine calls the runner makes. */
 export interface BatchSolver {
@@ -103,6 +110,8 @@ export interface BatchOptions {
   /** The snap radius (route prefs); null = use the exact points. */
   snapKm: number | null;
   index: SubstationIndex | null;
+  /** The end snap (substation-index.ts `snapEnd`); called with `osm: true`, never when `snapKm` is null. */
+  snap: typeof snapEnd;
   /** Alternatives for a row without its own (default 0) and the stretch they are searched within. */
   alternatives?: number;
   altStretch?: number;
@@ -143,7 +152,7 @@ export function reasonText(code: string, params?: Record<string, string | number
   const exact: Record<string, string> = {
     'busy': 'busy', 'no-window': 'noWindow', 'no image': 'noImage', 'none found': 'none', 'no alternatives asked for': 'noAlts',
     [ZIP_CAP]: 'zip', [CANCELLED]: 'cancelled', 'unknown method': 'unknownMethod', 'method not available': 'methodNA',
-    'unknown line type': 'unknownLine', [UPLOAD_NOT_LOADED]: 'upload', 'no report': 'noReport',
+    'unknown line type': 'unknownLine', [UPLOAD_NOT_LOADED]: 'upload', 'no report': 'noReport', [NO_POSITION_FIGURE]: 'noPosition',
   };
   if (exact[code]) return t(`route.batch.why.${exact[code]}`);
   const budget = parseUploadBudget(code);
@@ -203,7 +212,8 @@ function costColumns(c: RouteResult['cost']): Pick<RowReport, 'terminalA' | 'ter
 }
 
 const SUMMARY_FIELDS = ['line', 'key', 'status', 'reason', 'reason_code', 'folder', 'method', 'line_type', 'a_lon', 'a_lat', 'a_substation',
-  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'terminal_a', 'terminal_b', 'lowest_score_proof', 'pictures'];
+  'b_lon', 'b_lat', 'b_substation', 'length_mi', 'total_usd_2025', 'terminal_a', 'terminal_b',
+  'lowest_score_proof', 'pictures', 'substation_source_a', 'substation_source_b'];
 
 /** A snapped end's substation name; a snap to a substation without one says so. */
 const subName = (e: RouteEnd | undefined): string => (e?.hit ? e.hit.name || t('route.report.endUnnamedSub') : '');
@@ -215,6 +225,7 @@ function summaryRow(r: RowReport): Record<string, unknown> {
     b_lon: r.b?.lngLat[0] ?? '', b_lat: r.b?.lngLat[1] ?? '', b_substation: subName(r.b),
     length_mi: r.lengthMi === undefined ? '' : +r.lengthMi.toFixed(2), total_usd_2025: r.total2025 === undefined ? '' : Math.round(r.total2025),
     terminal_a: r.terminalA ?? '', terminal_b: r.terminalB ?? '',
+    substation_source_a: r.a?.hit?.source ?? '', substation_source_b: r.b?.hit?.source ?? '',
     lowest_score_proof: r.optimality ?? '',
     pictures: (r.pictures ?? []).map((p) => `${p.picture}: ${p.note ?? 'ok'}${p.code ? ` (${reasonText(p.code)})` : ''}`).join('; '),
   };
@@ -266,10 +277,16 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
   const features: GeoJSON.Feature[] = [];
   const used = new Map<string, { base: string; patch?: PresetPatch; name?: string }>();
 
-  function end(lngLat: [number, number], kv: number): RouteEnd {
-    if (opts.snapKm === null || !opts.index) return { lngLat, hit: null };
-    const hit = snapAt(opts.index, lngLat, kv, opts.snapKm).best;
-    return hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null };
+  /** Both ends snapped as a map click (HIFLD, else OSM), each with the row's terminal choice; a cancel answers at once. */
+  async function ends(row: BatchRow, kv: number): Promise<[RouteEnd, RouteEnd]> {
+    const km = opts.snapKm;
+    const one = async (lngLat: [number, number], i: 0 | 1): Promise<RouteEnd> => {
+      const hit = km === null ? null : await opts.snap(opts.index, lngLat, kv, km, { osm: true });
+      return { ...(hit ? { lngLat: hit.lngLat, hit } : { lngLat, hit: null }), ...(row.terminals ? { term: row.terminals[i] } : {}) };
+    };
+    const out = await orCancel<[RouteEnd, RouteEnd]>(Promise.all([one(row.a, 0), one(row.b, 1)]).then((result) => ({ ok: true as const, result })));
+    if (!out.ok) throw new Cancelled();
+    return out.result;
   }
 
   async function shoot(picture: PictureId, view: CaptureView): Promise<{ jpeg?: Uint8Array; note?: string }> {
@@ -292,7 +309,15 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
     if (!(lineType in preset.line_types)) return { ...rep, reason: 'unknown line type' };
     const kv = preset.line_types[lineType]?.kv.value ?? 500;
     const patch = patchFor(id);
-    const inputs: RouteInputs = { a: end(row.a, kv), b: end(row.b, kv), lineType, presetId: id, patch };
+    const m = methodFor(id, patch);
+    if (typeof m !== 'string' && row.terminals?.includes('position')) {
+      const raw = (i: 0 | 1): RouteEnd => ({ lngLat: i ? row.b : row.a, hit: null, term: row.terminals![i] });
+      if (explainEnds(m.preset, m.patch, lineType, raw(0), raw(1)).some((e) => e.why === 'positionUnavailable')) return { ...rep, reason: NO_POSITION_FIGURE };
+    }
+    check();
+    const [a, b] = await ends(row, kv);
+    check();
+    const inputs: RouteInputs = { a, b, lineType, presetId: id, patch };
     rep.a = inputs.a!;
     rep.b = inputs.b!;
     const pics = picturesOf(row.pictures ?? opts.pictures);
@@ -300,7 +325,6 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
     const req = requestFor(inputs, { patch, profile: true, alternatives: 0, surface: false }, first);
     if (typeof req === 'string') return { ...rep, reason: req };
     if (solver.loaded && req.uploads?.some((h) => !solver.loaded!(h))) return { ...rep, reason: UPLOAD_NOT_LOADED };
-    const m = methodFor(id, patch);
     if (typeof m !== 'string' && !used.has(id)) {
       const c = opts.saved().find((x) => `custom:${x.id}` === id);
       used.set(id, { base: m.preset, ...(m.patch ? { patch: m.patch } : {}), ...(c ? { name: c.name } : {}) });
@@ -443,6 +467,8 @@ export function runBatch(opts: BatchOptions, deps: BatchDeps): { cancel(): void;
       const all = [...(opts.skipped ?? []).map((s): RowReport => ({ line: s.line, key: '', status: 'skipped', reason: s.reason, ...(s.params ? { params: s.params } : {}) })), ...reports]
         .sort((a, b) => a.line - b.line);
       zip.add('summary.csv', csvFile(all.map(summaryRow), SUMMARY_FIELDS));
+      if (reports.some((r) => r.a?.hit?.source === 'osm' || r.b?.hit?.source === 'osm'))
+        zip.add('CREDITS.txt', t('route.batch.credits', { credit: t('route.in.osmCredit') }) + '\n');
       zip.add('routes.geojson', JSON.stringify({ type: 'FeatureCollection', features }));
       zip.add('batch.json', JSON.stringify({
         options: {

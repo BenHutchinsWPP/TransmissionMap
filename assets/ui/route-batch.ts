@@ -5,8 +5,8 @@
 //       solver, the hidden-map capture, the dynamically imported PDF renderer and a ZIP sink; a progress bar and a
 //       table row per finished row (reason codes worded through `reasonText`); Cancel keeps the finished rows;
 //       Download ZIP builds the archive on click. A second batch, or any other holder of the lock, is refused with
-//       the `busy` wording. Ends snap as a map click (the HIFLD index from substation-index.ts, the pane's snap
-//       radius) unless "Use the exact points" is on; the cube version and sha256 come from grid.json (fetched
+//       the `busy` wording. Ends snap as a map click (substation-index.ts `snapEnd`: the HIFLD index, else OpenStreetMap
+//       substations; the pane's snap radius) unless "Use the exact points" is on; the cube version and sha256 come from grid.json (fetched
 //       here, hashed with Web Crypto). Text-only DOM, no
 //       innerHTML. Session only: nothing goes in the link, storage or the undo stack.
 //       Lazy chunk: ui-route.ts imports this module dynamically only; jsPDF stays behind route-batch-pdf.ts's own
@@ -24,7 +24,7 @@ import type { CustomPreset } from '../route/custom-presets.js';
 import type { PresetPatch } from '../route/preset-patch.js';
 import type { SubstationIndex } from '../route/snap.js';
 import { downloadFile } from '../user-data/user-data-export.js';
-import { ensureSubstationIndex } from './substation-index.js';
+import { ensureSubstationIndex, snapEnd } from './substation-index.js';
 import { createBatchCapture } from './route-batch-map.js';
 import { createZipSink } from './route-batch-zip.js';
 import { reasonText, runBatch, workerSolver, type BatchOutcome, type RowReport } from './route-batch-run.js';
@@ -204,7 +204,7 @@ export function mountBatch(root: HTMLElement, host: BatchHost): { dispose(): voi
     if (gone) { capture.close(); return; }
     handle = runBatch({
       rows, skipped, presetId: host.presetId, patch: host.patch, lineType: host.lineType,
-      snapKm: exact.checked ? null : host.snapKm, index, alternatives: Number(altsSel.value), saved: host.saved, cube,
+      snapKm: exact.checked ? null : host.snapKm, index, snap: snapEnd, alternatives: Number(altsSel.value), saved: host.saved, cube,
     }, {
       solver: workerSolver(), capture, renderPdf, zip: sink,
       onRow(r, done, total) { if (gone) return; addRow(r); bar.value = done; progress.textContent = t('route.batch.progress', { done, total }); },

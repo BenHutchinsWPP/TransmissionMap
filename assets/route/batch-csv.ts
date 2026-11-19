@@ -1,6 +1,8 @@
 /**
- * Batch route CSV: parse and validate `key,a_lat,a_lon,b_lat,b_lon[,line_type][,method][,alternatives][,pictures]`
- * One route per row.
+ * Batch route CSV: parse and validate `key,a_lat,a_lon,b_lat,b_lon[,line_type][,method][,alternatives][,pictures][,a_terminal][,b_terminal]`
+ * One route per row. A terminal cell is auto, new, existing or none (any case; empty = auto; `existing` is the
+ * `position` kind; a refused value is echoed with each control character shown as U+FFFD, at most 20 code points);
+ * whether the line type has a position figure is the runner's check, not this module's.
  *
  * Role: pure trust boundary for the Route pane's Batch view; every cell is untrusted text, never
  * evaluated. A bad row is reported with its record number and reason and skipped; a bad file
@@ -9,11 +11,12 @@
  * equals the physical line unless the file has blank lines or quoted line breaks.
  * Whether a line type exists for a method, and whether a saved method still exists, is the caller's
  * (route-batch-run.ts); this module checks a method's shape and, against `savedNames`, a saved method's exact name.
- * Dependencies: ../user-data/csv-parse.js (parseCSV), ./grid.js (cell check), ../../src/registry/route-presets.js (built-in ids).
+ * Dependencies: ../user-data/csv-parse.js (parseCSV), ./grid.js (cell check), ../../src/registry/route-presets.js (built-in ids;
+ * TermChoice, type only).
  */
 import { parseCSV } from '../user-data/csv-parse.js';
 import { GRID_250, cellOfLngLat } from './grid.js';
-import { routePreset } from '../../src/registry/route-presets.js';
+import { routePreset, type TermChoice } from '../../src/registry/route-presets.js';
 
 export const MAX_BATCH_ROWS = 200;
 export const MAX_BATCH_BYTES = 1024 * 1024;
@@ -30,6 +33,8 @@ export interface BatchRow {
   method?: string;
   alternatives?: number;
   pictures?: BatchPicture[];
+  /** Each end's terminal choice, set only when the file has an `a_terminal` or `b_terminal` column. */
+  terminals?: [TermChoice, TermChoice];
 }
 /** A reason as an i18n key (`route.batch.csv.*`) and its parameters; the view words it with `t(reason, params)`. */
 export interface BatchReasonParams { params?: Record<string, string | number> }
@@ -39,7 +44,8 @@ export type BatchParse =
   | ({ ok: false; reason: string } & BatchReasonParams);
 
 const REQUIRED = ['key', 'a_lat', 'a_lon', 'b_lat', 'b_lon'] as const;
-const OPTIONAL = ['line_type', 'method', 'alternatives', 'pictures'] as const;
+const OPTIONAL = ['line_type', 'method', 'alternatives', 'pictures', 'a_terminal', 'b_terminal'] as const;
+const TERMS: Record<string, TermChoice> = { '': 'auto', auto: 'auto', new: 'new', existing: 'position', none: 'none' };
 const NUM = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 const LAT: [number, number] = [24, 50];
 const LON: [number, number] = [-125, -66];
@@ -125,6 +131,12 @@ export function parseBatchCsv(text: string, opts: { savedNames?: readonly string
       const badPic = list.find((p) => !(BATCH_PICTURES as readonly string[]).includes(p));
       if (badPic !== undefined) { bad(why('unknownPic', { name: badPic.slice(0, 20).replace(/\p{Cc}/gu, '') })); continue; }
       row.pictures = [...new Set(list)] as BatchPicture[];
+    }
+    if (head.includes('a_terminal') || head.includes('b_terminal')) {
+      const cells = (['a_terminal', 'b_terminal'] as const).map((n) => [n, col(r, n).trim()] as const);
+      const badTerm = cells.find(([, v]) => !Object.hasOwn(TERMS, v.toLowerCase()));
+      if (badTerm) { bad(why('terminal', { name: badTerm[0], value: [...badTerm[1].replace(/\p{Cc}/gu, '\uFFFD')].slice(0, 20).join('') })); continue; }
+      row.terminals = [TERMS[cells[0][1].toLowerCase()], TERMS[cells[1][1].toLowerCase()]];
     }
     seen.add(kl);
     rows.push(row);

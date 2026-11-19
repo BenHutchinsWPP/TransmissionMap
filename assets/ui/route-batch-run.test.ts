@@ -5,8 +5,11 @@
 //       `route()` on them (built-in + session patch, saved method by name, uploaded-layer row); solve 1's
 //       weightMode; the implicit route picture; a failed row then a solved one; cancel keeps finished rows;
 //       a NO_WINDOW repaint marks the picture; the size gate on measured ZIP bytes; no RGBA alive after 30 rows
-//       and the 25-row recycle; captures wait while the tab is hidden. Capture, PDF and ZIP are fakes.
-// Deps: ./route-batch-run.ts, route/route.ts, route/upload-layer.ts, route/grid.ts, route/snap.ts,
+//       and the 25-row recycle; captures wait while the tab is hidden; the CSV's terminal choices reach the request,
+//       Existing on a study method fails with its code before any snap; an end with no HIFLD substation snaps to an
+//       OpenStreetMap one (summary.csv source columns, the PDF endpoint's credit, CREDITS.txt only then); exact points
+//       never snap. Capture, PDF, ZIP and the OSM point read are fakes; the snap is the real `snapEnd`.
+// Deps: ./route-batch-run.ts, ./substation-index.ts (snapEnd), route/route.ts, route/upload-layer.ts, route/grid.ts, route/snap.ts,
 //       route/custom-presets.ts, ./route-batch-types.ts (types).
 
 import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest';
@@ -19,7 +22,8 @@ import vm from 'node:vm';
 import { createWindowCache, repaint, route, type RouteIO, type RouteRequest, type RouteResult } from '../route/route.js';
 import { uploadLayer, type UploadLayer } from '../route/upload-layer.js';
 import { albersInverse, gridFromJson, lngLatOf } from '../route/grid.js';
-import { buildSubstationIndex } from '../route/snap.js';
+import { buildSubstationIndex, type OsmPoint } from '../route/snap.js';
+import { snapEnd } from './substation-index.js';
 import { createCustomPresetStore, CUSTOM_PRESETS_KEY } from '../route/custom-presets.js';
 import type { BatchRow } from '../route/batch-csv.js';
 import type { PresetPatch } from '../route/preset-patch.js';
@@ -30,7 +34,7 @@ import { observationFixture } from './route-observations.fixture.js';
 import type { ExactCrossingsRequest, ExactCrossingsResult } from '../route/route.js';
 import type { Outcome } from '../dataset-query.js';
 import { UPLOAD_BUDGET_MSG, localBudget, parseUploadBudget } from '../route/preset-patch.js';
-import { noteText, reasonText, runBatch, UPLOAD_NOT_LOADED, ZIP_CAP, ZIP_CAP_BYTES, type BatchOptions, type BatchSolver, type VisibilityDoc } from './route-batch-run.js';
+import { noteText, NO_POSITION_FIGURE, reasonText, runBatch, UPLOAD_NOT_LOADED, ZIP_CAP, ZIP_CAP_BYTES, type BatchOptions, type BatchSolver, type VisibilityDoc } from './route-batch-run.js';
 import { loadRouteStrings } from '../../src/i18n/index.js';
 
 beforeAll(() => loadRouteStrings());
@@ -125,8 +129,16 @@ function fakePdf(bytes = 100) {
 }
 
 const row = (line: number, key: string, o: Partial<BatchRow> = {}): BatchRow => ({ line, key, a: A, b: B, ...o });
+/** The OSM points the fake reader answers with (none unless a test sets them); every call is recorded. */
+let osmPoints: OsmPoint[] = [];
+const snapCalls: { lngLat: [number, number]; osm: boolean }[] = [];
+const snap: BatchOptions['snap'] = (i, ll, kv, km, o) => {
+  snapCalls.push({ lngLat: ll, osm: o.osm });
+  return snapEnd(i, ll, kv, km, { ...o, read: async () => osmPoints });
+};
+beforeEach(() => { osmPoints = []; snapCalls.length = 0; });
 const opts = (rows: BatchRow[], o: Partial<BatchOptions> = {}): BatchOptions => ({
-  rows, presetId: 'tm-default', patch: SESSION, lineType: 'ac500', snapKm: 5, index, saved: () => store().list(), date: '2026-11-03', ...o,
+  rows, presetId: 'tm-default', patch: SESSION, lineType: 'ac500', snapKm: 5, index, snap, saved: () => store().list(), date: '2026-11-03', ...o,
 });
 
 function setup(o: { solver?: ReturnType<typeof cubeSolver>; pdf?: number; jpeg?: number; doc?: VisibilityDoc | null } = {}) {
@@ -174,6 +186,8 @@ describe('runBatch over the mini cube', () => {
     const [shead, srow] = summaryLines(t.zip).map((l) => l.split(','));
     const col = (name: string) => srow[shead.indexOf(name)];
     expect([col('terminal_a'), col('terminal_b')]).toEqual(['position', 'new']);
+    expect(summaryLines(t.zip)[0]).toBe('line,key,status,reason,reason_code,folder,method,line_type,a_lon,a_lat,a_substation,b_lon,b_lat,b_substation,'
+      + 'length_mi,total_usd_2025,terminal_a,terminal_b,lowest_score_proof,pictures,substation_source_a,substation_source_b');   // released columns keep their place
     for (const f of ['rows/001-plain/report.pdf', 'rows/001-plain/cost.csv', 'rows/002-saved/crossings.csv', 'rows/003-upload/report.pdf', 'batch.json'])
       expect(t.zip.files.has(f), f).toBe(true);
     expect(String(t.zip.files.get('rows/001-plain/cost.csv')).startsWith('\uFEFF')).toBe(true);
@@ -184,6 +198,9 @@ describe('runBatch over the mini cube', () => {
     expect(meta.cube).toBe('unknown');
     expect(t.cap.cap.close).toHaveBeenCalledOnce();
     expect(t.solver.release).toHaveBeenCalledOnce();
+    expect([col('substation_source_a'), col('substation_source_b')]).toEqual(['hifld', '']);
+    expect(t.zip.files.has('CREDITS.txt')).toBe(false);   // no OSM end
+    expect(snapCalls.every((c) => c.osm)).toBe(true);
     // the cause picture carries its colour key; no caption
     const pics = t.pdf.calls[0].pictures;
     expect(pics.map((p) => p.picture)).toEqual(['route', 'cause', 'cost', 'similar', 'alternatives']);
@@ -211,7 +228,9 @@ describe('runBatch over the mini cube', () => {
 
   it('exact points: no snap, and a row whose A is off the cube is reported while the next row solves', async () => {
     const t = setup();
+    osmPoints = [{ fid: 1, lngLat: A, name: 'Never', kv: 500, countries: '|USA|' }];
     const out = await runBatch(opts([row(2, 'Sea', { a: at(-400, 29) }), row(3, 'Land')], { snapKm: null }), t.deps).done;
+    expect(snapCalls).toEqual([]);
     expect(out.rows[0].status).toBe('failed');
     expect(out.rows[0].reason).toBeTruthy();
     expect(out.rows[1].status).toBe('ok');
@@ -290,7 +309,7 @@ describe('runBatch over the mini cube', () => {
   });
 
   it('reasonText words every code the runner emits and noteText the capture literals', () => {
-    for (const c of ['busy', 'no-window', 'no image', 'none found', 'no alternatives asked for', ZIP_CAP, 'method not available', 'unknown line type', UPLOAD_NOT_LOADED, 'no report', 'skipped: x', 'repaint failed: x', 'solve 2 failed: x', 'none: x'])
+    for (const c of ['busy', 'no-window', 'no image', 'none found', 'no alternatives asked for', ZIP_CAP, 'method not available', 'unknown line type', UPLOAD_NOT_LOADED, 'no report', NO_POSITION_FIGURE, 'skipped: x', 'repaint failed: x', 'solve 2 failed: x', 'none: x'])
       expect(reasonText(c), c).not.toBe(c);
     expect(reasonText('solve 2 failed: boom')).toBe('second search failed: boom');
     expect(reasonText('some engine text')).toBe('some engine text');
@@ -484,5 +503,82 @@ describe('runBatch: observations, unnamed ends, captions', () => {
     expect(out.rows[0].pictures!.find((p) => p.picture === 'alternatives')!.code).toBe('none found');
     expect(t.pdf.calls[0].pictures.find((p) => p.picture === 'alternatives')!.caption).toBe('Alternatives: no alternatives found');
     expect(t.pdf.calls[1].pictures.find((p) => p.picture === 'alternatives')!.caption).toBe('Alternatives: alternatives were not asked for');
+  });
+});
+
+describe('runBatch: terminal choices and OpenStreetMap ends', () => {
+  const NEAR_B = at(62, 29);   // 500 m east of B, where HIFLD has nothing
+  const osmB: OsmPoint = { fid: 77, lngLat: NEAR_B, name: 'Osm Sub', kv: 500, countries: '|USA|' };
+  const solves = (s: ReturnType<typeof cubeSolver>) => s.calls.filter((c) => c.kind === 'route').map((c) => c.req as RouteRequest);
+
+  it('explicit choices from the CSV reach each request\'s terminals; Auto stays the snap rule', async () => {
+    const t = setup();
+    const out = await runBatch(opts([
+      row(2, 'NewNone', { terminals: ['new', 'none'], pictures: ['route'] }),
+      row(3, 'AutoPos', { terminals: ['auto', 'position'], pictures: ['route'] }),
+      row(4, 'NoneAuto', { terminals: ['none', 'auto'], pictures: ['route'] }),
+    ]), t.deps).done;
+    expect(out.rows.map((r) => r.status)).toEqual(['ok', 'ok', 'ok']);
+    expect(solves(t.solver).map((r) => r.terminals)).toEqual([['new', 'none'], ['position', 'position'], ['none', 'new']]);
+    expect(out.rows.map((r) => [r.a?.term, r.b?.term])).toEqual([['new', 'none'], ['auto', 'position'], ['none', 'auto']]);
+    const lines = summaryLines(t.zip).map((l) => l.split(','));
+    const ix = (n: string) => lines[0].indexOf(n);
+    expect(lines.slice(1).map((l) => [l[ix('terminal_a')], l[ix('terminal_b')]])).toEqual([['new', 'none'], ['position', 'position'], ['none', 'new']]);
+  });
+
+  it('Existing on a method without a position figure fails with its code before any snap or solve; the next row runs', async () => {
+    const t = setup();
+    const out = await runBatch(opts([
+      row(2, 'Study', { method: 'pnas-wu2023', terminals: ['position', 'auto'], pictures: ['route'] }),
+      row(3, 'Fine', { terminals: ['position', 'new'], pictures: ['route'] }),
+    ]), t.deps).done;
+    expect(out.rows[0]).toMatchObject({ status: 'failed', reason: NO_POSITION_FIGURE });
+    expect(out.rows[1].status).toBe('ok');
+    expect(solves(t.solver)).toHaveLength(1);
+    expect(snapCalls.map((c) => c.lngLat)).toEqual([A, B]);   // row 3's ends only
+    expect(summaryLines(t.zip)[1]).toMatch(/^2,Study,failed,/);
+    expect(summaryLines(t.zip)[1]).toContain(`"${reasonText(NO_POSITION_FIGURE)}",${NO_POSITION_FIGURE},`);   // the worded reason, then the code
+    expect(reasonText(NO_POSITION_FIGURE)).not.toBe(NO_POSITION_FIGURE);
+  });
+
+  it('an end with no HIFLD substation snaps to OpenStreetMap: summary.csv sources, the PDF credit, CREDITS.txt', async () => {
+    osmPoints = [osmB];
+    const t = setup();
+    const out = await runBatch(opts([row(2, 'Osm', { pictures: ['route'] })]), t.deps).done;
+    expect(out.rows[0].status).toBe('ok');
+    expect(out.rows[0].b?.hit).toMatchObject({ name: 'Osm Sub', source: 'osm', maxKv: 500 });
+    expect(solves(t.solver)[0]).toMatchObject({ from: SUB, to: NEAR_B, terminals: ['position', 'position'] });
+    const [head, one] = summaryLines(t.zip).map((l) => l.split(','));
+    const col = (n: string) => one[head.indexOf(n)];
+    expect([col('substation_source_a'), col('substation_source_b'), col('b_substation')]).toEqual(['hifld', 'osm', 'Osm Sub']);
+    expect(t.pdf.calls[0].model.endpoints.b).toContain('Osm Sub');
+    expect(t.pdf.calls[0].model.endpoints.b).toContain('© OpenStreetMap contributors');
+    expect(t.pdf.calls[0].model.endpoints.a).not.toContain('OpenStreetMap');
+    const credits = String(t.zip.files.get('CREDITS.txt'));
+    expect(credits).toContain('© OpenStreetMap contributors');
+    expect(credits).toContain('ODbL');
+    expect(credits).toContain('https://www.openstreetmap.org/copyright');
+  });
+
+  it('a cancel while the OSM read is pending ends the batch at once', async () => {
+    let handle: ReturnType<typeof runBatch> | null = null;
+    const hang: BatchOptions['snap'] = () => { setTimeout(() => handle!.cancel(), 0); return new Promise(() => {}); };
+    const t = setup();
+    handle = runBatch(opts([row(2, 'One'), row(3, 'Two')], { snap: hang }), t.deps);
+    const out = await handle.done;
+    expect(out.status).toBe('cancelled');
+    expect(out.rows.map((r) => r.status)).toEqual(['cancelled', 'cancelled']);
+    expect(t.solver.calls).toHaveLength(0);
+    expect(t.solver.release).toHaveBeenCalledOnce();
+  });
+
+  it('CREDITS.txt also when the only OSM end is on a failed row (summary.csv names it)', async () => {
+    osmPoints = [osmB];
+    const solver = cubeSolver({ route: async () => ({ ok: false, reason: 'boom' }) });
+    const t = setup({ solver });
+    const out = await runBatch(opts([row(2, 'Fails', { pictures: ['route'] })]), t.deps).done;
+    expect(out.rows[0]).toMatchObject({ status: 'failed', reason: 'boom' });
+    expect(out.rows[0].b?.hit?.source).toBe('osm');
+    expect(String(t.zip.files.get('CREDITS.txt'))).toContain('© OpenStreetMap contributors');
   });
 });
