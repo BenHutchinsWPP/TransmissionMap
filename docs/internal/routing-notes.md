@@ -126,14 +126,29 @@ Gates move only for a sourced difference in inputs.
 ## Route panel
 
 - **Strings:** see the AGENTS.md Route panel row; the boot-read `route.*` keys are the Routing constraints layer's concerns, the Tools item, the context menu and the drawer tab.
-- **Snapping:** the nearest HIFLD substation within 3 km whose voltage is at least the line type's
-  floor (`assets/route/snap.ts`); otherwise the raw point. A snapped end carries the substation's
-  highest voltage (`hit.maxKv`).
+- **Snapping:** `snapEnd` (`assets/ui/substation-index.ts`) returns, within the snap radius and at or
+  above the line type's kV floor, the first of: a HIFLD hit of known kV (`snapAt`), an OSM hit of
+  known kV (`snapAmong` over `substationPointsNear`; US points on the 250 m grid, `traction` and
+  `industrial` dropped, kV by `osmKv`), a HIFLD hit of unknown kV, else null (the raw point).
+  `SnapHit.source` is `hifld` or `osm`; an OSM id is `osm:<fid>`, its name may be null. A snapped
+  end carries the substation's highest voltage (`hit.maxKv`). `opts.osm: false` skips OSM; the
+  chat passes it, and `chatEnd` drops an OSM end's name. The OSM read is its own lazy chunk, raced
+  against a 4 s timeout (`OSM_SNAP_TIMEOUT_MS`; on timeout the HIFLD unknown-kV hit or the raw
+  point stands) and never rejects. `route-inputs.ts` takes the snap function as an option
+  (default `snapEnd`) and keeps one generation counter per end, bumped by every write to that
+  end, so a late snap reply for a replaced end is dropped.
 - **Terminal kinds:** each end is `new`, `position` or `none` (`EndKind`, `RoutePreset` line type
-  `terminals.position`); a request without kinds is `['new', 'new']`. The panel, batch and chat
-  set the kinds at request time through `resolveEnds` (`assets/ui/route-request.ts`): `position`
-  only for a snapped end with `maxKv` ≥ the line type's kV and a position figure on the patched line
-  type, else `new`. `validateTerminals` checks the kinds a request carries. `cost.ts` costs
+  `terminals.position`); a request without kinds is `['new', 'new']`. The visitor's choice is
+  `RouteEnd.term` (`TermChoice`: `auto` or a kind; absent is Auto); a choice replaces the
+  `RouteEnd`, never mutates it, and survives a drag or re-snap of the same end. The panel, batch and chat
+  set the kinds at request time through `resolveEnds` (`assets/ui/route-request.ts`), which maps
+  over `explainEnds` (kind, reason code, kV per end): Auto gives `position` only for a snapped end
+  with `maxKv` ≥ the line type's kV and a position figure on the patched line type, else `new`;
+  an explicit `position` without a figure is `positionUnavailable`, which `requestFor` refuses
+  (`route.err.termPosition`). `setEnd`/`setEndHit` take `resetTerm`; only the chat passes it, so its
+  ends start at Auto. Batch: `a_terminal`/`b_terminal` give `BatchRow.terminals`; the runner's
+  pre-check refuses a `position` row without a figure with the code `no position figure`, before
+  any snap, and snaps each end (`osm: true`) inside the batch lock. `validateTerminals` checks the kinds a request carries. `cost.ts` costs
   mid-line stations of the 500 kV rule as `new`; the waterfall reads `terminalsUsd`, never the sum
   of `terminalItems`.
 - **Line-only $/mi** is the KPI tile beside the all-in $/mi: (total − terminals × (1 + contingency pct)) ÷

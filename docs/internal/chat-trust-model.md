@@ -31,7 +31,9 @@ links and the free text in public map data (OSM names) are untrusted. These rule
   chars, ≤ 8 KB); other results ≤ 16 KB; only `allowedFields` reach a row.
 - Two page-built exceptions: `showTemplate`'s summary (≤ 1 KB, group labels ≤ 60 chars;
   `nearest` sends numbers only, no feature or group names) and `planRoute`'s (numbers plus
-  the end substations' HIFLD names, ≤ 60 chars, control characters stripped).
+  the end substations' HIFLD names, ≤ 60 chars, control characters stripped). The chat's ends
+  snap to HIFLD only; an OpenStreetMap substation's name never reaches the model, not even on
+  recall of a route the visitor placed.
 - Nothing a frame computes or says reaches the model: `showCanvas` returns `shown`/`partial`
   or an error category; a chart returns `chartShown`/`chartError`.
 

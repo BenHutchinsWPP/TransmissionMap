@@ -3,7 +3,7 @@
 //   Names: the OSM substation at a chain end (line-read.ts Chain startSub /
 //   endSub, an OSM fid). Points: the max-zoom point of a feature, for
 //   copy-rows.ts (any point archive, by DATA key). Near: every substation point
-//   around a place, for the route planner's OSM snap. Names:
+//   around a place, for the route planner's OSM snap.
 //   Reads the substation points archive (DATA.osm_substations_points: every
 //   substation at every zoom, each substation way as its centroid under the
 //   way's own fid) at its max zoom, only the tiles within NEAR_M of the chain

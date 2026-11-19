@@ -182,10 +182,32 @@ estimate     = 2025 total × 0.70 to 1.50
   voltage. HVDC has none: a converter is needed at each end.
 - **None:** nothing is costed at that end.
 
-`auto`, the default for both ends, takes a line position when the end is snapped to a substation
+Each end has a choice: Auto, New station, Existing station or None. Existing station prices line
+positions whether or not the end is snapped to a substation; a method with no position figure for
+the line type does not offer it, and a route that asks for it there is refused.
+
+Auto, the default for both ends, takes a line position when the end is snapped to a substation
 whose highest voltage is at least the line's and the method has a position figure for the line
-type, and a new station otherwise (a raw point, a lower-voltage substation, HVDC). The study
-methods carry no position figure: an end there is a new station priced as that method prices it.
+type, and a new station otherwise (a raw point, a lower-voltage substation, a substation of
+unknown voltage, HVDC). The study methods carry no position figure: an end there is a new
+station priced as that method prices it. The panel says under each end which kind it took and why.
+
+**Snapping.** An end snaps to the nearest substation within the snap radius whose voltage is at least
+the line type's floor (345 kV for a 500 kV line, 230 kV for 345 kV, 115 kV for 230 kV, the next
+voltage down below that), in this order: a HIFLD substation of known voltage; a US OpenStreetMap transmission
+substation of known voltage (traction and industrial substations are left out); a HIFLD
+substation of unknown voltage; otherwise the exact point. An end snapped to an OpenStreetMap
+substation shows its name with "© OpenStreetMap contributors", and the report, the GeoJSON
+export and a batch's CREDITS.txt carry the credit (ODbL). The route chat snaps to HIFLD only.
+
+The cost rows name what was priced: new stations, line positions at existing stations, a study
+method's own terminal figure, and mid-line stations.
+
+**Batch.** The batch CSV takes optional `a_terminal` and `b_terminal` columns (auto, new, existing
+or none; empty is auto). A row that asks for existing stations under a method with no position
+figure is skipped with that reason. `summary.csv` lists `terminal_a`/`terminal_b` and
+`substation_source_a`/`substation_source_b` (hifld or osm); the ZIP holds a `CREDITS.txt` when any
+end is an OpenStreetMap substation.
 
 Besides the all-in $/mi, the summary shows the line-only $/mi: the total less the terminals and
 their contingency, per mile, in the dollars shown.
