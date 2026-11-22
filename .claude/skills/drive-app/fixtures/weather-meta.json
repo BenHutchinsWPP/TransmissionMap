@@ -1,0 +1,119 @@
+{
+ "run_utc": "2026-11-20T10:00:00.000Z",
+ "step": 0,
+ "valid_utc": "2026-11-20T11:00:00.000Z",
+ "generated_utc": "2026-11-20T11:00:00.000Z",
+ "feed_status": {
+  "gfs": "ok"
+ },
+ "vars": {
+  "temp": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "wind": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "gust": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "rh": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "dewpoint": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "cloud": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  },
+  "pressure": {
+   "width": 2,
+   "height": 1,
+   "bbox": [
+    -180,
+    -90,
+    180,
+    90
+   ],
+   "scale": 0.1,
+   "nodata": -32768,
+   "units": "x"
+  }
+ },
+ "steps": [
+  {
+   "step": 0,
+   "valid_utc": "2026-11-20T11:00:00.000Z",
+   "suffix": ""
+  },
+  {
+   "step": 3,
+   "valid_utc": "2026-11-20T14:00:00.000Z",
+   "suffix": "_f003"
+  },
+  {
+   "step": 6,
+   "valid_utc": "2026-11-20T17:00:00.000Z",
+   "suffix": "_f006"
+  }
+ ]
+}

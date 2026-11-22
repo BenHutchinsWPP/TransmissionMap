@@ -29,9 +29,9 @@ const SHOW_LAYER_SEAM = {
 // text only (textContent, append, attributes): an HTML sink there would let a model's answer or a feature
 // name run as markup, next to a saved OpenRouter key.
 const CHAT_FILES = [
-  'assets/agent/**/*.ts', 'assets/ui/ui-chat.ts', 'assets/ui/chat-markdown.ts','assets/ui/ui-chart.ts', 'assets/chart-spec.ts',
+  'assets/agent/**/*.ts', 'assets/ui/**/ui-chat.ts', 'assets/ui/**/chat-markdown.ts', 'assets/ui/**/ui-chart.ts', 'assets/chart-spec.ts',
   'assets/ui/ui-services.ts', 'assets/ui/ui-linked-services.ts', 'assets/ui/services-dom.ts', 'assets/ui/notice-dialog.ts',
-  'assets/ui/ui-canvas.ts', 'assets/ui/ui-templates.ts', 'assets/ui/ui-proximity.ts', 'assets/ui/ui-grid-ops.ts', 'assets/sandbox/canvas-host.ts', 'assets/templates/template-actions.ts',
+  'assets/utils/utils-dom.ts', 'assets/ui/**/ui-canvas.ts', 'assets/ui/ui-templates.ts', 'assets/ui/**/ui-proximity.ts', 'assets/ui/ui-grid-ops.ts', 'assets/sandbox/canvas-host.ts', 'assets/templates/template-actions.ts',
 ];
 const HTML_SINKS = [
   {

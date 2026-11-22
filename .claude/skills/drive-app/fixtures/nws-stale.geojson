@@ -1,0 +1,44 @@
+{
+ "type": "FeatureCollection",
+ "generated_utc": "2026-11-20T08:00:00.000Z",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -99,
+       34
+      ],
+      [
+       -97.8,
+       34
+      ],
+      [
+       -97.8,
+       35.2
+      ],
+      [
+       -99,
+       35.2
+      ],
+      [
+       -99,
+       34
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "event": "Fixture Heat Advisory",
+    "_group": "heat",
+    "severity": "Moderate",
+    "ends": "2026-11-21T00:00:00Z",
+    "generated_utc": "2026-11-20T08:00:00.000Z"
+   }
+  }
+ ],
+ "zone_alerts": []
+}
