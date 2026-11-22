@@ -26,7 +26,8 @@ export const SUPPORTED_LOCALES: readonly LocaleDef[] = [
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', dir: 'ltr' },
   // Navajo is withheld from the picker until a Diné speaker reviews the
   // dictionary — `stale.odin.*` in locales/nv.ts is still English. The
-  // dictionary and its loader stay in place: uncomment this line to list it.
+  // dictionary and its loader stay in place (route strings fall back to English):
+  // uncomment this line to list it.
   // { code: 'nv', name: 'Navajo', nativeName: 'Diné Bizaad', dir: 'ltr' },
   { code: 'vi', name: 'Vietnamese', nativeName: 'Tiếng Việt', dir: 'ltr' },
   { code: 'tl', name: 'Tagalog', nativeName: 'Wikang Tagalog', dir: 'ltr' },

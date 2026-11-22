@@ -20,7 +20,7 @@ import en from './locales/en.js';
 import { LAYERS } from '../registry/index.js';
 import { concernKeys } from '../colors/route-constraints.js';
 
-// Every route file, nv included (the picker list leaves nv out).
+// Every route file. Navajo has none: its route strings fall back to English.
 const routeFiles = import.meta.glob<Record<string, string>>('./route/*.ts', { eager: true, import: 'default' });
 const routeDict = (code: string) => routeFiles[`./route/${code}.ts`];
 const routeCodes = Object.keys(routeFiles).map(f => path.basename(f, '.ts'));
@@ -511,8 +511,8 @@ describe('i18n Core Engine', () => {
     const enRoute = routeDict('en');
     const withRoute = (code: string) => ({ ...baseDict(code), ...routeDict(code) });
 
-    it('has route files for all 15 locales', () => {
-      expect(routeCodes.length).toBe(15);
+    it('has route files for the 14 listed locales', () => {
+      expect(routeCodes.length).toBe(14);
       expect(Object.keys(enRoute).length).toBeGreaterThan(700);
     });
 
@@ -530,7 +530,7 @@ describe('i18n Core Engine', () => {
       expect(bad, `${code} route strings empty or dropping a {param}`).toEqual([]);
     });
 
-    it.each(routeCodes.filter(c => c !== 'en' && c !== 'nv'))('locale "%s" translates the route strings', (code) => {
+    it.each(routeCodes.filter(c => c !== 'en'))('locale "%s" translates the route strings', (code) => {
       const dict = withRoute(code);
       const all = { ...en, ...enRoute };
       const untranslated = Object.keys(all).filter(k =>
@@ -550,7 +550,7 @@ describe('i18n Core Engine', () => {
       };
       walk(path.join(root, 'assets')); walk(path.join(root, 'src'));
       const inRouteChunk = (rel: string) =>
-        rel.startsWith('assets/route/') || rel.startsWith('assets/ui/route-tabs/') ||
+        rel.startsWith('assets/route/') || rel.startsWith('assets/ui/route/') || rel.startsWith('assets/ui/route-tabs/') ||
         rel === 'assets/ui/ui-route.ts' || rel === 'assets/ui/notice-dialog.ts' ||
         (/^assets\/ui\/route-/.test(rel) && rel !== 'assets/ui/route-panel-open.ts');
       const skip = (rel: string) => /\.test\.ts$/.test(rel) || rel.startsWith('src/i18n/locales/') || rel.startsWith('src/i18n/route/') ||
