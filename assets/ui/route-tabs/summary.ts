@@ -5,30 +5,24 @@
 //       "Where the money goes" waterfall (top 8 lines, the rest folded) on the right.
 //       Renders from ctx.session only; the colour control calls ctx.setColourMode.
 //       The reference tab for the other sub-tabs (RouteTab contract, widgets only).
-// Deps: route-tabs/widgets.ts, route-tabs/method.ts (solvedPresetOf), route-tabs/types.ts (types), registry/route-presets.ts,
-//       i18n (t), ./summary.css.
+// Deps: route-tabs/widgets.ts, route-format.ts (waterfallLines), route-methods.ts (solvedPresetOf), route-tabs/types.ts (types), registry/route-presets.ts,
+//       utils/utils-dom.ts (h, ht), ./summary.css.
 
 import './summary.css';
-import { t } from '../../../src/i18n/index.js';
+import { h, ht } from '../../utils/utils-dom.js';
 import { ROUTE_PRESETS, routePreset } from '../../../src/registry/route-presets.js';
-import { crossingPills, kpis, rangeBar, waterfall, waterfallLines } from './widgets.js';
-import { solvedPresetOf } from './method.js';
+import { crossingPills, kpis, rangeBar, waterfall } from './widgets.js';
+import { waterfallLines } from '../route-format.js';
+import { solvedPresetOf } from '../route-methods.js';
 import type { ColourMode, RouteTab, RouteTabContext } from './types.js';
 
 const MODES: ColourMode[] = ['cost', 'driver', 'plain'];
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, key?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (key) { e.dataset.i18n = key; e.textContent = t(key); }
-  return e;
-}
-
 function colourControl(ctx: RouteTabContext): HTMLElement {
-  const wrap = el('div', 'rs-colour');
-  const lab = el('span', 'rs-colour-lab', 'route.sum.colourBy');
+  const wrap = h('div', 'rs-colour');
+  const lab = ht('span', 'rs-colour-lab', 'route.sum.colourBy');
   lab.id = 'rs-colour-lab';
-  const group = el('div', 'rs-seg');
+  const group = h('div', 'rs-seg');
   group.setAttribute('role', 'radiogroup');
   group.setAttribute('aria-labelledby', lab.id);
   const pick = (m: ColourMode) => {
@@ -40,7 +34,7 @@ function colourControl(ctx: RouteTabContext): HTMLElement {
     }
   };
   for (const m of MODES) {
-    const b = el('button', 'rs-seg-btn', `route.colour.${m}`);
+    const b = ht('button', 'rs-seg-btn', `route.colour.${m}`);
     b.type = 'button';
     b.dataset.mode = m;
     b.setAttribute('role', 'radio');
@@ -72,19 +66,19 @@ const tab: RouteTab = {
     if (!r) return;
     const dollars = ctx.session.dollars;
     const money = (v: number) => ctx.money(v, v);
-    const left = el('div', 'rs-left');
+    const left = h('div', 'rs-left');
     left.append(kpis(r, dollars), rangeBar(r.cost, dollars));
     const crossings = r.profile?.crossings;
     if (crossings) left.append(crossingPills(crossings));
     left.append(colourControl(ctx));
 
-    const right = el('div', 'rs-right');
+    const right = h('div', 'rs-right');
     const preset = (ctx.session.resultInputs ? solvedPresetOf(ctx.session.resultInputs) : null) ?? routePreset(r.preset.id) ?? ROUTE_PRESETS[0];
     right.append(
-      el('h4', 'rs-h', 'route.sum.money'),
+      ht('h4', 'rs-h', 'route.sum.money'),
       waterfall(waterfallLines(r.cost, preset, { dollars }), { money, compact: true, maxLines: 8 }),
     );
-    const grid = el('div', 'rs');
+    const grid = h('div', 'rs');
     grid.append(left, right);
     root.append(grid);
   },

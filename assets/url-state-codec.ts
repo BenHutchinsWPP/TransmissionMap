@@ -22,8 +22,8 @@
 // against it read-only.
 // Deps: fflate (deflate for vx), view-validate.ts, services/service-spec.ts (caps, LinkedService), diag-log.ts, the registry
 // (incl. displayModes, conditions.ts, area-filter.ts), src/colors/route-constraints.ts
-// (the `rc` concern ids), ui/ui-legends.ts (LEGEND_FILTERS),
-// filters.ts (MW_SLIDER_MAX), src/colors/ramps.ts (year-filter bounds),
+// (the `rc` concern ids), src/colors/facets.ts (FACETS: the legend group codes
+// and buckets), src/colors/ramps.ts (MW_SLIDER_MAX, year-filter bounds),
 // src/i18n (isValidLocale). fflate deflates synchronously, as parse/format run
 // synchronously on cold boot; it is in the boot bundle via pmtiles.
 // CompressionStream's deflate-raw needs Safari 16.4+.
@@ -31,9 +31,8 @@
 import { LAYERS, displayModes } from '../src/registry/index.js';
 import { WEATHER_VARIABLES, NRI_HAZARDS, DEFAULT_NRI_HAZARD } from '../src/registry/conditions.js';
 import { DEFAULT_CONCERN, isConcernId } from '../src/colors/route-constraints.js';
-import { LEGEND_FILTERS, legendAllIds } from './ui/ui-legends.js';
-import { MW_SLIDER_MAX } from './filters.js';
-import { YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
+import { FACETS, facetAllIds } from '../src/colors/facets.js';
+import { MW_SLIDER_MAX, YEAR_FILTER_DEFAULT, YEAR_FILTER_MIN, YEAR_FILTER_MAX } from '../src/colors/ramps.js';
 import { isValidLocale } from '../src/i18n/index.js';
 import type { LayerScope, Selection, StyleOverride } from '../src/types.js';
 import type { Condition } from '../src/registry/condition-compile.js';
@@ -77,7 +76,7 @@ const bucketParam = (code: string, target: BucketParam['target'], key: string, b
     ...buckets.filter(b => b.urlCode).map(b => [b.urlCode!, b.id] as [string, string]),
   ]) });
 const BUCKET_PARAMS: BucketParam[] = [
-  ...LEGEND_FILTERS.filter(c => c.groupCode).map(c => bucketParam(c.groupCode, 'legendFilters', c.key, c.buckets)),
+  ...FACETS.filter(c => c.groupCode).map(c => bucketParam(c.groupCode, 'legendFilters', c.key, c.buckets)),
   ...LAYERS.filter(e => e.filterGroupCode && e.filterBuckets)
     .map(e => bucketParam(e.filterGroupCode!, 'layerFilters', e.id, e.filterBuckets!)),
 ];
@@ -214,7 +213,7 @@ export function defaultView(): UrlStateData {
     if (entry.heatLayerId || entry.modes) genMode[entry.id] = entry.defaultMode || 'icons';
   }
   const legendFilters: Record<string, Set<string>> = {};
-  for (const cfg of LEGEND_FILTERS) legendFilters[cfg.key] = new Set(cfg.defaultActive ?? legendAllIds(cfg));
+  for (const f of FACETS) legendFilters[f.key] = new Set(f.defaultActive ?? facetAllIds(f));
   return {
     layerVisibility,
     legendFilters,

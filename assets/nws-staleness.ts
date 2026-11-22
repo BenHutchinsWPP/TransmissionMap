@@ -1,7 +1,7 @@
 // ─── Live NWS weather-alert staleness safety ──────────────────────────────────
 // Role: thin config shell over the shared factory (live-staleness.ts) for the
 //       `nws-alerts` live layer: 5 min poll, 3 h max age, #nwsStaleDialog
-//       modal, PLUS expiry pruning — alerts past their `ends`/`expires` time
+//       modal (built by stale-dialog.ts when initNwsStaleness runs, before the kill-switch watch), PLUS expiry pruning — alerts past their `ends`/`expires` time
 //       are dropped client-side before every setData and on the 60 s tick, so
 //       a stale feed self-prunes instead of showing dead warnings. Features
 //       with no parseable end time are KEPT (fail open — the feed-level
@@ -20,12 +20,13 @@
 //       refetchZoneAlerts(), since the factory only restores polygon layers.
 // Exports NWS_LIVE, the config itself: ui/ui-legends.ts reads its maxAgeMs for
 //       the age chip's stale edge and diagnostics.ts for the feed check.
-// Deps: live-staleness.ts (factory), constants (DATA), nws-zone-join.ts
-//       (pruneExpiredZoneAlerts, clearZoneAlerts). Modal DOM in index.html.
+// Deps: live-staleness.ts (factory), stale-dialog.ts (the modal's DOM), constants (DATA),
+//       nws-zone-join.ts (pruneExpiredZoneAlerts, clearZoneAlerts).
 // Wired from ui/ui.ts init() via initNwsStaleness().
 
 import { DATA } from './constants.js';
 import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
+import { staleDialog } from './stale-dialog.js';
 import { pruneExpiredZoneAlerts, clearZoneAlerts, refetchZoneAlerts } from './nws-zone-join.js';
 
 function pruneExpiredAlerts(features: GeoJSON.Feature[]): GeoJSON.Feature[] {
@@ -79,6 +80,7 @@ export const NWS_LIVE: LiveStalenessConfig = {
 };
 
 export function initNwsStaleness() {
+  staleDialog({ ...NWS_LIVE, feed: "nws" });
   initLiveStaleness(NWS_LIVE);
   watchKillSwitch();
 }

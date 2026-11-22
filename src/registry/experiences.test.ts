@@ -9,7 +9,8 @@ import {
 } from './experiences.js';
 import { LAYERS, layerById, displayModes } from './index.js';
 import { WEATHER_VARIABLES } from './conditions.js';
-import { LEGEND_FILTERS, LEGEND_FILTERS_BY_KEY, legendAllIds } from '../../assets/ui/ui-legends.js';
+import { LEGEND_FILTERS, LEGEND_FILTERS_BY_KEY } from '../../assets/ui/ui-legends.js';
+import { facetAllIds as legendAllIds } from '../colors/facets.js';
 
 const BASEMAPS = new Set(['light', 'dark', 'street', 'topo', 'aerial', 'hydro']);
 const LAYER_IDS = new Set(LAYERS.map(l => l.id));

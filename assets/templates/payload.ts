@@ -39,7 +39,7 @@ export interface TemplateRoles {
     field: string; scale: 'lin' | 'log';
     /** The edges the rows were binned on (row `bin` i is [edges[i], edges[i + 1])). */
     edges?: readonly number[];
-    /** The values' own quantiles (dataset-query.ts binStats): n, p10, median, p90. */
+    /** The values' own quantiles (dataset-core.ts binStats): n, p10, median, p90. */
     stats?: { n: number; p10: number; median: number; p90: number };
     /** false: a bin takes no map filter (length / area, or a year read out of text), so the chart's bars are not clickable. */
     filter?: boolean;

@@ -1,7 +1,8 @@
 // ─── Legends + legend-filter registry ────────────────────────────────────────
 // LEGEND_FILTERS pairs each facet record (src/colors/facets.ts: group code,
 // buckets, defaults, DOM ids, title, swatch) with its applier from
-// ../filters.js's FACET_APPLIERS. The URL codec and ui-filters.ts read it.
+// ../filters.js's FACET_APPLIERS. ui-filters.ts reads it; the URL codec reads
+// the facet records directly.
 // Live-feed age/degraded-feed status text (downFor, feedIssue, fmtAgeShort)
 // comes from ../live-staleness.js, which owns those helpers so they can be
 // shared with other live-feed displays.
@@ -27,7 +28,7 @@
 import { state } from '../state.js';
 import { LAYERS } from '../../src/registry/index.js';
 import type { RampDef, BucketedField } from '../../src/types.js';
-import { FACETS } from '../../src/colors/facets.js';
+import { FACETS, facetAllIds } from '../../src/colors/facets.js';
 import { FACET_APPLIERS } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
 import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
@@ -59,10 +60,6 @@ export const LEGEND_FILTERS: LegendFilter[] = FACETS.map(f => {
 });
 
 export const LEGEND_FILTERS_BY_KEY = Object.fromEntries(LEGEND_FILTERS.map(c => [c.key, c]));
-
-export function legendAllIds(cfg: LegendFilter) {
-  return (cfg.syncBuckets ?? cfg.buckets).map(b => b.id);
-}
 
 // Continuous color-ramp legend HTML
 export function rampLegendHtml(entry: { id: string; ramp?: RampDef }) {
@@ -127,7 +124,7 @@ export function syncLegendMaster(cfg: LegendFilter) {
   const master = document.getElementById(cfg.masterId) as HTMLInputElement | null;
   if (!master) return;
   const active = state.legendFilters[cfg.key].size;
-  const total  = legendAllIds(cfg).length;
+  const total  = facetAllIds(cfg).length;
   master.checked       = active > 0;
   master.indeterminate = active > 0 && active < total;
 }

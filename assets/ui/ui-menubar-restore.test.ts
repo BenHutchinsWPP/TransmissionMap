@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // The session boot hook (wireMenubar → wireSessionRestore): the drawer restore
-// (table-open.js restoreDrawer, which loads the table chunk) runs only for a
+// (table-open.js restoreDrawer, which loads the drawer shell) runs only for a
 // restorable tm-drawer, once, after map:ready, and its resumeAsk imports
 // ui-chat.js; a snapshot that may not restore here is removed; one that may is
 // kept current with the link while its chunk stays unloaded.

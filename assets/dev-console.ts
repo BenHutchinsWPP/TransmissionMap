@@ -31,7 +31,7 @@
 //
 // Deps: map-api.js (every call), view-state.js (applyView, currentView),
 //       url-state.js (currentHash), style-overrides.js (listStylable), state.js (userLayers),
-//       dataset-query.js (summarise; Outcome type), route/route.js and route/preset-patch.js
+//       dataset-query.js (summarise), src/outcome.js (Outcome type), route/route.js and route/preset-patch.js
 //       (types only), route/route-open.js and user-data/user-data.js (dynamic, on the first
 //       tm.route call).
 
@@ -39,7 +39,8 @@ import * as api from './map-api.js';
 import { applyView, currentView } from './view-state.js';
 import { currentHash } from './url-state.js';
 import { listStylable } from './style-overrides.js';
-import { summarise, type Outcome } from './dataset-query.js';
+import { summarise } from './dataset-query.js';
+import type { Outcome } from '../src/outcome.js';
 import type { RouteResult, RouteSurface } from './route/route.js';
 import type { PresetPatch } from './route/preset-patch.js';
 import { state } from './state.js';

@@ -1,5 +1,5 @@
 // Bundle check for the route planner: after `npm run build`, a string literal that only
-// assets/ui/ui-route.ts holds (an rp- map layer id) must sit in a lazy chunk and in no
+// assets/ui/route-overlay.ts holds (an rp- map layer id) must sit in a lazy chunk and in no
 // chunk the page loads at boot (the entry script and every modulepreload in dist/index.html).
 // Usage: node scripts/check_route_bundle.mjs [needle]
 import { readFileSync, readdirSync } from 'node:fs';

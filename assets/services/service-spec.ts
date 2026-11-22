@@ -28,9 +28,9 @@
 // A style never carries a raw MapLibre expression: styleToLayers builds every
 // expression from validated scalars.
 //
-// Deps: type-only imports of maplibre-gl and dataset-query.ts (Outcome); pure.
+// Deps: type-only imports of maplibre-gl and src/outcome.ts (Outcome); pure.
 import type { LayerSpecification, SourceSpecification, ExpressionSpecification } from 'maplibre-gl';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 
 export const SERVICE_KINDS = [
   'geojson', 'arcgis-feature', 'arcgis-export', 'arcgis-image', 'wms', 'xyz', 'pmtiles-raster',

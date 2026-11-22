@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { fmtAge, fmtAgeShort, downFor, feedIssue, initLiveStaleness } from './live-staleness.js';
 import { state } from './state.js';
 import { emit, on } from './state-bus.js';
 import { WILDFIRE_LIVE } from './wildfire-staleness.js';
 import { NWS_LIVE } from './nws-staleness.js';
+import { ODIN_STALE } from './odin-outages.js';
+import { staleDialog, type StaleDialogCfg } from './stale-dialog.js';
 import { layerSourceId } from './layers/layer-source.js';
 import { LAYERS } from '../src/registry/index.js';
 
@@ -373,11 +373,17 @@ describe('refetchLive (via the refresh-interval timer)', () => {
 const LIVE_CONFIGS = { WILDFIRE_LIVE, NWS_LIVE };
 
 describe('DOM-id drift-guard', () => {
-  it('every id referenced by the wildfire/nws staleness configs exists in index.html', () => {
-    const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
-    for (const cfg of Object.values(LIVE_CONFIGS)) {
-      for (const id of [cfg.dialogId, cfg.ageElId, cfg.reenableId, cfg.dismissId]) {
-        expect(html.includes(`id="${id}"`), `missing id="${id}" in index.html`).toBe(true);
+  it('every id referenced by the wildfire/nws/odin staleness configs exists in the built, translated dialog', () => {
+    // Other tests in this file reset document.body, so build each dialog from its config afresh.
+    document.body.innerHTML = '';
+    const feeds = [
+      ...Object.entries(LIVE_CONFIGS).map(([name, cfg]) => [name.replace('_LIVE', '').toLowerCase(), cfg] as const),
+      ['odin', ODIN_STALE] as const,
+    ];
+    for (const [feed, cfg] of feeds) {
+      const dlg = staleDialog({ ...cfg, feed: feed as StaleDialogCfg['feed'] });
+      for (const id of [cfg.ageElId, cfg.reenableId, cfg.dismissId]) {
+        expect(dlg.querySelector(`#${id}`), `missing id="${id}" in #${cfg.dialogId}`).not.toBeNull();
       }
     }
   });

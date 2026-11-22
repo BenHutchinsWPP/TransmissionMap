@@ -2,7 +2,7 @@
 // A chip offers Undo only when its own call changed the view: a committing call
 // that changes nothing (a layer already on) pushes no undo step, so an Undo on
 // its chip would revert an older step.
-// Deps: ui-chat.js; ui-table.js, agent/loop.js, agent/local-commands.js,
+// Deps: ui-chat.js; drawer.js, agent/loop.js, agent/local-commands.js,
 //       view-state.js, url-state-codec.js and undo.js are mocked; so is
 //       agent/openrouter.js's catalogue (a test never calls OpenRouter).
 // The model picker groups by provider and labels each model with its
@@ -32,10 +32,10 @@ vi.mock('./ui-canvas.js', () => ({
   closeAllCanvases: () => {},
 }));
 
-vi.mock('./ui-table.js', () => {
+vi.mock('./drawer.js', () => {
   const p = document.createElement('div');
   document.body.append(p);
-  return { askPanel: () => p, openAsk: () => {} };
+  return { panel: () => p, openPane: () => {} };
 });
 vi.mock('../agent/local-commands.js', () => ({ LOCAL_EXAMPLES: [], localContext: async () => ({}) }));
 vi.mock('../view-state.js', () => ({ currentView: () => m.view }));

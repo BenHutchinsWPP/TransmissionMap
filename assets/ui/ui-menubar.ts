@@ -17,9 +17,10 @@
 // ui-chat.js (lazy — the map chat, the table drawer's Ask tab, loaded on first
 // Tools > Ask the map… click, or by wireSessionRestore after a reload of this
 // tab when the drawer was saved with Ask open). table-open.js (restoreDrawer:
-// the table chunk, imported by wireSessionRestore only for a restorable
-// `tm-drawer` snapshot — session-snapshot.ts; with none nothing is imported,
-// and a closed chat's `tm-chat` restores when the visitor next opens it).
+// the drawer chunk, imported by wireSessionRestore only for a restorable
+// `tm-drawer` snapshot — session-snapshot.ts — and the table chunk only when
+// that snapshot holds a table; with none nothing is imported, and a closed
+// chat's `tm-chat` restores when the visitor next opens it).
 // templates-open.js (openVisualize — Tools > Visualize…, the ui-templates.js lazy
 // chunk; resumeVisualize — the boot hook's resumeViz for a drawer saved with
 // Visualize open). proximity-open.js (openProximity — Tools > Proximity, the
@@ -402,7 +403,7 @@ export function wireMenubar() {
 }
 
 // The tab's snapshots: tm-drawer (the layout and the table, owned by
-// ui-table.ts) and tm-chat (the conversation, owned by ui-chat.ts). One that may
+// drawer.ts) and tm-chat (the conversation, owned by ui-chat.ts). One that may
 // not restore here (a fresh link in the tab, another view) is removed; one that
 // may is kept current with the link while its chunk is unloaded. A restorable
 // drawer is rebuilt once the map is ready (the table needs the layers): the chat

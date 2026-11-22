@@ -43,14 +43,15 @@
 //       RenderExtra, TemplateRender), template-actions.ts (templateActions),
 //       canvas-host.ts (types only: SignalAction), per-region.ts (classes, outlines),
 //       vega/common.ts (binLabels, monthText: the bins' and months' words),
-//       county-overlay.ts (paintCountyOverlay, clearCountyOverlay), ui/area-labels.ts
+//       county-overlay.ts (paintCountyOverlay, clearCountyOverlay), area-labels.ts
 //       (loadAreaLabels, areaLabel), nearest.ts (nearest); html/kit.js and the templates' own
 //       code on demand.
 
 import { CATALOGUE, templateById, templatesFor, queryableRoles, TEMPLATE_IDS, type TemplateDef } from './catalogue.js';
 import { topGroups, NEUTRAL } from './groups.js';
 import { TEMPLATE_PAYLOAD_VERSION, type TemplatePayload, type TemplateParam } from './payload.js';
-import { shapeRows, shapeSlots, hasColumns, type Outcome, type ShapeRow, type ShapeKey } from '../dataset-query.js';
+import { shapeRows, shapeSlots, hasColumns, type ShapeRow, type ShapeKey } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { rolesOf, aliasFields, type RoleField, type Roles } from '../../src/registry/field-roles.js';
 import { fit, slotFields, type Slot } from '../../src/registry/template-signatures.js';
 import { layerById } from '../../src/registry/index.js';
@@ -71,7 +72,7 @@ import { templateActions, conditionForBin } from './template-actions.js';
 import { binLabels, monthText } from './vega/common.js';
 import { classBreaks, classOf, classLabels, rampColours, regionFeatures, regionCentre } from './per-region.js';
 import { paintCountyOverlay, clearCountyOverlay, type CountyLegend } from '../county-overlay.js';
-import { loadAreaLabels, areaLabel } from '../ui/area-labels.js';
+import { loadAreaLabels, areaLabel } from '../area-labels.js';
 import { AREA_KINDS, type AreaKind } from '../../src/registry/area-filter.js';
 import { nearest as nearestOf, type LonLat } from './nearest.js';
 

@@ -5,15 +5,17 @@
 //       session.dollars and calls ctx.rerender(). Source text is set through textContent. Terminals are one
 //       row per kind (stations, line positions: `terminalSplit`, "n × each"). The rows read the preset as the solve used it
 //       (`solvedPresetOf`: the method with its patch).
-// Deps: route-tabs/widgets.ts, route-tabs/method.ts (solvedPresetOf), route-tabs/types.ts (types), route/cost.ts (types),
-//       registry/route-presets.ts, i18n (t), ./cost.css.
+// Deps: route-tabs/widgets.ts, route-format.ts (terminalLabel, terminalSplit, waterfallLines), route-methods.ts (solvedPresetOf), route-tabs/types.ts (types), route/cost.ts (types),
+//       registry/route-presets.ts, utils/utils-dom.ts (h), i18n (t), ./cost.css.
 
 import './cost.css';
 import { t } from '../../../src/i18n/index.js';
+import { h } from '../../utils/utils-dom.js';
 import { ROUTE_PRESETS, routePreset, type RoutePreset } from '../../../src/registry/route-presets.js';
 import type { CostResult } from '../../route/cost.js';
-import { kpis, rangeBar, sourceInfo, terminalLabel, terminalSplit, waterfall, waterfallLines } from './widgets.js';
-import { solvedPresetOf } from './method.js';
+import { kpis, rangeBar, sourceInfo, waterfall } from './widgets.js';
+import { terminalLabel, terminalSplit, waterfallLines } from '../route-format.js';
+import { solvedPresetOf } from '../route-methods.js';
 import type { DollarYear, RouteSession, RouteTab, RouteTabContext } from './types.js';
 
 /** Method-year dollars and the mitigation range are shown on request; per session, off by default. */
@@ -21,13 +23,6 @@ const showMethod = new WeakMap<RouteSession, boolean>();
 
 const M_PER_MI = 1609.344;
 const DOLLARS: DollarYear[] = ['y2025', 'preset'];
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
 
 export interface CostItem { key: string; label: string; basis: string; nominal: number; src: string }
 
@@ -72,10 +67,10 @@ export function costItems(cost: CostResult, preset: RoutePreset): CostItem[] {
 }
 
 function segmented(ctx: RouteTabContext, year: number): HTMLElement {
-  const wrap = el('div', 'rc-head');
-  const lab = el('span', 'rc-head-lab', t('route.cost.dollarYear'));
+  const wrap = h('div', 'rc-head');
+  const lab = h('span', 'rc-head-lab', t('route.cost.dollarYear'));
   lab.id = 'rc-dollars-lab';
-  const group = el('div', 'rc-seg');
+  const group = h('div', 'rc-seg');
   group.setAttribute('role', 'radiogroup');
   group.setAttribute('aria-labelledby', lab.id);
   const label = (d: DollarYear) => (d === 'y2025' ? t('route.kpi.dollars.y2025') : t('route.kpi.dollars.preset', { year }));
@@ -85,7 +80,7 @@ function segmented(ctx: RouteTabContext, year: number): HTMLElement {
     ctx.rerender();
   };
   for (const d of DOLLARS) {
-    const b = el('button', 'rc-seg-btn', label(d));
+    const b = h('button', 'rc-seg-btn', label(d));
     b.type = 'button';
     b.dataset.dollars = d;
     b.setAttribute('role', 'radio');
@@ -106,15 +101,15 @@ function segmented(ctx: RouteTabContext, year: number): HTMLElement {
 }
 
 function methodToggle(ctx: RouteTabContext): HTMLElement {
-  const lab = el('label', 'rc-method');
-  const box = el('input');
+  const lab = h('label', 'rc-method');
+  const box = h('input');
   box.type = 'checkbox';
   box.checked = showMethod.get(ctx.session) === true;
   box.addEventListener('change', () => {
     showMethod.set(ctx.session, box.checked);
     ctx.rerender();
   });
-  const text = el('span', undefined, t('route.cost.showMethod'));
+  const text = h('span', undefined, t('route.cost.showMethod'));
   text.dataset.i18n = 'route.cost.showMethod';
   lab.append(box, text);
   return lab;
@@ -125,39 +120,39 @@ function table(cost: CostResult, preset: RoutePreset, method: boolean): HTMLElem
   const n = preset.escalation.to_year - preset.dollar_year;
   const pct = n > 0 ? Math.round((k ** (1 / n) - 1) * 1000) / 10 : 0;
   const esc = t('route.cost.escalation', { f: k.toFixed(3), pct });
-  const tbl = el('table', 'rc-table');
-  const head = el('tr');
+  const tbl = h('table', 'rc-table');
+  const head = h('tr');
   const cols: [string, boolean][] = [
     [t('route.cost.col.item'), false], [t('route.cost.col.basis'), false],
     [t('route.cost.col.nominal', { year: cost.dollarYear }), true], [t('route.cost.col.y2025'), true], [t('route.cost.col.source'), false],
   ];
   cols.forEach(([text, num], i) => {
-    const th = el('th', num ? 'rc-num' : undefined, text);
+    const th = h('th', num ? 'rc-num' : undefined, text);
     if (i === 2) th.hidden = !method;
     head.append(th);
   });
-  const thead = el('thead');
+  const thead = h('thead');
   thead.append(head);
   tbl.append(thead);
-  const body = el('tbody');
+  const body = h('tbody');
   const row = (key: string, label: string, basis: string, nominal: number, src: string, cls?: string) => {
-    const tr = el('tr', cls);
+    const tr = h('tr', cls);
     tr.dataset.item = key;
     tr.dataset.nominal = String(nominal);
     tr.dataset.usd2025 = String(nominal * k);
-    const source = el('td');
+    const source = h('td');
     if (src) {
-      source.append(el('span', 'rc-src', src), ' ', sourceInfo(src));
+      source.append(h('span', 'rc-src', src), ' ', sourceInfo(src));
     }
-    const nom = el('td', 'rc-num', m1(nominal));
+    const nom = h('td', 'rc-num', m1(nominal));
     nom.hidden = !method;
-    tr.append(el('td', undefined, label), el('td', undefined, key === 'mitigation' && !method ? '' : basis), nom, el('td', 'rc-num', m1(nominal * k)), source);
+    tr.append(h('td', undefined, label), h('td', undefined, key === 'mitigation' && !method ? '' : basis), nom, h('td', 'rc-num', m1(nominal * k)), source);
     body.append(tr);
   };
   for (const it of costItems(cost, preset)) row(it.key, it.label, it.basis, it.nominal, it.src);
   row('total', t('route.cost.total'), '', cost.totalNominal, `${preset.escalation.src} · ${esc}`, 'rc-total');
   tbl.append(body);
-  const wrap = el('div', 'rc-scroll');
+  const wrap = h('div', 'rc-scroll');
   wrap.append(tbl);
   return wrap;
 }
@@ -175,16 +170,16 @@ const tab: RouteTab = {
     const preset = (ctx.session.resultInputs ? solvedPresetOf(ctx.session.resultInputs) : null) ?? routePreset(r.preset.id) ?? routePreset(r.cost.preset) ?? ROUTE_PRESETS[0];
     const yearLabel = dollars === 'y2025' ? t('route.kpi.dollars.y2025') : t('route.kpi.dollars.preset', { year: r.cost.dollarYear });
 
-    const left = el('div', 'rc-left');
+    const left = h('div', 'rc-left');
     left.append(
-      el('h4', 'rc-h', t('route.cost.heading', { dollars: yearLabel })),
+      h('h4', 'rc-h', t('route.cost.heading', { dollars: yearLabel })),
       waterfall(waterfallLines(r.cost, preset, { dollars }), { money }),
     );
-    const right = el('div', 'rc-right');
-    right.append(kpis(r, dollars), rangeBar(r.cost, dollars), el('h4', 'rc-h', t('route.cost.items')), table(r.cost, preset, showMethod.get(ctx.session) === true));
-    const grid = el('div', 'rc-grid');
+    const right = h('div', 'rc-right');
+    right.append(kpis(r, dollars), rangeBar(r.cost, dollars), h('h4', 'rc-h', t('route.cost.items')), table(r.cost, preset, showMethod.get(ctx.session) === true));
+    const grid = h('div', 'rc-grid');
     grid.append(left, right);
-    const wrap = el('div', 'rc');
+    const wrap = h('div', 'rc');
     wrap.append(segmented(ctx, r.cost.dollarYear), methodToggle(ctx), grid);
     root.append(wrap);
   },

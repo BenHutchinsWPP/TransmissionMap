@@ -1,13 +1,13 @@
 // Tests for the chat summary: size cap, name cleaning, drivers equal the Cost tab's category lines,
 // alternatives capped to two, notes include the estimate-range line and the skipped-alternatives reason,
 // crossing point names and details never reach it.
-// Deps: chat-summary.js, widgets.js, fixture.js, registry/route-presets.ts.
+// Deps: chat-summary.js, ../route-format.ts, fixture.js, registry/route-presets.ts.
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../../src/i18n/index.js', () => ({ t: (k: string) => k }));
 
 import { chatSummary, cleanName } from './chat-summary.js';
-import { waterfallLines } from './widgets.js';
+import { waterfallLines } from '../route-format.js';
 import { FIXTURE_RESULT, fixtureCost } from './fixture.js';
 import { routePreset } from '../../../src/registry/route-presets.js';
 import type { RouteResult } from '../../route/route.js';

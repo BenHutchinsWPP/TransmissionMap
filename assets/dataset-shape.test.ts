@@ -8,7 +8,8 @@
 import { describe as group, it, expect, beforeEach } from 'vitest';
 import { state } from './state.js';
 import { seedView } from './view-state.js';
-import { shapeRows, shapeSlots, yearOf, monthOf, binEdges, binIndex, binStats, count, mergeViewPieces, SHAPE_MAX_FEATURES, QUERY_MAX_ROWS, type ShapeResult } from './dataset-query.js';
+import { shapeRows, shapeSlots, count, QUERY_MAX_ROWS } from './dataset-query.js';
+import { yearOf, monthOf, binEdges, binIndex, binStats, mergeViewPieces, SHAPE_MAX_FEATURES, type ShapeResult } from './dataset-core.js';
 import { conditionForBin } from './templates/template-actions.js';
 import { STATE_TO_ADMIN1 } from '../src/registry/region-codes.js';
 import { layerSourceId } from './layers/layer-source.js';

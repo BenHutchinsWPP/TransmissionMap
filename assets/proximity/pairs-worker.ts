@@ -7,9 +7,9 @@
 //       refusal with a fixed reason; no input value is ever put in a reason.
 //       handlePairs is the pure part (unit-tested without a Worker); the onmessage wiring is the rest.
 //       Started only by pairs-open.ts (`new Worker(new URL(...), {type: 'module'})`).
-// Deps: proximity.ts; dataset-query.ts (Outcome type only).
+// Deps: proximity.ts; src/outcome.ts (Outcome type only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { proximityPairs } from './proximity.js';
 import type { PairsResult } from './types.js';
 

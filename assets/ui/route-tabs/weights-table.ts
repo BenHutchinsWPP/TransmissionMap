@@ -14,7 +14,7 @@
 //       `base`, the registry preset); it writes the inputs and fires `input`, so the edit is read like a typed one.
 //       All text goes in through textContent.
 // Deps: route/preset-patch.ts, route/categories.ts, route/inspect.ts (matchText), registry/route-presets.ts, route-tabs/method-rows.ts (setExcluded),
-//       route-tabs/widgets.ts (sourceInfo), i18n (t), ./weights-table.css.
+//       route-tabs/widgets.ts (sourceInfo), route-format.ts (fmtFactor, rowLabel), i18n (t), ./weights-table.css.
 
 import './weights-table.css';
 import { t } from '../../../src/i18n/index.js';
@@ -23,6 +23,7 @@ import { categoryLabelKey, routeCategory } from '../../route/categories.js';
 import { matchText, textOf } from '../../route/inspect.js';
 import { EXCLUDED_W, type CostRow, type Factor, type RoutePreset } from '../../../src/registry/route-presets.js';
 import { sourceInfo } from './widgets.js';
+import { fmtFactor, rowLabel } from '../route-format.js';
 import { setExcluded } from './method-rows.js';
 import { h } from '../../utils/utils-dom.js';
 
@@ -48,9 +49,6 @@ type Field = 'route_w' | 'cost_x';
 type Val = number | [number, number];
 interface Cell { row: number; field: Field; input: HTMLInputElement; td: HTMLElement; was: HTMLElement; err: HTMLElement; sets: HTMLElement | null }
 
-export const fmtFactor = (f: Factor | Val): string =>
-  typeof f === 'number' ? String(f) : Array.isArray(f) ? `${f[0]}, ${f[1]}` : `${f.ramp[0]}, ${f.ramp[1]}`;
-
 /** Input text → a number, or [from, to] for a ramp row; anything else stays NaN for the checks. */
 function parse(text: string, like: Factor): Val {
   const n = (s: string) => (s.trim() === '' ? NaN : Number(s));
@@ -67,8 +65,6 @@ const inRange = (v: Val, r: readonly [number, number]) =>
 export const regionalSets = (row: CostRow, k: number): [string, number][] =>
   Object.entries(row.cost_by_region ?? {}).map(([n, v]) => [n, +(v * k).toPrecision(6)]);
 export const fmtSets = (sets: [string, number][]): string => sets.map(([n, v]) => `${n} ×${v}`).join(' · ');
-
-export const rowLabel = (row: CostRow): string => `${t(categoryLabelKey(routeCategory(row)))} — ${row.note ?? row.band}`;
 
 export function mountWeightsTable(el: HTMLElement, opts: WeightsTableOpts): WeightsTable {
   const { preset } = opts;

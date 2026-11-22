@@ -17,7 +17,7 @@
 // ui-legends.js (rampLegendHtml), utils.js (escapeHtml), src/i18n/index.js (t).
 // Consumed by panel-mirror.ts (panelRows, hasPanelRow), which then writes every
 // control value from state (syncPanel); PANEL_GROUPS also by panel-mirror.test.ts;
-// TABLE_ICON and VIZ_ICON also by ui-table.ts (the drawer's tabs).
+// TABLE_ICON and VIZ_ICON also by drawer.ts (the drawer's tabs).
 
 import { LAYER_SOURCES } from '../../src/registry/index.js';
 import { templatesFor } from '../templates/catalogue.js';

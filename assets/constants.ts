@@ -6,7 +6,7 @@
 // page's Content Security Policy, rendered by vite.config.js), EMPTY_FC, the
 // county join keys (COUNTY_SRC*) and WEATHER_WASH_OPACITY.
 // A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
-// filters.ts, the default viewport in map.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
+// src/colors/ramps.ts, the default viewport in map.ts, BLANK_STYLE + fog/atmosphere tuning and the USGS topo/hydro URLs
 // in basemap.ts, terrain exaggeration and credit in terrain.ts.
 // Which registry layer reads which DATA file, and its map credit, is the layer's
 // own LayerDef.data (resolved by layers/layer-source.ts).

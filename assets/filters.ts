@@ -35,9 +35,9 @@
 // (bottom of file) runs every one.
 // drawnFilterLabels() says in words which of these narrow a layer (the table's
 // pills and CSV).
-// Owns MW_SLIDER_MAX, the MW range's no-upper-bound sentinel (also read by
-// url-state-codec.ts and ui/ui-filters.ts).
-// Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts), condition-compile.ts,
+// MW_SLIDER_MAX, the MW range's no-upper-bound sentinel, lives in src/colors/ramps.ts
+// (read here, by url-state-codec.ts and by ui/ui-filters.ts).
+// Deps: state.ts, registry (LAYERS, layerById), src/colors/* (incl. facets.ts, ramps.ts), condition-compile.ts,
 // view-validate.ts, area-filter.ts, feature-id.ts (featureIdExpr),
 // nws-zone-join.ts (NWS feature-state half), diag-log.ts, src/i18n (t, getLocale),
 // layers/base-filters.ts (BASE_LAYER_FILTERS).
@@ -48,6 +48,7 @@ import type { BucketDef, BucketedField, Selection } from '../src/types.js';
 import { LAYERS, layerById } from '../src/registry/index.js';
 import { FUEL_LEGEND, OSM_FUEL_MAP, EIA_FUEL_MAP } from '../src/colors/fuel.js';
 import { FACETS, facet, facetValueMap } from '../src/colors/facets.js';
+import { MW_SLIDER_MAX } from '../src/colors/ramps.js';
 import {
   OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS, OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, KV_BUCKET_RANGES,
 } from '../src/colors/buckets.js';
@@ -69,8 +70,6 @@ const GEN_MW_FIELDS: Record<string, string> = {
   "osm-plants-polygons-fill":    "output_mw",
   "osm-plants-polygons-outline": "output_mw",
 };
-
-export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
 
 // Slider is log-scaled: handle position is linear 0..MW_SLIDER_POS_MAX, mapping to
 // MW decades 1, 10, 100, 1000, 10000 (1000 position units per decade). State always

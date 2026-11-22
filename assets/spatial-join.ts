@@ -19,11 +19,12 @@
 //       simplified for the zoom; GeoJSON is the full file). Not antimeridian-aware
 //       (geo-kit.ts).
 //
-// Deps: dataset-query.ts (query, describe, QUERY_MAX_ROWS, Outcome, QueryRow, QueryResult),
+// Deps: dataset-query.ts (query, describe, QUERY_MAX_ROWS, QueryRow, QueryResult), src/outcome.ts (Outcome),
 //       sandbox/geo-kit.ts, condition-compile.ts (Condition), state.ts (zoom).
 
 import { state } from './state.js';
-import { describe, query, QUERY_MAX_ROWS, type Outcome, type QueryRow, type QueryResult } from './dataset-query.js';
+import { describe, query, QUERY_MAX_ROWS, type QueryRow, type QueryResult } from './dataset-query.js';
+import type { Outcome } from '../src/outcome.js';
 import type { Condition } from '../src/registry/condition-compile.js';
 import { bbox, pointInGeometry, lineIntersectsGeometry, lineCrossingCount } from './sandbox/geo-kit.js';
 

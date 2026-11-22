@@ -1,5 +1,5 @@
 // ─── Visualize: the template gallery in the bottom drawer (lazy chunk) ───────
-// Role: the drawer's Visualize tab (ui-table.ts vizPanel / openViz), which
+// Role: the drawer's Visualize tab (drawer.ts panel('viz') / openPane('viz')), which
 //       shows a page-owned template (assets/templates/) with no key and no
 //       model, through the same showTemplate() the chat's tool calls.
 //         openVisualize(layerId?, from?)  open the pane (File ▸ Visualize…, or a
@@ -29,19 +29,19 @@
 //       this file to the chat's text-only rule); strings carry data-chat-key
 //       or are rebuilt on lang:changed.
 //
-// Deps: ui-table.ts (vizPanel, openViz, vizOpen, registerVizSnapshot, mapIdle,
+// Deps: drawer.ts (panel, openPane, paneOpen, registerSnapshotPart, mapIdle,
 //       drawerChanged), ui-canvas.ts (canvasCard, claimRestoreSlots,
 //       releaseRestoreSlot), services-dom.ts (el),
 //       templates/show-template.ts (showTemplate, validateTemplateArgs,
 //       formChoices, coverageArea, fieldLabel, measureLabel, TOP_*, WITHIN_*), templates/catalogue.ts
 //       (templatesFor, templateById), registry (LAYERS, layerById),
-//       area-filter.ts (areaCondition), area-labels.ts, state.ts, state-bus.ts
+//       area-filter.ts (areaCondition), ../area-labels.ts, state.ts, state-bus.ts
 //       (on), visibility.ts (setLayerVisibility), field-schema.ts / field-roles.ts
 //       (where2's fields), units.ts (within's unit), drawer-snapshot.ts (types,
 //       MAX_VIZ_CARDS), i18n (t); types from agent/tools.ts and canvas-host.ts.
 // Loaded by: templates-open.ts (dynamic import).
 
-import { vizPanel, openViz, vizOpen, registerVizSnapshot, mapIdle, drawerChanged } from './ui-table.js';
+import { panel, openPane, paneOpen, registerSnapshotPart, mapIdle, drawerChanged } from './drawer.js';
 import { canvasCard, claimRestoreSlots, releaseRestoreSlot } from './ui-canvas.js';
 import { el } from './services-dom.js';
 import {
@@ -54,7 +54,7 @@ import { getUnits, unitLabel } from '../../src/units.js';
 import { templatesFor, templateById, type TemplateDef } from '../templates/catalogue.js';
 import { LAYERS, layerById } from '../../src/registry/index.js';
 import { areaCondition } from '../../src/registry/area-filter.js';
-import { areaLabel, areaLabelsNow, loadAreaLabels } from './area-labels.js';
+import { areaLabel, areaLabelsNow, loadAreaLabels } from '../area-labels.js';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
 import { setLayerVisibility } from '../visibility.js';
@@ -190,20 +190,20 @@ function netOpen(): boolean {
 // ─── Building the pane ───────────────────────────────────────────────────────
 function build(): HTMLElement {
   if (root) return root;
-  const panel = vizPanel();
+  const pane = panel('viz');
   root = el('div', { class: 'tv' },
     el('div', { class: 'tv-side' },
       el('label', { class: 'tv-field tv-layer-field' }, tx('span', 'viz.layer'), el('select', { class: 'tv-layer' })),
       el('div', { class: 'tv-gallery', role: 'group' }),
       el('div', { class: 'tv-form' })),
     el('div', { class: 'tv-cards' }));
-  panel.replaceChildren(root);
+  pane.replaceChildren(root);
   q('.tv-layer').addEventListener('change', () => {
     pickLayer(q<HTMLSelectElement>('.tv-layer').value);
     renderGallery();
     renderForm();
   });
-  registerVizSnapshot(snapshot);
+  registerSnapshotPart('viz', snapshot);
   on('lang:changed', () => {
     if (!root) return;
     for (const e of root.querySelectorAll<HTMLElement>('[data-chat-key]')) {
@@ -213,9 +213,9 @@ function build(): HTMLElement {
     renderGallery();
     renderForm();
   });
-  on('layer:visibility', () => { if (root && vizOpen()) { renderPicker(); renderScope(); } });
-  on('view:applied', () => { if (root && vizOpen()) renderScope(); });
-  on('url:write', () => { if (root && vizOpen()) renderScope(); });
+  on('layer:visibility', () => { if (root && paneOpen('viz')) { renderPicker(); renderScope(); } });
+  on('view:applied', () => { if (root && paneOpen('viz')) renderScope(); });
+  on('url:write', () => { if (root && paneOpen('viz')) renderScope(); });
   return root;
 }
 
@@ -544,9 +544,9 @@ function renderAll() {
 // ─── Entry points ────────────────────────────────────────────────────────────
 export function openVisualize(layerId?: string, from?: HTMLElement | null): void {
   build();
-  const first = !vizOpen();
+  const first = !paneOpen('viz');
   if (layerId || first || !layer) pickLayer(layerId ?? (layer ?? vizLayers()[0] ?? null));
-  openViz(undefined, from);
+  openPane('viz', undefined, from);
   renderAll();
   // Focus into the pane: the gallery's picked card when a row asked for a layer, else the picker.
   ((layerId && root!.querySelector<HTMLElement>('.tv-card[aria-pressed="true"]')) || q('.tv-layer')).focus({ preventScroll: true });
@@ -555,7 +555,7 @@ export function openVisualize(layerId?: string, from?: HTMLElement | null): void
 export async function resumeVisualize(viz: VizSnapshot): Promise<void> {
   build();
   pickLayer(viz.layer);
-  openViz(undefined, null);
+  openPane('viz', undefined, null);
   renderAll();
   const box = q('.tv-cards');
   const vega: (() => Promise<void>)[] = [];

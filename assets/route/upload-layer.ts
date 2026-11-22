@@ -16,10 +16,10 @@
 //       bbox, part bbox, then a per-part row-bucket edge index) and agrees with `rasterize`
 //       on every cell. Checked against rasterio by upload-layer.test.ts with
 //       fixtures/upload-ref.json (fixtures/make-upload-ref.py). Pure: no DOM, no I/O.
-// Deps: grid.ts (albersForward, GRID_250), dataset-query.ts (Outcome, type only),
+// Deps: grid.ts (albersForward, GRID_250), src/outcome.ts (Outcome, type only),
 //       surface-image.ts (CellWindow, type only); WebCrypto `crypto.subtle` for the hash.
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { albersForward, GRID_250, type Grid } from './grid.js';
 import type { CellWindow } from './surface-image.js';
 

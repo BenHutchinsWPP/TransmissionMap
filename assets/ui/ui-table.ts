@@ -1,6 +1,7 @@
 // ─── Table drawer (lazy chunk) ───────────────────────────────────────────────
 // A dataset's rows as a table in a bottom drawer. Nothing here is in the view
-// or the link; the drawer lasts the tab (sessionStorage `tm-drawer`, below).
+// or the link; the drawer lasts the tab (sessionStorage `tm-drawer`, kept by
+// drawer.ts; the table's part below).
 //   showTable(req)       open (or replace) the drawer's one table. A request
 //                        with only a layerId shows what the map draws when the
 //                        layer is on (asDrawn), else the view's `where` and
@@ -10,19 +11,14 @@
 //                        its size and asks; closing the drawer or the next
 //                        showTable() answers "no".
 //   zoomToSelection()    fit the map to state.sel's features.
-//   restoreDrawer(resumeAsk)  after a reload of this tab (ui-menubar.ts's boot
-//                        hook through table-open.ts): the drawer as its
-//                        tm-drawer snapshot left it (drawer-snapshot.ts checks
-//                        the shape; the fields are checked here against
-//                        describe()). Ask first, then the table (a vector-tile
-//                        layer after the map's `idle`, a large file through the
-//                        size prompt, never answered for the visitor), then the
-//                        pane in view, height and collapse. No focus moves, no
-//                        link write, no undo step. The Route, Line, Proximity
-//                        and Grid Ops tabs are never kept. The Visualize pane's
-//                        part comes from the getter ui-templates.ts registers
-//                        (registerVizSnapshot).
-//   mapIdle()            resolves once the map has drawn (a vector-tile read waits for it).
+//   prepareRestore(s) / startRestore(s)  the table's half of a restore of this
+//                        tab (drawer.ts's restoreDrawer, through table-open.ts):
+//                        whether the snapshot's layer is queryable now (a
+//                        vector-tile layer after the map's `idle`), then the
+//                        table as the snapshot left it (its fields checked
+//                        against describe(); a large file through the size
+//                        prompt, never answered for the visitor). startRestore
+//                        runs synchronously up to its first wait.
 // Rows come from dataset-query.ts's query() (≤ QUERY_MAX_ROWS, sorted there,
 // so a sort re-queries); the left column is aggregate() over the same options.
 // The grid is Tabulator (tabulator-tables, this chunk only), a renderer and
@@ -57,24 +53,26 @@
 // Fixed strings carry data-i18n* keys (ui.ts's lang:changed handler
 // re-translates them); the rest, the status line included (setStatus keeps
 // its key), is redrawn by this module's own lang:changed subscriber.
-// Panes (table, Ask, Visualize, Line, Proximity, Grid Ops, Route) share the
-// drawer, one in view at a time; each is filled by its own module. drawerPadding()
-// is the map padding that keeps a fit above the drawer and clear of the layer panel.
-// Deps: tabulator-tables (+ its simple theme CSS), state.ts, state-bus.ts (on),
+// The table is one pane of the drawer (drawer.ts, the shell): this module binds
+// itself there at load (bindTable) and wires its controls on the drawer's root
+// once it exists (mount).
+// Deps: utils/utils-dom.ts (h), tabulator-tables (+ its simple theme CSS), state.ts, state-bus.ts (on),
 //       dataset-query.ts, feature-id.ts, columns/columns-read.ts (dynamic import), highlights.ts, filters.ts (drawnFilterLabels),
 //       panel-mirror.ts (commitSelection, conditionLabel), map-api.ts (setWhere),
 //       view-validate.ts (validateWhere), user-data-export.ts (toCsv, downloadFile),
 //       grid-copy.ts (range-grid options, copy key, clipValue, tsvOf, copyText),
-//       layers/layer-source.ts (layerSourceId, layerDataUrl), area-labels.ts,
-//       ui-layer-rows.ts (TABLE_ICON, VIZ_ICON), registry (layerById), fuel.ts (fuelFold),
-//       view-validate.ts (MAX_SELECTION_IDS), utils.ts (escapeHtml, FORMULA guard), i18n (t),
-//       session-snapshot.ts (saveSnapshot, readSnapshot, clearSnapshot, onHidden),
-//       drawer-snapshot.ts (parseDrawerSnapshot); user-data/copy-fit.ts (caps,
+//       layers/layer-source.ts (layerSourceId, layerDataUrl), ../area-labels.ts,
+//       registry (layerById), fuel.ts (fuelFold),
+//       view-validate.ts (MAX_SELECTION_IDS), i18n (t),
+//       drawer.ts (the shell: panel, openPane, closePane, paneOpen, selectPane,
+//       drawerPadding, drawerChanged, mapIdle, noteVisitorAct, bindTable,
+//       registerSnapshotPart), drawer-snapshot.ts (types);
+//       user-data/copy-fit.ts (caps,
 //       showCopyResult, downloadCopy); user-data/copy-rows.ts (dynamic import:
 //       "Copy N checked to My Data" on a GeoJSON layer, a tiled point layer or a
 //       layer with GeoParquet geometry, shown once copyAvailable answers true; its wording
 //       follows copyNoun: lines, else features).
-// Loaded by: table-open.ts (dynamic import).
+// Loaded by: table-open.ts (dynamic import); drawer-test-names.ts (tests).
 
 import {
   Tabulator, FormatModule, FrozenColumnsModule, InteractionModule, KeybindingsModule,
@@ -92,21 +90,24 @@ import { featureId, type FeatureId } from '../feature-id.js';
 import {
   query, aggregate, count, describe, hasColumns, QUERY_MAX_ROWS,
   type QueryOpts, type QueryRow, type FieldInfo, type Group,
-  type Outcome, type AggregateResult, type CountResult,
+  type AggregateResult, type CountResult,
 } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
 import { drawnFilterLabels } from '../filters.js';
 import { commitSelection, conditionLabel } from './panel-mirror.js';
 import { setWhere } from '../map-api.js';
 import { toCsv, downloadFile } from '../user-data/user-data-export.js';
 import { layerSourceId, layerDataUrl } from '../layers/layer-source.js';
-import { areaLabel, areaLabelsNow } from './area-labels.js';
-import { TABLE_ICON, VIZ_ICON } from './ui-layer-rows.js';
-import { escapeHtml } from '../utils/utils.js';
+import { areaLabel, areaLabelsNow } from '../area-labels.js';
 import { on } from '../state-bus.js';
 import { t, getLocale } from '../../src/i18n/index.js';
-import { saveSnapshot, readSnapshot, clearSnapshot, claimSnapshot, onHidden } from '../session-snapshot.js';
-import { DRAWER_SNAPSHOT, DRAWER_SNAPSHOT_VERSION, parseDrawerSnapshot, type DrawerSnapshot, type TableSnapshot, type VizSnapshot } from './drawer-snapshot.js';
+import { h } from '../utils/utils-dom.js';
+import type { TableSnapshot } from './drawer-snapshot.js';
+import {
+  panel, openPane, closePane, paneOpen, selectPane, drawerPadding, drawerChanged, mapIdle,
+  noteVisitorAct, bindTable, registerSnapshotPart,
+} from './drawer.js';
 import { GRID_RANGE_DEFAULTS, isCopyKey, keepFromGrid, clipValue, tsvOf, copyText } from './grid-copy.js';
 import { MAX_COPY_ITEMS, showCopyResult, downloadCopy } from '../user-data/copy-fit.js';
 
@@ -150,39 +151,10 @@ interface Table {
   init?: TableSnapshot;      // a restore's checks, active row and scroll, until the first load lands
 }
 
-let drawer: HTMLElement | null = null;
+let drawer: HTMLElement | null = null;   // the drawer's root, from drawer.ts (mount)
 let tbl: Table | null = null;
 let opener: HTMLElement | null = null;
-let height = 0;             // px, from `frac` and the container
-let frac = 0;               // the drawer's share of the map container; 0 = the layout's default
-let collapsed = false;
 let seq = 0;               // the latest load; an older one that lands later is dropped
-let routeTall = false;     // setRouteTall(true): the drawer is at least ROUTE_TALL_PX
-const ROUTE_TALL_PX = 540;
-const ROUTE_MIN_PX = 410;  // the Route pane's default height (desktop): its input column fits
-type Pane = 'ask' | 'table' | 'route' | 'viz' | 'line' | 'prox' | 'gops';
-type Side = Exclude<Pane, 'table'>;
-/** Each side pane's open flag, the element focus returns to and its onClose. */
-const P: Record<Side, { open: boolean; opener: HTMLElement | null; onClose: (() => void) | null }> = {
-  ask: { open: false, opener: null, onClose: null },
-  viz: { open: false, opener: null, onClose: null },
-  line: { open: false, opener: null, onClose: null },
-  prox: { open: false, opener: null, onClose: null },
-  gops: { open: false, opener: null, onClose: null },
-  route: { open: false, opener: null, onClose: null },
-};
-/** What differs between the side panes: whether an open or close counts as the
- *  visitor's act() (`resuming`: a restore's open does not), whether the open
- *  recomputes the height (Ask keeps the layout's), and what a close also undoes. */
-const SIDE: Record<Side, { visitor: boolean; resuming?: () => boolean; height: boolean; off?: () => void }> = {
-  ask: { visitor: true, resuming: () => resumingAsk, height: false },
-  viz: { visitor: true, resuming: () => resumingViz, height: true },
-  line: { visitor: true, height: true },
-  prox: { visitor: true, height: true },
-  gops: { visitor: true, height: true },
-  route: { visitor: false, height: true, off: () => setRouteTall(false) },
-};
-let pane: Pane = 'table';  // the pane in view
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => drawer!.querySelector<T>(sel)!;
 const fmt = (n: number, digits = 1) => n.toLocaleString(getLocale(), { maximumFractionDigits: digits });
@@ -192,7 +164,7 @@ const fmtSum = (n: number, field: string) => !field ? fmt(n, 0)
 
 // ─── Public entry points ─────────────────────────────────────────────────────
 export function showTable(req: TableRequest): Promise<void> {
-  act();
+  noteVisitorAct();
   return openTable(req);
 }
 
@@ -203,7 +175,7 @@ async function openTable(req: TableRequest, init?: TableSnapshot): Promise<void>
   const entry = layerById(req.layerId);
   const d = describe(req.layerId);
   if (!entry || !d.ok || !d.result.queryable) return;
-  ensureDrawer();
+  panel('table');
   sizeAnswer?.(false);
   if (!tbl) {
     const a = document.activeElement as HTMLElement | null;
@@ -299,9 +271,11 @@ export async function zoomToSelection(): Promise<void> {
   if (boxes.length) fitTo(boxes.reduce(union), false);
 }
 
-export function closeTable() {
-  if (!drawer) return;
-  act();
+export function closeTable(): void { closePane('table'); }
+
+/** The drawer closes the table (its × or Esc, closePane): what it held goes;
+ *  focus returns to what opened it. */
+function dropTable(): HTMLElement | null {
   seq++;
   sizeAnswer?.(false);
   showColPanel(false);
@@ -309,199 +283,7 @@ export function closeTable() {
   tbl = null;
   const back = opener;
   opener = null;
-  afterClose(back);
-}
-
-/** After a pane closes: the drawer stays while another pane is open (focus
- *  to `back`, else into the pane now in view, else its tab when `toTab`),
- *  else it hides and focus goes to `back`, else the map (the popup's "Show in
- *  table" button is gone once the popup closes). */
-function afterClose(back: HTMLElement | null, toTab = false) {
-  if (FALLBACK.some(paneOpen)) {
-    syncPanes();
-    if (pane === 'table') showGrid();
-    const into = toTab || (pane !== 'ask' && pane !== 'table') ? null
-      : pane === 'ask' ? drawer!.querySelector<HTMLElement>('.chat-input') : gridFocus();
-    (back?.isConnected ? back : into ?? $(TAB_OF[pane])).focus();
-    return;
-  }
-  hideDrawer();
-  (back?.isConnected ? back : state.map?.getCanvas())?.focus();
-}
-
-function hideDrawer() {
-  drawer!.classList.remove('td--open');
-  drawer!.hidden = true;
-  mapContainer()?.classList.remove('has-drawer');
-}
-
-/** On a phone the layer panel and the drawer together leave little map: the
- *  drawer coming up folds the panel away (its own close button, so the Layers
- *  button comes back). */
-function foldLayersOnPhone() {
-  const c = mapContainer(), lp = document.getElementById('layersPanel');
-  if (!c || !lp || lp.hidden) return;
-  if (c.clientWidth <= 640 || window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches) document.getElementById('closeLayers')?.click();
-}
-
-/** Show the drawer if it is closed (at the layout's default height), or
- *  expand it if it is collapsed. */
-function showDrawer() {
-  if (drawer!.classList.contains('td--open') && !collapsed) return;
-  foldLayersOnPhone();
-  drawer!.hidden = false;
-  drawer!.classList.add('td--open');
-  mapContainer()!.classList.add('has-drawer');
-  collapsed = false;
-  applyHeight();
-}
-
-// ─── The side panes (Ask, Visualize, Line, Proximity, Grid Ops, Route) ───────
-/** Open a side pane and bring it into view; `onClose` runs when it closes, and
- *  focus then returns to `from` (default: the focused element). With
- *  `background` (the map chat's route) the pane opens or stays open but the
- *  pane in view stays in view; focus and the opener are left as they are. */
-function openSide(p: Side, onClose?: () => void, from?: HTMLElement | null, background = false): void {
-  ensureDrawer();
-  const s = P[p], o = SIDE[p];
-  if (!s.open && !background) {
-    const a = from ?? document.activeElement as HTMLElement | null;
-    s.opener = a && a !== document.body && !drawer!.contains(a) ? a : null;
-  }
-  if (o.visitor && !o.resuming?.()) act();
-  const keep = background && !drawer!.hidden && paneOpen(pane);
-  s.open = true;
-  s.onClose = onClose ?? null;
-  if (!keep) pane = p;
-  showDrawer();
-  if (o.height) applyHeight();
-  syncPanes();
-}
-
-/** Close a side pane; the drawer stays while another pane is open. Focus goes
- *  back to what opened it, else another open pane's tab (Ask: the table, else
- *  the map). */
-function closeSide(p: Side): void {
-  const s = P[p], o = SIDE[p];
-  if (!s.open || !drawer) return;
-  if (o.visitor) act();
-  s.open = false;
-  o.off?.();
-  s.onClose?.();
-  const back = s.opener;
-  s.opener = null;
-  afterClose(back, p !== 'ask');
-}
-
-/** The Ask tab's panel, empty until ui-chat.ts builds the chat in it. */
-export function askPanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-ask');
-}
-export const openAsk = (onClose?: () => void, from?: HTMLElement | null): void => openSide('ask', onClose, from);
-export const closeAsk = (): void => closeSide('ask');
-
-/** The Visualize tab's panel, empty until ui-templates.ts builds the gallery in it. */
-export function vizPanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-viz');
-}
-export const openViz = (onClose?: () => void, from?: HTMLElement | null): void => openSide('viz', onClose, from);
-export const closeViz = (): void => closeSide('viz');
-export const vizOpen = (): boolean => P.viz.open;
-
-/** The Line tab's panel, empty until ui-line.ts builds the line tools in it. */
-export function linePanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-line');
-}
-export const openLine = (onClose?: () => void, from?: HTMLElement | null): void => openSide('line', onClose, from);
-export const closeLine = (): void => closeSide('line');
-export const lineOpen = (): boolean => P.line.open;
-
-/** The Proximity tab's panel, empty until ui-proximity.ts builds the tool in it. */
-export function proxPanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-prox');
-}
-export const openProx = (onClose?: () => void, from?: HTMLElement | null): void => openSide('prox', onClose, from);
-export const closeProx = (): void => closeSide('prox');
-export const proxOpen = (): boolean => P.prox.open;
-
-/** The Grid Ops tab's panel, empty until ui-grid-ops.ts builds in it. */
-export function gopsPanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-gops');
-}
-export const openGops = (onClose?: () => void, from?: HTMLElement | null): void => openSide('gops', onClose, from);
-export const closeGops = (): void => closeSide('gops');
-export const gopsOpen = (): boolean => P.gops.open;
-
-/** The Route tab's panel, empty until the route planner builds in it. */
-export function routePanel(): HTMLElement {
-  ensureDrawer();
-  return $('#td-route');
-}
-
-/** The route planner's slot in the drawer header, shown only while the Route
- *  pane is. */
-export function routeActions(): HTMLElement {
-  ensureDrawer();
-  return $('.td-route-actions');
-}
-export const openRoute = (onClose?: () => void, from?: HTMLElement | null, opts?: { background?: boolean }): void =>
-  openSide('route', onClose, from, !!opts?.background);
-export const closeRoute = (): void => closeSide('route');
-export const routeOpen = (): boolean => P.route.open;
-
-/** While on, the drawer is at least ROUTE_TALL_PX high (within the map); off,
- *  it is back at the height it had. */
-export function setRouteTall(on: boolean): void {
-  routeTall = on;
-  if (drawer && !drawer.hidden) applyHeight();
-}
-
-const TAB_OF: Record<Pane, string> = { ask: '#td-tab-ask', table: '#td-tab', route: '#td-tab-route', viz: '#td-tab-viz', line: '#td-tab-line', prox: '#td-tab-prox', gops: '#td-tab-gops' };
-const PANE_OF: Record<string, Pane> = { 'td-tab-ask': 'ask', 'td-tab': 'table', 'td-tab-viz': 'viz', 'td-tab-line': 'line', 'td-tab-prox': 'prox', 'td-tab-gops': 'gops', 'td-tab-route': 'route' };
-const paneOpen = (p: Pane) => p === 'table' ? !!tbl : P[p].open;
-const FALLBACK: Pane[] = ['table', 'ask', 'viz', 'line', 'prox', 'gops', 'route'];
-
-function closePane(p: Pane) {
-  if (p === 'table') closeTable(); else closeSide(p);
-}
-
-/** Which pane shows: the one in view, the others hidden but kept. */
-function syncPanes() {
-  if (!drawer) return;
-  if (!paneOpen(pane)) pane = FALLBACK.find(paneOpen) ?? 'table';
-  const shown = Object.fromEntries(FALLBACK.map(p => [p, paneOpen(p) && pane === p])) as Record<Pane, boolean>;
-  for (const p of ['ask', 'table', 'viz', 'line', 'prox', 'gops', 'route'] as const) {
-    const tab = $(TAB_OF[p]);
-    tab.hidden = !paneOpen(p);
-    tab.setAttribute('aria-selected', String(shown[p]));
-    tab.tabIndex = pane === p ? 0 : -1;
-    const x = $(`.td-tab-x[data-pane="${p}"]`);
-    x.hidden = tab.hidden;
-    x.setAttribute('aria-label', t('table.closeTab', { name: tab.lastElementChild?.textContent ?? '' }));
-    x.title = x.getAttribute('aria-label')!;
-  }
-  $('#td-ask').hidden = !shown.ask;
-  $('#td-viz').hidden = !shown.viz;
-  $('#td-line').hidden = !shown.line;
-  $('#td-prox').hidden = !shown.prox;
-  $('#td-gops').hidden = !shown.gops;
-  $('#td-route').hidden = !shown.route;
-  $('.td-route-actions').hidden = !shown.route;
-  drawer.classList.toggle('td--table-off', !shown.table);
-  touched();
-}
-
-function selectPane(p: Pane, focus = false) {
-  if (!paneOpen(p)) return;
-  pane = p;
-  syncPanes();
-  if (p === 'table') showGrid();
-  if (focus) $(TAB_OF[p]).focus();
+  return back;
 }
 
 // ─── Fields and options ──────────────────────────────────────────────────────
@@ -711,7 +493,7 @@ function render() {
   markHeader();
   syncChecks();
   syncUnfilter();
-  touched();
+  drawerChanged();
 }
 
 function renderSummary() {
@@ -834,7 +616,7 @@ function makeGrid(el: HTMLElement): Tabulator {
     tb.shown = new Set(order);
     shownCols.set(tb.req.layerId, tb.shown);
     colsKey = colsKeyOf(tb);
-    touched();
+    drawerChanged();
   });
   g.on('columnResized', col => {
     const name = tbl && nameOf(tbl, col.getField() ?? '');
@@ -1308,9 +1090,6 @@ function closeFilter(refocus = false) {
   if (refocus && back?.isConnected) back.focus();
 }
 
-const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text = '') =>
-  Object.assign(document.createElement(tag), { className: cls, textContent: text });
-
 function toggleFilter(name: string, btn: HTMLElement) {
   if (filterOpen === name) { closeFilter(true); return; }
   closeFilter();
@@ -1323,22 +1102,22 @@ function toggleFilter(name: string, btn: HTMLElement) {
   btn.setAttribute('aria-expanded', 'true');
   const pop = $('.td-filterpop');
   const cur = tableWhere(tb).filter(c => c.field === name);
-  const title = el('div', 'td-fp-title', name);
+  const title = h('div', 'td-fp-title', name);
   title.id = 'td-fp-title';
   pop.setAttribute('aria-labelledby', 'td-fp-title');
-  const body = el('div', 'td-fp-body');
-  const err = el('div', 'td-fp-err');
+  const body = h('div', 'td-fp-body');
+  const err = h('div', 'td-fp-err');
   err.setAttribute('role', 'alert');
   let read: () => Condition[];
   const op = f.list ? 'contains_any' : 'in';
   const curValues = cur.flatMap(c => Array.isArray(c.value) ? c.value : c.op === 'has' ? [] : [c.value]).map(String);
   if (kind === 'values') {
     const picked = new Set(curValues);
-    const list = el('div', 'td-fp-list');
+    const list = h('div', 'td-fp-list');
     const boxes = f.values!.map(v => {
-      const label = el('label', 'td-fp-opt');
+      const label = h('label', 'td-fp-opt');
       const box = Object.assign(document.createElement('input'), { type: 'checkbox', value: v, checked: picked.has(v) });
-      label.append(box, el('span', '', v));
+      label.append(box, h('span', '', v));
       return label;
     });
     list.append(...boxes);
@@ -1372,8 +1151,8 @@ function toggleFilter(name: string, btn: HTMLElement) {
         type: f.type === 'number' ? 'number' : 'text', className: 'td-fp-num', value: c ? String(c.value) : '',
       });
       input.setAttribute('step', 'any');
-      const label = el('label', 'td-fp-bound');
-      label.append(el('span', '', t(key)), input);
+      const label = h('label', 'td-fp-bound');
+      label.append(h('span', '', t(key)), input);
       body.append(label);
       return input;
     };
@@ -1396,17 +1175,17 @@ function toggleFilter(name: string, btn: HTMLElement) {
     body.append(sel);
     read = () => sel.value ? [{ field: name, op: '=', value: sel.value === 'true' }] : [];
   }
-  const note = el('p', 'td-fp-note', t('table.filterNote'));
-  if (tb.partial) note.append(' ', el('strong', '', t('table.filterTiles')));
-  const actions = el('div', 'td-fp-actions');
-  const cancel = el('button', 'td-btn td-fp-cancel', t('table.cancel'));
+  const note = h('p', 'td-fp-note', t('table.filterNote'));
+  if (tb.partial) note.append(' ', h('strong', '', t('table.filterTiles')));
+  const actions = h('div', 'td-fp-actions');
+  const cancel = h('button', 'td-btn td-fp-cancel', t('table.cancel'));
   cancel.type = 'button';
   cancel.addEventListener('click', () => closeFilter(true));
-  const clear = el('button', 'td-btn td-fp-clear', t('table.filterClear'));
+  const clear = h('button', 'td-btn td-fp-clear', t('table.filterClear'));
   clear.type = 'button';
   clear.hidden = !cur.length;
   clear.addEventListener('click', () => applyFilter(name, [], err));
-  const apply = el('button', 'td-btn td-fp-apply', t('table.filterApply'));
+  const apply = h('button', 'td-btn td-fp-apply', t('table.filterApply'));
   apply.type = 'button';
   apply.addEventListener('click', () => applyFilter(name, read(), err));
   actions.append(cancel, clear, apply);
@@ -1524,7 +1303,7 @@ function setShown(next: Set<string>) {
   shownCols.set(tb.req.layerId, next);
   syncColsButton();
   syncColPanel();
-  touched();
+  drawerChanged();
   if (tb.sort && !next.has(tb.sort.field)) {
     tb.sort = tb.sumField && next.has(tb.sumField) ? { field: tb.sumField, desc: true } : null;
     tb.active = -1;
@@ -1610,19 +1389,6 @@ function bbox(g: GeoJSON.Geometry | null | undefined): BBox | null {
   return Number.isFinite(b[0]) ? b : null;
 }
 
-/** Map padding (px) that keeps a fit above the drawer and clear of the
- *  layer panel. */
-export function drawerPadding(): { top: number; left: number; right: number; bottom: number } {
-  const c = state.map?.getContainer() ?? mapContainer();
-  if (!c) return { top: 60, left: 40, right: 40, bottom: 40 };
-  const panel = document.getElementById('layersPanel');
-  const desktop = c.clientWidth > 640;
-  const drawerH = drawer && !drawer.hidden ? drawer.offsetHeight : 0;
-  const right = desktop && panel && !panel.hidden ? panel.offsetWidth + 36 : 40;
-  const bottom = Math.min(drawerH + 40, Math.max(40, c.clientHeight - 140));
-  return { top: 60, left: 40, right: Math.min(right, c.clientWidth - 140), bottom };
-}
-
 // Fit the camera to `b` above the drawer and clear of the layer panel. A
 // point (or a lone small feature) is flown to at ≥ z9; nothing zooms past 13.
 function fitTo(b: BBox, point: boolean) {
@@ -1685,7 +1451,7 @@ function activate(i: number, fly: boolean) {
   // The rows on screen now; one drawn later reads tb.active in paintRow.
   for (const k of [was, i]) { const row = k >= 0 && grid.getRow(k); if (row) row.getElement().classList.toggle('td-row--active', k === i); }
   showRow(i, fly);
-  touched();
+  drawerChanged();
 }
 
 function sortBy(field: string) {
@@ -1719,7 +1485,7 @@ function repaintChecks() {
     box.closest('.tabulator-row')?.setAttribute('aria-selected', String(on));
   }
   syncChecks();
-  touched();
+  drawerChanged();
 }
 
 function selectRows() {
@@ -1751,57 +1517,10 @@ function exportCsv() {
 
 function mapContainer() { return document.querySelector<HTMLElement>('.map-container'); }
 
-// The drawer's height is a share of the map container, so a rotation keeps
-// the sheet's proportion: until the grip moves it, the layout's default —
-// half the map on a narrow screen but at least 400 px, up to 60 % (five rows
-// on a 360×740 phone), 80 % on a short one (three rows on a landscape phone),
-// else 40 % up to 320 px.
-function defaultFrac(ch: number): number {
-  return !compact() ? Math.min(320, ch * 0.4) / ch
-    : matchMedia('(max-height: 500px)').matches ? 0.8 : 0.6;
-}
-
-function applyHeight() {
-  const c = mapContainer();
-  if (!c || !drawer) return;
-  const ch = c.clientHeight;
-  const max = Math.max(160, ch - (compact() ? 48 : 100));
-  // The Route, Visualize and Line panes' default is taller (Route's input column, a template's 420 px frame, the locator's form); a grip drag still wins.
-  const base = frac ? frac * ch : Math.max(defaultFrac(ch) * ch, (P.route.open || P.viz.open || P.line.open || P.prox.open || P.gops.open) && !compact() ? Math.max(ROUTE_MIN_PX, ch * 0.45) : 0);
-  height = Math.max(140, Math.min(Math.max(base, routeTall ? ROUTE_TALL_PX : 0), max));
-  drawer.style.height = collapsed ? '' : `${height}px`;
-  drawer.classList.toggle('td--min', collapsed);
-  c.style.setProperty('--drawer-h', `${collapsed ? drawer.offsetHeight : height}px`);
-  const grip = $('.td-grip');
-  grip.setAttribute('aria-valuenow', String(Math.round(height)));
-  grip.setAttribute('aria-valuemax', String(Math.round(max)));
-  const btn = $('.td-collapse');
-  btn.setAttribute('aria-expanded', String(!collapsed));
-  btn.dataset.i18nAriaLabel = collapsed ? 'table.expand' : 'table.collapse';
-  btn.setAttribute('aria-label', t(btn.dataset.i18nAriaLabel));
-  btn.textContent = collapsed ? '▴' : '▾';
-  touched();
-}
-
-function setHeight(px: number) {
-  const ch = mapContainer()?.clientHeight;
-  if (ch) frac = px / ch;
-  applyHeight();
-}
-
 function open(quiet = false) {
-  const c = mapContainer()!;
-  // A table the chat asked for leaves the conversation in view; Route, if
-  // open, stays in its tab.
-  const chatting = P.ask.open && $('#td-ask').contains(document.activeElement);
-  if (!chatting) pane = 'table';
-  foldLayersOnPhone();
-  drawer!.hidden = false;
-  drawer!.classList.add('td--open');
-  c.classList.add('has-drawer');
-  collapsed = false;
-  applyHeight();
-  syncPanes();
+  // A table the chat asked for leaves the conversation in view (and focus in it).
+  const chatting = paneOpen('ask') && panel('ask').contains(document.activeElement);
+  openPane('table');
   setStatus('');
   gridScroll = 0;
   wantScroll = null;
@@ -1821,86 +1540,9 @@ function open(quiet = false) {
   if (!chatting && !quiet) gridFocus().focus({ preventScroll: true });
 }
 
-function ensureDrawer() {
-  if (drawer) return;
-  const c = mapContainer()!;
-  drawer = document.createElement('section');
-  drawer.className = 'table-drawer';
-  drawer.hidden = true;
-  drawer.setAttribute('role', 'region');
-  drawer.setAttribute('aria-label', t('table.tab'));
-  drawer.dataset.i18nAriaLabel = 'table.tab';
-  const e = (k: string) => escapeHtml(t(k));
-  // Static strings carry their key (data-i18n*), so ui.ts's lang:changed
-  // handler (updateDomTranslations) re-translates them in place; a key sits on
-  // an inner <span>, never on a node that also holds an icon or a count.
-  drawer.innerHTML = `
-    <div class="td-grip" role="separator" aria-orientation="horizontal" tabindex="0" aria-label="${e('table.resize')}" data-i18n-aria-label="table.resize" aria-valuemin="140"></div>
-    <div class="td-head">
-      <div class="td-tabs" role="tablist" aria-label="${e('table.tab')}" data-i18n-aria-label="table.tab">
-        <button type="button" class="td-tab td-tab-ask" id="td-tab-ask" role="tab" aria-selected="false" aria-controls="td-ask" tabindex="-1" hidden><span class="td-tab-ask-icon" aria-hidden="true">✦</span><span data-i18n="chat.tab">${e('chat.tab')}</span></button>
-        <button type="button" class="td-tab" id="td-tab" role="tab" aria-selected="true" aria-controls="td-panel">${TABLE_ICON}<span class="td-tab-name"></span></button>
-        <button type="button" class="td-tab td-tab-viz" id="td-tab-viz" role="tab" aria-selected="false" aria-controls="td-viz" tabindex="-1" hidden><span class="td-tab-viz-icon" aria-hidden="true">${VIZ_ICON}</span><span data-i18n="viz.tab">${e('viz.tab')}</span></button>
-        <button type="button" class="td-tab td-tab-line" id="td-tab-line" role="tab" aria-selected="false" aria-controls="td-line" tabindex="-1" hidden><span class="td-tab-line-icon" aria-hidden="true">⌁</span><span data-i18n="line.tab">${e('line.tab')}</span></button>
-        <button type="button" class="td-tab td-tab-prox" id="td-tab-prox" role="tab" aria-selected="false" aria-controls="td-prox" tabindex="-1" hidden><span class="td-tab-prox-icon" aria-hidden="true">◎</span><span data-i18n="px.tab">${e('px.tab')}</span></button>
-        <button type="button" class="td-tab td-tab-gops" id="td-tab-gops" role="tab" aria-selected="false" aria-controls="td-gops" tabindex="-1" hidden><span class="td-tab-gops-icon" aria-hidden="true">⇄</span><span data-i18n="gridOps.tab">${e('gridOps.tab')}</span></button>
-        <button type="button" class="td-tab td-tab-route" id="td-tab-route" role="tab" aria-selected="false" aria-controls="td-route" tabindex="-1" hidden><span class="td-tab-route-icon" aria-hidden="true">⤳</span><span data-i18n="route.tab">${e('route.tab')}</span></button>
-      </div>
-      <div class="td-pills"></div>
-      <span class="td-count"></span>
-      <div class="td-actions">
-        <div class="td-route-actions" hidden></div>
-        <button type="button" class="td-btn td-unfilter" hidden title="${e('table.showAllTitle')}" data-i18n-title="table.showAllTitle"><span data-i18n="table.showAll">${e('table.showAll')}</span></button>
-        <button type="button" class="td-btn td-select"></button>
-        <button type="button" class="td-btn td-copy" hidden></button>
-        <button type="button" class="td-btn td-csv" title="${e('table.csvTitle')}" data-i18n-title="table.csvTitle">↓ CSV</button>
-        <button type="button" class="td-btn td-cols" aria-expanded="false" aria-controls="td-colpanel" title="${e('table.colsTitle')}" data-i18n-title="table.colsTitle">☰<span class="td-cols-label"> <span data-i18n="table.columns">${e('table.columns')}</span> <span class="td-cols-n"></span></span></button>
-        <button type="button" class="td-icon td-refresh" title="${e('table.refresh')}" aria-label="${e('table.refresh')}" data-i18n-title="table.refresh" data-i18n-aria-label="table.refresh">↻</button>
-        <button type="button" class="td-icon td-collapse" aria-expanded="true">▾</button>
-      </div>
-    </div>
-    <div class="td-colpanel" id="td-colpanel" role="group" aria-labelledby="td-colpanel-title" hidden>
-      <div class="td-colpanel-head">
-        <span class="td-colpanel-title" id="td-colpanel-title" data-i18n="table.columns">${e('table.columns')}</span>
-        <button type="button" class="td-link td-cols-default" data-i18n="table.colsDefault">${e('table.colsDefault')}</button>
-        <button type="button" class="td-link td-cols-all" data-i18n="table.colsAll">${e('table.colsAll')}</button>
-        <button type="button" class="td-link td-cols-done" data-i18n="table.colsDone">${e('table.colsDone')}</button>
-      </div>
-      <div class="td-colpanel-groups"></div>
-    </div>
-    <div class="td-filterpop" role="dialog" hidden></div>
-    <div class="td-status" role="status" hidden></div>
-    <div class="td-ask" id="td-ask" role="tabpanel" aria-labelledby="td-tab-ask" hidden></div>
-    <div class="td-viz" id="td-viz" role="tabpanel" aria-labelledby="td-tab-viz" hidden></div>
-    <div class="td-line" id="td-line" role="tabpanel" aria-labelledby="td-tab-line" hidden></div>
-    <div class="td-prox" id="td-prox" role="tabpanel" aria-labelledby="td-tab-prox" hidden></div>
-    <div class="td-gops" id="td-gops" role="tabpanel" aria-labelledby="td-tab-gops" hidden></div>
-    <div class="td-route" id="td-route" role="tabpanel" aria-labelledby="td-tab-route" hidden></div>
-    <div class="td-body" id="td-panel" role="tabpanel" aria-labelledby="td-tab">
-      <aside class="td-summary">
-        <button type="button" class="td-fold" aria-expanded="false" aria-controls="td-summary-full"><span class="td-fold-total"></span><span class="td-fold-rows"></span><span class="td-fold-bar"></span><span class="td-fold-filter"></span><span class="td-fold-sort"></span><span class="td-fold-by"></span></button>
-        <div class="td-summary-full" id="td-summary-full">
-        <div class="td-group-ctl">
-          <label><span data-i18n="table.groupBy">${e('table.groupBy')}</span> <select class="td-groupby"></select></label>
-          <label><span data-i18n="table.sumOf">${e('table.sumOf')}</span> <select class="td-sum"></select></label>
-        </div>
-        <div class="td-total-line"><span class="td-total"></span> <span class="td-total-sub"></span></div>
-        <div class="td-bars"></div>
-        <div class="td-more"></div>
-        <div class="td-note"></div>
-        </div>
-      </aside>
-      <div class="td-grid" aria-label="${e('table.tab')}" data-i18n-aria-label="table.tab"></div>
-    </div>
-    <div class="td-foot">
-      <span class="td-range"></span>
-      <span class="td-hint" data-i18n="table.hint">${e('table.hint')}</span>
-      <span class="td-credit"></span>
-    </div>`;
-  c.append(drawer);
-  claimSnapshot(DRAWER_SNAPSHOT);
-  onHidden(saveDrawer);
-
+/** Wire the table's controls on the drawer's root (drawer.ts calls it once, when the drawer exists). */
+function mount(root: HTMLElement) {
+  drawer = root;
   grid = makeGrid($('.td-grid'));
   // The range follows the keys (Tabulator); a one-row range makes that row
   // active. Enter flies to it, Space checks the range's rows.
@@ -1964,71 +1606,6 @@ function ensureDrawer() {
   wireColPanel();
   $('.td-csv').addEventListener('click', exportCsv);
   $('.td-refresh').addEventListener('click', () => { if (tbl) void load(++seq, true); });
-  // Each tab's own × closes that pane; the drawer hides with the last one.
-  for (const [id, p] of Object.entries(PANE_OF)) {
-    const x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'td-tab-x';
-    x.dataset.pane = p;
-    x.tabIndex = -1;
-    x.hidden = true;
-    x.textContent = '×';
-    x.addEventListener('click', () => { if (paneOpen(p)) closePane(p); });
-    $(`#${id}`).after(x);
-  }
-  $('.td-collapse').addEventListener('click', () => { act(); collapsed = !collapsed; applyHeight(); });
-  drawer.addEventListener('keydown', (ev) => {
-    if (ev.key !== 'Escape' || ev.defaultPrevented) return;
-    ev.preventDefault();
-    // The active pane only: Route when it is in view, else the pane focus is in.
-    if (pane !== 'table' && pane !== 'ask' && P[pane].open) closeSide(pane);
-    else if (P.ask.open && ($('#td-ask').contains(ev.target as Node) || !tbl)) closeAsk();
-    else if (tbl || !P.route.open) closeTable();
-    else closeRoute();
-  });
-  // The tabs: a click or ←→ Home End (over the open ones) picks the pane in view.
-  for (const [id, p] of Object.entries(PANE_OF)) $(`#${id}`).addEventListener('click', () => { act(); selectPane(p); });
-  $('.td-tabs').addEventListener('keydown', (ev) => {
-    const tabs = [...drawer!.querySelectorAll<HTMLElement>('.td-tab')].filter(b => !b.hidden);
-    const i = tabs.indexOf(ev.target as HTMLElement);
-    const n = tabs.length;
-    const back = getComputedStyle(drawer!).direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    const fwd = back === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft';
-    const to = ev.key === 'Home' ? 0 : ev.key === 'End' ? n - 1
-      : ev.key === fwd ? (i + 1) % n : ev.key === back ? (i - 1 + n) % n : -1;
-    if (i < 0 || to < 0) return;
-    ev.preventDefault();
-    act();
-    selectPane(PANE_OF[tabs[to].id], true);
-  });
-
-  // Resize by the grip: drag, or ↑↓ with the grip focused.
-  const grip = $('.td-grip');
-  grip.addEventListener('pointerdown', (ev) => {
-    grip.setPointerCapture(ev.pointerId);
-    const startY = ev.clientY, startH = height;
-    act();
-    collapsed = false;
-    const move = (m: PointerEvent) => { setHeight(startH + (startY - m.clientY)); };
-    const up = () => {
-      grip.removeEventListener('pointermove', move);
-      grip.removeEventListener('pointerup', up);
-      grip.removeEventListener('pointercancel', up);
-    };
-    grip.addEventListener('pointermove', move);
-    grip.addEventListener('pointerup', up);
-    grip.addEventListener('pointercancel', up);
-  });
-  grip.addEventListener('keydown', (ev) => {
-    if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
-    ev.preventDefault();
-    act();
-    collapsed = false;
-    setHeight(height + (ev.key === 'ArrowUp' ? 24 : -24));
-  });
-  window.addEventListener('resize', () => { if (drawer && !drawer.hidden) applyHeight(); });
-  // The layer panel opening or closing narrows the drawer without a resize.
-  new ResizeObserver(() => { if (drawer && !drawer.hidden) syncPanes(); }).observe(drawer);
   // Runs after ui.ts's handler has re-translated the data-i18n* nodes; what
   // is left is built from data: pills, counts, the Select label, the header.
   // A `where` set elsewhere (the row chip's ×, Undo, a story, the chat)
@@ -2036,10 +1613,9 @@ function ensureDrawer() {
   on('url:write', onViewWhere);
   on('view:applied', onViewWhere);
   on('lang:changed', () => {
-    if (drawer) syncPanes();
-    if (!drawer || !tbl) return;
+    if (!tbl) return;
     closeFilter();
-    drawer.querySelector('.td-check-all')?.setAttribute('aria-label', t('table.checkAll'));
+    root.querySelector('.td-check-all')?.setAttribute('aria-label', t('table.checkAll'));
     $<HTMLSelectElement>('.td-sum').options[0].text = t('table.count');
     syncColsButton();
     if (!$('.td-colpanel').hidden) renderColPanel();
@@ -2050,23 +1626,12 @@ function ensureDrawer() {
 }
 
 // ─── Save and restore (this tab's sessionStorage) ────────────────────────────
-// tm-drawer (drawer-snapshot.ts): the layout — Ask and the table open or not,
-// the pane in view, height and collapse — and the table's state. Saved on
-// hidden / pagehide and again on every change while hidden (a table the chat
-// opens in the background); removed when no pane is open. The Route tab is
-// never kept. A restore writes no link and adds no undo step: the selection
-// stays the link's (`sel`), and checked rows come back as table checks only.
-let restoring = false;             // a restore's own synchronous steps: nothing is saved meanwhile
-let visitorActs = 0;               // the visitor's opens, closes, tab picks and resizes, counted
-let resumingAsk = false;           // the restore is opening the chat: that open is not the visitor's
-let resumingViz = false;           // the restore is opening the Visualize pane: likewise
-let vizState: (() => VizSnapshot | null) | null = null;   // ui-templates.ts's part of the snapshot
-let pending: DrawerSnapshot | null = null;   // a restore still waiting for the chat or the map: what a save keeps meanwhile
+// The table's part of tm-drawer (drawer.ts): its request, sort, grouping, bar
+// filter, columns, checks, active row and scroll. A restore writes no link and
+// adds no undo step: the selection stays the link's (`sel`), and checked rows
+// come back as table checks only.
 let gridScroll = 0;                // the grid's scroll offset, kept while the grid is out of view
 let wantScroll: number | null = null;   // a restored offset for a grid not yet in view
-
-/** The visitor changed the drawer: a restore still waiting gives way, and its saved table is no longer kept. */
-function act() { visitorActs++; pending = null; }
 
 function tableSnapshot(tb: Table): TableSnapshot {
   // A restore still loading keeps what it was asked to bring back.
@@ -2083,85 +1648,27 @@ function tableSnapshot(tb: Table): TableSnapshot {
   };
 }
 
-/** ui-templates.ts's getter for the Visualize pane's part of tm-drawer (its layer and cards). */
-export function registerVizSnapshot(get: () => VizSnapshot | null): void { vizState = get; }
-
-function drawerSnapshot(): DrawerSnapshot | null {
-  const table = tbl ? (tbl.req.ids && tbl.req.ids.length > MAX_SELECTION_IDS ? null : tableSnapshot(tbl)) : pending?.table ?? null;
-  const viz = P.viz.open ? vizState?.() ?? null : pending?.viz ?? null;
-  if (!table && !P.ask.open && !viz) return null;
-  const has = { ask: P.ask.open, table: !!table, viz: !!viz };
-  const p = pane !== 'route' && pane !== 'line' && pane !== 'prox' && pane !== 'gops' && has[pane] ? pane : (['table', 'ask', 'viz'] as const).find(k => has[k])!;
-  return {
-    v: DRAWER_SNAPSHOT_VERSION, ask: P.ask.open, table, ...(viz && { viz }),
-    pane: p, frac, collapsed,
-  };
+/** A restore's first half: whether the snapshot's layer is queryable now; a
+ *  vector-tile layer's rows are the loaded tiles, so it waits for the map. */
+export async function prepareRestore(s: TableSnapshot): Promise<boolean> {
+  const d = describe(s.req.layerId);
+  const qd = d.ok && d.result.queryable ? d.result : null;
+  if (qd?.kind === 'pmtiles') await mapIdle();
+  return !!qd;
 }
 
-function saveDrawer() {
-  if (!drawer || restoring) return;
-  const s = drawerSnapshot();
-  if (!s) { clearSnapshot(DRAWER_SNAPSHOT); return; }
-  if (!saveSnapshot(DRAWER_SNAPSHOT, s, { maxChars: 200_000 })) clearSnapshot(DRAWER_SNAPSHOT);
+/** A restore's second half: the table as the snapshot left it, no focus
+ *  moved; synchronous up to its first wait (the table is in view on return). */
+export function startRestore(s: TableSnapshot): Promise<void> {
+  return openTable(s.req, s);
 }
 
-/** A change while the page is hidden is saved at once (ui-templates.ts calls it for its cards). */
-export function drawerChanged(): void { touched(); }
-
-function touched() {
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') saveDrawer();
-}
-
-/** Resolves once the map has drawn its tiles (vector-tile rows are the loaded tiles only). */
-export function mapIdle(): Promise<void> {
-  const map = state.map;
-  if (!map || map.loaded()) return Promise.resolve();
-  return new Promise(resolve => {
-    const timer = setTimeout(resolve, 20_000);
-    map.once('idle', () => { clearTimeout(timer); resolve(); });
-  });
-}
-
-/** After a reload of this tab (the boot hook in ui-menubar.ts, through
- *  table-open.ts): the drawer as tm-drawer left it. `resumeAsk` brings the chat
- *  back first when Ask was open, `resumeViz` the Visualize pane; then the table — a vector-tile layer once the
- *  map is idle, a large file through the size prompt as usual — then the pane in
- *  view, the height and the collapse. No focus moves. */
-export async function restoreDrawer(resumeAsk: () => Promise<void>, resumeViz?: (viz: VizSnapshot) => Promise<void>): Promise<void> {
-  const snap = readSnapshot(DRAWER_SNAPSHOT, parseDrawerSnapshot);
-  if (!snap) { clearSnapshot(DRAWER_SNAPSHOT); return; }
-  const acts = visitorActs;
-  const moved = () => visitorActs !== acts;
-  let shown: Promise<void> | null = null;
-  pending = snap;
-  try {
-    restoring = true;
-    try { ensureDrawer(); frac = snap.frac; } finally { restoring = false; }
-    if (snap.ask) {
-      resumingAsk = true;
-      try { await resumeAsk(); } catch { /* the chat opens from the menu as usual */ } finally { resumingAsk = false; }
-    }
-    if (snap.viz && resumeViz) {
-      resumingViz = true;
-      try { await resumeViz(snap.viz); } catch { /* Visualize opens from the menu as usual */ } finally { resumingViz = false; }
-    }
-    const tb = snap.table;
-    const d = tb && describe(tb.req.layerId);
-    const qd = d && d.ok && d.result.queryable ? d.result : null;
-    const wanted = !!tb && !!qd;
-    if (qd?.kind === 'pmtiles') await mapIdle();
-    // The visitor opened or changed something while this waited: theirs stands.
-    if (moved()) return;
-    restoring = true;
-    try {
-      if (wanted) shown = openTable(tb!.req, tb!);
-      if (paneOpen(snap.pane) && !sizeAnswer) pane = snap.pane;
-      if (drawer!.classList.contains('td--open')) { collapsed = snap.collapsed; applyHeight(); syncPanes(); }
-    } finally {
-      restoring = false;
-    }
-  } finally {
-    pending = null;
-  }
-  await shown;
-}
+bindTable({
+  isOpen: () => !!tbl,
+  onShow: showGrid,
+  focusTarget: () => gridFocus(),
+  close: dropTable,
+  sizePromptPending: () => !!sizeAnswer,
+  mount,
+});
+registerSnapshotPart('table', () => tbl && !(tbl.req.ids && tbl.req.ids.length > MAX_SELECTION_IDS) ? tableSnapshot(tbl) : null);

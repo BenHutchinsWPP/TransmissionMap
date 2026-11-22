@@ -17,10 +17,10 @@
 //       Session only: a chart is never in the view, the link or undo.
 //       Loaded with the chat chunk (agent/tools.ts, ui/ui-chart.ts).
 //
-// Deps: dataset-query.ts (Outcome; type only), registry (layerById), utils/field-label.ts (humanise),
+// Deps: src/outcome.ts (Outcome; type only), registry (layerById), utils/field-label.ts (humanise),
 //       user-data-export.ts (toCsv).
 
-import type { Outcome } from './dataset-query.js';
+import type { Outcome } from '../src/outcome.js';
 import { layerById } from '../src/registry/index.js';
 import { toCsv } from './user-data/user-data-export.js';
 import { humanise } from './utils/field-label.js';

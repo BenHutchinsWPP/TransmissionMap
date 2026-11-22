@@ -13,8 +13,8 @@
 //       multiplier, barrier) as templates whose label is visitor text. Each
 //       endpoint line names its terminal (new station, line position, none) from the result's `terminalItems`.
 //       The waterfall and the sources read the preset as the solve used it (`solvedPresetOf`). `costCsv` is the cost.csv text (pane download and batch ZIP).
-// Deps: route-tabs/widgets.ts (waterfallLines, bandLabel, approxCount, kpiTiles, fmtMoneyHead), route-tabs/method.ts (methodOf, countEdits, solvedPresetOf),
-//       route-tabs/crossings.ts (shownExact), route-tabs/weights-table.ts (rowLabel, fmtFactor), route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel, PresetPatch type), ./route-request.ts (mergePatch),
+// Deps: route-format.ts (waterfallLines, bandLabel, approxCount, kpiTiles, fmtMoneyHead, shownExact, rowLabel, fmtFactor), route-methods.ts (methodOf, countEdits, solvedPresetOf),
+//       route/custom-presets.ts (presetLabel), route/screening.ts (types), route/preset-patch.ts (uploadLabel, PresetPatch type), ./route-request.ts (mergePatch),
 //       registry/route-presets.ts, registry/route-band-data.ts (methodSources), user-data/user-data-export.ts (toCsv), i18n.
 
 import { t } from '../../src/i18n/index.js';
@@ -28,12 +28,10 @@ import { methodSources } from '../../src/registry/route-band-data.js';
 import { presetLabel } from '../route/custom-presets.js';
 import type { DollarYear, RouteInputs, RouteSession } from './route-tabs/types.js';
 import { toCsv } from '../user-data/user-data-export.js';
-import { countEdits, methodOf, solvedPresetOf } from './route-tabs/method.js';
-import { shownExact } from './route-tabs/crossings.js';
+import { countEdits, methodOf, solvedPresetOf } from './route-methods.js';
 import { aviationMiles, aviationNote } from './route-observations.js';
 import { mergePatch } from './route-request.js';
-import { fmtFactor, rowLabel } from './route-tabs/weights-table.js';
-import { approxCount, bandLabel, fmtMoneyHead, kpiTiles, waterfallLines, type WaterfallGroup, type WaterfallLine } from './route-tabs/widgets.js';
+import { approxCount, bandLabel, fmtFactor, fmtMoneyHead, kpiTiles, rowLabel, shownExact, waterfallLines, type WaterfallGroup, type WaterfallLine } from './route-format.js';
 
 /** Dollars as the panel and the PDF show them (`$3.10 B`, `$716 M`, `$33.4 M`, `$12 k`). */
 export function fmtMoney(v: number): string {

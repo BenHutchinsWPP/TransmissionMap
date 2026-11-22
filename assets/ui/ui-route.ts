@@ -21,7 +21,7 @@
 //         on a phone one ⋯ menu). Batch… opens route-batch.ts (dynamic import only) in
 //         `.rp-main`; `p.batch` holds its disposer and closing the pane or the view
 //         cancels a running batch;
-//       - the map: every source and layer id starts `rp-` and is added or removed, never
+//       - the map (drawn by route-overlay.ts): every source and layer id starts `rp-` and is added or removed, never
 //         visibility-toggled: search-area outline + A–B chord while solving, the route cut
 //         into its profile runs and coloured by cost ×, driver or plain, a hover readout,
 //         alternatives, the similar-cost areas through one canvas source whose alpha is
@@ -63,24 +63,23 @@
 //       explainEnds for the session's inputs); a Method tab patch change calls `inputs.renderTerms()`.
 //       Closing the pane (× / Esc in the drawer) disposes all of it. Session only:
 //       nothing goes in the link or on the undo stack.
-// Deps: ui-table.ts (openRoute, routePanel, routeActions, setRouteTall, drawerPadding),
-//       route-inputs.ts, route-tabs/method.ts (dropUploads), route/route-open.ts (routeLine, cancelRoute, inspectCell, repaintWeight, repaintRows, dropWindow, exactCrossings),
+// Deps: drawer.ts (openPane, panel, headerSlot, setPaneFloor, drawerPadding),
+//       route-inputs.ts, route-tabs/method.ts (dropUploads), route-methods.ts (methodOf), route/route-open.ts (routeLine, cancelRoute, inspectCell, repaintWeight, repaintRows, dropWindow, exactCrossings),
 //       route/route.ts (searchBufferM, SURFACE_PALETTE, WEIGHT_PALETTE, COST_PALETTE, types), route/inspect.ts (textOf, fmtX, presentFacts), colors/route-constraints.ts (palettes),
-//       utils/utils-dom.ts (h, ht), route/grid.ts (albersForward), route/cost.ts (greatCircleM), route/surface-image.ts (palette types),
-//       route/preset-patch.ts (validatePresetPatch, limits), route-request.ts (the request builder), dataset-query.ts (Outcome, type only),
+//       utils/utils-dom.ts (h, ht), route/grid.ts (albersForward), route/cost.ts (greatCircleM),
+//       route/preset-patch.ts (validatePresetPatch, limits), route-request.ts (the request builder), src/outcome.ts (Outcome, type only),
 //       notice-gate.ts (noticeAccepted, forgetNotice on close) + notice-dialog.ts (showNotice): the usage notice, asked on every open (the chat's planRoute shows it too),
 //       route/custom-presets.ts, route/route-prefs.ts, route/categories.ts, registry/route-presets.ts,
 //       popup.ts (setRouteTapClaims: a hole tap opens no feature popup),
 //       map-input.ts (onMapPoint, onMapTap, onMapPointLeave), state-bus.ts (lang:changed), state.ts, ui-legends.ts (updateLegends),
 //       ui-menubar.ts (positionColorMenu: the Map ▾ menu flips above its button near the screen's foot),
-//       overlay-layers.ts (setGeojson, removeOverlay), user-data/user-data-export.ts
+//       route-overlay.ts (createRouteOverlay: every rp- source and layer, the map as a parameter), user-data/user-data-export.ts
 //       (downloadFile), route-report-model.ts (costCsv, fmtMoney), user-data/user-data.ts (dynamic: addImportedLayer),
 //       route-report.ts (dynamic), route-tabs/*.ts (incl. colours.ts, chat-summary.ts), route/snap.ts (kvFloor,
 //       searchSubstations), route-panel-open.ts (ChatRouteRequest, type only), i18n (t), route-panel.css.
 
-import type { CanvasSource, FilterSpecification, LayerSpecification } from 'maplibre-gl';
 import './route-panel.css';
-import { openRoute, routePanel, routeActions, setRouteTall, drawerPadding } from './ui-table.js';
+import { openPane, panel, headerSlot, setPaneFloor, drawerPadding } from './drawer.js';
 import { mountInputs, type End, type InputsHandle, type TermExplain } from './route-inputs.js';
 import type { ChatRouteRequest } from './route-panel-open.js';
 import { chatSummary, cleanName, type ChatRouteEnd, type RouteSummary } from './route-tabs/chat-summary.js';
@@ -88,13 +87,12 @@ import { kvFloor, searchSubstations, type SnapHit, type SubstationIndex } from '
 import { routeLine, cancelRoute, inspectCell, repaintWeight, repaintRows, dropWindow, exactCrossings } from '../route/route-open.js';
 import {
   searchBufferM, COST_BARRIER, COST_PALETTE, SURFACE_PALETTE, WEIGHT_BARRIER, WEIGHT_PALETTE, HIGHLIGHT_PALETTE, NO_WINDOW_REASONS,
-  type InspectRequest, type InspectResult, type OverlayMode, type RouteRequest, type RouteResult, type RouteStep, type RouteSurface, type RowPick, type RowsImage, type WeightImage, type WeightMode,
+  type InspectRequest, type InspectResult, type OverlayMode, type RouteRequest, type RouteResult, type RouteStep, type RowPick, type RowsImage, type WeightImage, type WeightMode,
 } from '../route/route.js';
 import { fmtX, presentFacts, textOf, type Fact } from '../route/inspect.js';
 import { CONCERNS, CONSTRAINT_PALETTE, LAND_MANAGER_PALETTE } from '../../src/colors/route-constraints.js';
 import { albersForward } from '../route/grid.js';
-import type { SurfaceImage } from '../route/surface-image.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { greatCircleM } from '../route/cost.js';
 import { createCustomPresetStore, presetLabel } from '../route/custom-presets.js';
 import { categoryLabelKey } from '../route/categories.js';
@@ -113,16 +111,18 @@ import { positionColorMenu } from './ui-menubar.js';
 import { downloadFile } from '../user-data/user-data-export.js';
 import { badge } from './route-tabs/widgets.js';
 import { costCsv, fmtMoney } from './route-report-model.js';
-import { setGeojson, removeOverlay } from './overlay-layers.js';
+import { createRouteOverlay, type RouteOverlay } from './route-overlay.js';
 import { PLAIN } from './route-tabs/colours.js';
 import type { ColourMode, PreviousRoute, RouteInputs, RouteSession, RouteSubTab, RouteTab, RouteTabContext, SolveSpec, SurfaceThreshold } from './route-tabs/types.js';
 import { updateLegends } from './ui-legends.js';
 import summaryTab from './route-tabs/summary.js';
 import costTab from './route-tabs/cost.js';
 import profileTab from './route-tabs/profile.js';
-import crossingsTab, { pathKey, shownExact } from './route-tabs/crossings.js';
+import crossingsTab from './route-tabs/crossings.js';
+import { pathKey, shownExact } from './route-format.js';
 import alternativesTab, { otherRoutes } from './route-tabs/alternatives.js';
-import methodTab, { methodOf, dropUploads } from './route-tabs/method.js';
+import methodTab, { dropUploads } from './route-tabs/method.js';
+import { methodOf } from './route-methods.js';
 import { h, ht } from '../utils/utils-dom.js';
 
 type LngLat = [number, number];
@@ -136,6 +136,8 @@ const STEPS: RouteStep[] = ['read', 'surfaces', 'solve', 'prove', 'reduce'];
 const INSPECT_DEBOUNCE_MS = 120;
 /** A Method edit's overlay repaint waits this long after the last edit (before the 600 ms live solve). */
 const PREVIEW_DEBOUNCE_MS = 150;
+/** The drawer's floor while the Method tab is open (setTall): it wins over a grip drag. */
+const ROUTE_TALL_PX = 540;
 
 /** Cost × ramp ×1.0 → ×2.5: amber → fuchsia → deep purple, clear of the voltage reds, blues and greens. */
 const COST_RAMP: [number, string][] = [[1.0, '#eab308'], [1.375, '#f59e0b'], [1.75, '#c026d3'], [2.125, '#7e22ce'], [2.5, '#3b0764']];
@@ -145,18 +147,6 @@ const DRIVER_FIXED: Record<string, string> = {
   protection: '#0e7490', protect: '#0e7490', parallel: '#4338ca', adj: '#4338ca', wildfire: '#db2777', whpclass: '#db2777',
 };
 const DRIVER_EXTRA = ['#c026d3', '#0f172a', '#eab308', '#06b6d4', '#64748b', '#9a3412'];
-/** Crossing markers start here: at a whole-route zoom they would hide the route's colours. */
-const CROSS_MINZOOM = 8;
-const CROSS_COLOURS: Record<string, [string, string]> = {   // kind → [fill, stroke]
-  river: ['#0ea5e9', '#ffffff'], road: ['#ffffff', '#334155'], rail: ['#334155', '#ffffff'],
-  pipeline: ['#a16207', '#ffffff'], line230: ['#6b21a8', '#ffffff'], line100: ['#a78bfa', '#ffffff'],
-};
-
-/** Paint order, bottom to top; a layer is inserted below the next one present. */
-const ORDER = ['rp-weight', 'rp-surface', 'rp-area-fill', 'rp-area-line', 'rp-chord', 'rp-ghost-casing', 'rp-ghost', 'rp-alts', 'rp-alts-label',
-  'rp-route-casing', 'rp-route', 'rp-cross', 'rp-marker', 'rp-marker-label'];
-const SOURCES = ['rp-weight', 'rp-surface', 'rp-area', 'rp-chord', 'rp-ghost', 'rp-alts', 'rp-route', 'rp-cross', 'rp-marker'];
-
 const presetStore = createCustomPresetStore({
   getItem: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
   setItem: (k, v) => { try { localStorage.setItem(k, v); } catch { /* storage unavailable */ } },
@@ -241,25 +231,6 @@ export function routeFeatures(r: RouteResult, mode: ColourMode): FC {
   };
 }
 
-/** An approximate search-area outline: a capsule `bufM` either side of segment a–b. */
-export function capsule(a: LngLat, b: LngLat, bufM: number, steps = 24): GeoJSON.Polygon {
-  const lat0 = ((a[1] + b[1]) / 2) * (Math.PI / 180);
-  const kx = 111_320 * Math.cos(lat0), ky = 110_574;
-  const A = [a[0] * kx, a[1] * ky], B = [b[0] * kx, b[1] * ky];
-  const ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
-  const ring: LngLat[] = [];
-  const arc = (c: number[], from: number) => {
-    for (let k = 0; k <= steps; k++) {
-      const th = from + (Math.PI * k) / steps;
-      ring.push([(c[0] + bufM * Math.cos(th)) / kx, (c[1] + bufM * Math.sin(th)) / ky]);
-    }
-  };
-  arc(B, ang - Math.PI / 2);
-  arc(A, ang + Math.PI / 2);
-  ring.push(ring[0]);
-  return { type: 'Polygon', coordinates: [ring] };
-}
-
 function bounds(points: LngLat[]): [[number, number], [number, number]] | null {
   if (!points.length) return null;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -290,7 +261,7 @@ interface Pane {
   activeTab: RouteTab | null;
   refine: boolean;              // the solve running re-solves the shown route: result view stays, header chip
   refineError: string | null;   // a refine solve's refusal, shown in the header chip
-  surf: { src: RouteSurface; canvas: HTMLCanvasElement; g: CanvasRenderingContext2D; cls: Uint8Array; img: ImageData } | null;
+  ov: RouteOverlay;             // the map's rp- sources and layers (route-overlay.ts)
   markerAt: { mi: number; label?: string } | null;
   menu: HTMLElement | null;
   menuOff?: () => void;         // removes the export menu's outside-press listener
@@ -310,7 +281,6 @@ interface Pane {
   weightLoading: boolean;
   weightDeferred: boolean;      // the weight fetch waits for a solve of ours to settle (or was cancelled by one)
   weightError: string | null;
-  weight: { src: WeightImage | RowsImage; canvas: HTMLCanvasElement; g: CanvasRenderingContext2D; data: ImageData; mode: OverlayMode } | null;
   weightMode: OverlayMode;
   rowsImg: RowsImage | null;    // the Method grid's highlight image (never on the result)
   rowsTried: boolean;           // one weight fetch has been spent on a missing window for this highlight
@@ -356,7 +326,7 @@ export function openRoutePanel(at?: { lngLat: LngLat; end: 'A' | 'B' }): void {
     return;
   }
   if (!pane) pane = createPane();
-  else openRoute(dispose);
+  else openPane('route', dispose);
   const p = pane;
   if (!at) return;
   void p.inputs.setEnd(at.end, at.lngLat).then(() => {
@@ -367,8 +337,8 @@ export function openRoutePanel(at?: { lngLat: LngLat; end: 'A' | 'B' }): void {
 }
 
 function createPane(background = false): Pane {
-  openRoute(dispose, undefined, { background });
-  const host = routePanel();
+  openPane('route', dispose, undefined, { background });
+  const host = panel('route');
   const root = h('div', 'rp');
   const left = h('div', 'rp-inputs');
   const main = h('div', 'rp-main');
@@ -395,10 +365,10 @@ function createPane(background = false): Pane {
   const p: Pane = {
     session, prefs, ctx: null as unknown as RouteTabContext, inputs: null as unknown as InputsHandle, main, view: '', call: 0, pending: 0,
     hoverOff: onMapPoint(onHover), legend, lgLabel, lgBody, tip, activeTab: null, refine: false, refineError: null,
-    surf: null, markerAt: null, menu: null, mapMenu: { at: null },
+    ov: createRouteOverlay(() => state.map), markerAt: null, menu: null, mapMenu: { at: null },
     leaveOff: onMapPointLeave(() => { if (pane) hideInspect(pane); tip.hidden = true; }),
     itip, icard, pin: null, tapOff: onMapTap(onTap), inspectOn: false, insp: { seq: 0, pinSeq: 0, last: null, grid: null },
-    showWeight: false, weightLoading: false, weightDeferred: false, weightError: null, weight: null,
+    showWeight: false, weightLoading: false, weightDeferred: false, weightError: null,
     weightMode: 'route', rowsImg: null, rowsTried: false, rowsKey: '', hlBase: baseOf(session.inputs.presetId), rp: { seq: 0, ms: null }, chatDriving: false, batch: null,
   };
   setRouteTapClaims((e) => holeTap(p, e));
@@ -467,8 +437,8 @@ function dispose(): void {
   p.menuOff?.();
   p.menu?.remove();
   p.mapMenu.off?.();
-  routeActions().replaceChildren();
-  routePanel().replaceChildren();
+  headerSlot('route').replaceChildren();
+  panel('route').replaceChildren();
 }
 
 // ─── solving ─────────────────────────────────────────────────────────────────
@@ -534,7 +504,7 @@ async function solve(p: Pane, spec: SolveSpec): Promise<boolean> {
   const out = await run(p, req, (step) => { if (my === p.call) onStep(p, step); });
   if (my !== p.call || pane !== p) return false;
   clearInterval(p.timer);
-  removeOverlay(['rp-area-fill', 'rp-area-line', 'rp-chord'], ['rp-area', 'rp-chord']);
+  p.ov.clearSearchArea();
   const refine = p.refine && p.view === 'result';
   p.refine = false;
   if (out.ok) {
@@ -650,7 +620,7 @@ function renderSolving(p: Pane): void {
   };
   tick();
   p.timer = setInterval(tick, 1000);
-  if (!routePanel().hidden) cancel.focus();   // a chat solve runs with Ask in view: focus stays there
+  if (!panel('route').hidden) cancel.focus();   // a chat solve runs with Ask in view: focus stays there
 }
 
 function renderSteps(p: Pane): void {
@@ -895,7 +865,7 @@ function renderStrip(p: Pane): void {
 // ─── drawer header actions ──────────────────────────────────────────────────
 
 function renderActions(p: Pane): void {
-  const slot = routeActions();
+  const slot = headerSlot('route');
   p.menuOff?.();
   p.menu?.remove();
   p.menu = null;
@@ -1058,20 +1028,9 @@ async function addToMyData(p: Pane, btn?: HTMLButtonElement): Promise<void> {
 
 // ─── map ─────────────────────────────────────────────────────────────────────
 
-function addLayer(spec: LayerSpecification): void {
-  const map = state.map;
-  if (!map) return;
-  if (map.getLayer(spec.id)) map.removeLayer(spec.id);
-  const i = ORDER.indexOf(spec.id);
-  const before = ORDER.slice(i + 1).find((id) => map.getLayer(id));
-  map.addLayer(spec, before);
-}
 /** Remove every rp- layer and source (`all`), or only the result's (route, alts, surface, crossings, marker). */
 function clearMap(p: Pane, all: boolean): void {
-  const keep = all ? [] : ['rp-ghost-casing', 'rp-ghost'];
-  removeOverlay([...ORDER].reverse().filter((id) => !keep.includes(id)), SOURCES.filter((id) => !keep.includes(id)));
-  releaseSurface(p);
-  releaseWeight(p);
+  p.ov.clear(all);
   p.markerAt = null;
   p.tip.hidden = true;
   hideInspect(p);
@@ -1080,13 +1039,7 @@ function clearMap(p: Pane, all: boolean): void {
 }
 
 function drawSearchArea(p: Pane, a: LngLat, b: LngLat): void {
-  const buf = searchBufferM(greatCircleM(a, b));
-  setGeojson('rp-area', { type: 'Feature', geometry: capsule(a, b, buf), properties: {} });
-  setGeojson('rp-chord', { type: 'Feature', geometry: { type: 'LineString', coordinates: [a, b] }, properties: {} });
-  addLayer({ id: 'rp-area-fill', type: 'fill', source: 'rp-area', paint: { 'fill-color': '#7e22ce', 'fill-opacity': 0.12 } });
-  addLayer({ id: 'rp-area-line', type: 'line', source: 'rp-area', paint: { 'line-color': '#7e22ce', 'line-opacity': 0.55, 'line-width': 1.5 } });
-  addLayer({ id: 'rp-chord', type: 'line', source: 'rp-chord', paint: { 'line-color': '#334155', 'line-width': 1.5, 'line-dasharray': [3, 3] } });
-  renderLegend(p, Math.round(buf / 1000));
+  renderLegend(p, p.ov.searchArea(a, b));
 }
 
 /** (Re)draw the result's layers from the session. */
@@ -1103,120 +1056,32 @@ function drawResult(p: Pane): void {
 }
 
 function drawRoute(p: Pane): void {
-  const r = p.session.result!;
-  setGeojson('rp-route', routeFeatures(r, p.session.colour));
-  if (!state.map?.getLayer('rp-route-casing')) {
-    addLayer({ id: 'rp-route-casing', type: 'line', source: 'rp-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.95 } });
-  }
-  if (!state.map?.getLayer('rp-route')) {
-    addLayer({ id: 'rp-route', type: 'line', source: 'rp-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ['get', 'color'], 'line-width': 4.5 } });
-  }
+  p.ov.route(routeFeatures(p.session.result!, p.session.colour));
 }
 
 function drawAlternatives(p: Pane): void {
-  const alts = otherRoutes(p.session);
-  if (!alts.length) { removeOverlay(['rp-alts-label', 'rp-alts'], ['rp-alts']); return; }
-  setGeojson('rp-alts', {
-    type: 'FeatureCollection',
-    features: alts.map((a) => ({ type: 'Feature', geometry: a.path, properties: { i: a.alt, name: a.name, color: a.colour } })),
-  });
-  addLayer({ id: 'rp-alts', type: 'line', source: 'rp-alts', layout: { 'line-join': 'round' },
-    paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.9 } });
-  addLayer({ id: 'rp-alts-label', type: 'symbol', source: 'rp-alts',
-    layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'symbol-spacing': 300 },
-    paint: { 'text-color': ['get', 'color'], 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
-}
-
-function crossFilter(p: Pane): FilterSpecification {
-  return ['in', ['get', 'kind'], ['literal', [...p.session.crossingKinds]]] as unknown as FilterSpecification;
+  p.ov.alternatives(otherRoutes(p.session));
 }
 
 function drawCrossings(p: Pane): void {
   const grid = p.session.result?.profile?.crossings.points ?? [];
   const ex = shownExact(p.session);
   const pts = ex ? [...grid.filter((c) => !ex.exact.includes(c.kind)), ...ex.result.points.filter((c) => ex.exact.includes(c.kind))] : grid;
-  if (!pts.length) { removeOverlay(['rp-cross'], ['rp-cross']); return; }
-  setGeojson('rp-cross', {
-    type: 'FeatureCollection',
-    features: pts.map((c) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: c.lngLat }, properties: { kind: c.kind, mi: c.mi } })),
-  });
-  const pick = (k: 0 | 1) => ['match', ['get', 'kind'], ...Object.entries(CROSS_COLOURS).flatMap(([kind, c]) => [kind, c[k]]), '#64748b'];
-  addLayer({ id: 'rp-cross', type: 'circle', source: 'rp-cross', filter: crossFilter(p), minzoom: CROSS_MINZOOM,
-    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], CROSS_MINZOOM, 6, 13, 9], 'circle-color': pick(0),
-      'circle-stroke-color': pick(1), 'circle-stroke-width': 2.5 } } as unknown as LayerSpecification);
+  p.ov.crossings(pts, p.session.crossingKinds);
 }
 
 function drawMarker(p: Pane): void {
   const r = p.session.result;
-  if (!r || !p.markerAt) { removeOverlay(['rp-marker-label', 'rp-marker'], ['rp-marker']); return; }
+  if (!r || !p.markerAt) { p.ov.marker(null); return; }
   const { mi, label } = p.markerAt;
-  setGeojson('rp-marker', { type: 'Feature', geometry: { type: 'Point', coordinates: pointAtMile(r, mi) },
-    properties: { label: label ?? t('route.marker', { mi: Math.round(mi) }) } });
-  if (!state.map?.getLayer('rp-marker')) {
-    addLayer({ id: 'rp-marker', type: 'circle', source: 'rp-marker',
-      paint: { 'circle-radius': 6, 'circle-color': '#ffffff', 'circle-stroke-color': '#0f172a', 'circle-stroke-width': 3 } });
-    addLayer({ id: 'rp-marker-label', type: 'symbol', source: 'rp-marker',
-      layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, -1.4], 'text-anchor': 'bottom' },
-      paint: { 'text-color': '#0f172a', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
-  }
-}
-
-// One canvas; the worker's RGBA is kept untouched and only alpha is rewritten.
-function releaseSurface(p: Pane): void {
-  removeOverlay(['rp-surface'], ['rp-surface']);
-  if (p.surf) { p.surf.canvas.width = 0; p.surf.canvas.height = 0; }
-  p.surf = null;
-}
-
-/** Palette class (1..4) per pixel of the worker's image; 0 = transparent / no class. */
-export function pixelClasses(rgba: Uint8ClampedArray): Uint8Array {
-  const out = new Uint8Array(rgba.length / 4);
-  for (let i = 0, j = 0; j < out.length; i += 4, j++) {
-    if (!rgba[i + 3]) continue;
-    for (let k = 1; k < SURFACE_PALETTE.length; k++) {
-      const c = SURFACE_PALETTE[k];
-      if (rgba[i] === c[0] && rgba[i + 1] === c[1] && rgba[i + 2] === c[2]) { out[j] = k; break; }
-    }
-  }
-  return out;
-}
-
-/** Write `img` from the original RGBA with alpha 0 for classes above `threshold`. */
-export function maskSurface(orig: Uint8ClampedArray, cls: Uint8Array, bands: readonly number[], threshold: number, out: Uint8ClampedArray): void {
-  const maxClass = bands.filter((b) => b <= threshold + 1e-9).length;
-  out.set(orig);
-  for (let j = 0; j < cls.length; j++) if (cls[j] > maxClass || !cls[j]) out[j * 4 + 3] = 0;
+  p.ov.marker({ lngLat: pointAtMile(r, mi), label: label ?? t('route.marker', { mi: Math.round(mi) }) });
 }
 
 function drawSurface(p: Pane): void {
-  const s = p.session, map = state.map;
+  const s = p.session;
   const surface = s.result?.surface && 'image' in s.result.surface ? s.result.surface : null;
-  if (!surface || !s.showSurface || !map) { releaseSurface(p); renderLegend(p); return; }
-  if (p.surf?.src !== surface) {
-    releaseSurface(p);
-    const { width, height, rgba } = surface.image;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const g = canvas.getContext('2d');
-    if (!g) return;
-    p.surf = { src: surface, canvas, g, cls: pixelClasses(rgba), img: g.createImageData(width, height) };
-  }
-  const sf = p.surf!;
-  maskSurface(surface.image.rgba, sf.cls, surface.bands, s.threshold, sf.img.data);
-  sf.g.putImageData(sf.img, 0, 0);
-  const src = map.getSource('rp-surface') as CanvasSource | undefined;
-  if (src) {
-    src.play();                                  // a paused canvas source uploads only while playing
-    map.once('render', () => src.pause());
-    map.triggerRepaint();
-  } else {
-    map.addSource('rp-surface', { type: 'canvas', canvas: sf.canvas, coordinates: surface.image.coordinates, animate: false });
-    addLayer({ id: 'rp-surface', type: 'raster', source: 'rp-surface', paint: { 'raster-opacity': 0.7, 'raster-resampling': 'nearest' } });
-  }
-  renderLegend(p);
+  if (!surface || !s.showSurface) { p.ov.surface(null, s.threshold); renderLegend(p); return; }
+  if (p.ov.surface(surface, s.threshold) !== 'failed') renderLegend(p);
 }
 
 function fitLine(points: LngLat[]): void {
@@ -1280,7 +1145,7 @@ function renderLegend(p: Pane, searchKm?: number): void {
     showLegend(p, true);
     return;
   }
-  if (!r || !state.map?.getLayer('rp-route')) { showLegend(p, false); return; }
+  if (!r || !p.ov.has('rp-route')) { showLegend(p, false); return; }
   const runs = r.profile?.runs ?? [];
   const mode: ColourMode = runs.length ? s.colour : 'plain';
   p.lgLabel.textContent = t(`route.legend.${mode}`);
@@ -1314,10 +1179,11 @@ function renderLegend(p: Pane, searchKm?: number): void {
     row.append(sw, h('span', '', a.name));
     lg.append(row);
   }
-  if (p.surf && state.map?.getLayer('rp-surface')) {
+  const bands = p.ov.surfaceBands();
+  if (bands) {
     lg.append(h('div', 'rp-lg-h rp-lg-h--sub', t('route.legend.surface')));
     const row = h('div', 'rp-lg-swatches');
-    p.surf.src.bands.forEach((b, k) => {
+    bands.forEach((b, k) => {
       if (b > s.threshold + 1e-9) return;
       const c = SURFACE_PALETTE[k + 1];
       const item = h('span', 'rp-lg-row');
@@ -1343,19 +1209,20 @@ function renderLegend(p: Pane, searchKm?: number): void {
     }
     lg.append(h('p', 'rp-lg-note', t('route.legend.rowsThin')));
     if (p.weightError) lg.append(h('p', 'rp-lg-note', t('route.mg.hlRefused', { reason: p.weightError })));
-  } else if (p.weight && state.map?.getLayer('rp-weight')) {
-    const cost = p.weight.mode === 'cost', cause = p.weight.mode === 'cause';
+  } else if (p.ov.weightHeld() && p.ov.has('rp-weight')) {
+    const held = p.ov.weightHeld()!;
+    const cost = held.mode === 'cost', cause = held.mode === 'cause';
     if (weightStale(p)) { lg.append(h('div', 'rp-lg-h rp-lg-h--sub', t('route.insp.weightLoading'))); showLegend(p, true); return; }
     lg.append(h('div', 'rp-lg-h rp-lg-h--sub', t(cause ? 'route.insp.legendCause' : cost ? 'route.insp.legendCost' : 'route.insp.legend')));
     if (cause) {
-      for (const x of (p.weight.src as WeightImage).cause?.present ?? []) {
+      for (const x of (held.src as WeightImage).cause?.present ?? []) {
         const row = h('div', 'rp-lg-row');
         const sw = h('i', 'rp-lg-sw');
         sw.style.background = x.colour;
         row.append(sw, h('span', '', t(x.labelKey)), h('span', 'rp-lg-pct', x.share < 0.01 ? '< 1 %' : `${Math.round(x.share * 100)} %`));
         lg.append(row);
       }
-      if ((p.weight.src as WeightImage).cause?.barrier) {
+      if ((held.src as WeightImage).cause?.barrier) {
         const row = h('div', 'rp-lg-row');
         row.append(h('i', 'rp-lg-sw rp-lg-sw--hatch'), h('span', '', t('route.insp.legend.blocked')));
         lg.append(row);
@@ -1378,15 +1245,15 @@ function renderLegend(p: Pane, searchKm?: number): void {
 }
 
 function onHover(e: MapPointerEvent): void {
-  const p = pane, map = state.map;
-  if (!p || !map) return;
+  const p = pane;
+  if (!p || !state.map) return;
   const tip = p.tip;
   if (state.routePick || !p.session.result) { tip.hidden = true; hideInspect(p); return; }
-  const hole = !!p.surf && !!map.getLayer('rp-surface') && holeAt(p.surf.img, p.surf.src.image, [e.lngLat.lng, e.lngLat.lat]);
+  const hole = p.ov.surfaceHole([e.lngLat.lng, e.lngLat.lat]);
   if (p.inspectOn || hole) { tip.hidden = true; if (noHover()) p.itip.hidden = true; else queueInspect(p, e, hole); return; }
   hideInspect(p);
-  if (!map.getLayer('rp-route')) { tip.hidden = true; return; }
-  const f = map.queryRenderedFeatures(e.point, { layers: ['rp-route'] })[0];
+  if (!p.ov.has('rp-route')) { tip.hidden = true; return; }
+  const f = p.ov.routeFeatureAt(e.point);
   const pr = f?.properties as { mi0?: number; mi1?: number; costX?: number; driver?: string; usdNom?: number } | undefined;
   if (!pr || pr.mi0 === undefined || pr.mi1 === undefined) { tip.hidden = true; return; }
   const c = p.session.result.cost, nom = pr.usdNom ?? 0;
@@ -1404,30 +1271,12 @@ function onHover(e: MapPointerEvent): void {
 
 // ─── cell inspector + routing-weight overlay ──────────────────────────
 
-const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
-
-/** True when `lngLat` falls on a transparent pixel of `img` (drawn over `geo`'s corners)
- *  that has drawn pixels left, right, above and below it: a hole in the areas, not their outside. */
-export function holeAt(img: { data: Uint8ClampedArray; width: number; height: number }, geo: Pick<SurfaceImage, 'coordinates'>, lngLat: [number, number]): boolean {
-  const [[W, N], , [E, S]] = geo.coordinates, [lng, lat] = lngLat, { data, width, height } = img;
-  if (!(lng >= W && lng <= E && lat >= S && lat <= N)) return false;
-  const x = Math.min(width - 1, Math.floor(((lng - W) / (E - W)) * width));
-  const y = Math.min(height - 1, Math.floor(((mercY(N) - mercY(lat)) / (mercY(N) - mercY(S))) * height));
-  const a = (i: number, j: number) => data[(j * width + i) * 4 + 3];
-  if (a(x, y)) return false;
-  const seen = (dx: number, dy: number) => {
-    for (let i = x + dx, j = y + dy; i >= 0 && i < width && j >= 0 && j < height; i += dx, j += dy) if (a(i, j)) return true;
-    return false;
-  };
-  return seen(-1, 0) && seen(1, 0) && seen(0, -1) && seen(0, 1);
-}
-
 /** The overlay on screen was drawn in another mode than the one picked: its image is still on its way. */
-const weightStale = (p: Pane): boolean => p.showWeight && !!p.weight && p.weight.mode !== p.weightMode;
+const weightStale = (p: Pane): boolean => p.showWeight && !!p.ov.weightHeld() && p.ov.weightHeld()!.mode !== p.weightMode;
 
 /** Dimmed while stale, so the previous mode's colours are not read as the new one's. */
 function dimWeight(p: Pane): void {
-  if (state.map?.getLayer('rp-weight')) state.map.setPaintProperty('rp-weight', 'raster-opacity', weightStale(p) ? 0.25 : 0.8);
+  p.ov.dimWeight(weightStale(p));
 }
 
 function syncInspectControls(p: Pane, root: ParentNode = p.main): void {
@@ -1550,9 +1399,7 @@ function hideInspectTimer(p: Pane): void {
 
 /** The tap is on a hole in the drawn similar-cost areas (the route pane reads that cell). */
 function holeTap(p: Pane, e: MapPointerEvent): boolean {
-  const map = state.map;
-  return !!map && !state.routePick && !!p.session.result && !!p.surf && !!map.getLayer('rp-surface')
-    && holeAt(p.surf.img, p.surf.src.image, [e.lngLat.lng, e.lngLat.lat]);
+  return !!state.map && !state.routePick && !!p.session.result && p.ov.surfaceHole([e.lngLat.lng, e.lngLat.lat]);
 }
 
 /** A click or tap with Inspect on (or on a hole in the similar-cost areas): pin the cell's card. */
@@ -1703,7 +1550,7 @@ function renderCard(p: Pane, out: Outcome<InspectResult>, at: { x: number; y: nu
 
 /** The weight image can be drawn: its pixels, or (once drawn and dropped) the canvas holding them. */
 function weightReady(p: Pane, img: RouteResult['weightImage'] | RowsImage): boolean {
-  return !!img && 'rgba' in img && (img.rgba.length > 0 || p.weight?.src === img);
+  return !!img && 'rgba' in img && (img.rgba.length > 0 || p.ov.weightHeld()?.src === img);
 }
 
 /** A result without a drawable weight image (a skipped one is final). */
@@ -1766,58 +1613,17 @@ async function fetchWeight(p: Pane): Promise<void> {
   syncInspectControls(p);
 }
 
-function releaseWeight(p: Pane): void {
-  removeOverlay(['rp-weight'], ['rp-weight']);
-  if (p.weight) { p.weight.canvas.width = 0; p.weight.canvas.height = 0; }
-  p.weight = null;
-}
-
 /** Switched off, only the layer goes: the canvas stays for switching on again (the RGBA is dropped once drawn). */
 function drawWeight(p: Pane): void {
   const rows = p.weightMode === 'rows';
-  const img = rows ? p.rowsImg : p.session.result?.weightImage, map = state.map;
+  const img = rows ? p.rowsImg : p.session.result?.weightImage;
   if (rows && p.showWeight && !img && !p.weightError) { renderLegend(p); return; }   // its image is on the way: the picture stays, dimmed
-  if (!p.showWeight || !img || !weightReady(p, img) || !('rgba' in img) || !map) {
-    if (p.weight?.src !== img) releaseWeight(p);
-    else removeOverlay(['rp-weight'], ['rp-weight']);
+  if (!p.showWeight || !img || !weightReady(p, img) || !('rgba' in img) || !state.map) {
+    p.ov.hideWeight(img);
     renderLegend(p);
     return;
   }
-  if (p.weight?.src === img && map.getLayer('rp-weight')) return;
-  if (p.weight?.src !== img && !paintWeight(p, img)) return;
-  if (!map.getSource('rp-weight')) map.addSource('rp-weight', { type: 'canvas', canvas: p.weight!.canvas, coordinates: img.coordinates, animate: false });
-  if (!map.getLayer('rp-weight')) addLayer({ id: 'rp-weight', type: 'raster', source: 'rp-weight', paint: { 'raster-opacity': 0.8, 'raster-resampling': 'nearest' } });
-  renderLegend(p);
-}
-
-/** Writes `img` into the one weight canvas — in place when the size matches (a shown source is
- *  replayed for one frame to upload it), else resized with its source re-added — then drops its RGBA. */
-function paintWeight(p: Pane, img: WeightImage | RowsImage): boolean {
-  const map = state.map!;
-  let w = p.weight;
-  if (!w || w.canvas.width !== img.width || w.canvas.height !== img.height) {
-    removeOverlay(['rp-weight'], ['rp-weight']);
-    const canvas = w?.canvas ?? document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const g = canvas.getContext('2d');
-    if (!g) return false;
-    w = p.weight = { src: img, canvas, g, data: g.createImageData(img.width, img.height), mode: img.mode ?? 'route' };
-  }
-  w.data.data.set(img.rgba);
-  w.g.putImageData(w.data, 0, 0);
-  const coordsMoved = JSON.stringify(w.src.coordinates) !== JSON.stringify(img.coordinates);
-  w.src = img;
-  w.mode = img.mode ?? 'route';
-  img.rgba = new Uint8ClampedArray(0);   // the canvas holds the pixels now; nothing re-reads them
-  const src = map.getSource('rp-weight') as CanvasSource | undefined;
-  if (src) {
-    if (coordsMoved) src.setCoordinates(img.coordinates);
-    src.play();
-    map.once('render', () => src.pause());
-    map.triggerRepaint();
-  }
-  return true;
+  if (p.ov.showWeight(img) === 'drawn') renderLegend(p);
 }
 
 /** The overlay for `patch` (on the shown result's method, line type and the shown mode), repainted by the
@@ -1932,7 +1738,7 @@ function makeContext(p: Pane): RouteTabContext {
     setColourMode(m) {
       s.colour = m;
       rememberPrefs(p);
-      if (live() && s.result && state.map?.getSource('rp-route')) setGeojson('rp-route', routeFeatures(s.result, m));
+      if (live() && s.result) p.ov.recolour(routeFeatures(s.result, m));
       renderLegend(p);
     },
     setProfileMarker(mi, label) {
@@ -1943,7 +1749,7 @@ function makeContext(p: Pane): RouteTabContext {
       const set = new Set(s.crossingKinds);
       for (const k of kinds) if (onOff) set.add(k); else set.delete(k);
       s.crossingKinds = [...set];
-      if (live() && state.map?.getLayer('rp-cross')) drawCrossings(p);   // re-added with the new filter
+      if (live() && p.ov.has('rp-cross')) drawCrossings(p);   // re-added with the new filter
     },
     fitMiles(mi0, mi1) {
       const r = s.result;
@@ -2010,16 +1816,9 @@ function makeContext(p: Pane): RouteTabContext {
     },
     setGhost(path) {
       if (!live()) return;
-      if (!path) { removeOverlay(['rp-ghost', 'rp-ghost-casing'], ['rp-ghost']); return; }
-      setGeojson('rp-ghost', { type: 'Feature', geometry: path, properties: {} });
-      if (!state.map?.getLayer('rp-ghost')) {
-        addLayer({ id: 'rp-ghost-casing', type: 'line', source: 'rp-ghost',
-          layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.9 } });
-        addLayer({ id: 'rp-ghost', type: 'line', source: 'rp-ghost',
-          paint: { 'line-color': '#334155', 'line-width': 3, 'line-dasharray': [2, 1.5] } });
-      }
+      p.ov.ghost(path);
     },
-    setTall(onOff) { setRouteTall(onOff); },
+    setTall(onOff) { setPaneFloor('route', onOff ? ROUTE_TALL_PX : 0); },
     setMethodErrors(n) { if (live()) p.inputs.setErrors(n); },
     rerender() { if (live()) { syncHighlightBase(p); renderMain(p, true); renderActions(p); renderStrip(p); } },
     previewPatch(patch) { if (live()) { p.inputs.renderTerms(); previewPatch(p, patch); } },
@@ -2173,7 +1972,7 @@ export async function routeForChat(req: ChatRouteRequest, signal?: AbortSignal):
     if (signal?.aborted) { forgetNotice('route'); return refuse('cancelled'); }
   }
   if (!pane) pane = createPane(true);
-  else openRoute(dispose, undefined, { background: true });
+  else openPane('route', dispose, undefined, { background: true });
   const p = pane, s = p.session;
   const busy = () => isBusy(p);
   if (busy()) return refuse(BUSY);

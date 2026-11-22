@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Role: observations preserve partial scope, source dates and inert display/export text.
-// Deps: route-observations.ts, route-observations.fixture.ts, route-tabs/crossings.ts.
+// Deps: route-observations.ts, route-observations.fixture.ts, route-format.ts.
 import { describe, expect, it, beforeAll } from 'vitest';
 import { routeObservations, observationCsvRows, source, aviationNote, aviationMiles } from './route-observations.js';
 import baseEn from '../../src/i18n/locales/en.js';
 import routeEn from '../../src/i18n/route/en.js';
 import { observationFixture } from './route-observations.fixture.js';
-import { crossingsCsv, pathKey, shownExact } from './route-tabs/crossings.js';
+import { crossingsCsv, pathKey, shownExact } from './route-format.js';
 import { FIXTURE_SESSION } from './route-tabs/fixture.js';
 import { loadRouteStrings } from '../../src/i18n/index.js';
 

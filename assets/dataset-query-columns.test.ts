@@ -28,7 +28,8 @@ import {
 } from './layers/map-layers-osm.js';
 import { planHifldTransmission, planHifldNatgasLines, planRetailTerritories } from './layers/map-layers-hifld.js';
 import { planPadus, planCritHab } from './layers/map-layers-land.js';
-import { describe, query, count, aggregate, shapeRows, hasColumns, type ShapeResult, type ShapeOpts } from './dataset-query.js';
+import { describe, query, count, aggregate, shapeRows, hasColumns } from './dataset-query.js';
+import type { ShapeResult, ShapeOpts } from './dataset-core.js';
 
 // plannedBytes is wrapped so one test can push a read over the cap; every other call is the real one.
 const cap = vi.hoisted(() => ({ over: false }));

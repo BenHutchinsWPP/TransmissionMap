@@ -17,12 +17,12 @@
 // wrong polygon. Good enough to draw; never used for analysis.
 // Status (loading / ok / truncated / zoom-in / error / pending-approval) lives
 // in a module map the UI reads through serviceStatus / onServiceStatus.
-// Deps: state.ts (state.map), service-spec.ts (types), dataset-query.ts
+// Deps: state.ts (state.map), service-spec.ts (types), src/outcome.ts
 //       (Outcome, type only), src/i18n (t).
 import type { GeoJSONSource } from 'maplibre-gl';
 import { state } from '../state.js';
 import { t } from '../../src/i18n/index.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { SERVICE_LAYER_PREFIX, type LinkedService, type ServiceSpec, type ServiceStyle } from './service-spec.js';
 
 export const META_MAX_BYTES = 2 * 1024 * 1024;

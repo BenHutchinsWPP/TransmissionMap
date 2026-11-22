@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // A restore of a table over a COLUMNS_DATASETS layer reads the site's own data/analysis/ files
 // (index and columns file, by range) to rebuild its rows, and fetches nothing else.
-// Deps: ui-table.js and dataset-query.js (real), columns/fixtures (served by a fetch stub),
+// Deps: drawer-test-names.js over ui-table.js, and dataset-query.js (real), columns/fixtures (served by a fetch stub),
 //       test-drawer-env.js, state.js.
 
 import { readFileSync } from 'node:fs';
@@ -35,7 +35,7 @@ async function restore() {
   const resetRangeIo = (await import('../parquet/range-io.js')).resetRangeIo;
   resetRangeIo();
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => serve(url, init)));
-  const t = await import('./ui-table.js');
+  const t = await import('./drawer-test-names.js');
   await t.restoreDrawer(async () => {});
   await vi.waitFor(() => expect(document.querySelector('.td-row')).not.toBeNull());
 }

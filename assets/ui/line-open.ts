@@ -1,6 +1,6 @@
 // ─── Line tools opener (main bundle) ─────────────────────────────────────────
 // openLineTools(req, from) loads the ui-line.ts lazy chunk (which brings the
-// table drawer chunk and the line GeoParquet reader with it) and opens the
+// drawer shell and the line GeoParquet reader with it) and opens the
 // drawer's Line tab on one transmission line. The popup's "Line tools" button
 // opens it through here, so the locator never lands in the boot bundle.
 // A chunk that fails to load is recorded and retried on the next call.

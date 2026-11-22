@@ -10,7 +10,7 @@
 // Also owns the row-flag note (a button that shows why a layer is not
 // filtered, on tap as well as by keyboard) and "Show", which opens the
 // sections of the flagged rows and scrolls to the first.
-// Labels come from area-labels.ts; until they load, or if they cannot, the
+// Labels come from ../area-labels.ts; until they load, or if they cannot, the
 // field still takes codes (TX, 48201) checked by validateArea().
 //   wireAreaPicker()   attach the field's handlers (once, on first use).
 //   areaAction(el)     a click on a chip ×, Clear, Show or a row flag.
@@ -18,14 +18,14 @@
 // Loaded by ui.ts on the field's first focus or the row's first click, so the
 // boot bundle carries only the static row markup (index.html).
 // Deps: state.ts, state-bus.ts ('view:applied' clears the note), panel-mirror.ts
-//       (commitArea, flagTitle), area-labels.ts, map-input.ts (onMapTap),
+//       (commitArea, flagTitle), ../area-labels.ts, map-input.ts (onMapTap),
 //       src/registry/area-filter.ts, src/registry/view-validate.ts (validateArea),
 //       src/registry/condition-compile.ts (MAX_LIST_VALUES), src/i18n (t),
 //       utils/utils.ts (escapeHtml).
 
 import { state } from '../state.js';
 import { commitArea, flagTitle } from './panel-mirror.js';
-import { loadAreaLabels, areaLabel, type AreaLabels } from './area-labels.js';
+import { loadAreaLabels, areaLabel, type AreaLabels } from '../area-labels.js';
 import { onMapTap } from '../map-input.js';
 import { on } from '../state-bus.js';
 import { AREA_KINDS, type AreaFilter, type AreaKind } from '../../src/registry/area-filter.js';

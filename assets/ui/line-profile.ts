@@ -15,7 +15,7 @@
 //   cancelProfile()        abort a running profile and drop the crosshair.
 //   Distances and elevations follow the display units (src/units.ts). Session only: no URL
 //   write, no undo step, not kept in tm-drawer.
-// Deps: lines/profile.ts, lines/along.ts (Pos), user-data/user-data-export.ts (downloadFile),
+// Deps: utils/utils-dom.ts (hx), lines/profile.ts, lines/along.ts (Pos), user-data/user-data-export.ts (downloadFile),
 //       src/units.ts, i18n (t, getLocale). Loaded by: ui-line.ts.
 
 import { lineProfile, profileCredits, profileCsv, profileStats, reaches3dep, reversed, SOURCE_NAME,
@@ -24,6 +24,7 @@ import type { Pos } from '../lines/along.js';
 import { downloadFile } from '../user-data/user-data-export.js';
 import { convElevation, fmtDistance, fmtElevation, getUnits, unitLabel } from '../../src/units.js';
 import { t, getLocale } from '../../src/i18n/index.js';
+import { hx } from '../utils/utils-dom.js';
 
 export interface ProfileHost {
   key: string;                                // the line and scope: one cached profile each
@@ -51,17 +52,8 @@ let host: ProfileHost | null = null;
 let hoverD: number | null = null;
 let hoverKey = '';
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: (Node | string | null | false)[]): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v; else e.setAttribute(k, v);
-  }
-  for (const c of kids) if (c) e.append(c);
-  return e;
-}
-
 const btn = (label: string, cls: string, onClick: () => void) => {
-  const b = el('button', { type: 'button', class: `td-btn ${cls}` }, label);
+  const b = hx('button', { type: 'button', class: `td-btn ${cls}` }, label);
   b.addEventListener('click', onClick);
   return b;
 };
@@ -85,7 +77,7 @@ export function profileSection(h: ProfileHost): HTMLElement {
   host = h;
   if (job && job.key !== h.key) cancelProfile();
   if (hoverKey !== h.key) { hoverKey = h.key; hoverD = null; }
-  section = el('section', { class: 'lt-profile', 'aria-label': t('line.profile') });
+  section = hx('section', { class: 'lt-profile', 'aria-label': t('line.profile') });
   fill();
   return section;
 }
@@ -96,22 +88,22 @@ function refresh() {
 
 function fill() {
   const h = host!, sec = section!;
-  const head = el('h4', { class: 'lt-sub' }, t('line.profile'));
-  if (!h.line) { sec.replaceChildren(head, el('p', { class: 'lt-hint' }, t('line.profilePieces'))); return; }
+  const head = hx('h4', { class: 'lt-sub' }, t('line.profile'));
+  if (!h.line) { sec.replaceChildren(head, hx('p', { class: 'lt-hint' }, t('line.profilePieces'))); return; }
   const p = profileFor(h);
   if (p) { sec.replaceChildren(head, ...chartBlock(h, p)); return; }
   if (job?.key === h.key) {
     const pr = job.progress;
     const msg = pr?.phase === 'terrarium' || pr?.total === 0 ? t('line.profileFilling')
       : t('line.profileReading', { done: pr?.done ?? 0, total: pr?.total ?? '…' });
-    sec.replaceChildren(head, el('p', { class: 'lt-status', role: 'status' }, msg),
-      el('div', { class: 'lt-actions' }, btn(t('line.profileCancel'), 'lt-prof-cancel', () => { cancelProfile(); refresh(); })));
+    sec.replaceChildren(head, hx('p', { class: 'lt-status', role: 'status' }, msg),
+      hx('div', { class: 'lt-actions' }, btn(t('line.profileCancel'), 'lt-prof-cancel', () => { cancelProfile(); refresh(); })));
     return;
   }
   const kids: Node[] = [head];
-  if (failed.has(h.key)) kids.push(el('p', { class: 'lt-refuse', role: 'alert' }, t('line.profileFailed')));
-  else kids.push(el('p', { class: 'lt-hint' }, t(reaches3dep(h.line) ? 'line.profileIntro' : 'line.profileIntroWorld')));
-  kids.push(el('div', { class: 'lt-actions' },
+  if (failed.has(h.key)) kids.push(hx('p', { class: 'lt-refuse', role: 'alert' }, t('line.profileFailed')));
+  else kids.push(hx('p', { class: 'lt-hint' }, t(reaches3dep(h.line) ? 'line.profileIntro' : 'line.profileIntroWorld')));
+  kids.push(hx('div', { class: 'lt-actions' },
     btn(failed.has(h.key) ? t('line.profileRetry') : t('line.profileShow'), 'lt-prof-show', () => void start(h))));
   sec.replaceChildren(...kids);
 }
@@ -254,10 +246,10 @@ function readoutText(p: LineProfile, d: number | null): string {
 
 function chartBlock(h: ProfileHost, p: LineProfile): Node[] {
   const st = profileStats(p.points);
-  const cv = el('canvas', { class: 'lt-prof-chart', tabindex: '0', role: 'img' });
+  const cv = hx('canvas', { class: 'lt-prof-chart', tabindex: '0', role: 'img' });
   cv.setAttribute('aria-label', t('line.profileAria', {
     min: fmtElevation(st.min!.m!), max: fmtElevation(st.max!.m!), up: fmtElevation(st.climbM), down: fmtElevation(st.descentM) }));
-  const readout = el('p', { class: 'lt-prof-readout', 'aria-live': 'polite' }, readoutText(p, hoverD));
+  const readout = hx('p', { class: 'lt-prof-readout', 'aria-live': 'polite' }, readoutText(p, hoverD));
   let frame: Frame | null = null, w = 0;
   const paint = () => {
     const g = cv.getContext('2d');
@@ -300,8 +292,8 @@ function chartBlock(h: ProfileHost, p: LineProfile): Node[] {
   });
   if (hoverD !== null) h.onHover(p.points[nearest(p, hoverD)].pos);
 
-  const dl = el('dl', { class: 'lt-facts lt-prof-stats' });
-  const fact = (k: string, v: string) => dl.append(el('dt', {}, k), el('dd', {}, v));
+  const dl = hx('dl', { class: 'lt-facts lt-prof-stats' });
+  const fact = (k: string, v: string) => dl.append(hx('dt', {}, k), hx('dd', {}, v));
   fact(t('line.profileMin'), `${fmtElevation(st.min!.m!)} (${t('line.profileAt', { d: fmtDistance(st.min!.d) })})`);
   fact(t('line.profileMax'), `${fmtElevation(st.max!.m!)} (${t('line.profileAt', { d: fmtDistance(st.max!.d) })})`);
   fact(t('line.profileClimb'), fmtElevation(st.climbM));
@@ -312,22 +304,22 @@ function chartBlock(h: ProfileHost, p: LineProfile): Node[] {
   fact(t('line.profileSource'), [st.n3dep && `${SOURCE_NAME['3dep']} ${share(st.n3dep)}`, st.nTerrarium && `${SOURCE_NAME.terrarium} ${share(st.nTerrarium)}`]
     .filter(Boolean).join(' · '));
 
-  const legend = el('div', { class: 'lt-prof-legend' },
+  const legend = hx('div', { class: 'lt-prof-legend' },
     ...(['3dep', 'terrarium'] as const).filter(s => (s === '3dep' ? st.n3dep : st.nTerrarium) > 0)
-      .map(s => el('span', { class: 'lt-prof-key' }, el('span', { class: 'lt-prof-sw', style: `background:${COLOUR[s].line}` }), SOURCE_NAME[s])));
-  const notes = el('ul', { class: 'lt-notes' });
-  if (st.nTerrarium) notes.append(el('li', {}, t('line.profileTerrNote')));
-  if (st.nGap) notes.append(el('li', { class: 'lt-warn' }, t('line.profileGaps', { n: num(st.nGap) })));
+      .map(s => hx('span', { class: 'lt-prof-key' }, hx('span', { class: 'lt-prof-sw', style: `background:${COLOUR[s].line}` }), SOURCE_NAME[s])));
+  const notes = hx('ul', { class: 'lt-notes' });
+  if (st.nTerrarium) notes.append(hx('li', {}, t('line.profileTerrNote')));
+  if (st.nGap) notes.append(hx('li', { class: 'lt-warn' }, t('line.profileGaps', { n: num(st.nGap) })));
   const credits = profileCredits(st);
   const png = btn(t('line.profilePng'), 'lt-prof-png', () => savePng(h, p, credits));
   const csv = btn(t('line.profileCsv'), 'lt-prof-csv', () =>
     downloadFile(profileCsv(p, { title: h.title, lineCredit: h.lineCredit }), fileName(h.title, 'csv'), 'text/csv;charset=utf-8'));
   return [
-    el('div', { class: 'lt-prof-plot' }, cv, legend),
+    hx('div', { class: 'lt-prof-plot' }, cv, legend),
     readout,
-    el('div', { class: 'lt-prof-foot' }, dl,
-      el('div', {}, notes, el('div', { class: 'lt-actions' }, png, csv),
-        el('p', { class: 'lt-prof-credit' }, t('line.profileCredit', { credits: credits.join('; ') })))),
+    hx('div', { class: 'lt-prof-foot' }, dl,
+      hx('div', {}, notes, hx('div', { class: 'lt-actions' }, png, csv),
+        hx('p', { class: 'lt-prof-credit' }, t('line.profileCredit', { credits: credits.join('; ') })))),
   ];
 }
 

@@ -2,7 +2,8 @@
 // polygon with holes, bbox-centre points, completeness and precision text,
 // crossings, and the line validator.
 import { describe as suite, it, expect, vi, beforeEach } from 'vitest';
-import type { Outcome, QueryResult } from './dataset-query.js';
+import type { QueryResult } from './dataset-query.js';
+import type { Outcome } from '../src/outcome.js';
 
 const m = vi.hoisted(() => ({
   kinds: {} as Record<string, 'geojson' | 'pmtiles'>,

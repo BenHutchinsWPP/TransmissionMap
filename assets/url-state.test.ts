@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { beginExperience, endExperienceLink, activeExperienceId, experienceIsDirty } from './experience-link.js';
 import { readUrlState, writeUrlState } from './url-state.js';
 import { splitHash, parseCameraSegment, formatCameraSegment, parseUrlState, formatUrlState, defaultView, LEGACY_BUCKET_CODES } from './url-state-codec.js';
-import { MW_SLIDER_MAX } from './filters.js';
+import { MW_SLIDER_MAX } from '../src/colors/ramps.js';
 import { LEGEND_FILTERS } from './ui/ui-legends.js';
 import { getLocale, setLocale } from '../src/i18n/index.js';
 

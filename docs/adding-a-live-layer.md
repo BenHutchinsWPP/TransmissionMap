@@ -201,6 +201,7 @@ For a GeoJSON feed, don't hand-roll this. Use the shared factory:
 ```ts
 // assets/<name>-staleness.ts
 import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
+import { staleDialog } from './stale-dialog.js';
 
 export const <NAME>_LIVE: LiveStalenessConfig = {
   sourceKey: '<registry id>',
@@ -212,7 +213,10 @@ export const <NAME>_LIVE: LiveStalenessConfig = {
   reenableId: '…', dismissId: '…',
 };
 
-export function init<Name>Staleness() { initLiveStaleness(<NAME>_LIVE); }
+export function init<Name>Staleness() {
+  staleDialog({ ...<NAME>_LIVE, feed: '<name>' });   // builds the modal before the factory looks up its ids
+  initLiveStaleness(<NAME>_LIVE);
+}
 ```
 
 Export the config: the legend chip (step 6) and `assets/diagnostics.ts` read
@@ -223,8 +227,9 @@ that and the dialog ids.
 It auto-refetches on an interval and on return-to-page (mobile browsers freeze
 background timers) — through `pollWhileVisible()` in `assets/live-poll.ts` — and when the data is older than `maxAgeMs` it **auto-hides
 every layer on that source** and shows a blocking modal until the user
-explicitly accepts the risk. Add the `<dialog>` to `index.html` — copy
-`#wildfireStaleDialog`.
+explicitly accepts the risk. `staleDialog()` (`assets/stale-dialog.ts`) builds the
+`<dialog>`; add `stale.<name>.title`, `.body1` (with the `<strong id="<name>StaleAge">`
+element) and `.body2` to every locale, and the feed to `StaleDialogCfg['feed']` and to `ORDER` in `stale-dialog.ts`.
 
 The factory does `setData` on a `GeoJSONSource`. **A raster or feature-state
 feed can't use it** — write your own fetch, but drive it with the same poll
@@ -289,7 +294,7 @@ Frontend (both shapes):
 - [ ] Legend + age pill (`<span class="legend-age" id="…Age">`), wired in `ui-legends.ts`
 - [ ] Chip's stale edge reads the config's `maxAgeMs`, not a literal
 - [ ] Refresh loop: `initLiveStaleness(<NAME>_LIVE)` for GeoJSON, `pollWhileVisible()` (`assets/live-poll.ts`) around your own fetch otherwise
-- [ ] Stale `<dialog>` in `index.html` (GeoJSON feeds)
+- [ ] `stale.<name>.*` strings in every locale and `staleDialog()` called from the feed's init (GeoJSON feeds)
 - [ ] `layerIds` lists every registry layer on the source (config added to `LIVE_CONFIGS` in `live-staleness.test.ts`)
 - [ ] Raster only: `.i16.gz` LUT + `.json` meta emitted, wired into `RASTER_PROBES`
 - [ ] `maxAgeMs` > worst-case cron gap

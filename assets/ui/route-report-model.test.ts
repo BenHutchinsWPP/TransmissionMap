@@ -3,7 +3,7 @@
 // Role: the model of the fixture session equals hand-written figures and wording, and the printed
 //       report's text equals the model's text in order (the DOM report is the reference for wording).
 //       English comes from src/i18n/route/en.ts and locales/en.ts (the shipped text).
-// Deps: ./route-report-model.ts, ./route-report.ts, ./route-tabs/fixture.ts, state.ts.
+// Deps: ./route-report-model.ts, ./route-format.ts, ./route-report.ts, ./route-tabs/fixture.ts, state.ts.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -15,7 +15,7 @@ vi.mock('../../src/i18n/index.js', async () => {
   return { t: (k: string, p?: Record<string, string | number>) => (en[k] ?? k).replace(/\{(\w+)\}/g, (m, n) => (p && n in p ? String(p[n]) : m)) };
 });
 
-import { fmtMoneyHead } from './route-tabs/widgets.js';
+import { fmtMoneyHead } from './route-format.js';
 import { buildReportModel, costCsv, fillTpl, fmtMoney, reportText } from './route-report-model.js';
 import { openRouteReport } from './route-report.js';
 import { FIXTURE_RESULT, FIXTURE_SESSION, fakeTabContext, fixtureCost } from './route-tabs/fixture.js';

@@ -63,10 +63,10 @@
 //       docs/internal/routing-notes.md.
 // Deps: grid.ts, cog-read.ts, dijkstra.ts, pi-reduce.ts, cost.ts, similar-cost.ts,
 //       surface-image.ts, preset-patch.ts, upload-layer.ts, profile.ts, inspect.ts, report-read.ts, crossings-exact.ts, screening.ts,
-//       src/registry/route-presets.ts; dataset-query.ts
+//       src/registry/route-presets.ts; src/outcome.ts
 //       (Outcome, type only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { routePreset, type BandName, type EndKind, type RoutePreset } from '../../src/registry/route-presets.js';
 import { albersForward, albersInverse, gridFromJson, type Grid } from './grid.js';
 import { createLimiter, openTiff, readTile, readWindow, type Fetcher, type Limiter, type TiffInfo } from './cog-read.js';

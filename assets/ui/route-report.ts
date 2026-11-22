@@ -4,7 +4,7 @@
 //       (title, badge, the route usage notice as a disclaimer, map snapshot, KPIs + estimate range, endpoints, optimality sentence,
 //       waterfall, long-section strip, crossings table, method, sources),
 //       the crossings table taking the exact counts of the kinds session.exact covers while it belongs to
-//       the shown result (crossings.ts shownExact); while some counted kinds are exact and some not, the exact rows
+//       the shown result (route-format.ts shownExact); while some counted kinds are exact and some not, the exact rows
 //       end in " (exact)" and the "approximate" sentence stands for the rest; all exact, one sentence saying the counts come from vector data and the miles from cells,
 //       takes the map snapshot inside a `render` event after an unpadded refit (cell weights and
 //       similar-cost areas at opacity 0 for it), restores the camera and those overlays, then prints with `body.printing-route-report` set (cleared, and the
@@ -15,7 +15,7 @@
 //       The wording and figures come from `route-report-model.ts` (`buildReportModel`); this file only
 //       lays them out, so the PDF and the print show the same text (including the method's uploaded-layer lines).
 // Deps: route-report-model.ts (the model), route-tabs/widgets.ts (builders), route-tabs/types.ts (types),
-//       route-observations.ts (shared aviation tables), state.ts (map), i18n, ./route-report.css.
+//       route-observations.ts (shared aviation tables), state.ts (map), utils/utils-dom.ts (h), i18n, ./route-report.css.
 
 import './route-report.css';
 import { state } from '../state.js';
@@ -24,16 +24,10 @@ import { routeObservations } from './route-observations.js';
 import { buildReportModel, fillTpl, type RouteReportModel } from './route-report-model.js';
 import { badge, kpis, rangeBar, waterfall } from './route-tabs/widgets.js';
 import { t } from '../../src/i18n/index.js';
+import { h } from '../utils/utils-dom.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const OVERLAYS = ['rp-weight', 'rp-surface'];
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
 
 /** Cost × track and land-manager track as small SVG bars over the profile's runs. */
 function strip(m: NonNullable<RouteReportModel['strip']>): SVGSVGElement {
@@ -73,26 +67,26 @@ function strip(m: NonNullable<RouteReportModel['strip']>): SVGSVGElement {
 }
 
 function crossingsTable(c: NonNullable<RouteReportModel['crossings']>): HTMLElement {
-  const wrap = el('div');
-  const table = el('table');
+  const wrap = h('div');
+  const table = h('table');
   table.setAttribute('aria-label', t('route.cross.table'));
-  const head = el('tr');
-  c.head.forEach((h, i) => head.append(el('th', i > 0 ? 'rr-n' : undefined, h)));
+  const head = h('tr');
+  c.head.forEach((col, i) => head.append(h('th', i > 0 ? 'rr-n' : undefined, col)));
   table.append(head);
   for (const r of c.rows) {
-    const tr = el('tr');
-    tr.append(el('td', undefined, r.label), el('td', 'rr-n', r.count), el('td', 'rr-n', r.miles));
+    const tr = h('tr');
+    tr.append(h('td', undefined, r.label), h('td', 'rr-n', r.count), h('td', 'rr-n', r.miles));
     table.append(tr);
   }
   wrap.append(table);
-  if (c.aviationNote) wrap.append(el('p', 'rr-small', c.aviationNote));
-  wrap.append(el('p', 'rr-small', c.note));
+  if (c.aviationNote) wrap.append(h('p', 'rr-small', c.aviationNote));
+  wrap.append(h('p', 'rr-small', c.note));
   return wrap;
 }
 
-function section(h: string, ...kids: (Node | string)[]): HTMLElement {
-  const s = el('section');
-  s.append(el('h2', undefined, h), ...kids);
+function section(heading: string, ...kids: (Node | string)[]): HTMLElement {
+  const s = h('section');
+  s.append(h('h2', undefined, heading), ...kids);
   return s;
 }
 
@@ -143,27 +137,27 @@ export function openRouteReport(ctx: RouteTabContext): void {
   const m = buildReportModel(session, money);
   if (!m) return;
 
-  const root = el('section');
+  const root = h('section');
   root.id = 'route-report';
-  const head = el('header');
-  head.append(el('h1', undefined, m.title), el('p', 'rr-sub', m.subtitle), badge(result.optimality));
+  const head = h('header');
+  head.append(h('h1', undefined, m.title), h('p', 'rr-sub', m.subtitle), badge(result.optimality));
 
-  const img = el('img', 'rr-snap');
+  const img = h('img', 'rr-snap');
   img.alt = m.snapshot.alt;
   img.hidden = true;
-  const na = el('div', 'rr-snap-na', m.snapshot.unavailable);
+  const na = h('div', 'rr-snap-na', m.snapshot.unavailable);
   na.hidden = true;
 
   const wf = waterfall(m.waterfall.lines, { money });
 
-  const disclaimer = section(m.disclaimer.heading, ...m.disclaimer.paras.map((x) => el('p', undefined, x)));
+  const disclaimer = section(m.disclaimer.heading, ...m.disclaimer.paras.map((x) => h('p', undefined, x)));
   disclaimer.className = 'rr-disclaimer rr-keep';
   root.append(head, disclaimer, img, na);
-  root.append(section(m.cost.heading, kpis(result, session.dollars), rangeBar(result.cost, session.dollars), el('p', 'rr-small', m.cost.note)));
-  root.append(section(m.endpoints.heading, el('div', undefined, m.endpoints.a), el('div', undefined, m.endpoints.b), el('p', undefined, m.endpoints.optimality)));
+  root.append(section(m.cost.heading, kpis(result, session.dollars), rangeBar(result.cost, session.dollars), h('p', 'rr-small', m.cost.note)));
+  root.append(section(m.endpoints.heading, h('div', undefined, m.endpoints.a), h('div', undefined, m.endpoints.b), h('p', undefined, m.endpoints.optimality)));
   root.append(section(m.waterfall.heading, wf));
   if (m.strip) {
-    const along = section(m.strip.heading, el('div', 'rr-legend', m.strip.legend), strip(m.strip));
+    const along = section(m.strip.heading, h('div', 'rr-legend', m.strip.legend), strip(m.strip));
     along.className = 'rr-keep';   // prints whole: its heading never ends a page without its tracks
     root.append(along);
   }
@@ -172,27 +166,27 @@ export function openRouteReport(ctx: RouteTabContext): void {
   const me = m.method;
   const edits: Node[] = [];
   if (me.editsSummary !== null) {
-    edits.push(el('p', undefined, me.editsSummary));
-    const ul = el('ul', 'rr-edits');
-    for (const line of me.edits) ul.append(el('li', undefined, line));
+    edits.push(h('p', undefined, me.editsSummary));
+    const ul = h('ul', 'rr-edits');
+    for (const line of me.edits) ul.append(h('li', undefined, line));
     edits.push(ul);
   }
   if (me.uploads.length) {
-    const ul = el('ul', 'rr-edits');
-    for (const u of me.uploads) ul.append(el('li', undefined, fillTpl(u)));
+    const ul = h('ul', 'rr-edits');
+    for (const u of me.uploads) ul.append(h('li', undefined, fillTpl(u)));
     edits.push(ul);
   }
   root.append(section(
     me.heading,
-    el('p', undefined, me.preset),
+    h('p', undefined, me.preset),
     ...edits,
-    el('p', undefined, me.attribution),
-    el('p', undefined, me.caveat),
-    el('p', undefined, me.class5),
-    el('p', undefined, me.grid),
-    el('h2', undefined, me.sourcesHeading), el('p', undefined, me.sources),
+    h('p', undefined, me.attribution),
+    h('p', undefined, me.caveat),
+    h('p', undefined, me.class5),
+    h('p', undefined, me.grid),
+    h('h2', undefined, me.sourcesHeading), h('p', undefined, me.sources),
   ));
-  root.append(section(m.caveats.heading, el('p', undefined, m.caveats.screening), el('p', 'rr-small', m.caveats.credit)));
+  root.append(section(m.caveats.heading, h('p', undefined, m.caveats.screening), h('p', 'rr-small', m.caveats.credit)));
   document.body.append(root);
 
   snapshot(result.path.coordinates, img, na, () => {

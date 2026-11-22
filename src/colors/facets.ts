@@ -2,7 +2,7 @@
 // Each record carries the facet's URL group code, field (or, for kv and fuel,
 // the per-layer `fields` its buckets classify), buckets (with their
 // URL codes and `values`), default active set, title key, swatch and target map
-// layers. facet(key) looks one up; facetValueMap() is its bucket id → feature
+// layers. facet(key) looks one up; facetAllIds(f) lists the bucket ids its master checkbox selects; facetValueMap() is its bucket id → feature
 // values map, the one every filter and value domain reads.
 // assets/filters.ts derives each facet's applier (FACET_APPLIERS),
 // assets/ui/ui-legends.ts pairs record and applier into LEGEND_FILTERS and
@@ -106,6 +106,12 @@ export function facet(key: string): BucketedField {
   const f = BY_KEY[key];
   if (!f) throw new Error(`unknown facet "${key}"`);
   return f;
+}
+
+/** Every bucket id a facet's master checkbox selects: the sync buckets when the
+ *  facet has them, else its buckets. */
+export function facetAllIds(f: BucketedField): string[] {
+  return (f.syncBuckets ?? f.buckets).map(b => b.id);
 }
 
 /** A facet's bucket id → feature values: the buckets' `values`, or, when no

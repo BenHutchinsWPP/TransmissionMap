@@ -20,7 +20,7 @@ import routeEn from '../../src/i18n/route/en.js';
 import { openRouteReport } from './route-report.js';
 import { FIXTURE_SESSION, fakeTabContext } from './route-tabs/fixture.js';
 import { observationFixture } from './route-observations.fixture.js';
-import { pathKey } from './route-tabs/crossings.js';
+import { pathKey } from './route-format.js';
 import { state } from '../state.js';
 import { createCustomPresetStore } from '../route/custom-presets.js';
 

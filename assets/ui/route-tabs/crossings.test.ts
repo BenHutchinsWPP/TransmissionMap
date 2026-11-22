@@ -3,7 +3,7 @@
 // row click fits that kind's points, the "Show on map" toggles, the CSV text and wording.
 // Exact crossings (session.exact): counts, notes, the names list and the CSV point lines.
 // English comes from src/i18n/route/en.ts and locales/en.ts (the shipped text).
-// Deps: crossings.ts, fixture.ts.
+// Deps: crossings.ts, ../route-format.ts, fixture.ts.
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -15,7 +15,8 @@ vi.mock('../../../src/i18n/index.js', async () => {
   return { t: (k: string, p?: Record<string, string | number>) => (en[k] ?? k).replace(/\{(\w+)\}/g, (m, n) => (p && n in p ? String(p[n]) : m)) };
 });
 
-import tab, { crossingsCsv, crossingRows, pathKey, shownExact } from './crossings.js';
+import tab from './crossings.js';
+import { crossingsCsv, crossingRows, pathKey, shownExact } from '../route-format.js';
 import { FIXTURE_SESSION, fakeTabContext } from './fixture.js';
 import type { CrossingPoint } from '../../route/profile.js';
 import type { RouteSession } from './types.js';

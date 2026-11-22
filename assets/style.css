@@ -3073,8 +3073,8 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
 @media (max-width: 640px) {
   .map-container.has-drawer .layers-panel { max-height: calc(100% - 24px - var(--drawer-h)); }
 }
-/* Compact layouts (a narrow or a short screen; ui-table.ts's COMPACT reads
-   the same query): the summary folds to one line, the pills and the credit
+/* Compact layouts (a narrow or a short screen; the media query is repeated
+   as COMPACT in drawer.ts and ui-table.ts and must agree with this one): the summary folds to one line, the pills and the credit
    share a footer line, and the Columns panel covers the drawer. */
 @media (max-width: 640px), (max-height: 500px) {
   .table-drawer {

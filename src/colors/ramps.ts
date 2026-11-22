@@ -160,6 +160,9 @@ const HEAT_RAMP_STOPS = [
 ];
 export const HEAT_RAMP = { stops: HEAT_RAMP_STOPS, max: 100, minLabel: "low", maxLabel: "high" };
 
+// ─── Generator MW range filter ────────────────────────────────────────────────
+export const MW_SLIDER_MAX = 10000; // sentinel MW: top of range = no upper bound
+
 // ─── EIA year filter (playback) bounds ────────────────────────────────────────
 export const YEAR_FILTER_MIN     = 1900;
 export const YEAR_FILTER_MAX     = 2031;

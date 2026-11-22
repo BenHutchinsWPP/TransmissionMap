@@ -1,6 +1,6 @@
 // ─── Proximity pane opener (main bundle) ─────────────────────────────────────
 // openProximity(from?) loads the ui-proximity.ts lazy chunk (which brings the
-// table drawer chunk, Tabulator and the proximity core with it) and opens the
+// drawer shell, Tabulator and the proximity core with it) and opens the
 // drawer's Proximity tab. Tools ▸ Proximity opens it through here, so
 // none of that lands in the boot bundle. A chunk that fails to load is
 // recorded and retried on the next call.

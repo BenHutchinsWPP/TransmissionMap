@@ -13,10 +13,10 @@
 //       or the signal aborts, the frame is removed and the next run makes a new
 //       one. This module only runs code: the caller decides what reaches a model.
 //
-// Deps: dataset-query.ts (Outcome type only); public/sandbox.html (built from
+// Deps: src/outcome.ts (Outcome type only); public/sandbox.html (built from
 //       sandbox/runner.js + sandbox/geo-kit.ts by scripts/build_sandbox.mjs).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 
 export const SANDBOX_URL = `${import.meta.env.BASE_URL}sandbox.html`;
 export const MAX_INPUT_CHARS = 5 * 1024 * 1024;

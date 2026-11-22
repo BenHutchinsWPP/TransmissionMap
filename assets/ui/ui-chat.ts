@@ -1,13 +1,13 @@
 // ─── Map chat: the Ask tab of the table drawer (lazy chunk) ──────────────────
-// Role: the visitor's side of the map agent, built into ui-table.ts's Ask pane
-//       (askPanel / openAsk / closeAsk), so an answer and the table it opens
+// Role: the visitor's side of the map agent, built into the drawer's Ask pane
+//       (drawer.ts panel('ask') / openPane('ask')), so an answer and the table it opens
 //       share the drawer, one tab at a time.
 //         openChat(from?)  open the Ask pane (File ▸ Ask the map…), building
 //                      the chat on first use — after the usage notice (notice-gate.ts,
 //                      notice-dialog.ts) is accepted: until then nothing is built, no
 //                      model list is fetched, and Cancel leaves the drawer as it was.
 //         resumeChat()     (same notice first) after a reload of this tab whose drawer had Ask open
-//                      (ui-table.ts restoreDrawer, from ui-menubar.ts's boot
+//                      (drawer.ts restoreDrawer, from ui-menubar.ts's boot
 //                      hook): rebuilt from the snapshot (empty when it fails
 //                      validation) and opened without focus and without
 //                      fetching the catalogue until the visitor touches the pane.
@@ -19,7 +19,7 @@
 //       undo step. Vega and canvas cards come back as Re-run; a template card
 //       re-validates its params (validateTemplateArgs) and an html one comes
 //       back as Re-run, so a per-county card never repaints the main map on its
-//       own. Whether Ask is open is ui-table.ts's `tm-drawer`, not this key's.
+//       own. Whether Ask is open is drawer.ts's `tm-drawer`, not this key's.
 //       Each message goes to agent/loop.ts ask(): a local command runs at once
 //       with no key and no network; anything else goes to the model with the
 //       visitor's own OpenRouter key. A confirm card shows before a model's
@@ -28,10 +28,10 @@
 //       append(string), attributes) — never as HTML; eslint.config.js holds
 //       this module and assets/agent/ to it. Strings: data-i18n* for fixed
 //       ones (ui.ts re-translates them), data-chat-key (+ params) for the rest,
-//       redrawn here on lang:changed. Esc closes the chat (ui-table.ts) and
+//       redrawn here on lang:changed. Esc closes the chat (drawer.ts) and
 //       stops a request in flight; focus returns to what opened it.
 //
-// Deps: ui-table.ts (askPanel, openAsk), ui-chart.ts (chartCard), ui-canvas.ts
+// Deps: utils/utils-dom.ts (hx), drawer.ts (panel, openPane), ui-chart.ts (chartCard), ui-canvas.ts
 //       (canvasCard, closeAllCanvases; dynamic import), agent/loop.ts (ask, runLocal,
 //       newSession, history, validateHistory), agent/local-commands.ts (localContext,
 //       LOCAL_EXAMPLES), agent/openrouter.ts (models), agent/key-store.ts,
@@ -47,7 +47,7 @@
 // Loaded by: ui-menubar.ts (dynamic import: File ▸ Ask the map…, or its boot
 //       hook when a restorable tm-drawer snapshot had Ask open — resumeChat).
 
-import { askPanel, openAsk } from './ui-table.js';
+import { panel, openPane } from './drawer.js';
 import { chartCard } from './ui-chart.js';
 import { renderMarkdown } from './chat-markdown.js';
 import { validateChart, type Chart } from '../chart-spec.js';
@@ -68,6 +68,7 @@ import { currentView } from '../view-state.js';
 import { formatUrlState } from '../url-state-codec.js';
 import { on } from '../state-bus.js';
 import { t } from '../../src/i18n/index.js';
+import { hx } from '../utils/utils-dom.js';
 import { noticeAccepted, CHAT_NOTICE_VERSION } from './notice-gate.js';
 import { showNotice } from './notice-dialog.js';
 
@@ -107,20 +108,9 @@ let pendingCanvas: { code: number; layers?: unknown[] } | null = null;
 let codeIds = 0;
 
 // ─── DOM, as text only ───────────────────────────────────────────────────────
-type Kid = Node | string | null | undefined | false;
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: Kid[]): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else e.setAttribute(k, v);
-  }
-  for (const k of kids) if (k) e.append(k);
-  return e;
-}
-
 /** An element showing t(key, params), redrawn on lang:changed. */
 function tx<K extends keyof HTMLElementTagNameMap>(tag: K, key: string, params?: Record<string, string | number>, attrs: Record<string, string> = {}) {
-  const e = el(tag, attrs);
+  const e = hx(tag, attrs);
   setTx(e, key, params);
   return e;
 }
@@ -171,7 +161,7 @@ export function openChat(from?: HTMLElement | null): void {
   (keyShown ? q('.chat-key-input') : q('.chat-input')).focus();
 }
 
-/** After a reload of this tab whose drawer had Ask open (ui-table.ts
+/** After a reload of this tab whose drawer had Ask open (drawer.ts
  *  restoreDrawer): the chat rebuilt from tm-chat and opened, with no focus (no
  *  phone keyboard) and no catalogue fetch until the visitor touches the pane. */
 export async function resumeChat(): Promise<void> {
@@ -188,7 +178,7 @@ export async function resumeChat(): Promise<void> {
 }
 
 function open(from?: HTMLElement | null) {
-  openAsk(() => { stop(); canvasMod?.closeAllCanvases(); touched(); }, from);
+  openPane('ask', () => { stop(); canvasMod?.closeAllCanvases(); touched(); }, from);
   touched();
 }
 
@@ -197,11 +187,11 @@ function stop() { busy?.abort(); }
 // ─── Building the pane (once) ────────────────────────────────────────────────
 function build(quiet = false) {
   if (pane) return;
-  pane = askPanel();
+  pane = panel('ask');
   const btn = (cls: string, key: string, attrs: Record<string, string> = {}) =>
     tx('button', key, undefined, { type: 'button', class: `td-btn ${cls}`, ...attrs });
 
-  const select = el('select', { class: 'chat-model', 'aria-label': t('chat.model'), 'data-i18n-aria-label': 'chat.model' });
+  const select = hx('select', { class: 'chat-model', 'aria-label': t('chat.model'), 'data-i18n-aria-label': 'chat.model' });
   fillModels(select);
   select.addEventListener('change', () => { void pickModel(select); });
   const loadCatalogue = () => { void listToolModels().then(list => { if (list) { catalogue = list; fillModels(select); } }); };
@@ -214,26 +204,26 @@ function build(quiet = false) {
   const keyBtn = btn('chat-key-btn', 'chat.key', { 'aria-expanded': 'false', 'aria-controls': 'chat-key' });
   keyBtn.addEventListener('click', () => showKeyForm(q('.chat-key').hidden === true));
 
-  const bar = el('div', { class: 'chat-bar' }, select, tx('span', 'chat.cost', { cost: costText() }, { class: 'chat-cost' }), keyBtn);
+  const bar = hx('div', { class: 'chat-bar' }, select, tx('span', 'chat.cost', { cost: costText() }, { class: 'chat-cost' }), keyBtn);
 
-  const keyInput = el('input', {
+  const keyInput = hx('input', {
     class: 'chat-key-input', type: 'password', autocomplete: 'off', spellcheck: 'false',
     placeholder: 'sk-or-v1-…', 'aria-describedby': 'chat-key-status',
   });
-  const remember = el('input', { type: 'checkbox', class: 'chat-remember-box' });
+  const remember = hx('input', { type: 'checkbox', class: 'chat-remember-box' });
   remember.addEventListener('change', () => {
     const k = getKey();
     if (k) { setKey(k, remember.checked); syncKey(); }
   });
   const connect = btn('chat-connect', 'chat.connect');
   const forget = btn('chat-forget', 'chat.forget');
-  const keyForm = el('div', { class: 'chat-key', id: 'chat-key', hidden: '' },
+  const keyForm = hx('div', { class: 'chat-key', id: 'chat-key', hidden: '' },
     tx('p', 'chat.keyIntro'),
-    el('label', {}, tx('span', 'chat.keyLabel'), keyInput),
-    el('label', { class: 'chat-remember' }, remember, tx('span', 'chat.remember')),
-    el('div', { class: 'chat-key-actions' }, connect, forget,
+    hx('label', {}, tx('span', 'chat.keyLabel'), keyInput),
+    hx('label', { class: 'chat-remember' }, remember, tx('span', 'chat.remember')),
+    hx('div', { class: 'chat-key-actions' }, connect, forget,
       tx('a', 'chat.getKey', undefined, { href: KEY_URL, target: '_blank', rel: 'noopener noreferrer' })),
-    el('p', { class: 'chat-key-status', id: 'chat-key-status', role: 'status' }),
+    hx('p', { class: 'chat-key-status', id: 'chat-key-status', role: 'status' }),
     tx('p', 'chat.keyNote'));
   const doConnect = () => {
     if (!setKey(keyInput.value, remember.checked)) { setTx(q('.chat-key-status'), 'chat.keyBad'); q('.chat-key-status').dataset.bad = ''; return; }
@@ -252,14 +242,14 @@ function build(quiet = false) {
     keyInput.focus();
   });
 
-  const log = el('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite', 'aria-label': t('chat.log'), 'data-i18n-aria-label': 'chat.log', tabindex: '0' },
+  const log = hx('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite', 'aria-label': t('chat.log'), 'data-i18n-aria-label': 'chat.log', tabindex: '0' },
     tx('p', 'chat.welcome', { examples: LOCAL_EXAMPLES.map(x => `“${x}”`).join(', ') }, { class: 'chat-msg chat-hint' }));
   // A log at its end stays there when the pane narrows (the table opening beside it).
   let atEnd = true;
   log.addEventListener('scroll', () => { atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 4; });
   if (globalThis.ResizeObserver) new ResizeObserver(() => { if (atEnd) log.scrollTop = log.scrollHeight; }).observe(log);
 
-  const input = el('input', {
+  const input = hx('input', {
     class: 'chat-input', type: 'text', autocomplete: 'off', maxlength: '2000',
     'aria-label': t('chat.input'), 'data-i18n-aria-label': 'chat.input',
     placeholder: t('chat.placeholder'), 'data-i18n-placeholder': 'chat.placeholder',
@@ -267,7 +257,7 @@ function build(quiet = false) {
   const send = tx('button', 'chat.send', undefined, { type: 'submit', class: 'td-btn chat-send' });
   const stopBtn = btn('chat-stop', 'chat.stop', { hidden: '' });
   stopBtn.addEventListener('click', stop);
-  const form = el('form', { class: 'chat-form' }, input, send, stopBtn);
+  const form = hx('form', { class: 'chat-form' }, input, send, stopBtn);
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
     const text = input.value.trim();
@@ -339,7 +329,7 @@ function fillModels(select: HTMLSelectElement) {
   const kids: HTMLElement[] = [];
   if (catalogue) kids.push(Object.assign(new Option(t('chat.modelHint'), ''), { disabled: true }));
   for (const g of order) {
-    const group = el('optgroup', { label: name(g) });
+    const group = hx('optgroup', { label: name(g) });
     for (const id of groups.get(g)!) group.append(new Option(modelLabel(id, byId.get(id)), id));
     kids.push(group);
   }
@@ -380,13 +370,13 @@ function addNote(key: string, params?: Record<string, string | number>, cls = 'c
 
 /** A chip without its Undo: where the call ran, what it was asked, how it went. */
 function chipEl(e: Extract<Entry, { t: 'chip' }>, summary = `${e.name} ${e.args}`.trim()) {
-  const chip = el('div', { class: 'chat-chip', 'data-source': e.source, 'data-ok': String(e.ok), 'data-tool': e.name },
+  const chip = hx('div', { class: 'chat-chip', 'data-source': e.source, 'data-ok': String(e.ok), 'data-tool': e.name },
     tx('span', e.source === 'local' ? 'chat.local' : 'chat.modelBadge', undefined, { class: 'chat-chip-src' }),
-    el('details', { class: 'chat-chip-text' }, el('summary', { title: summary }, summary)));
-  if (!e.ok && e.reason !== undefined) chip.append(el('span', { class: 'chat-chip-why', title: e.reason }, e.reason));
+    hx('details', { class: 'chat-chip-text' }, hx('summary', { title: summary }, summary)));
+  if (!e.ok && e.reason !== undefined) chip.append(hx('span', { class: 'chat-chip-why', title: e.reason }, e.reason));
   const state = e.ok ? 'chat.done' : 'chat.failed';
   if (e.dl) chip.append(tx('span', 'chat.copyDownloadGone', undefined, { class: 'chat-chip-why' }));
-  chip.append(el('span', { class: 'chat-chip-state', role: 'img', 'aria-label': t(state), 'data-i18n-aria-label': state }, e.ok ? '✓' : '✕'));
+  chip.append(hx('span', { class: 'chat-chip-state', role: 'img', 'aria-label': t(state), 'data-i18n-aria-label': state }, e.ok ? '✓' : '✕'));
   return chip;
 }
 
@@ -463,7 +453,7 @@ function addCode(name: string, args: unknown) {
 }
 
 function addChoose(r: Extract<AskResult, { kind: 'choose' }>, text: string) {
-  const box = track(el('div', { class: 'chat-choose', role: 'group' }), { t: 'choose', labels: r.options.map(o => o.label) });
+  const box = track(hx('div', { class: 'chat-choose', role: 'group' }), { t: 'choose', labels: r.options.map(o => o.label) });
   const pick = async (o: LocalOption) => {
     box.querySelectorAll('button').forEach(b => { b.disabled = true; });
     lastView = viewKey();
@@ -472,7 +462,7 @@ function addChoose(r: Extract<AskResult, { kind: 'choose' }>, text: string) {
     touched();
   };
   for (const o of r.options) {
-    const b = el('button', { type: 'button', class: 'td-btn' }, o.label);
+    const b = hx('button', { type: 'button', class: 'td-btn' }, o.label);
     b.addEventListener('click', () => { void pick(o); });
     box.append(b);
   }
@@ -519,7 +509,7 @@ const cardOpts = (extra: RenderExtra | undefined, e?: Card | TemplateEntry | nul
 
 /** A confirm card's question; `result` is its settled line. */
 function confirmCard(e: Extract<Entry, { t: 'confirm' }>) {
-  const card = track(el('div', { class: 'chat-card', role: 'group' },
+  const card = track(hx('div', { class: 'chat-card', role: 'group' },
     tx('p', e.copy ? 'chat.confirmCopy' : e.svc ? 'chat.confirmService' : 'chat.confirm', { text: e.text, host: e.host }),
     ...(e.vetNote ? [tx('p', 'chat.notVetted')] : [])), e);
   const result = (ok: boolean) => tx('p', e.copy ? (ok ? 'chat.copied' : 'chat.notCopied') : e.svc ? (ok ? 'chat.added' : 'chat.notAdded') : ok ? 'chat.sent' : 'chat.notSent', { host: e.host }, { class: 'chat-card-result' });
@@ -534,7 +524,7 @@ function confirmOffPage(req: OffPageRequest, signal: AbortSignal): Promise<boole
     const { card, result } = confirmCard(e);
     const yes = tx('button', e.copy ? 'chat.confirmCopyYes' : e.svc ? 'chat.confirmAdd' : 'chat.confirmYes', undefined, { type: 'button', class: 'td-btn chat-confirm-yes' });
     const no = tx('button', e.copy ? 'chat.confirmCopyNo' : e.svc ? 'chat.confirmNoAdd' : 'chat.confirmNo', undefined, { type: 'button', class: 'td-btn chat-confirm-no' });
-    const actions = el('div', { class: 'chat-card-actions' }, yes, no);
+    const actions = hx('div', { class: 'chat-card-actions' }, yes, no);
     card.append(actions);
     const done = (ok: boolean) => {
       signal.removeEventListener('abort', abort);
@@ -595,18 +585,18 @@ async function submit(text: string) {
 // ─── One builder per entry: the live chat and a restore share it ─────────────
 function renderEntry(e: Entry): HTMLElement {
   switch (e.t) {
-    case 'user': return track(el('p', { class: 'chat-msg chat-user' }, e.text), e);
-    case 'bot': return track(el('div', { class: 'chat-msg chat-bot' }, renderMarkdown(e.text)), e);
+    case 'user': return track(hx('p', { class: 'chat-msg chat-user' }, e.text), e);
+    case 'bot': return track(hx('div', { class: 'chat-msg chat-bot' }, renderMarkdown(e.text)), e);
     case 'note': return track(tx('p', e.key, e.params, { class: `chat-msg ${e.cls}` }), e);
     case 'chip': return track(chipEl(e), e);   // a restored copy-download chip says "copy again": no button
-    case 'code': return track(el('details', { class: 'chat-chip chat-code', 'data-tool': e.tool },
-      tx('summary', CODE_CHIPS[e.tool].label), el('pre', {}, e.code)), e);
+    case 'code': return track(hx('details', { class: 'chat-chip chat-code', 'data-tool': e.tool },
+      tx('summary', CODE_CHIPS[e.tool].label), hx('pre', {}, e.code)), e);
     case 'chart': return track(chartCard(e.chart), e);
     case 'vega': case 'canvas': return track(placeholder(e), e);
     case 'template': return track(templatePlaceholder(e), e);
     case 'confirm': { const { card, result } = confirmCard(e); card.append(result(e.ok === true)); return card; }
-    case 'choose': return track(el('div', { class: 'chat-choose', role: 'group' },
-      ...e.labels.map(l => Object.assign(el('button', { type: 'button', class: 'td-btn' }, l), { disabled: true }))), e);
+    case 'choose': return track(hx('div', { class: 'chat-choose', role: 'group' },
+      ...e.labels.map(l => Object.assign(hx('button', { type: 'button', class: 'td-btn' }, l), { disabled: true }))), e);
   }
 }
 
@@ -614,10 +604,10 @@ function renderEntry(e: Entry): HTMLElement {
  *  code runs until the visitor clicks. */
 function placeholder(e: Card): HTMLElement {
   const again = tx('button', 'canvas.rerun', undefined, { type: 'button', class: 'td-btn chat-canvas-rerun' });
-  const why = el('p', { class: 'chat-canvas-error', role: 'status' });
-  const card = el('figure', { class: 'chat-canvas chat-canvas-restored', 'data-kind': e.t === 'vega' ? 'vega' : 'html' },
-    el('figcaption', { class: 'chat-canvas-title' }, e.title),
-    el('p', { class: 'chat-canvas-closed' }, tx('span', e.t === 'vega' ? 'chat.restore.vega' : 'chat.restore.canvas'), ' ', again), why);
+  const why = hx('p', { class: 'chat-canvas-error', role: 'status' });
+  const card = hx('figure', { class: 'chat-canvas chat-canvas-restored', 'data-kind': e.t === 'vega' ? 'vega' : 'html' },
+    hx('figcaption', { class: 'chat-canvas-title' }, e.title),
+    hx('p', { class: 'chat-canvas-closed' }, tx('span', e.t === 'vega' ? 'chat.restore.vega' : 'chat.restore.canvas'), ' ', again), why);
   again.addEventListener('click', () => { void rerun(e, card, again, why); });
   return card;
 }
@@ -658,10 +648,10 @@ async function rerun(e: Card, card: HTMLElement, btn: HTMLButtonElement, why: HT
  *  once when a frame slot is free, like a chart card). */
 function templatePlaceholder(e: TemplateEntry): HTMLElement {
   const again = tx('button', 'canvas.rerun', undefined, { type: 'button', class: 'td-btn chat-canvas-rerun' });
-  const why = el('p', { class: 'chat-canvas-error', role: 'status' });
-  const card = el('figure', { class: 'chat-canvas chat-canvas-restored', 'data-kind': e.kind, 'data-template': '' },
-    el('figcaption', { class: 'chat-canvas-title' }, e.title),
-    el('p', { class: 'chat-canvas-closed' }, tx('span', 'chat.restore.canvas'), ' ', again), why);
+  const why = hx('p', { class: 'chat-canvas-error', role: 'status' });
+  const card = hx('figure', { class: 'chat-canvas chat-canvas-restored', 'data-kind': e.kind, 'data-template': '' },
+    hx('figcaption', { class: 'chat-canvas-title' }, e.title),
+    hx('p', { class: 'chat-canvas-closed' }, tx('span', 'chat.restore.canvas'), ' ', again), why);
   const run = async () => {
     if (!card.isConnected) return;
     again.disabled = true;

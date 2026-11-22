@@ -39,7 +39,7 @@
 //       view-state.js (applyView), county-overlay.js (clearCountyOverlay), undo.js (undo, redo, asOwnStep),
 //       ui/panel-mirror.js (commitArea, commitSelection, commitWhere, syncPanel),
 //       ui/table-open.js (openTable), ui/ui-geocoder.js (findPlaces, placeSearchOn),
-//       dataset-query.js (describe, query, count, aggregate, allowedFields, Outcome), spatial-join.js (joinPoints, crossings),
+//       dataset-query.js (describe, query, count, aggregate, allowedFields), src/outcome.js (Outcome), spatial-join.js (joinPoints, crossings),
 //       sandbox/sandbox-host.js (runInSandbox; dynamic import), user-data/copy-fit.js (MAX_COPY_ITEMS, types),
 //       user-data/copy-rows.js (copyMode, copyNoun, copyAvailable, copyRows; dynamic import only),
 //       view-validate.js (selectionSize), services/service-spec.js (parseServiceUrl, validateServiceSpec,
@@ -70,7 +70,8 @@ import { undo as undoRaw, redo as redoRaw, asOwnStep } from './undo.js';
 import { commitArea, commitSelection, commitWhere, syncPanel } from './ui/panel-mirror.js';
 import { openTable } from './ui/table-open.js';
 import { findPlaces, placeSearchOn } from './ui/ui-geocoder.js';
-import { describe, query, allowedFields, QUERY_MAX_ROWS, type Outcome } from './dataset-query.js';
+import { describe, query, allowedFields, QUERY_MAX_ROWS } from './dataset-query.js';
+import type { Outcome } from '../src/outcome.js';
 import type { Condition } from '../src/registry/condition-compile.js';
 import { selectionSize, selectionIdsError, MAX_SELECTION_IDS } from '../src/registry/view-validate.js';
 import { MAX_COPY_ITEMS, type CopyDownload } from './user-data/copy-fit.js';

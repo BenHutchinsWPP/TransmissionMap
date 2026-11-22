@@ -30,7 +30,7 @@ import {
   validateLinkedService, MAX_SERVICES, MAX_SERVICES_JSON,
   type LinkedService, type ServiceKind, type ServiceStyle,
 } from '../../assets/services/service-spec.js';
-import type { Outcome } from '../../assets/dataset-query.js';
+import type { Outcome } from '../outcome.js';
 
 // Registry layers whose features a filter cannot reach, with the reason.
 const WHERE_REJECTED_LAYERS: Record<string, string> = {

@@ -24,8 +24,8 @@
 // Map: sources and layers prefixed `lt-`, added and removed (never
 //   visibility-toggled); no pointer input. Session only: no URL write, no undo
 //   step, not kept in tm-drawer — a reload drops the pins.
-// Deps: overlay-layers.ts (setGeojson, removeOverlay), state.ts, state-bus.ts (on: lang:changed, units:changed), ui-table.ts
-//       (openLine, linePanel, lineOpen, drawerPadding; closeLine runs onClose), lines/line-read.ts,
+// Deps: utils/utils-dom.ts (hx), overlay-layers.ts (setGeojson, removeOverlay), state.ts, state-bus.ts (on: lang:changed, units:changed), drawer.ts
+//       (openPane, panel, paneOpen, drawerPadding; closing the pane runs onClose), lines/line-read.ts,
 //       lines/along.ts, lines/osm-substation.ts, user-data/user-data.ts (addCopiedFeatures), line-profile.ts,
 //       layers/layer-data.ts (loadSource: the HIFLD substations), layers/layer-source.ts,
 //       src/registry (layerById), src/registry/osm-fid.ts (osmRef), src/units.ts,
@@ -34,7 +34,7 @@
 import type { LayerSpecification } from 'maplibre-gl';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
-import { openLine, linePanel, lineOpen, drawerPadding } from './ui-table.js';
+import { openPane, panel, paneOpen, drawerPadding } from './drawer.js';
 import { chainGeometry, lookup, type Chain, type LineFailure } from '../lines/line-read.js';
 import { assembleWays, faultPosition, orientEnds, pointAt, sliceAt, JOIN_TOL_M, type Assembled, type Pos } from '../lines/along.js';
 import { loadSource } from '../layers/layer-data.js';
@@ -46,6 +46,7 @@ import { osmRef } from '../../src/registry/osm-fid.js';
 import { osmSubstationName } from '../lines/osm-substation.js';
 import { getUnits, fmtDistance } from '../../src/units.js';
 import { t } from '../../src/i18n/index.js';
+import { hx } from '../utils/utils-dom.js';
 import { setGeojson, removeOverlay } from './overlay-layers.js';
 import './ui-line.css';
 
@@ -87,16 +88,6 @@ let unitSeen = unitKey();
 const unitM = () => getUnits().distance === 'mi' ? 1609.344 : 1000;
 const unitName = () => getUnits().distance;
 
-// ─── DOM helper (text only) ──────────────────────────────────────────────────
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: (Node | string | null | false)[]): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v; else e.setAttribute(k, v);
-  }
-  for (const c of kids) if (c) e.append(c);
-  return e;
-}
-
 // ─── Entry point ─────────────────────────────────────────────────────────────
 export async function openLineTools(req: LineRequest, from?: HTMLElement | null): Promise<void> {
   subscribe();
@@ -105,7 +96,7 @@ export async function openLineTools(req: LineRequest, from?: HTMLElement | null)
   clearMap();
   s = { req, seq: my, status: 'loading', circuits: -1, scope: 'chain', flip: false, orient: 'pending', pins: [], errors: [], subNames: new Map(),
     inputs: { a: null, b: null, relay: null, pct: DEFAULT_PCT } };
-  openLine(onClose, from);
+  openPane('line', onClose, from);
   render();
   const [chain, idx] = await Promise.all([chainGeometry(req.layerId, req.fid), lookup(req.layerId, req.fid)]);
   if (!s || s.seq !== my) return;
@@ -228,59 +219,59 @@ function endInfo(end: End, line: Pos[] | null): EndInfo {
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
 function render() {
-  if (!s || !lineOpen()) return;
-  const root = linePanel();
-  const box = el('div', { class: 'lt' });
+  if (!s || !paneOpen('line')) return;
+  const root = panel('line');
+  const box = hx('div', { class: 'lt' });
   const kv = lineKv();
-  box.append(el('div', { class: 'lt-head' },
-    el('h3', { class: 'lt-title' }, lineTitle()),
-    kv && el('span', { class: 'lt-kv' }, kv),
-    el('span', { class: 'lt-tool' }, t('line.faultLocator'))));
+  box.append(hx('div', { class: 'lt-head' },
+    hx('h3', { class: 'lt-title' }, lineTitle()),
+    kv && hx('span', { class: 'lt-kv' }, kv),
+    hx('span', { class: 'lt-tool' }, t('line.faultLocator'))));
 
   if (s.status === 'loading') {
-    box.append(el('p', { class: 'lt-status', role: 'status' }, t('line.loading')));
+    box.append(hx('p', { class: 'lt-status', role: 'status' }, t('line.loading')));
   } else if (s.status === 'failed') {
-    box.append(el('p', { class: 'lt-refuse', role: 'alert' },
+    box.append(hx('p', { class: 'lt-refuse', role: 'alert' },
       t('line.locatorRefused', { reason: t(`line.reason.${s.reason}`) })));
   } else {
     const geom = current()!;
-    box.append(el('div', { class: 'lt-grid' }, infoSection(geom), formSection(geom), resultsSection(geom)), profileSection(profileHost(geom)));
+    box.append(hx('div', { class: 'lt-grid' }, infoSection(geom), formSection(geom), resultsSection(geom)), profileSection(profileHost(geom)));
   }
   root.replaceChildren(box);
 }
 
 function infoSection(geom: Assembled): HTMLElement {
   const c = s!.chain!;
-  const sec = el('section', { class: 'lt-info', 'aria-label': t('line.lineSection') });
+  const sec = hx('section', { class: 'lt-info', 'aria-label': t('line.lineSection') });
   if (c.ways.length > 1) {
     const way = c.ways[clickedWay(c)];
     const wayLen = assembleWays([way]);
     const chainLen = assembleWays(c.ways);
     const radio = (v: 'chain' | 'way', label: string) => {
-      const r = el('input', { type: 'radio', name: 'lt-scope', value: v });
+      const r = hx('input', { type: 'radio', name: 'lt-scope', value: v });
       r.checked = s!.scope === v;
       r.addEventListener('change', () => { if (!s) return; s.scope = v; s.pins = []; s.errors = []; render(); drawLine(); zoomTo(current()); });
-      return el('label', { class: 'lt-radio' }, r, ' ', label);
+      return hx('label', { class: 'lt-radio' }, r, ' ', label);
     };
     const len = (a: Assembled) => a.ok ? fmtDistance(a.lengthM) : t('line.inPieces');
-    sec.append(el('fieldset', { class: 'lt-scope' },
-      el('legend', {}, t('line.scope')),
+    sec.append(hx('fieldset', { class: 'lt-scope' },
+      hx('legend', {}, t('line.scope')),
       radio('chain', t('line.scopeChain', { n: c.ways.length, len: len(chainLen) })),
       radio('way', t('line.scopeWay', { len: len(wayLen) }))));
   }
   const line = geom.ok ? geom.line : null;
   const A = endInfo('A', line), B = endInfo('B', line);
-  const dl = el('dl', { class: 'lt-facts' });
-  const fact = (k: string, v: string | Node) => dl.append(el('dt', {}, k), el('dd', {}, v));
-  const endVal = (e: EndInfo) => e.href ? el('a', { href: e.href, target: '_blank', rel: 'noopener' }, e.label) : e.label;
+  const dl = hx('dl', { class: 'lt-facts' });
+  const fact = (k: string, v: string | Node) => dl.append(hx('dt', {}, k), hx('dd', {}, v));
+  const endVal = (e: EndInfo) => e.href ? hx('a', { href: e.href, target: '_blank', rel: 'noopener' }, e.label) : e.label;
   if (geom.ok) fact(t('line.length'), fmtDistance(geom.lengthM));
   fact(t('line.ways'), String(s!.scope === 'chain' ? c.ways.length : 1));
   fact(t('line.endA'), endVal(A));
   fact(t('line.endB'), endVal(B));
   sec.append(dl);
 
-  const notes = el('ul', { class: 'lt-notes' });
-  const note = (txt: string, warn = false) => notes.append(el('li', warn ? { class: 'lt-warn' } : {}, txt));
+  const notes = hx('ul', { class: 'lt-notes' });
+  const note = (txt: string, warn = false) => notes.append(hx('li', warn ? { class: 'lt-warn' } : {}, txt));
   if (!geom.ok) note(t('line.disconnected', { n: geom.pieces.length, tol: String(JOIN_TOL_M) }), true);
   if (s!.circuits > 1) note(t('line.circuitsMany', { n: s!.circuits }), true);
   else if (s!.circuits < 0) note(t('line.circuitsUnknown'));
@@ -295,18 +286,18 @@ function infoSection(geom: Assembled): HTMLElement {
   else note(t('line.hifldEnds', { a: String(p.SUB_1 ?? '?'), b: String(p.SUB_2 ?? '?') }), true);
   sec.append(notes);
   if (!isOsm()) {
-    const swap = el('button', { type: 'button', class: 'td-btn lt-swap' }, t('line.swap'));
+    const swap = hx('button', { type: 'button', class: 'td-btn lt-swap' }, t('line.swap'));
     swap.addEventListener('click', () => { if (!s) return; s.flip = !s.flip; s.pins = []; s.errors = []; render(); drawLine(); });
-    sec.append(el('div', { class: 'lt-actions' }, swap));
+    sec.append(hx('div', { class: 'lt-actions' }, swap));
   }
   return sec;
 }
 
 function numInput(id: string, value: number | null, label: string, suffix: string, step = 'any'): HTMLElement {
-  const i = el('input', { id, type: 'number', inputmode: 'decimal', min: '0', step, class: 'lt-num' });
+  const i = hx('input', { id, type: 'number', inputmode: 'decimal', min: '0', step, class: 'lt-num' });
   if (value !== null) i.value = String(+value.toFixed(4));
-  return el('label', { class: 'lt-field', for: id }, el('span', { class: 'lt-field-label' }, label),
-    el('span', { class: 'lt-field-in' }, i, el('span', { class: 'lt-unit' }, suffix)));
+  return hx('label', { class: 'lt-field', for: id }, hx('span', { class: 'lt-field-label' }, label),
+    hx('span', { class: 'lt-field-in' }, i, hx('span', { class: 'lt-unit' }, suffix)));
 }
 
 const distLabel = (end: End, e: EndInfo) => e.named ? t('line.distFrom', { end, name: e.label }) : t('line.distFromEnd', { end });
@@ -317,15 +308,15 @@ function formSection(geom: Assembled): HTMLElement {
   const A = endInfo('A', line), B = endInfo('B', line);
   const inp = s!.inputs;
   const toU = (m: number | null) => m === null ? null : m / u;
-  const form = el('form', { class: 'lt-form', 'aria-label': t('line.formSection'), novalidate: '' },
+  const form = hx('form', { class: 'lt-form', 'aria-label': t('line.formSection'), novalidate: '' },
     numInput('lt-da', toU(inp.a), distLabel('A', A), un),
     numInput('lt-db', toU(inp.b), distLabel('B', B), un),
     numInput('lt-relay', toU(inp.relay), t('line.relayLength'), un),
     numInput('lt-pct', inp.pct, t('line.uncertainty'), t('line.pctOfLength'), '0.1'),
-    el('div', { class: 'lt-actions' },
-      el('button', { type: 'submit', class: 'td-btn lt-locate' }, t('line.locate')),
-      el('button', { type: 'button', class: 'td-btn lt-clear' }, t('line.clear')),
-      el('button', { type: 'button', class: 'td-btn lt-zoom-line' }, t('line.zoomLine'))));
+    hx('div', { class: 'lt-actions' },
+      hx('button', { type: 'submit', class: 'td-btn lt-locate' }, t('line.locate')),
+      hx('button', { type: 'button', class: 'td-btn lt-clear' }, t('line.clear')),
+      hx('button', { type: 'button', class: 'td-btn lt-zoom-line' }, t('line.zoomLine'))));
   const read = (id: string) => {
     const v = form.querySelector<HTMLInputElement>('#' + id)!.valueAsNumber;
     return Number.isFinite(v) ? v : null;
@@ -339,7 +330,7 @@ function formSection(geom: Assembled): HTMLElement {
     render();
     drawPoints();
     if (s.pins.length) zoomToPins();
-    linePanel().querySelector<HTMLElement>('.lt-results')?.focus({ preventScroll: true });
+    panel('line').querySelector<HTMLElement>('.lt-results')?.focus({ preventScroll: true });
   });
   form.querySelector('.lt-clear')!.addEventListener('click', () => {
     if (!s) return;
@@ -371,37 +362,37 @@ function locate() {
 }
 
 function resultsSection(geom: Assembled): HTMLElement {
-  const sec = el('section', { class: 'lt-results', 'aria-live': 'polite', tabindex: '-1', 'aria-label': t('line.resultsSection') });
-  for (const e of s!.errors) sec.append(el('p', { class: 'lt-refuse' }, e));
+  const sec = hx('section', { class: 'lt-results', 'aria-live': 'polite', tabindex: '-1', 'aria-label': t('line.resultsSection') });
+  for (const e of s!.errors) sec.append(hx('p', { class: 'lt-refuse' }, e));
   if (!s!.pins.length) {
-    if (!s!.errors.length) sec.append(el('p', { class: 'lt-hint' }, t('line.hint')));
+    if (!s!.errors.length) sec.append(hx('p', { class: 'lt-hint' }, t('line.hint')));
     return sec;
   }
   const { relay, pct } = s!.inputs;
-  if (relay !== null && geom.ok) sec.append(el('p', { class: 'lt-hint' }, t('line.scaled', { map: fmtDistance(geom.lengthM), relay: fmtDistance(relay) })));
+  if (relay !== null && geom.ok) sec.append(hx('p', { class: 'lt-hint' }, t('line.scaled', { map: fmtDistance(geom.lengthM), relay: fmtDistance(relay) })));
   for (const p of s!.pins) {
     const coords = fmtPos(p.at);
     const fromA = (m: number) => fmtDistance(m);
-    const card = el('div', { class: 'lt-pin' },
-      el('div', { class: 'lt-pin-head' }, t('line.pinHead', { d: fmtDistance(p.distM), end: p.end })),
-      el('div', { class: 'lt-coords' }, el('span', { class: 'lt-coords-k' }, t('line.latLon')), ' ', el('code', {}, coords)),
-      el('div', { class: 'lt-along' }, t('line.alongBoth', { a: fromA(p.alongM), b: fromA(geom.ok ? geom.lengthM - p.alongM : 0) })),
-      el('div', { class: 'lt-span-txt' }, t('line.span', { pct: String(pct), low: fromA(p.lowM), high: fromA(p.highM) })));
-    const copy = el('button', { type: 'button', class: 'td-btn' }, t('line.copyCoords'));
+    const card = hx('div', { class: 'lt-pin' },
+      hx('div', { class: 'lt-pin-head' }, t('line.pinHead', { d: fmtDistance(p.distM), end: p.end })),
+      hx('div', { class: 'lt-coords' }, hx('span', { class: 'lt-coords-k' }, t('line.latLon')), ' ', hx('code', {}, coords)),
+      hx('div', { class: 'lt-along' }, t('line.alongBoth', { a: fromA(p.alongM), b: fromA(geom.ok ? geom.lengthM - p.alongM : 0) })),
+      hx('div', { class: 'lt-span-txt' }, t('line.span', { pct: String(pct), low: fromA(p.lowM), high: fromA(p.highM) })));
+    const copy = hx('button', { type: 'button', class: 'td-btn' }, t('line.copyCoords'));
     copy.addEventListener('click', () => {
       void navigator.clipboard?.writeText(coords).then(() => { copy.textContent = t('line.copiedCoords'); },
         () => { const sel = getSelection(); const code = card.querySelector('code'); if (sel && code) sel.selectAllChildren(code); });
     });
-    const zoom = el('button', { type: 'button', class: 'td-btn' }, t('line.zoomPin'));
+    const zoom = hx('button', { type: 'button', class: 'td-btn' }, t('line.zoomPin'));
     zoom.addEventListener('click', () => zoomToPins([p]));
-    const add = el('button', { type: 'button', class: 'td-btn' }, t('line.addPin'));
+    const add = hx('button', { type: 'button', class: 'td-btn' }, t('line.addPin'));
     add.addEventListener('click', () => { addPin(p); add.disabled = true; add.textContent = t('line.pinAdded'); }, { once: true });
-    card.append(el('div', { class: 'lt-pin-actions' }, copy, zoom, add));
+    card.append(hx('div', { class: 'lt-pin-actions' }, copy, zoom, add));
     sec.append(card);
   }
   if (s!.pins.length === 2) {
     const [x, y] = s!.pins;
-    sec.append(el('p', { class: 'lt-gap' }, t('line.gap', { d: fmtDistance(Math.abs(x.alongM - y.alongM)) })));
+    sec.append(hx('p', { class: 'lt-gap' }, t('line.gap', { d: fmtDistance(Math.abs(x.alongM - y.alongM)) })));
   }
   return sec;
 }

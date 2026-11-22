@@ -215,8 +215,6 @@ describe('odin-outages stale modal', () => {
   async function setupWithDialog() {
     const { state } = await import('./state.js');
     document.body.innerHTML =
-      '<dialog id="odinStaleDialog"><span id="odinStaleAge"></span>' +
-      '<button id="odinStaleReenable"></button><button id="odinStaleDismiss"></button></dialog>' +
       '<input type="checkbox" data-layer-id="odin-outages" checked>' +
       '<span id="odinAge"></span>';
     state.layerVisibility = { 'odin-outages': true };
@@ -247,6 +245,7 @@ describe('odin-outages stale modal', () => {
     mod.initOdinOutages();
     await vi.advanceTimersByTimeAsync(0);
 
+    expect(document.querySelectorAll('#odinStaleDialog')).toHaveLength(1);
     expect(dlg().open).toBe(true);
     expect(state.layerVisibility['odin-outages']).toBe(false);
     expect(document.getElementById('odinStaleAge')!.textContent).toBeTruthy();

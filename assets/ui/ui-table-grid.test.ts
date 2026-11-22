@@ -69,7 +69,8 @@ vi.mock('../map-api.js', async () => {
 // jsdom has no CSS.escape.
 (globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s.replace(/["\\]/g, '\\$&') };
 
-import { showTable, closeTable, clipValue, filterKind, proxPanel } from './ui-table.js';
+import { showTable, closeTable, clipValue, filterKind } from './ui-table.js';
+import { proxPanel } from './drawer-test-names.js';
 import { installDrawerEnv, resetDrawerEnv, type DrawerEnv } from './test-drawer-env.js';
 import { setWhere } from '../map-api.js';
 import { state } from '../state.js';

@@ -69,7 +69,7 @@ import { KV_BUCKET_RANGES } from '../../src/colors/buckets.js';
 import { templateById } from './catalogue.js';
 import { t } from '../../src/i18n/index.js';
 import type { Condition } from '../../src/registry/condition-compile.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { TemplateAction, FrameControl } from '../sandbox/canvas-host.js';
 import type { TemplatePayload } from './payload.js';
 import type { FeatureId } from '../feature-id.js';
@@ -120,7 +120,7 @@ export function conditionForBin(layer: string, field: string, bin: unknown, rang
     if (typeof lo !== 'number' || typeof hi !== 'number' || !Number.isFinite(lo) || !Number.isFinite(hi) || !(lo < hi)) return no('a bin has finite edges, lo < hi');
     return between(lo, hi);
   }
-  // A month or a year of a date field: its first day to its last (days 01–31, as dataset-query.ts monthOf reads them).
+  // A month or a year of a date field: its first day to its last (days 01–31, as dataset-core.ts monthOf reads them).
   if (role?.time === 'date') {
     const span = /^(?:18|19|20)\d\d-(?:0[1-9]|1[0-2])$/.test(key) ? [`${key}-01`, `${key}-31`]
       : /^(?:18|19|20)\d\d$/.test(key) ? [`${key}-01-01`, `${key}-12-31`] : null;

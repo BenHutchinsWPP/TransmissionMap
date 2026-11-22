@@ -50,13 +50,14 @@
 //                                      history() (≤ 32 KB).
 //
 // Deps: tools.ts (dispatch, toolSchemas), openrouter.ts (chat), local-commands.ts
-//       (parseLocal), dataset-query.ts (summarise, Outcome), templates/catalogue.ts (templatesFor:
+//       (parseLocal), dataset-query.ts (summarise), src/outcome.ts (Outcome), templates/catalogue.ts (templatesFor:
 //       an aggregate carries a tip naming the templates that fit its layer).
 
 import { dispatch, toolSchemas, type OffPageRequest, type DispatchOpts } from './tools.js';
 import { chat, type ChatMessage, type ChatErrorCode, type ToolCall } from './openrouter.js';
 import { parseLocal, type LocalCall, type LocalContext, type LocalOption } from './local-commands.js';
-import { summarise, type Outcome } from '../dataset-query.js';
+import { summarise } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { templatesFor } from '../templates/catalogue.js';
 
 export const MAX_TURNS = 8;

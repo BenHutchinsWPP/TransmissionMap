@@ -10,7 +10,7 @@
 // whose params no longer pass dropped).
 // Each "page load" is a fresh module graph (vi.resetModules) over the same
 // sessionStorage, as a reload in the same tab.
-// Deps: ui-templates.js over the real ui-table.js / catalogue / validateTemplateArgs;
+// Deps: ui-templates.js over the real ui-table.js (through drawer-test-names.js) / catalogue / validateTemplateArgs;
 //       show-template.js's showTemplate and visibility.js mocked; test-drawer-env.js.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -45,7 +45,7 @@ vi.mock('../visibility.js', () => ({ setLayerVisibility: (id: string, on: boolea
 
 type Mods = {
   v: typeof import('./ui-templates.js');
-  t: typeof import('./ui-table.js');
+  t: typeof import('./drawer-test-names.js');
   state: typeof import('../state.js')['state'];
   bus: typeof import('../state-bus.js');
   cat: typeof import('../templates/catalogue.js');
@@ -64,7 +64,7 @@ async function load(nav = 'reload'): Promise<Mods> {
   state.area = null;
   state.where = {};
   return {
-    v: await import('./ui-templates.js'), t: await import('./ui-table.js'), state, bus: await import('../state-bus.js'),
+    v: await import('./ui-templates.js'), t: await import('./drawer-test-names.js'), state, bus: await import('../state-bus.js'),
     cat: await import('../templates/catalogue.js'), st: await import('../templates/show-template.js'),
   };
 }

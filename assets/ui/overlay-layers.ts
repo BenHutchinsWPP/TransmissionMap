@@ -1,4 +1,4 @@
-// Role: shared helpers for the GeoJSON overlays of the lazy panels (route `rp-`, proximity `px-`, line `lt-`):
+// Role: shared helpers for the GeoJSON overlays of the lazy panels (proximity `px-`, line `lt-`; the route's `rp-` overlay has its own in route-overlay.ts):
 //       add-or-update a GeoJSON source, remove a list of layers and sources. Each panel keeps its own addLayer.
 // Deps: state.ts (the map); maplibre-gl types only. Imports no lazy chunk.
 import type { GeoJSONSource } from 'maplibre-gl';

@@ -1,6 +1,6 @@
 // ─── Visualize pane opener (main bundle) ─────────────────────────────────────
 // openVisualize(layerId?, from?) loads the ui-templates.ts lazy chunk (which
-// brings the table drawer chunk with it) and opens the drawer's Visualize tab,
+// brings the drawer shell with it) and opens the drawer's Visualize tab,
 // with `layerId` picked when given; resumeVisualize(viz) brings the pane back
 // after a reload of this tab (ui-menubar.ts's boot hook passes it to
 // restoreDrawer). File ▸ Visualize… and a layer row's ⋯ menu ▸ Visualize open it

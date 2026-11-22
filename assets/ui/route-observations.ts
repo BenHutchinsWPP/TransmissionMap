@@ -5,32 +5,27 @@
 //       worded as screening only: Part 77 surface heights, obstruction standard, "FAA Form 7460-1 / OE/AAA decides".
 //       `aviationMiles` (the aviation miles rows both the Crossings tab and the report list: codes with miles above zero)
 //       and `aviationNote` (the one note under them: the height the method screens at, or none) live here once.
-// Deps: route/screening.ts (types), route/profile.ts (type), i18n. Fetches nothing and changes no route state.
+// Deps: route/screening.ts (types), route/profile.ts (type), utils/utils-dom.ts (h), i18n. Fetches nothing and changes no route state.
 
 import type { RouteCrossings } from '../route/profile.js';
 import type { RouteScreening } from '../route/screening.js';
 import { t } from '../../src/i18n/index.js';
+import { h } from '../utils/utils-dom.js';
 
 export type CsvRow = (string | number)[];
 const metres = (n: number): string => n.toFixed(1);
 export const surveys = (dates: (string | null)[]): string => dates.map(d => d || t('route.cross.na')).join(' / ');
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
-
 function table(head: string[], rows: CsvRow[]): HTMLTableElement {
-  const tbl = el('table');
+  const tbl = h('table');
   tbl.className = 'rx-table';
-  const thead = el('thead'), tr = el('tr');
-  for (const text of head) { const th = el('th', text); th.scope = 'col'; tr.append(th); }
+  const thead = h('thead'), tr = h('tr');
+  for (const text of head) { const th = h('th', '', text); th.scope = 'col'; tr.append(th); }
   thead.append(tr); tbl.append(thead);
-  const body = el('tbody');
+  const body = h('tbody');
   for (const row of rows) {
-    const r = el('tr');
-    for (const v of row) r.append(el('td', String(v)));
+    const r = h('tr');
+    for (const v of row) r.append(h('td', '', String(v)));
     body.append(r);
   }
   tbl.append(body);
@@ -79,24 +74,24 @@ export const facilityHead = (): string[] => ['facility', 'attributes', 'distance
 
 /** Observations only: the caller ensures these belong to the current full path. */
 export function routeObservations(observations?: RouteScreening): HTMLElement {
-  const box = el('section');
+  const box = h('section');
   box.className = 'rx-box route-observations';
-  box.append(el('h3', t('route.obs.heading')));
-  if (!observations) { box.append(el('p', t('route.obs.notRead'))); return box; }
+  box.append(h('h3', '', t('route.obs.heading')));
+  if (!observations) { box.append(h('p', '', t('route.obs.notRead'))); return box; }
   const a = observations.aviation;
-  box.append(el('h4', t('route.obs.aviation')));
-  if (a.status === 'unavailable') box.append(el('p', unavailableText(a)));
+  box.append(h('h4', '', t('route.obs.aviation')));
+  if (a.status === 'unavailable') box.append(h('p', '', unavailableText(a)));
   else {
-    box.append(el('p', a.scope));
-    box.append(el('p', t('route.obs.inventory', { facilities: a.facilities.length, runways: a.runways.length })));
-    box.append(el('p', t('route.obs.cycle', { cycle: a.cycle })));
+    box.append(h('p', '', a.scope));
+    box.append(h('p', '', t('route.obs.inventory', { facilities: a.facilities.length, runways: a.runways.length })));
+    box.append(h('p', '', t('route.obs.cycle', { cycle: a.cycle })));
     box.append(table(runwayHead(), runwayRows(a)));
-    for (const r of a.runways) box.append(el('p', `${r.airport} ${r.runway} · ${t('route.obs.surveys', { dates: surveys(r.surveyDates) })}`));
-    box.append(el('h4', t('route.obs.facilities')));
+    for (const r of a.runways) box.append(h('p', '', `${r.airport} ${r.runway} · ${t('route.obs.surveys', { dates: surveys(r.surveyDates) })}`));
+    box.append(h('h4', '', t('route.obs.facilities')));
     box.append(table(facilityHead(), facilityRows(a)));
-    box.append(el('p', source(a.provenance)));
+    box.append(h('p', '', source(a.provenance)));
   }
-  box.append(el('p', t('route.obs.aviationLimit')));
+  box.append(h('p', '', t('route.obs.aviationLimit')));
   return box;
 }
 

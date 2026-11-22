@@ -32,7 +32,7 @@ import { fillTpl, type RouteReportModel } from './route-report-model.js';
 import { classLegend } from './route-batch-pdf.js';
 import { observationFixture } from './route-observations.fixture.js';
 import type { ExactCrossingsRequest, ExactCrossingsResult } from '../route/route.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { UPLOAD_BUDGET_MSG, localBudget, parseUploadBudget } from '../route/preset-patch.js';
 import { noteText, NO_POSITION_FIGURE, reasonText, runBatch, UPLOAD_NOT_LOADED, ZIP_CAP, ZIP_CAP_BYTES, type BatchOptions, type BatchSolver, type VisibilityDoc } from './route-batch-run.js';
 import { loadRouteStrings } from '../../src/i18n/index.js';

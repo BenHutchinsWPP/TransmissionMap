@@ -6,7 +6,7 @@
 // mutated snapshot loses only its bad entries; a fresh navigation restores nothing.
 // Each "page load" is a fresh module graph (vi.resetModules) over the same
 // sessionStorage, as a reload in the same tab.
-// Deps: ui-chat.js with ui-table.js, ui-canvas.js, ui-chart.js, agent/tools.js (dispatch),
+// Deps: ui-chat.js with drawer.js, ui-canvas.js, ui-chart.js, agent/tools.js (dispatch),
 //       local-commands, view-state, url-state-codec, undo and the catalogue
 //       mocked; agent/loop.js's ask is scripted (history/validateHistory real);
 //       templates/show-template.js's showTemplate mocked (its validator real).
@@ -32,10 +32,10 @@ const m = vi.hoisted(() => ({
   slots: 3,
 }));
 
-vi.mock('./ui-table.js', () => {
+vi.mock('./drawer.js', () => {
   const p = document.createElement('div');
   document.body.replaceChildren(p);
-  return { askPanel: () => p, openAsk: (...a: unknown[]) => { m.opened.push(a); } };
+  return { panel: () => p, openPane: (_id: unknown, ...a: unknown[]) => { m.opened.push(a); } };
 });
 vi.mock('./ui-canvas.js', () => ({
   canvasCard: (...a: unknown[]) => {

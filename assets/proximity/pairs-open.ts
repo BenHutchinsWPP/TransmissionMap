@@ -6,9 +6,9 @@
 //       the pending call as 'cancelled'. A worker error (or a reply that cannot be read) resolves
 //       the pending call as a refusal and drops the worker; the next call starts a fresh one.
 //       No coordinates, ids or other input value reaches a reason or the diagnostics log.
-// Deps: pairs-worker.ts (worker entry); dataset-query.ts and types.ts (types only).
+// Deps: pairs-worker.ts (worker entry); src/outcome.ts and types.ts (types only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { PairsResult } from './types.js';
 
 const FAILED = 'The proximity worker failed.';

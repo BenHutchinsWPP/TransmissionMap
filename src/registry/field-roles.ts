@@ -8,7 +8,7 @@
 //                   (count always; length_km for lines; area_km2 for polygons);
 //         label     the field naming one feature (a display field, or the id
 //                   column when the layer has no name);
-//         display   the role of each assets/dataset-query.ts DISPLAY_FIELDS
+//         display   the role of each assets/dataset-core.ts DISPLAY_FIELDS
 //                   name that is not a schema field (category or label);
 //         facets    field → legend facet (src/colors/facets.ts) whose bucket
 //                   colours and labels a chart of that field uses;
@@ -141,7 +141,7 @@ export interface Roles {
 }
 
 /** The US `states` a world layer (admin1 tags, no states field) is grouped by, read from its US
- *  admin-1 codes (area-filter.ts ADMIN1_TO_STATE; dataset-query.ts shapeRows): [] on any other layer. */
+ *  admin-1 codes (area-filter.ts ADMIN1_TO_STATE; dataset-core.ts planShape): [] on any other layer. */
 export function aliasFields(roles: Roles): RoleField[] {
   const has = (n: string) => roles.fields.some(f => f.name === n);
   return has('admin1') && !has('states') ? [{ name: 'states', role: 'region' }] : [];

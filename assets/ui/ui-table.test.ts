@@ -2,13 +2,15 @@
 // The table's designed default columns stay inside what a row may carry
 // (allowedFields), and each keeps the column the rows first sort by; the
 // drawer's three panes (table, Ask, Route) open, close and take turns.
-// Deps: ui-table.js, dataset-query.js, test-drawer-env.js.
+// Deps: ui-table.js, drawer-test-names.js, dataset-query.js, test-drawer-env.js.
 import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
 import {
   TABLE_DEFAULT_COLUMNS, defaultColumns, defaultSumField,
+} from './ui-table.js';
+import {
   openRoute, closeRoute, routeOpen, routePanel, routeActions, setRouteTall,
   openAsk, closeAsk, showTable, closeTable,
-} from './ui-table.js';
+} from './drawer-test-names.js';
 import { installDrawerEnv, resetDrawerEnv, type DrawerEnv } from './test-drawer-env.js';
 import { allowedFields, describe as describeLayer } from '../dataset-query.js';
 

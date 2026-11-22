@@ -19,7 +19,8 @@
 //   Grid: its own Tabulator grid (a renderer only: cells and titles are text nodes made by
 //   formatters, rows are `{_i}` and the formatters read the arrays). Each column is a ProxCol (proximity-rows.ts);
 //   every header holds a sort button (▲/▼, aria-sort) above a filter box (contains, 200 ms debounce), and sort and
-//   filter run here over the arrays in memory (Tabulator's Sort and Filter modules are never registered). They
+//   filter run here over the arrays in memory. The grid's modules are registered here (Format, FrozenColumns,
+//   Interaction, Keybindings, ResizeColumns, SelectRange); Sort, Filter, Clipboard and Export never are. They
 //   are kept per view across a threshold or unit change and reset on a new file. Columns are rebuilt only when
 //   `colsKey` changes and rows only when `rowsKey` does, so typing keeps focus. The CSVs ignore sort and filter.
 //   A dragged cell range (SelectRange; the px grid forces a redraw only when it goes from 0 px to visible, since a forced
@@ -30,16 +31,20 @@
 //   Seam for the map half: proxState(), onProxResult(cb), onProxRow(cb) (a row click: select), onProxFly(cb) (the row's ↗
 //   button: select, then zoom), focusPoint(i); the map half is proximity-map.ts (bubbles and points on the map,
 //   started on first open). A row click marks the row and outlines its point; only the ↗ button moves the camera.
-// Deps: ui-table.ts (openProx, proxPanel, drawerPadding; closing runs drop()), proximity-map.ts, proximity-rows.ts, proximity/proximity.ts, proximity/pairs-open.ts,
+// Deps: utils/utils-dom.ts (h), drawer.ts (openPane, panel, drawerPadding; closing runs drop()), proximity-map.ts, proximity-rows.ts, proximity/proximity.ts, proximity/pairs-open.ts,
 //       user-data/user-data-csv.ts (pickCsvPoints), user-data/user-data-export.ts (toCsv, downloadFile),
 //       proximity/csv-open.ts, proximity/sample-open.ts (workers), state.ts (map bounds), constants.ts (DATA),
 //       registry/sources.ts (HIFLD_CREDIT),
-//       state-bus.ts (on: lang:changed), src/units.ts (getUnits), i18n (t, getLocale), tabulator-tables.
+//       state-bus.ts (on: lang:changed), src/units.ts (getUnits), i18n (t, getLocale), tabulator-tables (+ its simple theme CSS).
 //       Loaded by: proximity-open.ts (dynamic import).
 
-import { Tabulator, type CellComponent, type ColumnDefinition } from 'tabulator-tables';
+import {
+  Tabulator, FormatModule, FrozenColumnsModule, InteractionModule, KeybindingsModule, ResizeColumnsModule, SelectRangeModule,
+  type CellComponent, type ColumnDefinition,
+} from 'tabulator-tables';
+import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import { on } from '../state-bus.js';
-import { openProx, proxPanel, drawerPadding } from './ui-table.js';
+import { openPane, panel, drawerPadding } from './drawer.js';
 import { startProximityMap } from './proximity-map.js';
 import { rankOf, viewOrder, rangeTsvOf, numberFormat, type ProxCol, type Sort } from './proximity-rows.js';
 import { proximityGroups, MAX_PAIRS, type ProximityResult, type PairsResult } from '../proximity/proximity.js';
@@ -56,7 +61,12 @@ import { pickCsvPoints } from '../user-data/user-data-csv.js';
 import { toCsv, downloadFile } from '../user-data/user-data-export.js';
 import { getUnits } from '../../src/units.js';
 import { t, getLocale } from '../../src/i18n/index.js';
+import { h } from '../utils/utils-dom.js';
 import './ui-proximity.css';
+
+Tabulator.registerModule([
+  FormatModule, FrozenColumnsModule, InteractionModule, KeybindingsModule, ResizeColumnsModule, SelectRangeModule,
+]);
 
 export type Unit = 'ft' | 'mi' | 'm' | 'km';
 export const UNITS: readonly Unit[] = ['ft', 'mi', 'm', 'km'];
@@ -240,7 +250,7 @@ export function focusPoint(i: number): void {
   const prev = focused;
   focused = i;
   if (!ui) return;
-  openProx(drop);
+  openPane('prox', drop);
   if (view !== 'groups') { setView('groups'); return; }
   const g = ui.grid;
   void ui.built.then(() => {
@@ -259,7 +269,7 @@ function markRows(g: Tabulator, ...ids: number[]): void {
 
 // ─── Open / close ────────────────────────────────────────────────────────────
 export function openProximity(from?: HTMLElement | null): void {
-  openProx(drop, from);
+  openPane('prox', drop, from);
   if (!subscribed) {
     subscribed = true;
     on('lang:changed', () => { if (ui) render(); });
@@ -291,30 +301,26 @@ function drop() {
   seen?.disconnect();
   seen = null;
   ui?.grid.destroy();
-  proxPanel().replaceChildren();
+  panel('prox').replaceChildren();
   ui = null;
   notify();
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  e.className = cls;
-  parent?.append(e);
-  return e;
-}
-
 function button(cls: string, parent: HTMLElement, click: () => void): HTMLButtonElement {
-  const b = el('button', cls, parent);
+  const b = h('button', cls);
+  parent.append(b);
   b.type = 'button';
   b.addEventListener('click', click);
   return b;
 }
 
 function build(): Ui {
-  const root = el('div', 'px');
-  const privacy = el('p', 'px-privacy', root);
-  const bar = el('div', 'px-bar', root);
-  const file = el('input', 'px-file');
+  const root = h('div', 'px');
+  const privacy = h('p', 'px-privacy');
+  root.append(privacy);
+  const bar = h('div', 'px-bar');
+  root.append(bar);
+  const file = h('input', 'px-file');
   file.type = 'file';
   file.accept = '.csv,text/csv';
   file.hidden = true;
@@ -322,16 +328,21 @@ function build(): Ui {
   bar.append(file);
   const choose = button('td-btn px-choose', bar, () => file.click());
   const sample = button('td-btn px-sample', bar, () => { void trySample(); });
-  const fileName = el('span', 'px-filename', bar);
-  const thWrap = el('div', 'px-th', bar);
-  const thLabel = el('label', 'px-th-label', thWrap);
-  const th = el('input', 'px-th-input', thWrap);
+  const fileName = h('span', 'px-filename');
+  bar.append(fileName);
+  const thWrap = h('div', 'px-th');
+  bar.append(thWrap);
+  const thLabel = h('label', 'px-th-label');
+  thWrap.append(thLabel);
+  const th = h('input', 'px-th-input');
+  thWrap.append(th);
   th.type = 'number';
   th.min = '0';
   th.step = 'any';
   th.id = 'px-th';
   thLabel.htmlFor = 'px-th';
-  const sel = el('select', 'px-unit', thWrap);
+  const sel = h('select', 'px-unit');
+  thWrap.append(sel);
   for (const u of UNITS) sel.append(Object.assign(document.createElement('option'), { value: u, textContent: u }));
   th.addEventListener('input', schedule);
   sel.addEventListener('change', () => {
@@ -340,20 +351,27 @@ function build(): Ui {
     if (th.value.trim() !== '' && Number.isFinite(v)) th.value = String(Number((v * UNIT_KM[was] / UNIT_KM[unit]).toPrecision(6)));
     schedule();
   });
-  const views = el('div', 'px-views', bar);
+  const views = h('div', 'px-views');
+  bar.append(views);
   views.setAttribute('role', 'group');
   const vGroups = button('td-btn px-view', views, () => setView('groups'));
   const vPairs = button('td-btn px-view', views, () => setView('pairs'));
   const dlGroups = button('td-btn px-dl px-dl-groups', bar, () => { void downloadGroups(); });
   const dlPairs = button('td-btn px-dl px-dl-pairs', bar, () => { void downloadPairs(); });
-  const csvNote = el('span', 'px-csv-note', bar);
-  const msg = el('div', 'px-msg', root);
+  const csvNote = h('span', 'px-csv-note');
+  bar.append(csvNote);
+  const msg = h('div', 'px-msg');
+  root.append(msg);
   msg.setAttribute('role', 'status');
-  const legend = el('p', 'px-legend', root);
-  const credit = el('p', 'px-credit', root);
+  const legend = h('p', 'px-legend');
+  root.append(legend);
+  const credit = h('p', 'px-credit');
+  root.append(credit);
   credit.hidden = true;
-  const statusRow = el('div', 'px-status-row', root);
-  const status = el('div', 'px-status', statusRow);
+  const statusRow = h('div', 'px-status-row');
+  root.append(statusRow);
+  const status = h('div', 'px-status');
+  statusRow.append(status);
   const clear = button('td-btn px-clear', statusRow, () => {
     dropPending();
     cur().filters.clear();
@@ -361,16 +379,19 @@ function build(): Ui {
     refreshView();
   });
   clear.hidden = true;
-  const prog = el('div', 'px-prog', root);
-  const progText = el('span', 'px-prog-text', prog);
+  const prog = h('div', 'px-prog');
+  root.append(prog);
+  const progText = h('span', 'px-prog-text');
+  prog.append(progText);
   const cancel = button('td-btn px-cancel', prog, () => {
     sampleSeq++; sampleBusy = false; cancelSample();
     cancelCsv(); csvRows = -1;
     if (pairState === 'running') { pairSeq++; cancelPairs(); running = null; pairState = 'cancelled'; view = 'groups'; }
     render();
   });
-  const gridEl = el('div', 'px-grid', root);
-  proxPanel().replaceChildren(root);
+  const gridEl = h('div', 'px-grid');
+  root.append(gridEl);
+  panel('prox').replaceChildren(root);
   const grid = new Tabulator(gridEl, {
     ...GRID_RANGE_DEFAULTS,
     height: '100%', layout: 'fitData', index: '_i',
@@ -682,15 +703,16 @@ function sortBy(field: string) {
 /** The header: a sort button above a filter box, both made as nodes. */
 function headFormatter(c: ProxCol) {
   return (_cell: CellComponent, _p: unknown, onRendered: (fn: () => void) => void): HTMLElement => {
-    const wrap = el('div', 'px-head-wrap');
+    const wrap = h('div', 'px-head-wrap');
     const b = button('px-head', wrap, () => sortBy(c.field));
     b.title = t('px.sortBy', { col: c.title });
     b.setAttribute('aria-label', b.title);
-    const ar = el('span', 'px-ar');
-    b.append(el('span', 'px-head-title'), ar);
+    const ar = h('span', 'px-ar');
+    b.append(h('span', 'px-head-title'), ar);
     b.firstElementChild!.textContent = c.title;
     ar.textContent = arrowOf(c.field);
-    const input = el('input', 'px-filter', wrap);
+    const input = h('input', 'px-filter');
+    wrap.append(input);
     input.type = 'search';
     input.placeholder = t('px.filterHint');
     input.setAttribute('aria-label', t('px.filterCol', { col: c.title }));

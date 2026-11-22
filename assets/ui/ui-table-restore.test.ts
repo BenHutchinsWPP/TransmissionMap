@@ -7,7 +7,7 @@
 // layer no longer has fall back to defaults; garbage restores nothing.
 // Each "page load" is a fresh module graph (vi.resetModules) over the same
 // sessionStorage, as a reload in the same tab.
-// Deps: ui-table.js (dataset-query.js's describe / query / aggregate / count
+// Deps: drawer-test-names.js over ui-table.js (dataset-query.js's describe / query / aggregate / count
 //       scripted), test-drawer-env.js, session-snapshot.js, state.js.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -56,7 +56,7 @@ vi.mock('../columns/columns-read.js', () => ({ columnsEntry: async () => ({ ok: 
 // jsdom has no CSS.escape.
 (globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s.replace(/["\\]/g, '\\$&') };
 
-type Mods = { t: typeof import('./ui-table.js'); env: typeof import('./test-drawer-env.js'); state: typeof import('../state.js')['state'] };
+type Mods = { t: typeof import('./drawer-test-names.js'); env: typeof import('./test-drawer-env.js'); state: typeof import('../state.js')['state'] };
 
 /** A page load in this tab: the same link, fresh modules, a fresh map container. */
 async function load(nav = 'reload', mapLoaded = true): Promise<Mods & { idle: () => void }> {
@@ -69,7 +69,7 @@ async function load(nav = 'reload', mapLoaded = true): Promise<Mods & { idle: ()
   Object.defineProperty(e.container, 'clientHeight', { value: 800, configurable: true });
   let idleFn = () => {};
   Object.assign(state.map!, { loaded: () => mapLoaded, once: (ev: string, fn: () => void) => { if (ev === 'idle') idleFn = fn; } });
-  const t = await import('./ui-table.js');
+  const t = await import('./drawer-test-names.js');
   return { t, env, state, idle: () => idleFn() };
 }
 

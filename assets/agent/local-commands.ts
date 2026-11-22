@@ -43,7 +43,7 @@
 //
 // Deps: registry (LAYERS), i18n (t), map-api.ts (BASEMAPS),
 //       area-filter.ts (AreaKind, areaCondition), field-roles.ts (rolesOf), field-schema.ts (a year's ops),
-//       template-signatures.ts (slotFields, fit, TEMPLATE_SIGNATURES), colors/fuel.ts (FUEL_LEGEND), ui/area-labels.ts (loadAreaLabels, areaLabel),
+//       template-signatures.ts (slotFields, fit, TEMPLATE_SIGNATURES), colors/fuel.ts (FUEL_LEGEND), area-labels.ts (loadAreaLabels, areaLabel),
 //       src/registry/service-library.json (dynamic import, titles only).
 
 import { LAYERS } from '../../src/registry/index.js';
@@ -55,7 +55,7 @@ import { slotFields, fit, TEMPLATE_SIGNATURES } from '../../src/registry/templat
 import { FIELD_SCHEMA } from '../../src/registry/field-schema.js';
 import { layerById } from '../../src/registry/index.js';
 import { FUEL_LEGEND } from '../../src/colors/fuel.js';
-import { loadAreaLabels, areaLabel, type AreaLabels } from '../ui/area-labels.js';
+import { loadAreaLabels, areaLabel, type AreaLabels } from '../area-labels.js';
 
 export interface LocalCall { tool: string; args: Record<string, unknown> }
 export interface LocalOption { label: string; call: LocalCall }

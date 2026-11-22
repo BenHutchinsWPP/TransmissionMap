@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as filters from './filters.js';
 import {
-  buildMwFilterExpr, buildKvFilterExpr, buildValueFilterExpr, MW_SLIDER_MAX, FACET_APPLIERS,
+  buildMwFilterExpr, buildKvFilterExpr, buildValueFilterExpr, FACET_APPLIERS,
   drawnFilterLabels,
 } from './filters.js';
+import { MW_SLIDER_MAX } from '../src/colors/ramps.js';
 import { state } from './state.js';
 import { FUEL_LEGEND } from '../src/colors/fuel.js';
 import { facet } from '../src/colors/facets.js';

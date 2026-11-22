@@ -1,5 +1,5 @@
 // ─── The drawer's tab snapshot: shape and caps (pure) ────────────────────────
-// Role: what ui-table.ts keeps of the bottom drawer in sessionStorage
+// Role: what drawer.ts keeps of the bottom drawer in sessionStorage
 //       `tm-drawer` (session-snapshot.ts) so a reload of this tab brings it
 //       back: which panes were open (Ask, the table — the Route tab is never
 //       kept), the pane in view, the height share and the collapsed state, and

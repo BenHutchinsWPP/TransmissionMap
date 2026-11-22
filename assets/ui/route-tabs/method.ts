@@ -28,8 +28,7 @@
 //       entries by hash (route-request.ts `mergePatch`); `hold()` refuses a layer that takes the
 //       session past UPLOAD_TOTAL_VERTICES. The invalid-cell count goes to the input column
 //       (ctx.setMethodErrors). Tall drawer while mounted.
-//       `solvedPresetOf` is the preset a solve used (method + patch).
-// Deps: route-tabs/method-grid.ts, route-tabs/method-rows.ts, route-tabs/weights-table.ts, route/preset-patch.ts, route/upload-layer.ts, route/route-open.ts (registerUpload, unregisterUpload), ui/route-request.ts (mergePatch), route/custom-presets.ts, user-data/user-data-export.ts (downloadFile),
+// Deps: route-methods.ts (methodOf, countEdits, dropRemove, methodStore, Method), route-tabs/method-grid.ts, route-tabs/method-rows.ts, route-tabs/weights-table.ts, route-format.ts (rowLabel), route/preset-patch.ts, route/upload-layer.ts, route/route-open.ts (registerUpload, unregisterUpload), ui/route-request.ts (mergePatch), route/custom-presets.ts, user-data/user-data-export.ts (downloadFile),
 //       registry/route-presets.ts, route/route.ts (types), route-tabs/types.ts (types),
 //       i18n (t), ./method.css.
 
@@ -37,27 +36,24 @@ import './method.css';
 import { getLocale, t } from '../../../src/i18n/index.js';
 import { routePreset, type CostRow, type Factor, type RoutePreset } from '../../../src/registry/route-presets.js';
 import { COST_X_RANGE, ROUTE_W_RANGE, validatePresetPatch, type PresetPatch, type RowPatch } from '../../route/preset-patch.js';
-import { buildMethodFile, createCustomPresetStore, methodFileName, presetLabel, MAX_NAME_LENGTH } from '../../route/custom-presets.js';
+import { buildMethodFile, methodFileName, MAX_NAME_LENGTH } from '../../route/custom-presets.js';
 import { downloadFile } from '../../user-data/user-data-export.js';
 import type { RouteResult } from '../../route/route.js';
-import { mountWeightsTable, rowLabel, type WeightsTable } from './weights-table.js';
+import { mountWeightsTable, type WeightsTable } from './weights-table.js';
+import { rowLabel } from '../route-format.js';
+import { countEdits, dropRemove, methodOf, methodStore, type Method } from '../route-methods.js';
 import { dropUpload, uploadRowsOf, upsertUpload, UPLOAD_DEFAULTS, uploadTotalRefusal, type Edit } from './method-rows.js';
 import { MAX_UPLOAD_LABEL, UPLOAD_TOTAL_VERTICES, uploadLabel } from '../../route/preset-patch.js';
 import { UPLOAD_MAX_BYTES, validateUpload, type UploadLayer } from '../../route/upload-layer.js';
 import { registerUpload, unregisterUpload } from '../../route/route-open.js';
 import { mergePatch } from '../route-request.js';
 import { mountMethodGrid, type MethodGrid } from './method-grid.js';
-import type { RouteInputs, RouteSession, RouteTab, RouteTabContext, SolveSpec } from './types.js';
+import type { RouteSession, RouteTab, RouteTabContext, SolveSpec } from './types.js';
 import { h } from '../../utils/utils-dom.js';
 
 export const LIVE_DEBOUNCE_MS = 600;
 export const SENS_ROWS = 7;
 export const SENS_FACTORS = [0.5, 1.5] as const;
-
-const store = createCustomPresetStore({
-  getItem: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
-  setItem: (k, v) => localStorage.setItem(k, v),   // the store catches a refused write
-});
 
 function btn(cls: string, text: string, onClick: () => void): HTMLButtonElement {
   const b = h('button', cls, text);
@@ -70,30 +66,8 @@ const sameJson = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.
 
 // ─── the method in play ──────────────────────────────────────────────────────
 
-export interface Method { preset: RoutePreset; base: string; stored: PresetPatch | null; label: string; customId?: string }
-
 /** The table's preset for the session: a built-in, or a custom's base with its stored patch applied. */
 export const methodFor = (s: RouteSession): Method | null => methodOf(s.inputs.presetId);
-
-/** A preset id (built-in or `custom:<id>`) → its method, or null when unknown / needs review. */
-export function methodOf(id: string): Method | null {
-  if (id.startsWith('custom:')) {
-    const c = store.list().find((x) => `custom:${x.id}` === id);
-    if (c?.status !== 'ok' || !c.preset) return null;
-    // Uploaded-layer rows are the Uploaded layers section's, not grid rows: the table's preset has the stored patch without them.
-    const stored = c.patch as PresetPatch, base = routePreset(c.base);
-    let preset = c.preset;
-    if (stored.add_rows && base) {
-      const rest = { ...stored };
-      delete rest.add_rows;
-      const v = validatePresetPatch(base, Object.keys(rest).length ? rest : undefined);
-      if (v.ok) preset = v.result;
-    }
-    return { preset, base: c.base, stored, label: c.name, customId: c.id };
-  }
-  const p = routePreset(id);
-  return p ? { preset: p, base: p.id, stored: null, label: presetLabel(p) } : null;
-}
 
 /** `top` over `base`, row by row (a row's fields in `top` win). */
 function merge(base: PresetPatch | null, top: PresetPatch | null): PresetPatch {
@@ -112,8 +86,6 @@ function combined(stored: PresetPatch | null, session: PresetPatch | null): Pres
   if (add?.length) out.add_rows = add; else delete out.add_rows;
   return out;
 }
-const dropRemove = (p: PresetPatch | null): PresetPatch | undefined =>
-  !p ? undefined : p.add_rows?.some((r) => r.remove) ? { ...p, add_rows: p.add_rows.filter((r) => !r.remove) } : p;
 /** The patch the tables edit: no uploaded-layer rows (they have their own section). */
 const rowsOnly = (p: PresetPatch | null): PresetPatch | null => {
   if (!p?.add_rows) return p;
@@ -121,18 +93,6 @@ const rowsOnly = (p: PresetPatch | null): PresetPatch | null => {
   delete rest.add_rows;
   return Object.keys(rest).length ? rest : null;
 };
-
-/** The preset a solve of `inp` used: its method (a saved one over its base) with the session patch applied; null when unknown or refused. */
-export function solvedPresetOf(inp: RouteInputs): RoutePreset | null {
-  const m = methodOf(inp.presetId), base = m && routePreset(m.base);
-  if (!m || !base) return null;
-  const v = validatePresetPatch(base, dropRemove(mergePatch(m.stored, inp.patch) ?? null));
-  return v.ok ? v.result : null;
-}
-
-export const countEdits = (p: PresetPatch | null) =>
-  (p?.rows ?? []).reduce((n, r) => n + (r.route_w !== undefined ? 1 : 0) + (r.cost_x !== undefined ? 1 : 0) + (r.except ? 1 : 0), 0)
-  + (p?.contingency !== undefined ? 1 : 0) + (p?.add_rows?.length ?? 0);
 
 /** Labels of the rows (and contingency) whose patch entry differs between a and b. */
 function changedRows(preset: RoutePreset, a: PresetPatch | null, b: PresetPatch | null): string[] {
@@ -350,7 +310,7 @@ function header(st: St, m: Method): HTMLElement {
   const rename = btn('rp-btn rm-rename', t('route.meth.rename'), () => { st.renaming = !st.renaming; refresh(); if (st.renaming) renameForm.querySelector('input')?.focus(); });
   const del = btn('rp-btn rm-delete', t('route.meth.delete'), () => {
     if (!confirmDelete) { confirmDelete = true; refresh(); return; }
-    store.remove(m.customId!);
+    methodStore.remove(m.customId!);
     document.dispatchEvent(new CustomEvent('route:presets'));
     ctx.rerender();
   });
@@ -372,7 +332,7 @@ function header(st: St, m: Method): HTMLElement {
     e.preventDefault();
     if (st.errors > 0) { msg.textContent = t('route.meth.saveFix'); return; }
     const patch = combined(m.stored, s.inputs.patch);
-    const r = store.save(name.value, m.base, patch);
+    const r = methodStore.save(name.value, m.base, patch);
     if (!r.ok) { msg.textContent = r.reason; return; }
     st.saving = false;
     s.inputs.presetId = `custom:${r.result.id}`;
@@ -394,7 +354,7 @@ function header(st: St, m: Method): HTMLElement {
   renameForm.append(newName, renameOk, btn('rp-btn', t('route.meth.cancel'), () => { st.renaming = false; refresh(); }), renameMsg);
   renameForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!store.rename(m.customId!, newName.value)) { renameMsg.textContent = t('route.meth.renameBad', { n: MAX_NAME_LENGTH }); return; }
+    if (!methodStore.rename(m.customId!, newName.value)) { renameMsg.textContent = t('route.meth.renameBad', { n: MAX_NAME_LENGTH }); return; }
     st.renaming = false;
     document.dispatchEvent(new CustomEvent('route:presets'));
     ctx.rerender();

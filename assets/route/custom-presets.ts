@@ -14,9 +14,9 @@
 //       A patch may hold uploaded-layer rows (`add_rows`: hash, label, weights); the geometry is never
 //       stored, and validatePresetPatch refuses any field beyond those. A `cost_inputs` key in a stored patch or a
 //       method file is dropped on read (`dropCostInputs`); the method loads without it.
-// Deps: preset-patch.ts (validatePresetPatch), src/registry/route-presets.ts, i18n (t), dataset-query.ts (Outcome, type only).
+// Deps: preset-patch.ts (validatePresetPatch), src/registry/route-presets.ts, i18n (t), src/outcome.ts (Outcome, type only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { ROUTE_PRESETS, type RoutePreset } from '../../src/registry/route-presets.js';
 import { validatePresetPatch } from './preset-patch.js';
 import { t } from '../../src/i18n/index.js';

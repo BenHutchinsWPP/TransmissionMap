@@ -5,7 +5,7 @@
 // (columns, formula guard, truncation note), the 50 MB / 100,000-point refusals, nothing
 // written to storage, and the file dropped when the tab closes.
 // Deps: ui-proximity.js (user-data-csv.js, pairs-open.js, proximity-map.js mocked; user-data-export.js's
-//       downloadFile spied), test-drawer-env.js, ui-table.js, units.js.
+//       downloadFile spied), test-drawer-env.js, drawer-test-names.js, units.js.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
@@ -42,7 +42,7 @@ const { state } = await import('../state.js');
 const { emit } = await import('../state-bus.js');
 const { loadDictionary, setLocale } = await import('../../src/i18n/index.js');
 const px = await import('./ui-proximity.js');
-const { closeProx, proxPanel } = await import('./ui-table.js');
+const { closeProx, proxPanel } = await import('./drawer-test-names.js');
 const { proximityPairs } = await import('../proximity/proximity.js');
 const { setUnits, DEFAULT_UNITS } = await import('../../src/units.js');
 
@@ -407,7 +407,7 @@ describe('review fixes', () => {
   it('a tap on a point brings the Proximity pane forward when another pane is in front', async () => {
     await openWith();
     await vi.waitFor(() => expect(bodyRows()).toHaveLength(5));
-    const { openAsk } = await import('./ui-table.js');
+    const { openAsk } = await import('./drawer-test-names.js');
     openAsk();
     expect(proxPanel().hidden).toBe(true);
     px.focusPoint(0);

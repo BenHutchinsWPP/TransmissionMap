@@ -35,9 +35,9 @@
 //       idle worker so the next call starts a fresh one (the batch's recycle; registered uploads re-posted).
 //       Data: DATA.route_cube (relative to the page's base URL in dev, the data host's versioned prefix in a build).
 // Deps: diag-log.ts; constants.ts (DATA.route_cube); route-worker.ts (worker entry); route.ts, upload-layer.ts and
-//       dataset-query.ts (types only).
+//       src/outcome.ts (types only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { ExactCrossingsRequest, ExactCrossingsResult, InspectRequest, InspectResult, RepaintRequest, RepaintResult, RepaintRowsRequest, RowsImage, RouteRequest, RouteResult, RouteStep } from './route.js';
 import type { UploadGeometry } from './upload-layer.js';
 import { recordDiagEvent } from '../diag-log.js';

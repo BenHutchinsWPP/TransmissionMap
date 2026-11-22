@@ -26,7 +26,7 @@
 //       refusal and is not cached, so the next call retries), setEnd()/setEndHit() with
 //       `{ resetTerm, osm: false }` (setEndHit places exactly that substation, no re-snap) and
 //       refresh() (redraws line type, method, fields, pins, strip).
-// Deps: route/snap.ts (snapAt, searchSubstations), route/custom-presets.ts, dataset-query.ts (Outcome, type only),
+// Deps: route/snap.ts (snapAt, searchSubstations), route/custom-presets.ts, src/outcome.ts (Outcome, type only),
 //       src/registry/route-presets.ts, map-input.ts (onMapTap, onMapHover),
 //       tool-mode.ts (toolHooks), state.ts, substation-index.ts (ensureSubstationIndex, snapEnd), i18n (t), state-bus.ts (lang:changed), units.ts (fmtDistanceMi),
 //       route-tabs/types.ts (types), route-request.ts (EndExplain, type only), maplibre-gl (Marker), route-panel.css.
@@ -44,7 +44,7 @@ import { t } from '../../src/i18n/index.js';
 import { on } from '../state-bus.js';
 import { fmtDistanceMi } from '../../src/units.js';
 import type { RouteEnd, RouteSession, RouteStatus } from './route-tabs/types.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { EndExplain } from './route-request.js';
 import type { TermChoice } from '../../src/registry/route-presets.js';
 import './route-panel.css';

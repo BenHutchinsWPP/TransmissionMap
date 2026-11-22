@@ -8,7 +8,7 @@
 // TM_COLUMNS_MUTATE=1 plants a fault: pruneGroups drops the first row group of a call with no
 // conditions (the world calls), so the run must fail on the totals.
 // Deps: dataset-query.ts (count, aggregate, shapeRows — scope 'dataset'), ui/ui-table.ts (showTable,
-//       real, in jsdom through test-drawer-env.ts), columns-read.ts (wrapped), parquet/range-io.ts
+//       real, in jsdom through test-drawer-env.ts, in the drawer.ts shell), columns-read.ts (wrapped), parquet/range-io.ts
 //       (requestLog, resetRangeIo), the real layer plans (base filters, legend filters).
 import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { describe as group, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
@@ -23,7 +23,8 @@ import { applyLayerPlan, type LayerPlan } from '../layers/layer-plan.js';
 import { planOsmTransmission } from '../layers/map-layers-osm.js';
 import { planRetailTerritories } from '../layers/map-layers-hifld.js';
 import { planPadus } from '../layers/map-layers-land.js';
-import { describe, count, aggregate, query, shapeRows, QUERY_MAX_ROWS, type ShapeResult, type Group } from '../dataset-query.js';
+import { describe, count, aggregate, query, shapeRows, QUERY_MAX_ROWS, type Group } from '../dataset-query.js';
+import type { ShapeResult } from '../dataset-core.js';
 
 const RUN = process.env.TM_COLUMNS_DATA === '1';
 

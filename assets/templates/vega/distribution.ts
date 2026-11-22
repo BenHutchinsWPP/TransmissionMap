@@ -1,7 +1,7 @@
 // ─── distribution (Vega-Lite): how one measure's values spread ──────────────
 // Role: the catalogue's `distribution` builder, (payload) → Vega-Lite spec with
 //       its data inline: a histogram of roles.bins.field over the page's own
-//       bins (dataset-query.ts binEdges: 1/2/5 steps, log when skewed; rows
+//       bins (dataset-core.ts binEdges: 1/2/5 steps, log when skewed; rows
 //       `bin`, `lo`, `hi`, count). Every bin is drawn, empty ones as zero; a
 //       bin is a band labelled "lo–hi" (whole numbers in full, the rest
 //       compact), the axis titled with the field and its unit.

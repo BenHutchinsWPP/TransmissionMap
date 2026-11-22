@@ -9,12 +9,12 @@
 //       lines/osm-substation.ts, imported dynamically on first use; any OSM failure, or no answer within
 //       OSM_SNAP_TIMEOUT_MS, reads as no OSM hit.
 //       The chat passes `osm: false` (the chat trust model admits HIFLD names only).
-// Deps: route/snap.ts (buildSubstationIndex, snapAt, snapAmong), dataset-query.ts (Outcome, type only), state.ts,
+// Deps: route/snap.ts (buildSubstationIndex, snapAt, snapAmong), src/outcome.ts (Outcome, type only), state.ts,
 //       layers/layer-data.ts (loadSource), layers/layer-source.ts (layerSourceId),
 //       lines/osm-substation.ts (substationPointsNear, dynamic import only).
 
 import { buildSubstationIndex, snapAmong, snapAt, type OsmPoint, type SnapHit, type SubstationIndex } from '../route/snap.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { state } from '../state.js';
 import { loadSource } from '../layers/layer-data.js';
 import { layerSourceId } from '../layers/layer-source.js';

@@ -46,7 +46,7 @@
 //       (heatRampShown, modeOf), filters.js (mwToPos, mwPosToMw, setArea, setSelection,
 //       setWhere), ui-layer-rows.js (panelRows, hasPanelRow), state-bus.js, src/i18n/index.js
 //       (t, getLocale), src/registry/area-filter.js (areaFlag),
-//       src/registry/view-validate.js (selectionSize), area-labels.js
+//       src/registry/view-validate.js (selectionSize), ../area-labels.ts
 //       (chip names; loads the lazy label table when an area is set).
 // Imported by: ui.ts (init, language and region changes), ui-area.ts and
 //              dev-console.ts (commitArea), ui-selection.ts, ui-table.ts and
@@ -67,7 +67,7 @@ import { numbersShown } from '../grid-ops/ba-graph.js';
 import { humanise } from '../utils/field-label.js';
 import { t, getLocale } from '../../src/i18n/index.js';
 import { areaFlag, type AreaFilter } from '../../src/registry/area-filter.js';
-import { areaLabel, areaLabelsNow, loadAreaLabels } from './area-labels.js';
+import { areaLabel, areaLabelsNow, loadAreaLabels } from '../area-labels.js';
 
 /** Minimum separation between the MW slider handles, in slider position units. */
 export const MW_POS_GAP = 1;

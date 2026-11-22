@@ -25,9 +25,9 @@
 //       Outcomes, never throws; numbers must be finite JS numbers (a string, NaN,
 //       Infinity or a JSON `1e400` is refused).
 //       Pure: no DOM, no I/O.
-// Deps: src/registry/route-presets.ts (types only), dataset-query.ts (Outcome, type only).
+// Deps: src/registry/route-presets.ts (types only), src/outcome.ts (Outcome, type only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { Combine, EndKind, Factor, RoutePreset, UploadBand } from '../../src/registry/route-presets.js';
 import { UPLOAD_MAX_VERTICES } from './upload-layer.js';
 

@@ -2,16 +2,17 @@
 // Role: thin config shell — the actual auto-refresh + stale-data kill-switch
 //       behavior lives in the shared factory (live-staleness.ts). Wildfire's
 //       parameters: 15 min poll, 6 h max age, the three live wildfire layers
-//       sharing the one `wildfire-live` source, #wildfireStaleDialog modal.
+//       sharing the one `wildfire-live` source, #wildfireStaleDialog modal (built by stale-dialog.ts when initWildfireStaleness runs).
 //       No expiry pruning — wildfire features carry no end time.
 // Exports WILDFIRE_LIVE, the config itself: ui/ui-legends.ts reads its maxAgeMs
 //       for the age chips' stale edge and diagnostics.ts for the feed check, so
 //       neither can disagree with the kill switch.
-// Deps: live-staleness.ts (factory), constants (DATA). Modal DOM in index.html.
+// Deps: live-staleness.ts (factory), stale-dialog.ts (the modal's DOM), constants (DATA).
 // Wired from ui/ui.ts init() via initWildfireStaleness().
 
 import { DATA } from './constants.js';
 import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
+import { staleDialog } from './stale-dialog.js';
 
 export const WILDFIRE_LIVE: LiveStalenessConfig = {
   sourceKey: "wildfire-live",
@@ -30,5 +31,6 @@ export const WILDFIRE_LIVE: LiveStalenessConfig = {
 };
 
 export function initWildfireStaleness() {
+  staleDialog({ ...WILDFIRE_LIVE, feed: "wildfire" });
   initLiveStaleness(WILDFIRE_LIVE);
 }

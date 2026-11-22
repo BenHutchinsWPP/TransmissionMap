@@ -12,9 +12,11 @@
 // whether their panel is open as aria-checked. A row's `where` chip × clears
 // the layer's conditions through panel-mirror.js commitWhere (one url:write).
 import { state } from '../state.js';
-import { LEGEND_FILTERS_BY_KEY, legendAllIds, syncLegendMaster, updateLegends } from './ui-legends.js';
+import { LEGEND_FILTERS_BY_KEY, syncLegendMaster, updateLegends } from './ui-legends.js';
 import { emit } from '../state-bus.js';
-import { MW_SLIDER_MAX, mwPosToMw, mwToPos, applyGeneratorFilters, applyLayerFilter } from '../filters.js';
+import { mwPosToMw, mwToPos, applyGeneratorFilters, applyLayerFilter } from '../filters.js';
+import { MW_SLIDER_MAX } from '../../src/colors/ramps.js';
+import { facetAllIds } from '../../src/colors/facets.js';
 import { setWeatherVar } from '../weather-live.js';
 import { setNriHazard } from '../fema-nri.js';
 import { setGridGroup, setGridGlyph, setGridNumbers } from '../grid-ops/grid-ops.js';
@@ -71,7 +73,7 @@ export function wireLegendFilters() {
     if (!cb) return;
     const cfg = LEGEND_FILTERS_BY_KEY[cb.dataset.legendKey!];
     if (!cfg) return;
-    state.legendFilters[cfg.key] = cb.checked ? new Set(legendAllIds(cfg)) : new Set();
+    state.legendFilters[cfg.key] = cb.checked ? new Set(facetAllIds(cfg)) : new Set();
     document.querySelectorAll<HTMLInputElement>(`input.legend-filter-cb[data-legend-key="${cfg.key}"]`)
       .forEach(c => { c.checked = cb.checked; });
     cfg.apply();

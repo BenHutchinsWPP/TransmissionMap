@@ -6,7 +6,7 @@
 // across a repaint, closing when the layer goes off, nothing written to tm-drawer,
 // and the bubble tap's toolOwnsTap guard (the real grid-ops.ts initGridOps).
 // Deps: ui-grid-ops.js (grid-ops.js, panel-mirror.js syncPanel mocked), grid-ops-open.js,
-//       test-drawer-env.js, ui-table.js, popup.js (toolOwnsTap), map-input.js (onMapTap captured).
+//       test-drawer-env.js, drawer-test-names.js, popup.js (toolOwnsTap), map-input.js (onMapTap captured).
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { installDrawerEnv, resetDrawerEnv, type DrawerEnv } from './test-drawer-env.js';
@@ -49,7 +49,7 @@ const { state } = await import('../state.js');
 const { emit } = await import('../state-bus.js');
 const { loadDictionary, setLocale } = await import('../../src/i18n/index.js');
 const go = await import('./ui-grid-ops.js');
-const { gopsPanel, gopsOpen, closeGops } = await import('./ui-table.js');
+const { gopsPanel, gopsOpen, closeGops } = await import('./drawer-test-names.js');
 
 const AT = Date.UTC(2026, 9, 30, 18);
 function node(id: string, o: Partial<PaintedNode['properties']> & { at?: [number, number] } = {}): PaintedNode {

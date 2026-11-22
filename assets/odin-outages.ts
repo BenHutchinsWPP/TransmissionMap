@@ -9,14 +9,15 @@
 //       the source's `sourcedata` event, so panning/zooming into new tiles paints.
 //       Refreshes every 15 min while the layer is visible, and on return-to-page
 //       (live-poll.ts); a snapshot older than 6 h is not painted, the layer is
-//       switched off and #odinStaleDialog explains why (the same kill switch as
+//       switched off and #odinStaleDialog (built by stale-dialog.ts in initOdinOutages) explains why (the same kill switch as
 //       live-staleness.ts, until the reader accepts the risk).
 // Source of truth for age = the snapshot's `generated_utc` (the legend chip too).
 // Deps: state (map, layerVisibility), constants (DATA, COUNTY_SRC*), diag-log.ts (recordDiagEvent —
 //       records refetch failures for the diagnostics panel), experience-link.ts
 //       (rebaselineExperience before the kill switch), live-poll.ts
 //       (pollWhileVisible — the refresh loop), state-bus.ts (on
-//       'layer:visibility' — re-runs the gate as the layer switches on), i18n (t,
+//       'layer:visibility' — re-runs the gate as the layer switches on), stale-dialog.ts (the
+//       modal's DOM), i18n (t,
 //       for the legend age chip = #odinAge in index.html).
 //       The map source/layers are built by layers/map-layers-conditions.ts
 //       (planOdinOutages); the click popup reads numbers from the feature-state set here, and
@@ -38,9 +39,19 @@ import { setLayerVisibility } from './visibility.js';
 import { on } from './state-bus.js';
 import { fmtAge } from './live-staleness.js';
 import { pollWhileVisible } from './live-poll.js';
+import { staleDialog } from './stale-dialog.js';
 import { t } from '../src/i18n/index.js';
 
 const REGISTRY_ID = "odin-outages";
+
+// The stale modal's DOM ids; initOdinOutages() builds the dialog before it looks them up.
+export const ODIN_STALE = {
+  feed: "odin" as const,
+  dialogId: "odinStaleDialog",
+  ageElId: "odinStaleAge",
+  reenableId: "odinStaleReenable",
+  dismissId: "odinStaleDismiss",
+};
 
 // 15-minute poll — the CI feed refreshes on a similar cadence; picks up a new
 // snapshot within a quarter-hour.
@@ -290,8 +301,8 @@ function enterStale(age: number) {
   rebaselineExperience();
   setLayerVisibility(REGISTRY_ID, false);
   disabledForStale = true;
-  const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
-  const ageEl = document.getElementById("odinStaleAge");
+  const dlg = document.getElementById(ODIN_STALE.dialogId) as HTMLDialogElement | null;
+  const ageEl = document.getElementById(ODIN_STALE.ageElId);
   if (ageEl) ageEl.textContent = fmtAge(age);
   if (dlg && !dlg.open) dlg.showModal();
 }
@@ -302,15 +313,15 @@ function exitStale() {
 }
 
 function wireStaleDialog() {
-  const dlg = document.getElementById("odinStaleDialog") as HTMLDialogElement | null;
-  document.getElementById("odinStaleReenable")?.addEventListener("click", () => {
+  const dlg = document.getElementById(ODIN_STALE.dialogId) as HTMLDialogElement | null;
+  document.getElementById(ODIN_STALE.reenableId)?.addEventListener("click", () => {
     acknowledged = true;
     if (disabledForStale) { setLayerVisibility(REGISTRY_ID, true); disabledForStale = false; }
     applyJoin();
     appliedFips = new Set(Object.keys(snapshot));
     dlg?.close();
   });
-  document.getElementById("odinStaleDismiss")?.addEventListener("click", () => {
+  document.getElementById(ODIN_STALE.dismissId)?.addEventListener("click", () => {
     disabledForStale = false;
     dlg?.close();
   });
@@ -318,6 +329,7 @@ function wireStaleDialog() {
 
 export function initOdinOutages() {
   if (!state.map) return;
+  staleDialog(ODIN_STALE);
   wireStaleDialog();
 
   // Re-apply the join whenever the source finishes (re)loading tiles — feature

@@ -3,7 +3,7 @@
 // Role: the WinAnsi byte measurement behind the core-font branch, glyph coverage generated from the en locale and
 //       ROUTE_PRESETS, the PDF's text streams (compress: false, parentheses escaped), zero canvas blocks for
 //       app wording, and the canvas path for non-Latin visitor text. Canvas is a recording fake.
-// Deps: ./route-batch-pdf.ts, ./route-report-model.ts, ./route-tabs/fixture.ts, ./route-tabs/weights-table.ts,
+// Deps: ./route-batch-pdf.ts, ./route-report-model.ts, ./route-tabs/fixture.ts, ./route-format.ts,
 //       registry/route-presets.ts, i18n/locales/en.ts, jspdf.
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -14,7 +14,7 @@ import { ROUTE_PRESETS } from '../../src/registry/route-presets.js';
 import { causeLegend, classLegend, similarLegend, isCoreText, isRtl, makeRenderPdf, pdfGlyphs, type CanvasLike } from './route-batch-pdf.js';
 import { buildReportModel, fmtMoney, type RouteReportModel } from './route-report-model.js';
 import { FIXTURE_SESSION } from './route-tabs/fixture.js';
-import { rowLabel } from './route-tabs/weights-table.js';
+import { rowLabel } from './route-format.js';
 import { loadRouteStrings } from '../../src/i18n/index.js';
 
 const en: Record<string, string> = { ...baseEn, ...routeEn };

@@ -24,7 +24,7 @@
 //       experience-link.ts (rebaselineExperience before the kill switch),
 //       layers/layer-data.ts (fetchGeojson, liveGeneratedUtc), live-poll.ts (pollWhileVisible),
 //       state-bus.ts (on 'layer:visibility' — vets a layer as it switches on;
-//       on/emit 'layer:data' — re-checks on fresh data, announces each refetch). Modal DOM ids come from cfg.
+//       on/emit 'layer:data' — re-checks on fresh data, announces each refetch). Modal DOM ids come from cfg; the modal itself is built by stale-dialog.ts.
 // Instantiated per live layer: wildfire-staleness.ts, nws-staleness.ts.
 
 import type { GeoJSONSource } from 'maplibre-gl';

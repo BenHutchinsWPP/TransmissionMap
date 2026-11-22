@@ -11,11 +11,12 @@
 //   areaLabel()        one code's display name; the code itself without a table.
 // Reads the seven kind keys only (the file's `_generated` header is skipped).
 // Deps: src/registry/area-filter.ts (AREA_KINDS, AreaKind), diag-log.ts.
-// Consumed by: panel-mirror.ts (the chips), ui-area.ts (the typeahead),
-//              ui-table.ts (the drawer's Area pill).
+// Consumed by: ui/panel-mirror.ts (the chips), ui/ui-area.ts (the typeahead),
+//              ui/ui-table.ts (the drawer's Area pill), ui/ui-templates.ts,
+//              templates/show-template.ts, agent/local-commands.ts.
 
-import { AREA_KINDS, type AreaKind } from '../../src/registry/area-filter.js';
-import { recordDiagEvent } from '../diag-log.js';
+import { AREA_KINDS, type AreaKind } from '../src/registry/area-filter.js';
+import { recordDiagEvent } from './diag-log.js';
 
 /** Kind → code → label; admin-1 labels are [name, country code]. */
 export type AreaLabels = Record<AreaKind, Record<string, string | [string, string]>>;
@@ -24,7 +25,7 @@ let labels: AreaLabels | null = null;
 let loading: Promise<AreaLabels | null> | null = null;
 
 export function loadAreaLabels(): Promise<AreaLabels | null> {
-  return loading ??= import('../../src/registry/region-labels.json')
+  return loading ??= import('../src/registry/region-labels.json')
     .then(m => {
       const raw = m.default as unknown as Record<string, AreaLabels[AreaKind] | undefined>;
       labels = Object.fromEntries(AREA_KINDS.map(k => [k, raw[k] ?? {}])) as AreaLabels;

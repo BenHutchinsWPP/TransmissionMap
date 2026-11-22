@@ -5,12 +5,12 @@
 // solve, prefs left unsaved, Ask staying in view, an index load failure then a retry, and recall;
 // the chat snaps a point to HIFLD only (snapEnd with osm: false), resets each end's terminal choice, and
 // a recalled visitor route never sends an OpenStreetMap name.
-// Deps: ui-route.js, ui-table.js; substation-index.js (snapEnd spied); route-open.js / map-input.js / layer-data.js / popup.js /
+// Deps: ui-route.js, drawer-test-names.js; substation-index.js (snapEnd spied); route-open.js / map-input.js / layer-data.js / popup.js /
 //       lines/osm-substation.js (fake points) /
 //       maplibre-gl (mocked), test-drawer-env.js, route-tabs/fixture.js, route-prefs.js, state.js.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { RouteRequest, RouteResult } from '../route/route.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 
 type Call = { req: RouteRequest; res: (o: Outcome<RouteResult>) => void };
 const solver = vi.hoisted(() => ({ calls: [] as Call[] }));
@@ -59,7 +59,7 @@ vi.mock('../lines/osm-substation.js', () => ({ substationPointsNear: async () =>
 
 import { routeForChat, openRoutePanel, _pane } from './ui-route.js';
 import { _resetSubstationIndex, snapEnd } from './substation-index.js';
-import { closeRoute, closeAsk, openAsk, askPanel } from './ui-table.js';
+import { closeRoute, closeAsk, openAsk, askPanel } from './drawer-test-names.js';
 import { routeLine, cancelRoute } from '../route/route-open.js';
 import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
 import { FIXTURE_RESULT } from './route-tabs/fixture.js';

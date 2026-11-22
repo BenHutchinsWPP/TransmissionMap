@@ -27,12 +27,12 @@
 //       The solver, capture, PDF renderer and ZIP sink are injected (route-batch-types.ts); `workerSolver()` is the route
 //       worker under the solver lock (owner 'batch').
 // Deps: i18n (t), route/route-open.ts (lock and calls), route/route.ts (NO_WINDOW_REASONS; types), route/snap.ts (types only), route/grid.ts (albersForward),
-//       route/batch-csv.ts, route/custom-presets.ts, route/preset-patch.ts, dataset-query.ts (types only),
+//       route/batch-csv.ts, route/custom-presets.ts, route/preset-patch.ts, src/outcome.ts (types only),
 //       registry/route-presets.ts, ./route-request.ts (makeRequestBuilder, explainEnds), ./substation-index.ts (snapEnd, type only), ./route-report-model.ts (buildReportModel, costCsv, fmtMoney), ./route-batch-pdf.ts (causeLegend, classLegend, similarLegend), ./route-batch-zip.ts (rowSlug, csvFile, BOM),
-//       ./route-tabs/crossings.ts (crossingsCsv, pathKey, shownExact), ./route-batch-types.ts
+//       ./route-format.ts (crossingsCsv, pathKey, shownExact), ./route-batch-types.ts
 //       and ./route-tabs/types.ts (types only).
 
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import { getLocale, t } from '../../src/i18n/index.js';
 import { NO_WINDOW_REASONS, type ExactCrossingsRequest, type ExactCrossingsResult, type RepaintRequest, type RepaintResult, type RouteRequest, type RouteResult, type WeightImage, type WeightMode } from '../route/route.js';
 import { acquireRoute, cancelRoute, dropWindow, exactCrossings, hasUpload, recycleWorker, releaseRoute, repaintWeight, routeLine } from '../route/route-open.js';
@@ -47,7 +47,7 @@ import type { snapEnd } from './substation-index.js';
 import { buildReportModel, costCsv, fmtMoney } from './route-report-model.js';
 import { causeLegend, classLegend, similarLegend } from './route-batch-pdf.js';
 import { BOM, csvFile, rowSlug } from './route-batch-zip.js';
-import { crossingsCsv, pathKey, shownExact } from './route-tabs/crossings.js';
+import { crossingsCsv, pathKey, shownExact } from './route-format.js';
 import type { Capture, CaptureView, PdfPicture, PictureId, RenderPdf, ZipSink } from './route-batch-types.js';
 import type { DollarYear, RouteEnd, RouteInputs, RouteSession } from './route-tabs/types.js';
 

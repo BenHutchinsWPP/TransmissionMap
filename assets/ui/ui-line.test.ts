@@ -23,7 +23,7 @@ vi.mock('../layers/layer-data.js', async () => {
 });
 
 const { openLineTools } = await import('./ui-line.js');
-const { closeLine, linePanel } = await import('./ui-table.js');
+const { closeLine, linePanel } = await import('./drawer-test-names.js');
 
 // Two ways on the equator, the second drawn backwards: 0.1° each.
 const DEG_M = 6371.0088e3 * Math.PI / 180;

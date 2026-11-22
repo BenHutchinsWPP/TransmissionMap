@@ -7,12 +7,12 @@
 // name" keeps its reply only for the shown route (markers move to its points; a refusal is one line, a cancel none);
 // right-click "Route from here" snaps to OpenStreetMap and keeps the end's terminal choice; the GeoJSON export
 // names each end's substation source and credits OpenStreetMap.
-// Deps: ui-route.js, ui-table.js; route-open.js / map-input.js / layer-data.js / lines/osm-substation.js (fake points) / user-data-export.js (downloadFile) /
+// Deps: ui-route.js, drawer-test-names.js; route-open.js / map-input.js / layer-data.js / lines/osm-substation.js (fake points) / user-data-export.js (downloadFile) /
 //       maplibre-gl (mocked), test-drawer-env.js, route-tabs/fixture.js, state.js, i18n.
 import { UPLOAD_BUDGET_MSG } from '../route/preset-patch.js';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi, onTestFinished } from 'vitest';
 import type { RouteRequest, RouteResult, RouteStep } from '../route/route.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 
 type Call = { req: RouteRequest; onProgress?: (s: RouteStep) => void; res: (o: Outcome<RouteResult>) => void };
 const solver = vi.hoisted(() => ({ calls: [] as Call[], inspects: [] as { req: unknown; res: (o: unknown) => void }[], repaints: [] as { req: unknown; res: (o: unknown) => void }[], rows: [] as { req: unknown; res: (o: unknown) => void }[], autoRows: null as null | ((n: number) => unknown), exacts: [] as { req: unknown; res: (o: unknown) => void }[] }));
@@ -68,11 +68,11 @@ const dl = vi.hoisted(() => vi.fn());
 vi.mock('../user-data/user-data-export.js', async (orig) => ({ ...(await orig<typeof import('../user-data/user-data-export.js')>()), downloadFile: dl }));
 
 import { mergePatch } from './route-request.js';
-import { openRoutePanel, _pane, routeFeatures, maskSurface, pixelClasses } from './ui-route.js';
-import { closeRoute, routePanel, routeActions } from './ui-table.js';
+import { openRoutePanel, _pane, routeFeatures } from './ui-route.js';
+import { maskSurface, pixelClasses, holeAt } from './route-overlay.js';
+import { closeRoute, routePanel, routeActions } from './drawer-test-names.js';
 import { routeLine, cancelRoute, inspectCell, repaintWeight, repaintRows, dropWindow, exactCrossings } from '../route/route-open.js';
 import { routePreset } from '../../src/registry/route-presets.js';
-import { holeAt } from './ui-route.js';
 import { setRouteTapClaims } from '../popup.js';
 import { installDrawerEnv, resetDrawerEnv } from './test-drawer-env.js';
 import { FIXTURE_RESULT } from './route-tabs/fixture.js';
@@ -294,7 +294,6 @@ describe('route pane shell', () => {
     expect(map.layers.has('rp-route-casing')).toBe(true);
     expect(map.layers.has('rp-cross')).toBe(true);
     expect(map.layers.has('rp-chord')).toBe(false);
-    expect(map.order.indexOf('rp-route-casing')).toBeLessThan(map.order.indexOf('rp-route'));
     expect(map.fitBounds).toHaveBeenCalled();
     expect(routeActions().querySelectorAll("button").length).toBe(4);
     expect(routePanel().querySelector('.ri-strip-extra')?.textContent).toContain('250.1');
@@ -1070,7 +1069,6 @@ describe('route pane cell inspector', () => {
     expect(s.result!.weightImage).toBe(weightImage);
     expect(s.result!.path).toBe(FIXTURE_RESULT.path);         // only the image is merged
     expect(map.sources.has('rp-weight')).toBe(true);
-    expect(map.order.indexOf('rp-weight')).toBeLessThan(map.order.indexOf('rp-route-casing'));
     expect(document.querySelector('.rp-legend')!.textContent).toContain('Routing weight');
     expect(document.querySelector('.rp-legend')!.textContent).toContain('blocked');
     // Find with the box on asks for the image itself

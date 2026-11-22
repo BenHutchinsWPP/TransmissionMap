@@ -2,14 +2,14 @@
 // The map chat's usage notice: nothing is built and nothing goes to openrouter.ai
 // before the visitor accepts; Cancel leaves the chat unopened; accepting builds
 // the chat and fetches the model catalogue.
-// Deps: ui-chat.js, notice-dialog.js (real); ui-table.js, agent/loop.js,
+// Deps: ui-chat.js, notice-dialog.js (real); drawer.js, agent/loop.js,
 //       agent/local-commands.js mocked; global fetch stubbed (never the network).
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./ui-table.js', () => {
+vi.mock('./drawer.js', () => {
   const p = document.createElement('div');
   document.body.append(p);
-  return { askPanel: () => p, openAsk: vi.fn() };
+  return { panel: () => p, openPane: vi.fn() };
 });
 vi.mock('../agent/local-commands.js', () => ({ LOCAL_EXAMPLES: [], localContext: async () => ({}) }));
 vi.mock('../agent/loop.js', () => ({
@@ -21,7 +21,7 @@ vi.mock('../agent/loop.js', () => ({
 }));
 
 import { openChat } from './ui-chat.js';
-import { openAsk } from './ui-table.js';
+import { openPane } from './drawer.js';
 
 const fetchMock = vi.fn(async (_u: unknown) => new Response(JSON.stringify({ data: [] })));
 const dialog = () => document.querySelector<HTMLDialogElement>('dialog.disclaimer-dialog');
@@ -45,7 +45,7 @@ describe('chat notice', () => {
     dialog()!.dispatchEvent(new Event('focusin', { bubbles: true }));
     await new Promise(r => setTimeout(r, 0));
     expect(orFetches()).toHaveLength(0);
-    expect(openAsk).not.toHaveBeenCalled();
+    expect(openPane).not.toHaveBeenCalled();
   });
 
   it('Cancel opens nothing and fetches nothing', async () => {
@@ -53,7 +53,7 @@ describe('chat notice', () => {
     button(0).click();
     await new Promise(r => setTimeout(r, 0));
     expect(dialog()).toBeNull();
-    expect(openAsk).not.toHaveBeenCalled();
+    expect(openPane).not.toHaveBeenCalled();
     expect(orFetches()).toHaveLength(0);
     expect(localStorage.getItem('tm-notice-chat')).toBeNull();
   });
@@ -61,7 +61,8 @@ describe('chat notice', () => {
   it('accepting records it, opens the chat and then fetches the catalogue', async () => {
     openChat();
     button(1).click();
-    await vi.waitFor(() => expect(openAsk).toHaveBeenCalled());
+    await vi.waitFor(() => expect(openPane).toHaveBeenCalled());
+    expect(vi.mocked(openPane).mock.calls.every(c => c[0] === 'ask')).toBe(true);
     expect(localStorage.getItem('tm-notice-chat')).toBe('1');
     expect(orFetches().length).toBeGreaterThan(0);
   });
@@ -70,7 +71,7 @@ describe('chat notice', () => {
 describe('chat notice on restore (resumeChat)', () => {
   const fresh = async () => {
     vi.resetModules();
-    vi.mocked(openAsk).mockClear();
+    vi.mocked(openPane).mockClear();
     return (await import('./ui-chat.js')).resumeChat;
   };
 
@@ -80,7 +81,7 @@ describe('chat notice on restore (resumeChat)', () => {
     expect(dialog()).not.toBeNull();
     button(0).click();
     await done;
-    expect(openAsk).not.toHaveBeenCalled();
+    expect(openPane).not.toHaveBeenCalled();
     expect(orFetches()).toHaveLength(0);
   });
 
@@ -93,7 +94,7 @@ describe('chat notice on restore (resumeChat)', () => {
     }
     await new Promise(r => setTimeout(r, 0));
     expect(orFetches()).toHaveLength(0);
-    expect(openAsk).not.toHaveBeenCalled();
+    expect(openPane).not.toHaveBeenCalled();
     button(0).click();
     await done;
   });
@@ -103,7 +104,7 @@ describe('chat notice on restore (resumeChat)', () => {
     const done = resumeChat();
     button(1).click();
     await done;
-    expect(openAsk).toHaveBeenCalled();
+    expect(openPane).toHaveBeenCalled();
     expect(orFetches()).toHaveLength(0);
     document.querySelector('.chat-model')!.dispatchEvent(new Event('focusin', { bubbles: true }));
     await vi.waitFor(() => expect(orFetches().length).toBeGreaterThan(0));

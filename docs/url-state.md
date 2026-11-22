@@ -340,6 +340,6 @@ holds 50. Keys and File ▸ Undo / Redo: `assets/ui/ui-menubar.ts`.
 ```
 
 Bucket/legend filters need none of the codec edits — they're data-driven from
-`LEGEND_FILTERS` / `filterBuckets`. You only pick a `groupCode` and give each
+`FACETS` (`src/colors/facets.ts`) / `filterBuckets`. You only pick a `groupCode` and give each
 bucket a `urlCode`; the codec loops over the registry. See
 [adding-a-filter.md](adding-a-filter.md).

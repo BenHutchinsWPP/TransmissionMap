@@ -5,12 +5,12 @@
 // planRouteFromChat is the map chat's way in (the planRoute tool): it hands the request to ui-route.ts's routeForChat.
 // The route strings (src/i18n/route/) load beside the chunk, before either entry runs.
 // Deps: state.ts, map-input.ts (onMapContextMenu), diag-log.ts, i18n (t, loadRouteStrings), ui-route.ts (dynamic),
-//       route-tabs/chat-summary.ts and dataset-query.ts (types only).
+//       route-tabs/chat-summary.ts and src/outcome.ts (types only).
 import { state } from '../state.js';
 import { onMapContextMenu } from '../map-input.js';
 import { t, loadRouteStrings } from '../../src/i18n/index.js';
 import { recordDiagEvent } from '../diag-log.js';
-import type { Outcome } from '../dataset-query.js';
+import type { Outcome } from '../../src/outcome.js';
 import type { RouteSummary } from './route-tabs/chat-summary.js';
 
 type End = 'A' | 'B';

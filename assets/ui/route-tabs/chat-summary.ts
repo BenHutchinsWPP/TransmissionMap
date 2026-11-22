@@ -3,12 +3,12 @@
 //       returns to the model (2025$ only, estimate range, drivers as the Cost tab's category lines,
 //       crossings by kind, ≤ 2 alternatives, short page-written notes; one more says the cost uses the visitor's own
 //       figures, never the figures). Pure; no DOM writes.
-// Deps: ./widgets.ts (waterfallLines), route/route.ts (types), registry/route-presets.ts (types), i18n/index.ts.
+// Deps: ../route-format.ts (waterfallLines), route/route.ts (types), registry/route-presets.ts (types), i18n/index.ts.
 
 import { t } from '../../../src/i18n/index.js';
 import type { RouteResult } from '../../route/route.js';
 import type { RoutePreset } from '../../../src/registry/route-presets.js';
-import { waterfallLines } from './widgets.js';
+import { waterfallLines } from '../route-format.js';
 
 export interface ChatRouteEnd { name: string | null; kv: number | null; lngLat: [number, number] }
 export interface RouteSummary {

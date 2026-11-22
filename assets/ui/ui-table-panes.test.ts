@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Characterization of the bottom drawer's panes (ui-table.ts), one row per pane
+// Characterization of the bottom drawer's panes (drawer.ts), one row per pane
 // (table, Ask, Visualize, Line, Proximity, Grid Ops, Route) for each rule the
 // pane code carries: what is open and in view, where focus goes on close, the
 // opener captured only while closed, act() and the resuming flags (observed
@@ -8,14 +8,14 @@
 // what the tm-drawer snapshot keeps, the "chatting" rule of Show in table, and
 // onClose replaced (not kept) by a re-open. These pin today's behaviour so the
 // panes can share one record; they are not a statement that every rule is ideal.
-// Deps: ui-table.js (dataset-query.js describe scripted), test-drawer-env.js.
+// Deps: drawer-test-names.js over ui-table.js (dataset-query.js describe scripted), test-drawer-env.js.
 
 import { describe, it, expect, vi, beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 import {
   openAsk, closeAsk, askPanel, openViz, closeViz, openLine, closeLine, openProx, closeProx,
   openGops, closeGops, openRoute, closeRoute, routePanel, setRouteTall, showTable, closeTable,
   registerVizSnapshot, drawerChanged, vizOpen, lineOpen, proxOpen, gopsOpen, routeOpen,
-} from './ui-table.js';
+} from './drawer-test-names.js';
 import { installDrawerEnv, resetDrawerEnv, type DrawerEnv } from './test-drawer-env.js';
 
 const ROWS = [{ id: 1231, props: { name: 'Alpha', nominal_kv: 500 } }];
@@ -530,7 +530,7 @@ describe('the tm-drawer snapshot', () => {
 });
 
 describe('act() and the resuming flags, seen through restoreDrawer', () => {
-  type Mods = { t: typeof import('./ui-table.js'); env: typeof import('./test-drawer-env.js') };
+  type Mods = { t: typeof import('./drawer-test-names.js'); env: typeof import('./test-drawer-env.js') };
 
   async function load(): Promise<Mods> {
     vi.resetModules();
@@ -541,7 +541,7 @@ describe('act() and the resuming flags, seen through restoreDrawer', () => {
     const ee = e.installDrawerEnv();
     Object.defineProperty(ee.container, 'clientHeight', { value: 800, configurable: true });
     Object.assign(state.map!, { loaded: () => true, once: () => {} });
-    return { t: await import('./ui-table.js'), env: e };
+    return { t: await import('./drawer-test-names.js'), env: e };
   }
   const put = (extra: { ask?: boolean; viz?: unknown }) => sessionStorage.setItem('tm-drawer', JSON.stringify({
     v: 1, hash: location.hash, at: 1, data: {

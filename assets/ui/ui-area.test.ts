@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { state } from '../state.js';
 import { on } from '../state-bus.js';
 import { buildAreaIndex, searchAreas, codeHits, kindOrder, wireAreaPicker, areaAction, fold } from './ui-area.js';
-import { loadAreaLabels, type AreaLabels } from './area-labels.js';
+import { loadAreaLabels, type AreaLabels } from '../area-labels.js';
 
 const TABLE = {
   states: { TX: 'Texas', NM: 'New Mexico' },

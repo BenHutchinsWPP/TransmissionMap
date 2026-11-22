@@ -11,10 +11,9 @@ import { on } from './state-bus.js';
 import { seedView, currentView } from './view-state.js';
 import { formatUrlState } from './url-state-codec.js';
 import { toMapLibreFilter } from '../src/registry/condition-compile.js';
-import {
-  describe, query, count, aggregate, summarise, buildTest, runQuery, runAggregate, drawnFilters,
-  allowedFields, DISPLAY_FIELDS, QUERY_MAX_ROWS, type QueryResult, type AggregateResult,
-} from './dataset-query.js';
+import { describe, query, count, aggregate, summarise, allowedFields, QUERY_MAX_ROWS, type QueryResult, type AggregateResult } from './dataset-query.js';
+import { buildTest, runQuery, runAggregate, DISPLAY_FIELDS } from './dataset-core.js';
+import { drawnFilters } from './dataset-view.js';
 import { readFileSync } from 'node:fs';
 import { layerById } from '../src/registry/index.js';
 

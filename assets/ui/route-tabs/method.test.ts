@@ -23,7 +23,8 @@ vi.mock('../../route/route-open.js', () => ({ registerUpload: vi.fn(), unregiste
 import { registerUpload, unregisterUpload } from '../../route/route-open.js';
 import { GRID_250, lngLatOf } from '../../route/grid.js';
 import { validateUpload, type UploadLayer } from '../../route/upload-layer.js';
-import tab, { _resetMethodTab, countEdits, solvedPresetOf, uploadReason, uploads, dropUploads, sensitivityRows, sensitivitySpecs, LIVE_DEBOUNCE_MS } from './method.js';
+import { countEdits, solvedPresetOf } from '../route-methods.js';
+import tab, { _resetMethodTab, uploadReason, uploads, dropUploads, sensitivityRows, sensitivitySpecs, LIVE_DEBOUNCE_MS } from './method.js';
 import { FIXTURE_RESULT, FIXTURE_SESSION, fakeTabContext } from './fixture.js';
 import { UPLOAD_TOTAL_VERTICES, validatePresetPatch } from '../../route/preset-patch.js';
 import { CUSTOM_PRESETS_KEY, createCustomPresetStore, presetLabel } from '../../route/custom-presets.js';

@@ -7,7 +7,7 @@
 // table's grid (.td-grid, Tabulator; also the proximity .px-grid and the Method .rm-grid) elements measure 600 × 800 px and a row
 // 26 px high, enough for its virtual renderer to draw rows; resetDrawerEnv()
 // undoes all of it.
-// Used by *.test.ts files that open the drawer (ui-table.test.ts) and by method-grid.test.ts.
+// Used by *.test.ts files that open the drawer (ui-table.test.ts, drawer.test.ts) and by method-grid.test.ts.
 // mockMarker() returns a stand-in for maplibre-gl's Marker (setLngLat, addTo,
 // remove, getLngLat, on, setDraggable, getElement; chainable, with `emit(name)`
 // to fire a registered handler). Use it inside the hoisted-safe factory:
