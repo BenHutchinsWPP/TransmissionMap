@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import route_grid as G  # noqa: E402
+from geo_common import sha256_file  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data/build/route/250m"
@@ -60,14 +61,6 @@ def raster_runtime():
     import rasterio.shutil
     from rasterio.io import MemoryFile
     from rasterio.transform import Affine
-
-
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def load_metadata():

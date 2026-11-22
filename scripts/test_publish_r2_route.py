@@ -87,7 +87,7 @@ class RoutePublish(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.repo = self.tmp / "repo"
         (self.repo / "scripts").mkdir(parents=True)
-        for n in ("publish_r2.sh", "route_publish_plan.py", "geoparquet_common.py"):
+        for n in ("publish_r2.sh", "route_publish_plan.py", "geoparquet_common.py", "geo_common.py"):
             shutil.copy(HERE / n, self.repo / "scripts")
         (self.repo / "scripts/route_data_LICENSE.txt").write_text("licence notice\n")
         (self.repo / "scripts/validate_build.py").write_text("print('data/layers/x.pmtiles')\n")

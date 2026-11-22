@@ -18,11 +18,12 @@ test-pipeline` can import this under `python3 -S`; numpy and pyarrow load
 inside the functions that need them.
 """
 import gzip
-import hashlib
 import json
 import math
 import os
 from pathlib import Path
+
+from geo_common import sha256_file
 
 R_KM = 6371.0088          # mean Earth radius; the same sphere as assets/sandbox/geo-kit.ts
 HILBERT_ORDER = 16        # 65,536 cells a side: ~600 m at the equator
@@ -328,14 +329,6 @@ def footer_len(path):
     if tail[4:] != b"PAR1":
         raise ValueError(f"{path}: not a Parquet file")
     return int.from_bytes(tail[:4], "little")
-
-
-def sha256_file(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            h.update(block)
-    return h.hexdigest()
 
 
 def content_name(path, stem, suffix=".parquet"):

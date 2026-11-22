@@ -13,26 +13,23 @@ changed object has a new URL. Written by scripts/publish_r2.sh only.
   rollback  --files LIST --table PATH --stamp STAMP [--write]
             Gives each restored path in LIST the token r<STAMP> (a URL no edge has seen).
 
-Output is sorted, indent 2, trailing newline. Stdlib only.
+Output is sorted, indent 2, trailing newline. Stdlib only, plus `sha256_file` from geo_common.py.
 """
 import argparse
-import hashlib
 import json
 import os
 import re
 import sys
 from pathlib import Path
 
+from geo_common import sha256_file
+
 IMMUTABLE = re.compile(r"\.[0-9a-f]{8}\.parquet$")
 STAMP = re.compile(r"^\d{8}T\d{6}Z$")
 
 
 def token(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            h.update(block)
-    return h.hexdigest()[:10]
+    return sha256_file(path)[:10]
 
 
 def read_list(path: str) -> list[str]:

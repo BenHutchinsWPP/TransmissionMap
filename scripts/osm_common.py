@@ -1,9 +1,11 @@
 """Shared helpers for the OSM extract scripts (substations, generators, plants,
 data centers, lines and pipelines), including `osm_fid`, the stable feature id
-every OSM intermediate and world layer carries."""
+every OSM intermediate and world layer carries, and `dedup_points`, the
+polygon-vs-node duplicate finder the plant, generator and data center extracts share."""
 
 import glob
 import logging
+import math
 import os
 import re
 import shutil
@@ -188,3 +190,31 @@ def normalise_plant_source(raw):
         "battery":     "battery",
     }
     return mapping.get(raw, raw)
+
+
+def dedup_points(merged, radius_m):
+    """Labels of way/relation rows that duplicate a node: rows with both coordinates
+    whose nearest node lies within 1.5 x radius_m. Nodes are never returned."""
+    import numpy as np
+    import pandas as pd
+    from scipy.spatial import cKDTree
+
+    poly_rows = merged[merged["osm_type"].isin(["way", "relation"])]
+    node_rows = merged[merged["osm_type"] == "node"]
+    if node_rows.empty or poly_rows.empty:
+        return pd.Index([])
+
+    R = 6_371_000.0
+    chord = 2 * math.sin(radius_m / (2 * R))
+
+    def _xyz(lats, lons):
+        la = np.deg2rad(np.asarray(lats, dtype=float))
+        lo = np.deg2rad(np.asarray(lons, dtype=float))
+        return np.column_stack([np.cos(la) * np.cos(lo),
+                                np.cos(la) * np.sin(lo), np.sin(la)])
+
+    tree = cKDTree(_xyz(node_rows["lat"].values, node_rows["lon"].values))
+    valid = poly_rows.dropna(subset=["lat", "lon"])
+    dists, _ = tree.query(_xyz(valid["lat"].values, valid["lon"].values),
+                          k=1, distance_upper_bound=chord * 1.5)
+    return valid.index[dists < chord * 1.5]

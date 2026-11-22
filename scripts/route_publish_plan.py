@@ -27,6 +27,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from geo_common import sha256_file
+
 CUBE = Path("data/route/250m")
 REPORT = Path("data/route/report")
 CONSTRAINTS = Path("data/route/constraints")
@@ -57,12 +59,7 @@ def listdir(d):
     return sorted(p.name for p in d.iterdir()) if d.is_dir() else []
 
 
-def sha256(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for b in iter(lambda: f.read(1 << 20), b""):
-            h.update(b)
-    return h.hexdigest()
+sha256 = sha256_file
 
 
 def build(verify_sha=False):

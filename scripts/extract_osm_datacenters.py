@@ -48,7 +48,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from osm_common import _run, _has, add_fid, find_pbf
+from osm_common import _run, _has, add_fid, dedup_points, find_pbf
 
 logging.basicConfig(
     level=logging.INFO,
@@ -204,27 +204,8 @@ def deduplicate(node_df, poly_df, radius_m=_DEDUP_RADIUS_M):
     if node_df.empty or poly_df.empty:
         return merged
 
-    R     = 6_371_000.0
-    chord = 2 * math.sin(radius_m / (2 * R))
-
-    def _xyz(lats, lons):
-        la = np.deg2rad(np.asarray(lats, dtype=float))
-        lo = np.deg2rad(np.asarray(lons, dtype=float))
-        return np.column_stack([np.cos(la)*np.cos(lo),
-                                np.cos(la)*np.sin(lo),
-                                np.sin(la)])
-
-    poly_rows  = merged[merged["osm_type"].isin(["way", "relation"])]
-    node_rows  = merged[merged["osm_type"] == "node"]
-    node_xyz   = _xyz(node_rows["lat"].values, node_rows["lon"].values)
-    tree       = cKDTree(node_xyz)
-
-    valid_polys = poly_rows.dropna(subset=["lat", "lon"])
-    poly_xyz    = _xyz(valid_polys["lat"].values, valid_polys["lon"].values)
-    dists, _    = tree.query(poly_xyz, k=1, distance_upper_bound=chord * 1.5)
-    dup_mask    = dists < chord * 1.5
-    dup_idx     = valid_polys.index[dup_mask]
-
+    poly_rows = merged[merged["osm_type"].isin(["way", "relation"])]
+    dup_idx = dedup_points(merged, radius_m)
     n_removed = len(dup_idx)
     merged = merged.drop(index=dup_idx)
     log.info("  Dedup: %d polygon rows → %d kept  (%d within %dm of a node)",

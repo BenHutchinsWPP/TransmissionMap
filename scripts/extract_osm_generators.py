@@ -35,14 +35,13 @@ Usage:
 import argparse
 import json
 import logging
-import math
 import os
 import re
 import sys
 import tempfile
 from pathlib import Path
 
-from osm_common import _run, _has, add_fid, find_pbf, parse_output_mw as _parse_output_mw, output_cap
+from osm_common import _run, _has, add_fid, dedup_points, find_pbf, parse_output_mw as _parse_output_mw, output_cap
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,8 +52,8 @@ log = logging.getLogger("extract_osm_generators")
 
 try:
     import pandas as pd
-    import numpy as np
-    from scipy.spatial import cKDTree
+    import numpy  # noqa: F401
+    import scipy.spatial  # noqa: F401
     import geopandas as gpd
 except ImportError:
     sys.stderr.write("ERROR: pandas/numpy/scipy/geopandas not found. Run: source venv/bin/activate\n")
@@ -275,25 +274,7 @@ def merge_and_write(node_df, poly_df, out_csv, dedup_radius_m=_DEDUP_RADIUS_M):
     n_removed = 0
 
     if not node_rows.empty and not poly_rows.empty:
-        R = 6_371_000.0
-        chord = 2 * math.sin(dedup_radius_m / (2 * R))
-
-        def _xyz(lat_deg, lon_deg):
-            lat = np.deg2rad(np.asarray(lat_deg, dtype=float))
-            lon = np.deg2rad(np.asarray(lon_deg, dtype=float))
-            return np.column_stack([np.cos(lat)*np.cos(lon),
-                                    np.cos(lat)*np.sin(lon), np.sin(lat)])
-
-        node_xyz = _xyz(node_rows["lat"].values, node_rows["lon"].values)
-        tree = cKDTree(node_xyz)
-        poly_xyz = _xyz(
-            poly_rows["lat"].dropna().values,
-            poly_rows["lon"].dropna().values,
-        )
-        dists, _ = tree.query(poly_xyz, k=1, distance_upper_bound=chord * 1.5)
-        is_dup = dists < chord * 1.5
-
-        dup_idx = poly_rows.dropna(subset=["lat", "lon"]).index[is_dup]
+        dup_idx = dedup_points(merged, dedup_radius_m)
         merged = merged.drop(index=dup_idx)
         n_removed = len(dup_idx)
         log.info(

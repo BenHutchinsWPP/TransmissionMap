@@ -2,13 +2,25 @@
 
 The CSV is the attribute table with the geometry replaced by a representative
 point (lon/lat), so it stays human-browsable without a GIS tool.
+
+`sha256_file(path)` is the full-hex file hash the route, publish and data-version scripts share.
 """
 import argparse
 import gzip
+import hashlib
 import json
 import os
 import sys
 from pathlib import Path
+
+
+def sha256_file(path):
+    """Hex SHA-256 of the file at `path` (str or Path), read in 1 MiB chunks."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
 
 
 def write_json_atomic(obj, path, **json_kwargs):

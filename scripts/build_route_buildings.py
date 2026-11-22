@@ -28,6 +28,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import route_grid as G
+from geo_common import sha256_file
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0"
@@ -47,14 +48,6 @@ def atomic_json(path, value):
         os.replace(tmp, path)
     finally:
         Path(tmp).unlink(missing_ok=True)
-
-
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as f:
-        for chunk in iter(lambda: f.read(1024*1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def promote_files(stage, output_dir, names, replace=None):

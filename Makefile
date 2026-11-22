@@ -561,6 +561,8 @@ test-pipeline:
 	@python3 -S -m unittest discover -s scripts -p "test_*.py"
 	@echo "with PyYAML (the manifest checks):"
 	@python3 -m unittest discover -s scripts -p "test_*.py"
+	@echo "with the venv (numpy/scipy/pandas pins):"
+	@if [ -x venv/bin/python ]; then venv/bin/python -m unittest scripts/test_dedup_points.py; fi
 
 # ── Tiles: data/build/ → data/layers/ ──────────────────────────────────────
 tiles: validate

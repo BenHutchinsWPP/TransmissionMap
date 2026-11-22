@@ -30,9 +30,11 @@ $NFHL_EDITION, default NFHL_Key_Layers_202610.gdb.zip; ~19 GB) into $NFHL_DIR (d
 an external disk), manifest nfhl_manifest.json (url, Last-Modified, size, sha256).
 Heavy PAD-US steps: wrap in systemd-run --user --scope -p MemoryMax=16G.
 """
-import csv, gzip, os, shutil, hashlib, json, re, subprocess, sys, tempfile, time, urllib.parse, urllib.request, zipfile
+import csv, gzip, os, shutil, json, re, subprocess, sys, tempfile, time, urllib.parse, urllib.request, zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
+
+from geo_common import sha256_file
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data/raw/route"
@@ -53,12 +55,7 @@ def log(*a):
     print(*a, flush=True)
 
 
-def sha256(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for b in iter(lambda: f.read(1 << 20), b""):
-            h.update(b)
-    return h.hexdigest()
+sha256 = sha256_file
 
 
 def download(url, dest, vintage):

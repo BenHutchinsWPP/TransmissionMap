@@ -192,6 +192,7 @@ class PublishR2(unittest.TestCase):
         shutil.copy(HERE / "geoparquet_common.py", sd)
         shutil.copy(HERE / "route_publish_plan.py", sd)
         shutil.copy(HERE / "data_versions.py", sd)
+        shutil.copy(HERE / "geo_common.py", sd)
         (self.repo / "src/registry").mkdir(parents=True)
         self.table = self.repo / "src/registry/data-versions.json"
         self.table.write_text("{}\n")
