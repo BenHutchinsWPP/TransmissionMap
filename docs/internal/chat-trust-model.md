@@ -76,7 +76,26 @@ package; a frame can hang the tab in browsers that share its process.
 
 ## Session restore
 
-`tm-chat` and `tm-drawer` (`sessionStorage`) restore only on a reload or back-forward of the
+`tm-chat` (owned by `ui-chat.ts`) and `tm-drawer` (owned by `drawer.ts`; the table's part is registered by `ui-table.ts`) (`sessionStorage`) restore only on a reload or back-forward of the
 same hash. They never hold the key and are validated on read as untrusted input. To rebuild a table, a
 restore reads only the site's own `data/analysis/` index and columns files (same origin as the tiles). It
-sends no model, service, geocoder or third-party request, runs no model code, writes no URL and adds no undo step.
+sends no model, service, geocoder or third-party request, runs no model code, writes no URL and adds no undo step. The boot hook loads the drawer shell (`drawer.ts`) only for a
+restorable `tm-drawer`, the table chunk only when it holds a table, and the chat chunk only when Ask was open.
+
+## Footguns
+
+### Map API / agent tools (what the chat may call)
+
+- a tool's arguments take a link's validator, never a looser path; a committing call goes through `asOwnStep`, or quick calls merge into one undo step; model text sent off the page needs an `offPage` entry so `dispatch` asks first; the tool schemas have a 16,000-byte budget in `tools.test.ts` — trim descriptions rather than raise it
+
+### Local chat commands (answered without a model)
+
+- a name that fits several layers or areas comes back `ambiguous`, never a guess; rule order matters — the specific `show …` rules sit before `show <layer>`; a template phrase reaches flow / buildout-map / distribution only where the template's signature fits the layer (`fit`), and nearest stays the model's — its second layer and threshold are not in the phrase
+
+### Session restore (Android discard / reload)
+
+- a snapshot restores only when its hash equals the hash the page loaded with and the navigation is a reload/back-forward — never on a fresh link, and map.ts's reload for a pasted link calls `endSnapshots()` first, or the reload's pagehide stamps the old drawer with the new hash; never store the key, and the save redacts anything key-shaped; validate on read as untrusted input, rebuilding entries with the text-only builders; save on hidden *and* re-save on every change while hidden, since a reply can land in the background; a restore sends no request, runs no model code, writes no URL and adds no undo step; one owner per fact — whether Ask is open is `tm-drawer`'s, never `tm-chat`'s; the boot hook in `ui-menubar.ts` imports the drawer shell (`drawer.ts`, through `table-open.ts` and `drawer-open.ts`) only for a restorable `tm-drawer`, the table chunk only when it holds a table, and the chat chunk only when it had Ask open; a vector-tile table restores after the map's `idle`, and the over-2 MiB size prompt is shown, never answered for the visitor; the Visualize pane's part of `tm-drawer` keeps card params only — each passes `validateTemplateArgs` again at restore, Vega cards (chat first, then Visualize, newest first) redraw only into free frame slots (`claimRestoreSlots`, ≤ 3 live, no eviction), the rest and html cards come back as Re-run
+
+### Agent loop / OpenRouter client / the key
+
+- never call OpenRouter from a test; data reaches the model only through `summarise()` — the one exception is `showTemplate`'s page-computed summary (total, group count, top 3 groups or the template's own figures — `nearest` numbers only, no names; ≤ 1 KB, group labels ≤ 60 chars); the key goes in the `Authorization` header only — never a URL, error text, `recordDiagEvent` or the view; a confirm-free `dispatch` is only for the visitor's own local-command text; `planRoute`'s page-built summary — HIFLD substation names capped at 60 characters with control characters stripped, plus numbers — is a second exception to `summarise()`, recorded in the chat trust model

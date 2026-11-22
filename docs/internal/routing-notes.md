@@ -2,7 +2,7 @@
 
 For people working on the route optimizer. The method is in [`../routing.md`](../routing.md); the
 rules that must not break (band order, the `osm_` split, `presetBands()`, the route data's
-hosting) are in the `AGENTS.md` task table. This file holds what neither says.
+hosting) are in § Footguns at the end of this file. This file holds what neither says.
 
 ## The cube
 
@@ -125,7 +125,7 @@ Gates move only for a sourced difference in inputs.
 
 ## Route panel
 
-- **Strings:** see the AGENTS.md Route panel row; the boot-read `route.*` keys are the Routing constraints layer's concerns, the Tools item, the context menu and the drawer tab.
+- **Strings:** see § Footguns › Route panel (UI); the boot-read `route.*` keys are the Routing constraints layer's concerns, the Tools item, the context menu and the drawer tab.
 - **Snapping:** `snapEnd` (`assets/ui/substation-index.ts`) returns, within the snap radius and at or
   above the line type's kV floor, the first of: a HIFLD hit of known kV (`snapAt`), an OSM hit of
   known kV (`snapAmong` over `substationPointsNear`; US points on the 250 m grid, `traction` and
@@ -182,7 +182,7 @@ Gates move only for a sourced difference in inputs.
 
 **What constrains** draws one class per cell by a fixed draw order (see [`../layers/route-constraints.md`](../layers/route-constraints.md) § Raster values). That order is a rendering rule,
 not a ranking of the land; no visitor-facing text should present it as one. Its other rules are
-in the `AGENTS.md` task table.
+in § Footguns at the end of this file.
 - **Concern switch:** a pick sets `state.routeConcern` through `setRouteConcern()` (`assets/route-constraints.ts`), which swaps the one raster source's url with `setRasterUrl()` (`assets/layers/layer-plan.ts`).
 - **Zoom range and hosting:** the tiles are z3–z9, and z3–z8 for land cover and slope, which exceed 20 MiB at z9 (see `manifest.json`). `DATA.route_constraints` is in `NOT_SCRAPED` (`assets/constants.test.ts`), so `make validate` never sees them; they ship in the route set (*Hosting* below).
 
@@ -240,3 +240,17 @@ Columns are the studies and tools in *Studies cited* in `routing.md`.
 | alternatives and similar-cost areas | ✓ | — | — | ✓ alternative routes | — | — | — |
 | proof of the lowest routing score | ✓ | — | — | — | — | — | — |
 | editable weights | ✓ | — fixed | ✓ config files | ✓ per project | ◐ workbook | ◐ spreadsheet | ✓ calculator |
+
+## Footguns
+
+### Route panel (UI)
+
+- open the pane only through `route-panel-open.ts`'s dynamic import, or route code lands in the boot bundle (`node scripts/check_route_bundle.mjs` checks a build); every map layer and source id is `rp-`-prefixed and added or removed, never visibility-toggled; tabs talk to the shell only through `RouteTabContext` — no import of `ui-route.ts`, or the chunk cycles; every preset edit, stored custom method and pref reaches a solve only through `validatePresetPatch`; wording is "Similar-cost areas" / "Alternatives", never "corridor" except proper names such as "Section 368 corridor", and cost ranges read "rough early estimate (−30 % / +50 %)", never "exploratory"; AACE Class 5 is cited only on the Method tab, the report method page and docs/routing.md; a new string needs a key in every locale or the i18n parity test fails — a new route string goes in `src/i18n/route/*.ts` (loaded with the panel by `loadRouteStrings()`, which `route-panel-open.ts` awaits beside the chunk), a route key the boot bundle reads goes in `locales/*.ts` (the exact set is held by `src/i18n/i18n.test.ts`); a route is session only — no URL param, no `url:write`; the Method grid's map highlight is the `rows` overlay mode on `rp-weight`, repainted by the worker from the held window (`repaintRows`), and `assets/route/band-data.validate.test.ts` holds the "Map data from" labels to the cube's source text; visitor text calls a proven route the "lowest routing score", never "optimal" or "least-cost"; a terminal choice replaces the `RouteEnd` (`{ ...end, term }`), never mutates it, and never bumps the end's snap generation; the chat snaps to HIFLD only (`osm: false`) and its ends start at Auto (`resetTerm`), and an OSM end's name never goes to the model; an OSM-named end carries "© OpenStreetMap contributors" everywhere its name is shown or exported
+
+### Routing constraints layer / concern picker
+
+- a categorical tile set is recoloured from index codes, so overviews must resample with `max` (`mode` for the land manager and land cover) and never average or use WEBP, or colours blend into ones outside the palette; a concern id is a share-link value (`rc`) — never rename one; `scripts/route_constraints.json` and `scripts/route_constraints_sets.json` are generated — edit the TS and regenerate with `UPDATE_ROUTE_CONSTRAINTS=1`; the tiles are served from the route set on the data host (`ROUTE_ORIGIN` in `assets/constants.ts`, immutable `data/route/<ROUTE_ID>/`); their DATA key is in `NOT_SCRAPED`, so only `publish_r2.sh --only route` uploads them; switch concern only through `setRasterUrl`, which also rewrites the held url, or a link or undo before the first show loads the old concern; the cube's `pd_`/`osm_` split stays absolute, but a concern may read `osm_flags`/`adj` as its own picker entry, credited © OpenStreetMap contributors (ODbL) in its legend and tile attribution — never in What constrains or Land manager, which stay `pd_`-only (`route-constraints.test.ts` and the build refuse it); an existing concern id may change kind only if it still draws the same cells; the classes of one entry never share a value; an entry over 20 MiB at z8 is split into two entries, never drawn transparent or given a larger cap
+
+### Route optimizer (cube, presets, solver)
+
+- the band order is one contract across `scripts/route_grid.py` (`PD_BANDS`/`OSM_BANDS`), `scripts/build_route_cube.py`, `route.ts` `PD_BANDS`/`OSM_BANDS` and `assets/route/fixtures/make-cube.py` — `route.ts` refuses a cube whose band order differs (loud), but `make-cube.py` indexes bands by position (silent), so change all four together or fixture reads land on the wrong band; an OSM-derived band (including anything computed from OSM lines, like `adj`) goes only in the `osm_` files, never `pd_`, or the public-domain files take on ODbL; preset edits reach a solve only through `preset-patch.ts`'s `validatePresetPatch`, never a looser path; `presetBands()` must list every band a preset reads (rows, active `except` entries, mitigation, regions, ROW land), or the band is not loaded, reads as nodata and its $ silently drop out; method edits happen in the Route panel's Method tab (this session, and saved methods: save, rename, delete), through `validatePresetPatch`; the panel saves its last method, line type, colour mode and surface choice to `route-prefs.ts` (`tm-route-prefs`, re-validated on read); terminal kinds reach a solve only through `validateTerminals`

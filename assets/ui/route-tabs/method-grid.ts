@@ -7,7 +7,7 @@
 //       validatePresetPatch); this module draws its rows with `replaceData`, turns a cell edit, an Excl. or
 //       exemption tick into a method-rows call, and hands the accepted patch to `onChange`. A refusal puts the
 //       cell's old value back and shows the reason in the toolbar's alert line.
-//       Tabulator rules (AGENTS.md, Table drawer): Format, FrozenColumns, Interaction, Keybindings, SelectRange,
+//       Tabulator rules (assets/ui/README.md § Footguns, Table drawer): Format, FrozenColumns, Interaction, Keybindings, SelectRange,
 //       Edit and ResizeColumns only (never Clipboard or Export: they write copied values through innerHTML);
 //       every formatter and titleFormatter returns a Node; fields are positional (`f0`…); cells are text
 //       only. Edit opens on a double click (or Enter on a one-cell range), so a drag over cells makes a range.

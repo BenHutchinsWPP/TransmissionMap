@@ -273,3 +273,9 @@ and `--as-of` defaults to today (UTC). `python -m moratoriums.refresh.run`
 runs with `PYTHONPATH=scripts`; `--mode dry_run` uses the fixtures and a stub
 model, with no network. `make test-pipeline` runs the stdlib unit tests,
 including `scripts/test_dcm_*.py`.
+
+## Footguns
+
+### Moratorium layer data / twice-monthly refresh
+
+- the workflow YAML must be on `main` to run at all; scheduled runs commit straight to `data-moratoriums` (no review; undo a run with `git revert`) — reject a row with an `updates.csv` `DROP` line and a rebuild, never by editing the published CSVs; move the pin in one `data-moratoriums` PR changing `inputs/upstream.sha` and `inputs/upstream_as_of` together
