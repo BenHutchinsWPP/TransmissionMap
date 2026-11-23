@@ -2965,7 +2965,11 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
 }
 .td-colpanel[hidden] { display: none; }
-.td-colpanel-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--panel-border); }
+.td-colpanel-head {
+  display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--panel-border);
+  /* Stays at the top while the fields scroll, covering the panel's top padding. */
+  position: sticky; top: -8px; z-index: 1; margin-top: -8px; padding-top: 8px; background: inherit;
+}
 .td-colpanel-title { font-weight: 700; font-size: 13px; margin-inline-end: auto; }
 .td-colpanel .td-link { margin-top: 0; }
 .td-colpanel fieldset { border: 0; margin: 6px 0 0; padding: 0; }
@@ -3128,6 +3132,20 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   .td-btn { padding: 4px 7px; }
   .td-colpanel, .td-filterpop { inset: 10px 0 0; width: auto; border-width: 1px 0 0; border-radius: 0; box-shadow: none; z-index: 3; background: #fff; }
   .td-colpanel .td-cols-done { display: inline-block; }
+  /* The filter fills the drawer: its values take the height, and only they
+     scroll, so Apply stays in view. */
+  .td-filterpop:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
+  .td-fp-body { flex: 0 1 auto; min-height: 0; }
+  .td-fp-list { max-height: none; min-height: 0; flex: 0 1 auto; }
+}
+/* A narrow screen: the column picker's fields in two columns. */
+@media (max-width: 640px) {
+  .td-colpanel fieldset { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .td-colpanel fieldset { margin-top: 2px; }
+  .td-col { min-width: 0; overflow-wrap: anywhere; }
+  /* The filter's values two to a row. */
+  .td-fp-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; align-content: start; }
+  .td-fp-opt { min-width: 0; overflow-wrap: anywhere; }
 }
 /* A short landscape (phone) screen: the actions become a rail at the
    inline start, and the tab, pills and credit one footer line. A portrait
@@ -3156,13 +3174,14 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   .td-grip { height: 20px; }
   .td-sort { min-height: 28px; }
   .td-filter-btn { min-width: 28px; min-height: 28px; font-size: 13px; }
-  .td-fp-opt { min-height: 40px; font-size: 14px; }
+  .td-fp-opt { min-height: 28px; font-size: 14px; }
   .td-fp-search, .td-fp-text, .td-fp-num, .td-fp-bool { min-height: 40px; font-size: 16px; }
   .td-btn, .td-tab, .td-tab-x, .td-fold, .td-link { min-height: 44px; }
   .td-link { padding: 0 8px; }
   .td-icon { width: 44px; height: 44px; }
   .td-bar { min-height: 40px; }
-  .td-col { min-height: 44px; font-size: 14px; }
+  .td-col { min-height: 28px; font-size: 13px; }
+  .td-col input, .td-fp-opt input { width: 18px; height: 18px; flex-shrink: 0; }
   .td-group-ctl select { min-height: 40px; }
   .td-hint { display: none; }
 }

@@ -89,7 +89,7 @@ export default async function table(ctx) {
     // (3b) Columns: the default set, a toggle off and on, All, Default; Esc
     // closes the panel (not the drawer) and returns focus to the button.
     const heads = () => page.evaluate(() => [...document.querySelectorAll('.td-grid .tabulator-col [data-sort]')].map(b => b.dataset.sort));
-    check('default columns: 8 shown', (await heads()).length === 8 && (await page.textContent('.td-cols-n')) === '8/19', `${(await heads()).join(',')} · ${await page.textContent('.td-cols-n')}`);
+    check('default columns: 8 shown', (await heads()).length === 8 && (await page.textContent('.td-cols-n')) === '8/22', `${(await heads()).join(',')} · ${await page.textContent('.td-cols-n')}`);
     await page.click('.td-cols');
     check('Columns opens a panel with grouped checkboxes', await page.isVisible('#td-colpanel') && (await page.locator('#td-colpanel fieldset').count()) >= 3);
     await shot(page, 'table-9-columns-desk');
@@ -98,7 +98,7 @@ export default async function table(ctx) {
     await page.click('#td-colpanel [data-col="gen_status"]');
     check('checking it shows it again', (await heads()).includes('gen_status'));
     await page.click('.td-cols-all');
-    check('All shows 19', (await heads()).length === 19);
+    check('All shows 22', (await heads()).length === 22);
     await page.click('.td-cols-default');
     check('Default goes back to 8', (await heads()).length === 8);
     await page.focus('#td-colpanel [data-col="plant_name"]');
@@ -452,7 +452,7 @@ export default async function table(ctx) {
     check('expanded: no second total line, the bars come first', await p.page.isHidden('.td-total-line'));
     await shot(p.page, 'table-12-fold-open-phone');
     await p.page.tap('.td-fold');
-    // The Columns sheet covers the drawer, with finger-sized rows.
+    // The Columns sheet covers the drawer, its fields two to a row.
     await p.page.tap('.td-cols');
     const sheet = await p.page.evaluate(() => {
       const c = document.querySelector('#td-colpanel').getBoundingClientRect();
@@ -460,10 +460,54 @@ export default async function table(ctx) {
       const item = document.querySelector('#td-colpanel .td-col').getBoundingClientRect();
       return { cw: c.width, dw: d.width, item: item.height };
     });
-    check('phone: Columns opens a sheet over the drawer', Math.abs(sheet.cw - sheet.dw) < 2 && sheet.item >= 44, JSON.stringify(sheet));
+    check('phone: Columns opens a sheet over the drawer, rows ≥ 28 px', Math.abs(sheet.cw - sheet.dw) < 2 && sheet.item >= 28, JSON.stringify(sheet));
+    const nCols = await p.page.evaluate(() => {
+      const box = document.querySelector('#td-colpanel').getBoundingClientRect();
+      return [...document.querySelectorAll('#td-colpanel .td-col')].filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.top >= box.top && r.bottom <= box.bottom;
+      }).length;
+    });
+    check('phone: the Columns sheet shows ≥ 20 fields at once', nCols >= 20, `${nCols}`);
     await shot(p.page, 'table-10-columns-phone');
+    // Scrolled to the last field, the Default / All / Done header stays in view.
+    const pinned = await p.page.evaluate(() => {
+      const c = document.querySelector('#td-colpanel');
+      c.scrollTop = c.scrollHeight;
+      const box = c.getBoundingClientRect();
+      const done = c.querySelector('.td-cols-done').getBoundingClientRect();
+      return { scrolled: c.scrollTop, top: done.top - box.top, bottom: box.bottom - done.bottom };
+    });
+    check('phone: Done stays in view at the end of the list', pinned.scrolled > 0 && pinned.top >= 0 && pinned.bottom >= 0, JSON.stringify(pinned));
+    await shot(p.page, 'table-16-columns-scrolled-phone');
     await p.page.tap('.td-cols-done');
     check('Done closes the sheet', await p.page.isHidden('#td-colpanel'));
+    // A value filter fills the drawer: the list takes the height, Apply stays in view.
+    await p.page.tap('.td-grid [data-filter="gen_status"]');
+    await p.page.waitForSelector('.td-filterpop:not([hidden])');
+    const fp = await p.page.evaluate(() => {
+      const pop = document.querySelector('.td-filterpop').getBoundingClientRect();
+      const list = document.querySelector('.td-fp-list');
+      const apply = document.querySelector('.td-fp-apply').getBoundingClientRect();
+      return { cap: getComputedStyle(list).maxHeight, clipped: list.scrollHeight > list.clientHeight + 1, apply: apply.bottom, pop: pop.bottom };
+    });
+    check('phone: the value list is uncapped, unclipped, Apply in view', fp.cap === 'none' && !fp.clipped && fp.apply <= fp.pop, JSON.stringify(fp));
+    await shot(p.page, 'table-15-filter-phone');
+    await p.page.tap('.td-fp-cancel');
+    // A long value list (energy_source, 20 codes) fits whole, two to a row.
+    await p.page.tap('.td-cols'); await p.page.tap('.td-cols-all'); await p.page.tap('.td-cols-done');
+    await p.page.locator('.td-grid [data-filter="energy_source"]').scrollIntoViewIfNeeded();
+    await p.page.tap('.td-grid [data-filter="energy_source"]');
+    await p.page.waitForSelector('.td-filterpop:not([hidden])');
+    const fpLong = await p.page.evaluate(() => {
+      const lb = document.querySelector('.td-fp-list').getBoundingClientRect();
+      const opts = [...document.querySelectorAll('.td-fp-list .td-fp-opt:not([hidden])')];
+      return { total: opts.length, shown: opts.filter(o => { const b = o.getBoundingClientRect(); return b.top >= lb.top - 1 && b.bottom <= lb.bottom + 1; }).length };
+    });
+    check('phone: a 20-value filter shows every value at once', fpLong.total >= 20 && fpLong.shown === fpLong.total, JSON.stringify(fpLong));
+    await shot(p.page, 'table-17-filter-long-phone');
+    await p.page.tap('.td-fp-cancel');
+    await p.page.tap('.td-cols'); await p.page.tap('.td-cols-default'); await p.page.tap('.td-cols-done');
     await p.page.locator('.td-row').nth(0).locator('input[type=checkbox]').tap();
     await p.page.locator('.td-row').nth(1).locator('input[type=checkbox]').tap();
     await p.page.tap('.td-select');
