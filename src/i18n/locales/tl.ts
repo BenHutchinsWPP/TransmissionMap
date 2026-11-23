@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'Mga tag ng rehiyon',
   'table.colGroupFields': 'Mga field',
   'table.colGroupNames': 'Mga pangalan',
+  'table.colGroupSuggested': 'Mga mungkahi',
   'table.colsAll': 'Lahat',
   'table.colsDefault': 'Default',
   'table.colsTitle': 'Piliin ang mga column na ipapakita (nasa CSV pa rin ang lahat)',

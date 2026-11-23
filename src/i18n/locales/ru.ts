@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'Теги регионов',
   'table.colGroupFields': 'Поля',
   'table.colGroupNames': 'Названия',
+  'table.colGroupSuggested': 'Рекомендуемые',
   'table.colsAll': 'Все',
   'table.colsDefault': 'По умолчанию',
   'table.colsTitle': 'Выбрать показываемые столбцы (CSV сохраняет все)',

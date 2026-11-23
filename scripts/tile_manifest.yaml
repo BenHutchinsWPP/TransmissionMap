@@ -430,3 +430,4 @@ built_elsewhere:
     select: [fid, kind, name, state, level, cls, n, last_event, items, history]
   - id: nrel_hydrothermal_points  # scripts/build_hydrothermal_pts.sh (`make hydro-pts`)
     id_field: UID
+    select: [UID, name, state, county, temp_c, min_depth_m, max_depth_m, heat_mwt, reference]

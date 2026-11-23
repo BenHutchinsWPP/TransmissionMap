@@ -30,19 +30,19 @@ Which of the 15 template archetypes (`src/registry/template-signatures.ts`) each
 | osm-pipelines-lines | line | D | D | D | — | — | D | D | — | P | — | D | D | D | — | P |
 | osm-pipelines-points | point | Y | Y | — | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
 | railroads | line | P | P | P | — | — | P | P | — | P | — | — | — | — | — | P |
-| nrel-hydrothermal-points | point | Y | Y | — | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
+| nrel-hydrothermal-points | point | Y | Y | Y | — | — | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
 | boem-wind-leases | polygon | Y | Y | Y | Y | — | Y | Y | Y | — | Y | — | — | — | — | — |
 | padus | polygon | D | D | D | D | — | D | D | D | — | D | — | — | — | — | — |
-| tribal-lands | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
+| tribal-lands | polygon | Y | Y | Y | — | — | Y | Y | Y | — | Y | — | — | — | — | — |
 | bia-tribal-lands | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
 | mines | point | Y | Y | Y | — | — | Y | Y | Y | — | — | Y | Y | Y | Y | — |
 | crithab | polygon | D | D | D | — | — | D | D | D | — | — | — | — | — | — | — |
 | osm-datacenters | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | Y | Y | Y | Y | — |
 | dc-moratoriums | point | Y | Y | Y | Y | Y | Y | Y | Y | — | Y | — | — | — | Y | — |
 | nerc-regions | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
-| control-areas | polygon | Y | Y | Y | — | — | — | — | Y | — | Y | — | — | — | — | — |
+| control-areas | polygon | Y | Y | Y | Y | — | — | — | Y | — | Y | — | — | — | — | — |
 | eia-ba | polygon | — | — | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
-| retail-territories | polygon | D | D | D | — | — | D | D | D | — | D | — | — | — | — | — |
+| retail-territories | polygon | D | D | D | D | — | D | D | D | — | D | — | — | — | — | — |
 | countries | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
 | admin1 | polygon | Y | Y | Y | — | — | Y | Y | Y | — | — | — | — | — | — | — |
 | us-states | polygon | Y | Y | Y | — | — | — | — | Y | — | — | — | — | — | — | — |
@@ -55,14 +55,14 @@ Which of the 15 template archetypes (`src/registry/template-signatures.ts`) each
 |---|---|---|---|---|---|---|
 | composition | C | 20 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
 | ranking | CR | 20 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
-| distribution | MT, length / area too | 18 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
-| timeline | T | 6 | 2 | 0 | 0 | transmission, generators, renewable, land, load |
+| distribution | MT, length / area too | 19 | 11 | 3 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
+| timeline | T | 7 | 3 | 0 | 0 | transmission, generators, renewable, land, load, regions |
 | buildout-map | T, on point | 4 | 0 | 0 | 0 | generators, load |
 | flow | C + CR | 16 | 11 | 2 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
 | hierarchy | CR + C | 16 | 11 | 2 | 0 | substations, transmission, generators, pipelines, rail, renewable, land, load, regions |
 | density | —, on point/polygon | 19 | 7 | 2 | 0 | substations, transmission, generators, pipelines, renewable, land, load, regions |
 | lines-by-class | C, on line | 2 | 0 | 5 | 0 | transmission, pipelines, rail |
-| scatter | MT + MT | 10 | 3 | 0 | 0 | substations, transmission, generators, renewable, land, load, regions |
+| scatter | MT + MT | 12 | 3 | 0 | 0 | substations, transmission, generators, renewable, land, load, regions |
 | compare-regions | R + C | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
 | points-per-polygon | R | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |
 | pies-per-region | R + C | 10 | 8 | 0 | 0 | substations, transmission, generators, pipelines, renewable, load |

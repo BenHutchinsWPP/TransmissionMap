@@ -657,6 +657,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'وسوم المناطق',
   'table.colGroupFields': 'الحقول',
   'table.colGroupNames': 'الأسماء',
+  'table.colGroupSuggested': 'مقترحة',
   'table.colsAll': 'الكل',
   'table.colsDefault': 'الافتراضي',
   'table.colsTitle': 'اختيار الأعمدة المعروضة (يحتفظ ملف CSV بها كلها)',

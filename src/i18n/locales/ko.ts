@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': '지역 태그',
   'table.colGroupFields': '필드',
   'table.colGroupNames': '이름',
+  'table.colGroupSuggested': '추천',
   'table.colsAll': '모두',
   'table.colsDefault': '기본값',
   'table.colsTitle': '표시할 열 선택(CSV에는 모든 열이 유지됨)',

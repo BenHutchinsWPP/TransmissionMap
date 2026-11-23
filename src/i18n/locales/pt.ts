@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'Etiquetas de região',
   'table.colGroupFields': 'Campos',
   'table.colGroupNames': 'Nomes',
+  'table.colGroupSuggested': 'Sugeridas',
   'table.colsAll': 'Todas',
   'table.colsDefault': 'Padrão',
   'table.colsTitle': 'Escolher as colunas exibidas (o CSV mantém todas)',

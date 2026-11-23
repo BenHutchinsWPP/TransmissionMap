@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': '地域タグ',
   'table.colGroupFields': 'フィールド',
   'table.colGroupNames': '名称',
+  'table.colGroupSuggested': 'おすすめ',
   'table.colsAll': 'すべて',
   'table.colsDefault': '既定',
   'table.colsTitle': '表示する列を選ぶ(CSV にはすべての列が残ります)',

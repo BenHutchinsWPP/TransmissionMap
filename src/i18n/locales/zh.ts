@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': '区域标签',
   'table.colGroupFields': '字段',
   'table.colGroupNames': '名称',
+  'table.colGroupSuggested': '推荐',
   'table.colsAll': '全部',
   'table.colsDefault': '默认',
   'table.colsTitle': '选择显示的列(CSV 保留全部列)',

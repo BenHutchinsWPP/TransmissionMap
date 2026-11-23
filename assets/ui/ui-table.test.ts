@@ -45,7 +45,7 @@ describe('TABLE_DEFAULT_COLUMNS', () => {
 
   it('any other layer shows every field but the region lists and the id', () => {
     const { fields, idField } = fieldsOf('hifld-substations');
-    const cols = defaultColumns('hifld-substations', fields, idField);
+    const cols = defaultColumns('no-designed-list', fields, idField);
     expect(cols).not.toContain(idField);
     expect(cols.some(c => fields.find(f => f.name === c)?.list)).toBe(false);
     expect(cols.length).toBeGreaterThan(0);

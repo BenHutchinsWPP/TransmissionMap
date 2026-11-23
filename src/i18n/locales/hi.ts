@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'क्षेत्र टैग',
   'table.colGroupFields': 'फ़ील्ड',
   'table.colGroupNames': 'नाम',
+  'table.colGroupSuggested': 'सुझाए गए',
   'table.colsAll': 'सभी',
   'table.colsDefault': 'डिफ़ॉल्ट',
   'table.colsTitle': 'दिखाए जाने वाले कॉलम चुनें (CSV में सभी रहते हैं)',

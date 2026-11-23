@@ -9,7 +9,8 @@
 //         label     the field naming one feature (a display field, or the id
 //                   column when the layer has no name);
 //         display   the role of each assets/query/dataset-core.ts DISPLAY_FIELDS
-//                   name that is not a schema field (category or label);
+//                   name that is not a schema field (category, label, or id:
+//                   a code, link or free text no template groups by);
 //         facets    field → legend facet (src/colors/facets.ts) whose bucket
 //                   colours and labels a chart of that field uses;
 //         pending   fields in the served data that no schema or display entry
@@ -35,7 +36,7 @@ interface PendingField { role: FieldRole; unit?: string; facet?: string }
 interface LayerRoles {
   geometry: Geometry;
   label: string;
-  display: Record<string, 'category' | 'label'>;
+  display: Record<string, 'category' | 'label' | 'id'>;
   facets?: Record<string, string>;
   pending?: Record<string, PendingField>;
 }
@@ -43,12 +44,16 @@ interface LayerRoles {
 const KV = { facets: { nominal_kv: 'kv' } };
 const OSM_NAMED = { name: 'label', operator: 'category' } as const;
 const FUEL = { source: 'fuel' };
+/** Display columns a chart may group by. */
+const cats = (...names: string[]) => Object.fromEntries(names.map(n => [n, 'category' as const]));
+/** Display columns no chart groups by: codes, links, free text. */
+const ids = (...names: string[]) => Object.fromEntries(names.map(n => [n, 'id' as const]));
 
 // Every registry layer with a `dataset` needs an entry (field-roles.test.ts).
 export const FIELD_ROLES: Record<string, LayerRoles> = {
   'eia-generators': {
     geometry: 'point', label: 'plant_name',
-    display: { plant_name: 'label', technology: 'category', state: 'category', ba_code: 'category', utility_name: 'category' },
+    display: { plant_name: 'label', technology: 'category', state: 'category', ba_code: 'category', utility_name: 'category', ...cats('nerc_region', 'pipelines'), ...ids('plant_code') },
     facets: { energy_source: 'fuel', sector_name: 'sector' },
   },
   'osm-plants-points': { geometry: 'point', label: 'name', display: OSM_NAMED, facets: FUEL },
@@ -57,15 +62,15 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
   'osm-substations-points': { geometry: 'point', label: 'name', display: { ...OSM_NAMED, sub_type: 'category' }, ...KV },
   'osm-substations-polygons': { geometry: 'polygon', label: 'name', display: { ...OSM_NAMED, sub_type: 'category' }, ...KV },
   'hifld-substations': { geometry: 'point', label: 'name', display: { name: 'label' }, facets: { max_kv: 'kv' } },
-  'osm-transmission-lines': { geometry: 'line', label: 'name', display: OSM_NAMED, ...KV },
-  'hifld-transmission-lines': { geometry: 'line', label: 'ID', display: { OWNER: 'category' }, facets: { VOLTAGE: 'kv' } },
+  'osm-transmission-lines': { geometry: 'line', label: 'name', display: { ...OSM_NAMED, ...cats('is_dc', 'is_undergrnd') }, ...KV },
+  'hifld-transmission-lines': { geometry: 'line', label: 'ID', display: { OWNER: 'category', ...ids('SUB_1', 'SUB_2') }, facets: { VOLTAGE: 'kv' } },
   'ogf-planned-transmission': {
     geometry: 'line', label: 'Project',
-    display: { Project: 'label', Owner: 'category', FromSub: 'category', ToSub: 'category', StatesFull: 'category' },
+    display: { Project: 'label', Owner: 'category', FromSub: 'category', ToSub: 'category', StatesFull: 'category', ...cats('ISO_RTO', 'PlanProc'), ...ids('FedPerm', 'StatePerm', 'Segment', 'AltName', 'AllSub', 'InfoDate', 'Perm_Updat', 'Link', 'Link2', 'ProjectID') },
     facets: { Status: 'ogfStatus', Work: 'ogfWork', Region: 'ogfRegion' },
   },
   'westtec-10yr': {
-    geometry: 'line', label: 'name', display: { name: 'label' },
+    geometry: 'line', label: 'name', display: { name: 'label', ...ids('ogf_ids') },
     facets: { scenario: 'westtecScenario', dataset: 'westtecDataset' },
   },
   'osm-pipelines-lines': { geometry: 'line', label: 'name', display: OSM_NAMED, facets: { substance: 'substance' } },
@@ -78,10 +83,10 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
   },
   'railroads': { geometry: 'line', label: 'RROWNER1', display: {} },
   'hifld-natgas-points': {
-    geometry: 'point', label: 'name', display: { ...OSM_NAMED, state: 'category' }, facets: { fac_type: 'natgasPts' },
+    geometry: 'point', label: 'name', display: { ...OSM_NAMED, state: 'category', ...ids('detail') }, facets: { fac_type: 'natgasPts' },
   },
   'nrel-hydrothermal-points': {
-    geometry: 'point', label: 'name', display: { name: 'label', state: 'category', county: 'category' },
+    geometry: 'point', label: 'name', display: { name: 'label', state: 'category', county: 'category', ...ids('reference') },
   },
   'mines': {
     geometry: 'point', label: 'name',
@@ -90,19 +95,19 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
   },
   'osm-datacenters': {
     geometry: 'point', label: 'name',
-    display: { ...OSM_NAMED, addr_city: 'category', addr_state: 'category' },
+    display: { ...OSM_NAMED, addr_city: 'category', addr_state: 'category', ...ids('website', 'im3_ref') },
   },
   'nerc-regions': {
-    geometry: 'polygon', label: 'sub_nm', display: { region: 'category', sub_nm: 'label', state: 'category' },
+    geometry: 'polygon', label: 'sub_nm', display: { region: 'category', sub_nm: 'label', state: 'category', ...ids('website') },
     facets: { code: 'nerc' },
   },
-  'control-areas': { geometry: 'polygon', label: 'name', display: { name: 'label', state: 'category' } },
+  'control-areas': { geometry: 'polygon', label: 'name', display: { name: 'label', state: 'category', ...ids('website') } },
   'us-counties': { geometry: 'polygon', label: 'NAME', display: { NAME: 'label' } },
   'us-zcta': { geometry: 'polygon', label: 'zcta5', display: {} },
   'bia-tribal-lands': { geometry: 'polygon', label: 'LARNAME', display: { LARNAME: 'label' } },
-  'wecc-paths': { geometry: 'point', label: 'name', display: { name: 'label' } },
-  'boem-wind-leases': { geometry: 'polygon', label: 'lease', display: { lease: 'label', project: 'category' } },
-  'us-states': { geometry: 'polygon', label: 'name', display: {} },
+  'wecc-paths': { geometry: 'point', label: 'name', display: { name: 'label', ...ids('number', 'revised', 'n_lines', 'source', 'note', 'rating_detail', 'lines') } },
+  'boem-wind-leases': { geometry: 'polygon', label: 'lease', display: { lease: 'label', project: 'category', ...ids('term') } },
+  'us-states': { geometry: 'polygon', label: 'name', display: { ...ids('geoid') } },
   'countries': { geometry: 'polygon', label: 'name', display: {} },
   'admin1': { geometry: 'polygon', label: 'name', display: { name: 'label' } },
   'tribal-lands': { geometry: 'polygon', label: 'name', display: { name: 'label' }, facets: { area_type: 'tribal' } },
@@ -112,7 +117,7 @@ export const FIELD_ROLES: Record<string, LayerRoles> = {
   },
   'padus': { geometry: 'polygon', label: 'name', display: { name: 'label' }, facets: { desig: 'padus' } },
   'crithab': {
-    geometry: 'polygon', label: 'comname', display: { comname: 'label', sciname: 'category' },
+    geometry: 'polygon', label: 'comname', display: { comname: 'label', sciname: 'category', ...ids('spcode') },
     facets: { listing_st: 'crithab' },
   },
   'dc-moratoriums': {

@@ -41,8 +41,9 @@ BUILT_ELSEWHERE_SCRIPTS = {
     "mines": EXTRACT_MINES,
     "dc_moratoriums": ROOT / "scripts" / "moratoriums" / "build_layer.py",
 }
-# Built-elsewhere datasets with no script: the served file is edited by hand.
-HAND_MAINTAINED = {"wecc_paths"}
+# Built-elsewhere datasets with no properties literal to compare: the served file is edited by hand,
+# or a shell script's KEEP map writes it.
+HAND_MAINTAINED = {"wecc_paths", "nrel_hydrothermal_points"}
 REGION = set(region_join.REGION_FIELDS)
 
 

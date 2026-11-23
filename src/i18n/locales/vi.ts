@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'Thẻ khu vực',
   'table.colGroupFields': 'Trường',
   'table.colGroupNames': 'Tên',
+  'table.colGroupSuggested': 'Gợi ý',
   'table.colsAll': 'Tất cả',
   'table.colsDefault': 'Mặc định',
   'table.colsTitle': 'Chọn các cột hiển thị (CSV giữ tất cả các cột)',

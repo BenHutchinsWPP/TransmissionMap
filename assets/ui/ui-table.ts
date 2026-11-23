@@ -296,14 +296,47 @@ function orderFields(fields: FieldInfo[], idField: string): FieldInfo[] {
   return [...fields].sort((a, b) => rankOf(a, idField) - rankOf(b, idField));
 }
 
-// The columns a table starts with: a designed list for the layers whose table
-// was laid out column by column, else every field but the region lists and
-// the id. Shown columns are a render choice only — the query, the sort, the
+// The columns a table starts with: the layer's designed list (the useful
+// columns, in order; the Columns panel lists them first as Suggested and every
+// other field below them, off), else every field but the region lists and the
+// id. Shown columns are a render choice only — the query, the sort, the
 // group-by and the CSV keep every allowed field.
 export const TABLE_DEFAULT_COLUMNS: Record<string, string[]> = {
   'eia-generators': ['plant_name', 'technology', 'nameplate_mw', 'gen_status', 'op_year', 'state', 'ba_code', 'utility_name'],
+  'osm-plants-points': ['name', 'source', 'output_mw', 'operator', 'start_date', 'countries', 'admin1'],
+  'osm-plants-polygons': ['name', 'source', 'output_mw', 'operator', 'start_date', 'countries', 'admin1'],
+  'osm-generators': ['name', 'source', 'output_mw', 'operator', 'gen_method', 'gen_type', 'countries'],
   'osm-substations-points': ['name', 'operator', 'nominal_kv', 'sub_type', 'countries', 'admin1'],
   'osm-substations-polygons': ['name', 'operator', 'nominal_kv', 'sub_type', 'countries', 'admin1'],
+  'hifld-substations': ['name', 'max_kv', 'min_kv', 'states'],
+  'osm-transmission-lines': ['name', 'nominal_kv', 'operator', 'countries', 'admin1'],
+  'hifld-transmission-lines': ['OWNER', 'VOLTAGE', 'VOLT_CLASS', 'STATUS', 'TYPE', 'SUB_1', 'SUB_2', 'states'],
+  'ogf-planned-transmission': ['Project', 'Owner', 'Status', 'FP_Filter', 'SP_Filter', 'MaxVolt', 'CapacityMW', 'EstYear', 'Type', 'Length_mi', 'FromSub', 'ToSub', 'StatesFull', 'Region'],
+  'westtec-10yr': ['name', 'scenario', 'dataset', 'upgrade_type', 'voltage_kv', 'line_type', 'length_mi'],
+  'osm-pipelines-lines': ['name', 'substance', 'operator', 'countries', 'admin1'],
+  'osm-pipelines-points': ['pipeline', 'operator', 'countries', 'admin1'],
+  'hifld-natgas-lines': ['name', 'operator', 'pipe_type', 'states'],
+  'hifld-natgas-points': ['name', 'fac_type', 'operator', 'status', 'state', 'detail'],
+  'railroads': ['RROWNER1', 'SUBDIV', 'BRANCH', 'TRACKS', 'PASSNGR', 'STATEAB', 'NET', 'DIVISION'],
+  'nrel-hydrothermal-points': ['name', 'state', 'county', 'temp_c', 'heat_mwt', 'min_depth_m', 'max_depth_m'],
+  'mines': ['name', 'commodity', 'status', 'employees', 'operator', 'state'],
+  'osm-datacenters': ['name', 'operator', 'addr_city', 'addr_state', 'im3_sqft', 'start_date'],
+  'nerc-regions': ['sub_nm', 'region', 'code', 'state'],
+  'control-areas': ['name', 'state', 'tot_cap', 'peak_ld', 'min_ld', 'avail_cap', 'year'],
+  'eia-ba': ['name', 'area_sqmi'],
+  'retail-territories': ['name', 'type', 'state', 'customers', 'retail_mwh', 'sumr_peak', 'wntr_peak', 'hold_co', 'ctrl_area', 'year'],
+  'padus': ['name', 'desig', 'mng_agency', 'own_type', 'gap', 'access', 'state', 'acres', 'yr_est'],
+  'tribal-lands': ['name', 'area_type', 'recognized', 'acres_land'],
+  'bia-tribal-lands': ['LARNAME', 'AGENCY'],
+  'crithab': ['comname', 'sciname', 'listing_st', 'status'],
+  'dc-moratoriums': ['name', 'state', 'cls', 'level', 'kind', 'n', 'last_event'],
+  'boem-wind-leases': ['lease', 'project', 'company', 'type', 'state', 'acres', 'date'],
+  'wecc-paths': ['name', 'status', 'rating_category', 'mw_fwd', 'mw_rev', 'dir_fwd', 'dir_rev'],
+  'countries': ['name'],
+  'admin1': ['name', 'country'],
+  'us-states': ['name'],
+  'us-counties': ['NAME', 'STATE_NAME', 'STUSPS'],
+  'us-zcta': ['zcta5'],
 };
 
 /** Layer id → the columns shown; kept for the session, not across reloads. */
@@ -1262,8 +1295,12 @@ function syncColsButton() {
 function renderColPanel() {
   const tb = tbl;
   if (!tb) return;
-  const groups = RANK_KEYS.map((key, rank) => {
-    const fs = tb.fields.filter(f => rankOf(f, tb.idField) === rank);
+  const pin = TABLE_DEFAULT_COLUMNS[tb.req.layerId] ?? [];
+  const suggested = tb.fields.filter(f => pin.includes(f.name)).sort((a, b) => pin.indexOf(a.name) - pin.indexOf(b.name));
+  const rest = tb.fields.filter(f => !suggested.includes(f));
+  const groups = [-1, ...RANK_KEYS.keys()].map(rank => {
+    const key = rank < 0 ? 'table.colGroupSuggested' : RANK_KEYS[rank];
+    const fs = rank < 0 ? suggested : rest.filter(f => rankOf(f, tb.idField) === rank);
     if (!fs.length) return null;
     const set = document.createElement('fieldset');
     const legend = document.createElement('legend');

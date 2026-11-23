@@ -656,6 +656,7 @@ const locale: LocaleDictionary = {
   'table.colGroupRegions': 'Regions-Tags',
   'table.colGroupFields': 'Felder',
   'table.colGroupNames': 'Namen',
+  'table.colGroupSuggested': 'Vorgeschlagen',
   'table.colsAll': 'Alle',
   'table.colsDefault': 'Standard',
   'table.colsTitle': 'Angezeigte Spalten wählen (die CSV behält alle)',
