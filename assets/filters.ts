@@ -52,7 +52,7 @@ import { MW_SLIDER_MAX } from '../src/colors/ramps.js';
 import {
   OSM_FUEL_BUCKETS, EIA_FUEL_BUCKETS, OSM_UNDERGROUND_EXPR, HIFLD_UNDERGROUND_EXPR, KV_BUCKET_RANGES,
 } from '../src/colors/buckets.js';
-import { setZoneGroupFilter } from './nws-zone-join.js';
+import { setZoneGroupFilter } from './live/nws-zone-join.js';
 import { toMapLibreFilter, ConditionError, type Condition } from '../src/registry/condition-compile.js';
 import { recordDiagEvent } from './diag-log.js';
 import { validateWhere, validateArea, validateSelection, normalizeSelection } from '../src/registry/view-validate.js';

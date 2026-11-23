@@ -2,7 +2,7 @@
 // Imported by: add-all-layers.ts (ensureLayerData — defaultOn bootstrap),
 //              visibility.ts (ensureLayerData), map-layers-wecc.ts (ensureLayerData),
 //              live-staleness.ts (fetchGeojson, liveGeneratedUtc),
-//              ../dataset-query.ts (loadSource, liveGeneratedUtc),
+//              ../query/dataset-query.ts (loadSource, liveGeneratedUtc),
 //              ui/ui-legends.ts + ../diagnostics.ts (liveFeed — pull time and
 //              subfeed status, one precedence for every display).
 // Deps: state.ts, state-bus.ts (emits 'layer:data' after a source's features

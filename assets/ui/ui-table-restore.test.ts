@@ -29,8 +29,8 @@ type Row = (typeof ROWS)[number];
 const pass = (where: Cond[] | undefined) => (r: Row) => (where ?? [])
   .every(c => c.op !== 'in' || c.value.includes((r.props as Record<string, unknown>)[c.field]));
 
-vi.mock('../dataset-query.js', async (orig) => ({
-  ...(await orig<typeof import('../dataset-query.js')>()),
+vi.mock('../query/dataset-query.js', async (orig) => ({
+  ...(await orig<typeof import('../query/dataset-query.js')>()),
   describe: (layerId: string) => layerId === 'osm-substations-points'
     ? { ok: true, result: { layerId, queryable: true, kind: 'pmtiles', complete: false, idField: 'fid', fields: FIELDS, credit: 'OSM' } }
     : { ok: false, reason: 'no' },

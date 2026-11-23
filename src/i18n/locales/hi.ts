@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "इसकी टाई देखने के लिए मानचित्र पर किसी बुलबुले पर क्लिक करें।",
   "gridOps.flyTo": "{name} को मानचित्र पर दिखाएँ",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "निकटता",
   'px.menu': "निकटता",
   'px.privacy': "आपकी फ़ाइल इस ब्राउज़र से बाहर कभी नहीं जाती: वह किसी सर्वर पर नहीं भेजी जाती।",

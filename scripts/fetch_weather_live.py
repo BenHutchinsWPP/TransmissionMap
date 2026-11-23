@@ -12,7 +12,7 @@ Emits, per variable, into the output DIRECTORY (-o):
                assets/raster-probes.ts). NoData = -32768.
   wind_uv.png  wind-only extra: native-res RGB PNG, u in R / v in G, linearly
                offset-encoded over [-40, +40] m/s (webgl-wind convention).
-               The particle field consumed by assets/weather-particles.ts.
+               The particle field consumed by assets/live/weather-particles.ts.
   meta.json    one shared sidecar: run_utc / step / valid_utc /
                generated_utc / feed_status / per-variable {width, height,
                bbox, scale, nodata, units} (wind also carries uv_min/uv_max),

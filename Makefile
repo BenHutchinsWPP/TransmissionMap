@@ -386,7 +386,7 @@ nws-alerts-dev:
 
 # ── ODIN county power outages live layer (local dev) ─────────────────────────
 # Fetches the ORNL ODIN county aggregates → data/layers/odin_outages.json, which
-# the map joins onto county_boundaries by FIPS (see assets/odin-outages.ts).
+# the map joins onto county_boundaries by FIPS (see assets/live/odin-outages.ts).
 # In production this runs via .github/workflows/alerts-outages.yml.
 outages-dev:
 	@$(PY) $(SCRIPTS)/fetch_odin_outages.py \

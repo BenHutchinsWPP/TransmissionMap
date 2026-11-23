@@ -23,7 +23,7 @@
 //       dynamically (ui-table.ts, map-api.ts, popup.ts).
 
 import { commitCopy, creditText, MAX_COPY_ITEMS, SIMPLIFIED, SIMPLIFIED_SERVED, type CopyMeta, type CopyResult } from './copy-fit.js';
-import type { QueryRow } from '../dataset-query.js';
+import type { QueryRow } from '../query/dataset-query.js';
 import { hasPopupRenderer } from '../popup-format.js';
 import { DATA } from '../constants.js';
 import { layerById } from '../../src/registry/index.js';

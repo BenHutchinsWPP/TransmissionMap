@@ -12,7 +12,7 @@ vi.mock('../map-input.js', () => ({
 }));
 
 const seen = vi.hoisted(() => ({ open: [] as string[], chat: [] as string[], t: null as null | ((k: string) => string) }));
-vi.mock('./ui-route.js', () => ({
+vi.mock('./route/ui-route.js', () => ({
   openRoutePanel: () => { seen.open.push(seen.t!('route.notice.title')); },
   routeForChat: async () => { seen.chat.push(seen.t!('route.notice.title')); return { ok: true, value: {} }; },
 }));

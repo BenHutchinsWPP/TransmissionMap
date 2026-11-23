@@ -27,7 +27,7 @@
 // Deps: pmtiles, @mapbox/vector-tile + pbf (the tile decoder, this chunk only),
 //   constants.ts (DATA), elevation/terrarium.ts (tileForLngLat), route/snap.ts (osmKv, OsmPoint).
 //   Imported by: ui/ui-line.ts (names), user-data/copy-rows.ts (points),
-//   ui/substation-index.ts (near), all dynamically.
+//   ui/route/substation-index.ts (near), all dynamically.
 
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';

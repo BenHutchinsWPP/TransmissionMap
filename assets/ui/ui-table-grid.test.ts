@@ -32,8 +32,8 @@ const pass = (where: Cond[] | undefined) => (r: (typeof ROWS)[number]) =>
   (where ?? []).every(c => test(c, (r.props as Record<string, unknown>)[c.field]));
 let complete = true;
 
-vi.mock('../dataset-query.js', async (orig) => ({
-  ...(await orig<typeof import('../dataset-query.js')>()),
+vi.mock('../query/dataset-query.js', async (orig) => ({
+  ...(await orig<typeof import('../query/dataset-query.js')>()),
   describe: (layerId: string) => ({ ok: true, result: { layerId, queryable: true, kind: 'geojson', complete, idField: 'fid', fields: FIELDS } }),
   count: async (_l: string, o: { where?: Cond[] }) => ({ ok: true, result: { complete, total: ROWS.filter(pass(o.where)).length } }),
   aggregate: async (_l: string, o: { where?: Cond[]; groupBy: string }) => {

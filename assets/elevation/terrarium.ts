@@ -1,7 +1,7 @@
 // ─── Terrarium elevation sampler ──────────────────────────────────────────────
 // Role: elevation at points from the Terrarium tiles the 3D terrain already uses (AWS Open Data
 //   Terrain Tiles, worldwide); one fetch per tile, a pixel per point. Used by the route profile
-//   (route-tabs/profile.ts) and, where USGS 3DEP has no value, the line profile
+//   (ui/route/tabs/profile.ts) and, where USGS 3DEP has no value, the line profile
 //   (lines/profile.ts). Main thread (createImageBitmap + canvas).
 // Deps: constants.js (TERRAIN_TILE_URL). Failed tiles give null samples, never 0.
 import { TERRAIN_TILE_URL } from '../constants.js';

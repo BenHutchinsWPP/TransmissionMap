@@ -75,7 +75,7 @@ previous output while a subfeed is down) — the chips use it to show outage dur
   - **VIIRS hotspots (core):** fetch is retried 3× per URL; if still failing the run
     exits nonzero and nothing is published — the map keeps the last good pull, whose
     growing age the legend chips show and the 6-hour kill-switch modal
-    (`assets/wildfire-staleness.ts`) enforces.
+    (`assets/live/wildfire-staleness.ts`) enforces.
   - **Perimeters / incidents / smoke (secondary):** each degrades independently to
     its last known state from the previous run (HMS smoke natively falls back up to 2 days
     before resorting to the previous run) so one unavailable source doesn't block

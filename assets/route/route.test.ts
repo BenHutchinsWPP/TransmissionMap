@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createInspectCache, createWindowCache, edgeCells, exactRouteCrossings, inspect, OSM_BANDS, PD_BANDS, provenOptimal, readBands, readGridJson, repaint, repaintRows, route, weightClass, WEIGHT_BARRIER, WEIGHT_PALETTE, type RouteIO, type RouteRequest, type RouteResult } from './route.js';
 import { uploadLayer, type UploadLayer } from './upload-layer.js';
 import { parseUploadBudget, uploadBand, UPLOAD_BUDGET_MSG, validatePresetPatch, type PresetPatch } from './preset-patch.js';
-import { mergePatch } from '../ui/route-request.js';
+import { mergePatch } from '../ui/route/route-request.js';
 import { buildSurfaces, presetBands } from './cost.js';
 import { CAUSE_COLOURS } from './cause-colours.js';
 import { surfaceImage } from './surface-image.js';

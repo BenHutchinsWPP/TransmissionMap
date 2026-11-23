@@ -70,7 +70,7 @@ import { undo as undoRaw, redo as redoRaw, asOwnStep } from './undo.js';
 import { commitArea, commitSelection, commitWhere, syncPanel } from './ui/panel-mirror.js';
 import { openTable } from './ui/table-open.js';
 import { findPlaces, placeSearchOn } from './ui/ui-geocoder.js';
-import { describe, query, allowedFields, QUERY_MAX_ROWS } from './dataset-query.js';
+import { describe, query, allowedFields, QUERY_MAX_ROWS } from './query/dataset-query.js';
 import type { Outcome } from '../src/outcome.js';
 import type { Condition } from '../src/registry/condition-compile.js';
 import { selectionSize, selectionIdsError, MAX_SELECTION_IDS } from '../src/registry/view-validate.js';
@@ -177,8 +177,8 @@ export function reset(): Outcome<{ done: true }> {
 
 // ─── Reading data ─────────────────────────────────────────────────────────────
 
-export { describe, query, count, aggregate } from './dataset-query.js';
-export { joinPoints, crossings } from './spatial-join.js';
+export { describe, query, count, aggregate } from './query/dataset-query.js';
+export { joinPoints, crossings } from './query/spatial-join.js';
 
 // ─── Analysis: model-written code over registry layers ───────────────────────
 

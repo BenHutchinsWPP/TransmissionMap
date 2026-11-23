@@ -53,7 +53,7 @@
 //
 // Deps: none; public/canvas.html (built from sandbox/canvas-runner.js by
 //       scripts/build_sandbox.mjs).
-// Loaded by: ui/ui-canvas.ts (chat chunk only).
+// Loaded by: ui/chat/ui-canvas.ts (chat chunk only).
 
 export const CANVAS_URL = `${import.meta.env.BASE_URL}canvas.html`;
 export const MAX_LIVE = 3;

@@ -91,7 +91,7 @@ import {
   query, aggregate, count, describe, hasColumns, QUERY_MAX_ROWS,
   type QueryOpts, type QueryRow, type FieldInfo, type Group,
   type AggregateResult, type CountResult,
-} from '../dataset-query.js';
+} from '../query/dataset-query.js';
 import type { Outcome } from '../../src/outcome.js';
 import { setHighlightFeatures, clearHighlights } from '../highlights.js';
 import { drawnFilterLabels } from '../filters.js';

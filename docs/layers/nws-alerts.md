@@ -208,7 +208,7 @@ annotation. That warning is the rebuild reminder: run `make nws-zones`, `make
 publish-r2`, and commit the refreshed key list.  If the key file is missing the check is
 skipped (fail-open), never a feed failure.
 
-**Frontend join module:** `assets/nws-zone-join.ts` (model: `assets/odin-outages.ts`).
+**Frontend join module:** `assets/live/nws-zone-join.ts` (model: `assets/live/odin-outages.ts`).
 On every alerts refresh it lazy-adds the `nws_zones` vector source (`promoteId: {nws_zones:
 "key"}`) plus `nws-zone-fill`/`nws-zone-line` layers, and joins county-FIPS entries onto
 the shared `county_boundaries` source (via `ensureCountyBoundaries()`) with
@@ -280,12 +280,12 @@ the amber degraded-feed chip — the same carry-forward + `feed_status` pattern
 - **Live & best-effort, no SLA.** The frontend force-disables the layer via a kill-switch
   modal when the last successful pull is more than 3 hours old (mirrors the wildfire
   staleness pattern in `wildfire-staleness.ts` / `live-staleness.ts`, but with its own
-  shorter 3 h threshold). When the kill-switch fires, `assets/nws-zone-join.ts` also
+  shorter 3 h threshold). When the kill-switch fires, `assets/live/nws-zone-join.ts` also
   clears its joined zone/county feature-state (watched via a MutationObserver on the
   stale-dialog's `open` attribute, since the shared staleness factory exposes no
   stale-fired callback). Independently of that, the client prunes any alert (polygon
   **or** zone/county-joined) whose `ends`/`expires` time has passed on every refresh —
-  `assets/nws-staleness.ts`'s `pruneExpiredAlerts()` calls `nws-zone-join.ts`'s
+  `assets/live/nws-staleness.ts`'s `pruneExpiredAlerts()` calls `nws-zone-join.ts`'s
   `pruneExpiredZoneAlerts()` at the same points (post-refetch, initial load, 60 s tick) —
   so a missed workflow cycle doesn't leave dead warnings on the map between pulls.
 - **Situational awareness only, not an alerting system.** These are official NWS/ECCC

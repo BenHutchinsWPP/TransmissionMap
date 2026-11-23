@@ -43,8 +43,8 @@ vi.mock('./user-data/copy-rows.js', async importOriginal => ({
 }));
 const geo = vi.hoisted(() => ({ on: true }));
 const qspy = vi.hoisted(() => ({ opts: [] as unknown[] }));
-vi.mock('./dataset-query.js', async importOriginal => {
-  const o = await importOriginal<typeof import('./dataset-query.js')>();
+vi.mock('./query/dataset-query.js', async importOriginal => {
+  const o = await importOriginal<typeof import('./query/dataset-query.js')>();
   return { ...o, query: ((id: string, opts: unknown) => (qspy.opts.push(opts), o.query(id, opts as never))) as typeof o.query };
 });
 vi.mock('./ui/ui-geocoder.js', () => ({

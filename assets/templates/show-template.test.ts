@@ -8,10 +8,10 @@
 //       dataset-query.js's shapeRows mocked (shapeSlots real).
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
-import type { ShapeOpts, ShapeResult } from '../dataset-core.js';
+import type { ShapeOpts, ShapeResult } from '../query/dataset-core.js';
 
 const m = vi.hoisted(() => ({ shape: vi.fn(), paint: vi.fn(() => 7), clear: vi.fn() }));
-vi.mock('../dataset-query.js', async orig => ({ ...(await orig<typeof import('../dataset-query.js')>()), shapeRows: m.shape }));
+vi.mock('../query/dataset-query.js', async orig => ({ ...(await orig<typeof import('../query/dataset-query.js')>()), shapeRows: m.shape }));
 vi.mock('../county-overlay.js', () => ({ paintCountyOverlay: m.paint, clearCountyOverlay: m.clear }));
 vi.mock('../layers/layer-data.js', () => ({ loadSource: vi.fn(async () => {}), liveGeneratedUtc: () => undefined }));
 

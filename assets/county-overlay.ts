@@ -36,7 +36,7 @@
 //       ui/ui-legends.ts (updateLegends: the legend container's shown state),
 //       i18n (t).
 // Used by: templates/show-template.ts (points-per-polygon by counties),
-//       ui/ui-canvas.ts (the card's Clear button and ×), ui/ui.ts and
+//       ui/chat/ui-canvas.ts (the card's Clear button and ×), ui/ui.ts and
 //       map-api.ts (Reset).
 
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';

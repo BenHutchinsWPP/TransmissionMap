@@ -23,8 +23,8 @@ import { applyLayerPlan, type LayerPlan } from '../layers/layer-plan.js';
 import { planOsmTransmission } from '../layers/map-layers-osm.js';
 import { planRetailTerritories } from '../layers/map-layers-hifld.js';
 import { planPadus } from '../layers/map-layers-land.js';
-import { describe, count, aggregate, query, shapeRows, QUERY_MAX_ROWS, type Group } from '../dataset-query.js';
-import type { ShapeResult } from '../dataset-core.js';
+import { describe, count, aggregate, query, shapeRows, QUERY_MAX_ROWS, type Group } from '../query/dataset-query.js';
+import type { ShapeResult } from '../query/dataset-core.js';
 
 const RUN = process.env.TM_COLUMNS_DATA === '1';
 

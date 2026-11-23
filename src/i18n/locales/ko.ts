@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "지도에서 거품을 클릭하면 연계선을 볼 수 있습니다.",
   "gridOps.flyTo": "지도에 {name} 표시",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "근접",
   'px.menu': "근접",
   'px.privacy': "파일은 이 브라우저를 떠나지 않습니다. 어떤 서버로도 전송되지 않습니다.",

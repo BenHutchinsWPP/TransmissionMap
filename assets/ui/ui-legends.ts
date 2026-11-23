@@ -4,7 +4,7 @@
 // ../filters.js's FACET_APPLIERS. ui-filters.ts reads it; the URL codec reads
 // the facet records directly.
 // Live-feed age/degraded-feed status text (downFor, feedIssue, fmtAgeShort)
-// comes from ../live-staleness.js, which owns those helpers so they can be
+// comes from ../live/live-staleness.js, which owns those helpers so they can be
 // shared with other live-feed displays.
 // rampLegendHtml() renders a ramp's end labels from the RampDef's own `fmt`
 // when it has one (a formatter from src/units.ts), so a ramp in a convertible
@@ -20,7 +20,7 @@
 // and read the feed's pull time and subfeed status from ../layers/layer-data.js
 // (liveFeed);
 // their stale edge is each feed's kill-switch maxAgeMs, read from the configs
-// ../wildfire-staleness.js (WILDFIRE_LIVE) and ../nws-staleness.js (NWS_LIVE)
+// ../live/wildfire-staleness.js (WILDFIRE_LIVE) and ../live/nws-staleness.js (NWS_LIVE)
 // export, so the chip turns red exactly when the kill switch fires.
 // The Grid Operations card (#gridOpsLegend) lists its fuel colours from
 // src/colors/fuel.ts, cut to the fuels ../grid-ops/ba-graph.js's SOURCE_FUEL names.
@@ -31,9 +31,9 @@ import type { RampDef, BucketedField } from '../../src/types.js';
 import { FACETS, facetAllIds } from '../../src/colors/facets.js';
 import { FACET_APPLIERS } from '../filters.js';
 import { escapeHtml } from '../utils/utils.js';
-import { fmtAgeShort, downFor, feedIssue } from '../live-staleness.js';
-import { WILDFIRE_LIVE } from '../wildfire-staleness.js';
-import { NWS_LIVE } from '../nws-staleness.js';
+import { fmtAgeShort, downFor, feedIssue } from '../live/live-staleness.js';
+import { WILDFIRE_LIVE } from '../live/wildfire-staleness.js';
+import { NWS_LIVE } from '../live/nws-staleness.js';
 import { ICON_SVG } from '../icons.js';
 import { WEATHER_VARIABLES } from '../../src/registry/conditions.js';
 import { t } from '../../src/i18n/index.js';

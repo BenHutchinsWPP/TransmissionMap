@@ -31,7 +31,7 @@ import { historyStamp } from './undo.js';
 import { reset, setLayerVisible } from './map-api.js';
 import { COUNTY_SRC } from './constants.js';
 import { paintCountyOverlay, clearCountyOverlay, countyOverlayToken, countyOverlayHeld, onCountyOverlay, ownCountyOverlay, OVERLAY_KEY, OVERLAY_LAYERS } from './county-overlay.js';
-import { canvasCard } from './ui/ui-canvas.js';
+import { canvasCard } from './ui/chat/ui-canvas.js';
 import { disposeAllCanvases } from './sandbox/canvas-host.js';
 
 type Spec = LayerSpecification & { paint?: Record<string, unknown>; layout?: Record<string, unknown> };

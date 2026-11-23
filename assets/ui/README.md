@@ -46,15 +46,7 @@ Map of this folder; each file's header comment is the source of truth.
     boot-bundle-safe opener (dynamic import; the only way in). `line-profile.ts` — the tab's Profile section: Show →
     `lines/profile.ts`, progress + Cancel, canvas chart (labels by `fillText`), crosshair → `lt-hover` marker, ←/→ keys,
     stats, PNG/CSV; the intro says points go to USGS only when the line reaches 3DEP coverage (`reaches3dep`)
-  - `ui-chat.ts` — the map chat in the drawer's Ask tab (Tools ▸ Chat): key form,
-    model picker, one chip per tool call, a confirm card before an off-page call, a chart card
-    after a call made with `chart`; bot replies render markdown via `chat-markdown.ts` (DOM nodes, text only); lazy chunk; the conversation lasts the tab (`tm-chat`, restored
-    after a reload of the same link — `resumeChat`, called by the boot restore when `tm-drawer` had Ask open).
-    `ui-chart.ts` — that card: a canvas bar/pie/line
-    drawn from a checked `chart-spec.ts` spec (text via `fillText`/`textContent` only), PNG and CSV
-    downloads; in the chat chunk. `ui-canvas.ts` — the canvas card (`DispatchOpts.render`: a
-    `showCanvas` page or a Vega-Lite chart): "Made by the model" border, Expand, ×, partial-data notes,
-    error lines, page-owned Save buttons; imported by `ui-chat.ts` on first use
+  - `chat/` — the map chat, its chart and canvas cards: `chat/README.md`
   - `ui-templates.ts` — the drawer's Visualize tab (Tools ▸ Charts, a layer row's ⋯ menu ▸
     Visualize): layer picker, the gallery of templates that fit (`templatesFor`), a form from
     `formChoices`, Show → `showTemplate` → a `canvasCard({template: true})`; works with no key; its
@@ -69,9 +61,8 @@ Map of this folder; each file's header comment is the source of truth.
   - `grid-ops-open.ts` — `openGridOps(nodeId)`, the boot-bundle-safe opener of the drawer's Grid Ops tab (`ui-grid-ops.ts`, lazy
     chunk): a node's load, generation, net, ties ranked by MW, a table of every shown node, "Inside the area"; text-only DOM;
     session only (not in `tm-drawer` or the link); a tap a tool owns (`popup.ts` `toolOwnsTap`) does not open it
-  - `ui-proximity.ts` — the Proximity tab's panel (lazy chunk; registers its own Tabulator modules): CSV picker, threshold in ft/mi/m/km, Groups and Pairs grids, both CSVs; `docs/proximity.md`
   - `overlay-layers.ts` — `setGeojson` (add or update a GeoJSON source) and `removeOverlay` (layers, then sources) for the proximity and line panels' overlays; state.ts only
-  - `proximity-map.ts` — the Proximity tool's map half (lazy chunk): `px-` sources and layers, fit once per file, row click selects (`onRow`), ↗ flies (`onFly`), tap → focus
+  - `proximity/` — the Proximity tab and its map half: `proximity/README.md`
   - `ui-experiences.ts` — Map Experiences gallery + floating story card; lazy chunk, opened from the File menu
   - `ui-diagnostics.ts` — Diagnostics dialog; lazy chunk, opened from the Tools menu
   - `ui-settings.ts` — Settings dialog (display units); lazy chunk, opened from the File menu
@@ -80,16 +71,7 @@ Map of this folder; each file's header comment is the source of truth.
     `scripts/build_data_manifest.py`) over the hand-written `<li>` fallback
     already shipped in `index.html`; lazy chunk, opened from the info button
   - `route-panel-open.ts` — the Route panel's entry points, boot bundle: Tools ▸ Plan a route…, right-click Route from/to here; the panel and its strings (`src/i18n/route/`) load on use
-  - `route-overlay.ts` — the Route pane's `rp-` sources and layers (`createRouteOverlay(getMap)`: add/remove in `ORDER`, the surface and weight canvases, hole and hover queries), the map as a parameter; imports no `state.ts`
-  - `ui-route.ts` — the Route tab of the bottom drawer, lazy chunk: the `RouteSession`, solve/cancel/progress,
-    the legend, cell inspector, cell-weight overlay, header actions, `RouteTabContext`
-  - `route-inputs.ts` — its input column: A/B search over substations, pick mode, draggable pins, line type, method; each end snaps through `snapEnd` (a snap function it takes as an option) and offers the Auto / New station / Existing station / None picker with its reason line
-  - `route-report.ts` — the printable report (browser print), loaded on the Report button
-  - `route-request.ts` — the solve request builder the panel, batch and chat share (`resolveEnds`, `explainEnds` — each end's kind, reason code and kV, from its `RouteEnd.term`, `mergePatch`); `route-methods.ts` — the method lookup (`methodOf`, `solvedPresetOf`, `countEdits`, the saved-methods store), no DOM; `route-format.ts` — the panel's pure text and number logic (`waterfallLines`, `fmtMoneyHead`, `kpiTiles`, `rowLabel`, `crossingsCsv`, `shownExact`), shared by the tabs, the report and the batch export; `route-report-model.ts` — the printed report as plain data (`buildReportModel`, `reportText`), shared by `route-report.ts` and the batch PDF
-  - `route-batch.ts` — the Batch view (CSV → runs → ZIP); `route-batch-run.ts` — `runBatch`, one row at a time with injected solver and snap (`a_terminal`/`b_terminal` kinds, `summary.csv` `substation_source_*`, `CREDITS.txt` for OSM names), capture, PDF renderer and ZIP sink; `route-batch-pdf.ts` — jsPDF report page layout; `route-batch-zip.ts` — the ZIP sink; `route-batch-map.ts` — the hidden map capture; lazy chunks
-  - `route-tabs/` — the six sub-tabs, each a `RouteTab` rendering from `ctx.session`: `summary`, `cost`, `profile`,
-    `crossings`, `alternatives`, `method`; shared `types.ts` (the contract), `widgets.ts` (waterfall, range bar, pills),
-    `colours.ts`, `weights-table.ts` (the stacked method editor on phones); `method-grid.ts` (the Method tab's Tabulator grid, renderer only, wider than 520 px) and `method-rows.ts` (its pure model: rows, filter, sort, edits through `validatePresetPatch`); the Method tab also renames and deletes saved methods; `fixture.ts` is test support
+  - `route/` — the route panel's modules and its tabs: `route/README.md`
 
 ## Footguns
 
@@ -100,14 +82,6 @@ Map of this folder; each file's header comment is the source of truth.
 ### Table drawer / selection chip
 
 - a pane imports `drawer.ts` directly, the table only through `table-open.ts`, and the boot bundle reaches either only through `drawer-open.ts` / `table-open.ts`, or the chunk (and Tabulator) lands in it (`ui-table.ts` registers its own Tabulator modules); Tabulator is a renderer only — sorting, filtering and grouping stay with `dataset-query.ts`; never register Tabulator's Clipboard/Export modules (they write copied values through `innerHTML`) or return a string from a formatter (it is HTML) — cells are text nodes; grid fields are positional (`f0`…), since a dotted field name is a path to Tabulator; a column filter goes through map-api `setWhere`, never `filters.ts` directly, or Undo and the row chip miss it; jsdom draws grid rows only under `test-drawer-env.ts`'s size stubs; a selection change goes through `commitSelection`, or the link and Undo miss it; a display column goes in `dataset-core.ts` `DISPLAY_FIELDS`, which a model also reads; a copy of GeoJSON rows clones each row before it is stored, since rows are `state.sourcesData` objects that My Data would otherwise mutate
-
-### Chat panel (the drawer's Ask tab)
-
-- model text goes in as text only; a string with params needs `data-chat-key` or `lang:changed` misses it; import `ui-chat.ts` only dynamically
-
-### Chat charts (bar/pie/line or Vega-Lite, PNG/CSV)
-
-- a spec from a model reaches the card only through `validateChart` — never draw an unchecked value; a Vega-Lite spec passes `validateVegaLite` and runs only in `public/canvas.html` through `ui-canvas.ts` — never import Vega into the page; labels are drawn with `fillText`/`textContent`, never HTML (lint covers both files); the chart rides on the tool result as `chart` and `loop.ts` `toolContent` must keep it out of what the model is sent; a chart is session only — no `url:write`, no undo; import `ui-chart.ts`/`chart-spec.ts` only from the chat chunk; the tool schemas' byte budget applies (Map API row)
 
 ### Area picker UI (the AREA row, chips, row flags)
 

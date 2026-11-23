@@ -1300,7 +1300,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "Click a bubble on the map to see its ties.",
   "gridOps.flyTo": "Show {name} on the map",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "Proximity",
   'px.menu': "Proximity",
   'px.privacy': "Your file never leaves this browser: it is not sent to any server.",

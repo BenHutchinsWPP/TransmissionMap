@@ -56,7 +56,7 @@
 import { dispatch, toolSchemas, type OffPageRequest, type DispatchOpts } from './tools.js';
 import { chat, type ChatMessage, type ChatErrorCode, type ToolCall } from './openrouter.js';
 import { parseLocal, type LocalCall, type LocalContext, type LocalOption } from './local-commands.js';
-import { summarise } from '../dataset-query.js';
+import { summarise } from '../query/dataset-query.js';
 import type { Outcome } from '../../src/outcome.js';
 import { templatesFor } from '../templates/catalogue.js';
 

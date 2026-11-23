@@ -75,7 +75,7 @@ import {
 } from './visibility.js';
 import { switchBasemap, switchProjection } from './basemap.js';
 import { setTerrain3d, setBuildings3d, setHillshade } from './terrain.js';
-import { setWeatherVar } from './weather-live.js';
+import { setWeatherVar } from './live/weather-live.js';
 import { setNriHazard } from './fema-nri.js';
 import { setRouteConcern } from './route-constraints.js';
 import { setGridView } from './grid-ops/grid-ops.js';

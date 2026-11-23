@@ -48,7 +48,7 @@ within the hour. GFS is freely accessible via AWS Open Data at
 - **Wind particle animation:** For u/v winds, additionally exports `wind_uv.png` at native
   0.25° — u in R, v in G, each clamped to [−40, 40] m/s and linearly scaled onto 0…255
   (`uv_min`/`uv_max` in `meta.json`); alpha 0 marks nodata. It feeds the lazy-loaded
-  particle animation in `assets/weather-particles.ts`.
+  particle animation in `assets/live/weather-particles.ts`.
 - **Metadata sidecar:** A shared `meta.json` carries:
   - `run_utc` / `step` (forecast cycle and output step)
   - `valid_utc` (the time the forecast describes)
@@ -88,9 +88,9 @@ label.
 | Upstream cadence | NOAA/NCEP GFS 00/06/12/18 UTC cycles, published ~3.5–4.5 h after cycle time, hourly steps f000–f120 |
 | Primary trigger | `workflow_dispatch`, fired **every 3 h** (`:22`) by cron-job.org |
 | Insurance cron | `schedule: 48 */6 * * *` — **6 h**, disaster insurance if cron-job.org dies |
-| Frontend poll | 10 min while the layer is on, and at once on return to the tab (at most once per 60 s; `assets/live-poll.ts`) — the ~300 B meta JSON only; raster reload only when `generated_utc` moves. A refetch keeps a scrubbed timebar where the user left it |
+| Frontend poll | 10 min while the layer is on, and at once on return to the tab (at most once per 60 s; `assets/live/live-poll.ts`) — the ~300 B meta JSON only; raster reload only when `generated_utc` moves. A refetch keeps a scrubbed timebar where the user left it |
 | Now-tracking | 60 s tick: a display parked on the auto-selected step advances to the step nearest wall-clock "now" (flip lands at half past the hour); a scrubbed-away position or running playback is never touched |
-| Stale threshold | **12 h** (`MAX_AGE_MS` in `assets/weather-live.ts`) — must stay **larger than the 6 h insurance cron**. Change one, change the other. |
+| Stale threshold | **12 h** (`MAX_AGE_MS` in `assets/live/weather-live.ts`) — must stay **larger than the 6 h insurance cron**. Change one, change the other. |
 | On stale | Console warning + red age chip. **No blocking modal** — a stale forecast is advisory, not a safety call like a fire perimeter. The layer keeps displaying. |
 
 ## Raster values

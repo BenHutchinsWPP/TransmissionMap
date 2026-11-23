@@ -2551,7 +2551,7 @@ body.is-experience-active .legend-container { max-height: 40vh; overflow-y: auto
   background: #fff;
 }
 
-/* ── Weather (Live) forecast time slider (see assets/weather-live.ts) ────── */
+/* ── Weather (Live) forecast time slider (see assets/live/weather-live.ts) ────── */
 #weatherTimebar {
   position: absolute;
   bottom: 28px;

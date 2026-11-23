@@ -199,7 +199,7 @@ Measure staleness (`maxAgeMs`) against `valid_utc` too — not the pull.
 For a GeoJSON feed, don't hand-roll this. Use the shared factory:
 
 ```ts
-// assets/<name>-staleness.ts
+// assets/live/<name>-staleness.ts
 import { initLiveStaleness, type LiveStalenessConfig } from './live-staleness.js';
 import { staleDialog } from './stale-dialog.js';
 
@@ -221,13 +221,13 @@ export function init<Name>Staleness() {
 
 Export the config: the legend chip (step 6) and `assets/diagnostics.ts` read
 its `maxAgeMs`. `layerIds` must list every registry layer on the source — add
-the config to `LIVE_CONFIGS` in `assets/live-staleness.test.ts`, which checks
+the config to `LIVE_CONFIGS` in `assets/live/live-staleness.test.ts`, which checks
 that and the dialog ids.
 
 It auto-refetches on an interval and on return-to-page (mobile browsers freeze
-background timers) — through `pollWhileVisible()` in `assets/live-poll.ts` — and when the data is older than `maxAgeMs` it **auto-hides
+background timers) — through `pollWhileVisible()` in `assets/live/live-poll.ts` — and when the data is older than `maxAgeMs` it **auto-hides
 every layer on that source** and shows a blocking modal until the user
-explicitly accepts the risk. `staleDialog()` (`assets/stale-dialog.ts`) builds the
+explicitly accepts the risk. `staleDialog()` (`assets/live/stale-dialog.ts`) builds the
 `<dialog>`; add `stale.<name>.title`, `.body1` (with the `<strong id="<name>StaleAge">`
 element) and `.body2` to every locale, and the feed to `StaleDialogCfg['feed']` and to `ORDER` in `stale-dialog.ts`.
 
@@ -251,7 +251,7 @@ hidden layer never polls. Pick the staleness response by risk:
   turn the age chip red, console warning only. There's no "wrong evacuation
   decision" risk from a stale temperature field.
 
-A Shape B tile feed polls the same way — see `assets/nexrad-radar.ts`, which
+A Shape B tile feed polls the same way — see `assets/live/nexrad-radar.ts`, which
 also refreshes when its layer is switched on.
 
 ### 8. Raster only — hover value readout
@@ -293,7 +293,7 @@ Frontend (both shapes):
 - [ ] Layer builder in `assets/layers/map-layers-conditions.ts`, added in `add-all-layers.ts`
 - [ ] Legend + age pill (`<span class="legend-age" id="…Age">`), wired in `ui-legends.ts`
 - [ ] Chip's stale edge reads the config's `maxAgeMs`, not a literal
-- [ ] Refresh loop: `initLiveStaleness(<NAME>_LIVE)` for GeoJSON, `pollWhileVisible()` (`assets/live-poll.ts`) around your own fetch otherwise
+- [ ] Refresh loop: `initLiveStaleness(<NAME>_LIVE)` for GeoJSON, `pollWhileVisible()` (`assets/live/live-poll.ts`) around your own fetch otherwise
 - [ ] `stale.<name>.*` strings in every locale and `staleDialog()` called from the feed's init (GeoJSON feeds)
 - [ ] `layerIds` lists every registry layer on the source (config added to `LIVE_CONFIGS` in `live-staleness.test.ts`)
 - [ ] Raster only: `.i16.gz` LUT + `.json` meta emitted, wired into `RASTER_PROBES`

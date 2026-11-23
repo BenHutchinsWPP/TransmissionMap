@@ -11,7 +11,7 @@ import { recordDiagEvent, clearDiagLog } from './diag-log.js';
 // registry and layer-init chains behind them; the diagnostics logic needs
 // neither at runtime.
 vi.mock('./visibility.js', () => ({ setLayerVisibility: vi.fn() }));
-vi.mock('./nws-zone-join.js', () => ({
+vi.mock('./live/nws-zone-join.js', () => ({
   pruneExpiredZoneAlerts: vi.fn(),
   clearZoneAlerts: vi.fn(),
   refetchZoneAlerts: vi.fn(),
@@ -23,8 +23,8 @@ const freshness = vi.hoisted(() => ({
   odin:    { ageMs: null as number | null, maxAgeMs: 6 * 60 * 60_000 },
   weather: { ageMs: null as number | null, maxAgeMs: 12 * 60 * 60_000 },
 }));
-vi.mock('./odin-outages.js', () => ({ odinFreshness: () => freshness.odin }));
-vi.mock('./weather-live.js', () => ({ weatherFreshness: () => freshness.weather }));
+vi.mock('./live/odin-outages.js', () => ({ odinFreshness: () => freshness.odin }));
+vi.mock('./live/weather-live.js', () => ({ weatherFreshness: () => freshness.weather }));
 
 // The geocoder check short-circuits to `skip` without a key.
 vi.mock('./constants.js', async (importOriginal) => ({

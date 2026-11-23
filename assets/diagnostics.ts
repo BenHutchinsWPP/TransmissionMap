@@ -34,11 +34,11 @@ import {
 } from './constants.js';
 import { getDiagLog } from './diag-log.js';
 import { liveFeed } from './layers/layer-data.js';
-import { fmtAge, feedIssue, liveAgeMs } from './live-staleness.js';
-import { WILDFIRE_LIVE } from './wildfire-staleness.js';
-import { NWS_LIVE } from './nws-staleness.js';
-import { odinFreshness } from './odin-outages.js';
-import { weatherFreshness } from './weather-live.js';
+import { fmtAge, feedIssue, liveAgeMs } from './live/live-staleness.js';
+import { WILDFIRE_LIVE } from './live/wildfire-staleness.js';
+import { NWS_LIVE } from './live/nws-staleness.js';
+import { odinFreshness } from './live/odin-outages.js';
+import { weatherFreshness } from './live/weather-live.js';
 import { pageLifecycle, type PageLifecycle } from './session-snapshot.js';
 
 export type DiagStatus = 'ok' | 'warn' | 'fail' | 'skip';

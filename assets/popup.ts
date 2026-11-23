@@ -348,7 +348,7 @@ const drawing = () => {
 function onMapClick(e: MapPointerEvent) {
   if (toolHoldsTap(e)) return;
   if (!state.map || !state.popup) return;
-  // A tap on a Proximity point focuses its table row (ui/proximity-map.ts), not a feature popup.
+  // A tap on a Proximity point focuses its table row (ui/proximity/proximity-map.ts), not a feature popup.
   if (state.map.getLayer('px-points') && state.map.queryRenderedFeatures(tapBox(e), { layers: ['px-points'] }).length) return;
   const at = performance.now();
   if (at - lastTapAt < DOUBLE_TAP_MS) return;

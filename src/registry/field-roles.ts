@@ -8,7 +8,7 @@
 //                   (count always; length_km for lines; area_km2 for polygons);
 //         label     the field naming one feature (a display field, or the id
 //                   column when the layer has no name);
-//         display   the role of each assets/dataset-core.ts DISPLAY_FIELDS
+//         display   the role of each assets/query/dataset-core.ts DISPLAY_FIELDS
 //                   name that is not a schema field (category or label);
 //         facets    field → legend facet (src/colors/facets.ts) whose bucket
 //                   colours and labels a chart of that field uses;

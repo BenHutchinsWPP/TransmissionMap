@@ -42,7 +42,7 @@
 // Loaded by: templates-open.ts (dynamic import).
 
 import { panel, openPane, paneOpen, registerSnapshotPart, mapIdle, drawerChanged } from './drawer.js';
-import { canvasCard, claimRestoreSlots, releaseRestoreSlot } from './ui-canvas.js';
+import { canvasCard, claimRestoreSlots, releaseRestoreSlot } from './chat/ui-canvas.js';
 import { el } from './services-dom.js';
 import {
   showTemplate, validateTemplateArgs, formChoices, coverageArea, viewOnly, fieldLabel, measureLabel,

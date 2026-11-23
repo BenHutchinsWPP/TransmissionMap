@@ -18,7 +18,7 @@
 // Deps: types only — dataset-query.ts (ShapeRow), src/registry/field-schema.ts
 //       (FieldRole), src/units.ts (UnitPrefs).
 
-import type { ShapeRow } from '../dataset-query.js';
+import type { ShapeRow } from '../query/dataset-query.js';
 import type { FieldRole } from '../../src/registry/field-schema.js';
 import type { UnitPrefs } from '../../src/units.js';
 

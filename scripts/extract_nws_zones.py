@@ -44,7 +44,7 @@ Output (data/build/):
   ID verbatim for marine), type ("forecast"|"fire"|"marine"), name, key
   ("z"+ugc for type=forecast, "f"+ugc for type=fire, "m"+ugc for
   type=marine — the (type,ugc) join key used as pmtiles promoteId, since
-  bare ugc collides across zone sets; see assets/nws-zone-join.ts).
+  bare ugc collides across zone sets; see assets/live/nws-zone-join.ts).
   Duplicate ugc rows (multipart zones) are dissolved by (ugc, type) —
   ~8370 output features.
 The tile_manifest builds this into data/layers/nws_zones.pmtiles (PMTiles).

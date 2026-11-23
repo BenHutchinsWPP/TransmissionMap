@@ -39,7 +39,7 @@ export default async function table(ctx) {
     await settle(page);
 
     // (1) Summary = aggregate() over the same options (the layer is on, so asDrawn).
-    const expected = await mod(page, '/assets/dataset-query.ts', async m => {
+    const expected = await mod(page, '/assets/query/dataset-query.ts', async m => {
       const r = await m.aggregate('eia-generators', { asDrawn: true, groupBy: 'energy_source', sum: ['nameplate_mw'] });
       const sum = r.result.groups.reduce((a, g) => a + g.sums.nameplate_mw, 0);
       const gas = r.result.groups.filter(g => g.key === 'NG' || g.key === 'OG').reduce((a, g) => a + g.sums.nameplate_mw, 0);

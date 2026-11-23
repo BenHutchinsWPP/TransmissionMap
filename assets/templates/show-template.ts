@@ -50,7 +50,7 @@
 import { CATALOGUE, templateById, templatesFor, queryableRoles, TEMPLATE_IDS, type TemplateDef } from './catalogue.js';
 import { topGroups, NEUTRAL } from './groups.js';
 import { TEMPLATE_PAYLOAD_VERSION, type TemplatePayload, type TemplateParam } from './payload.js';
-import { shapeRows, shapeSlots, hasColumns, type ShapeRow, type ShapeKey } from '../dataset-query.js';
+import { shapeRows, shapeSlots, hasColumns, type ShapeRow, type ShapeKey } from '../query/dataset-query.js';
 import type { Outcome } from '../../src/outcome.js';
 import { rolesOf, aliasFields, type RoleField, type Roles } from '../../src/registry/field-roles.js';
 import { fit, slotFields, type Slot } from '../../src/registry/template-signatures.js';

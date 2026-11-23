@@ -101,7 +101,7 @@ export default async function vega(ctx) {
     const fromTold = (Array.isArray(told?.value) ? told.value : []).map(g => `${g.group},${g.count}`).sort();
     check('CSV rows = the rows the model was told', told && body.slice().sort().join('|') === fromTold.join('|') && body.length >= 3, `${body.length} rows vs ${fromTold.length}`);
     if (!PREVIEW) {
-      const want = await mod(page, '/assets/dataset-query.ts', async (q, layer) => {
+      const want = await mod(page, '/assets/query/dataset-query.ts', async (q, layer) => {
         const r = await q.aggregate(layer, { groupBy: 'fac_type' });
         return r.ok ? r.result.groups.map(g => `${g.key ?? '—'},${g.count}`) : null;
       }, LAYER);

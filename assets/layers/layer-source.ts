@@ -9,7 +9,7 @@
 // tile's feature id. assets/feature-id.ts reads the same declaration.
 // Imported by: layer-init.ts (layerSource, pmtilesUrl), map-layers-*.ts (layerSource),
 //              layer-data.ts (layerDataUrl, layerSourceId),
-//              ../nws-zone-join.ts (pmtilesUrl), ../dataset-query.ts (layerSourceId),
+//              ../live/nws-zone-join.ts (pmtilesUrl), ../query/dataset-query.ts (layerSourceId),
 //              ../ui/ui-table.ts (layerSourceId, layerDataUrl).
 // Deps: constants.ts (DATA, EMPTY_FC, COUNTY_SRC), layer-plan.ts (PlanStep type),
 //       src/registry/index.ts (LAYERS, layerById), src/types.ts (LayerData, DataKey).

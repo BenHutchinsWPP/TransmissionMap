@@ -73,7 +73,7 @@ export default async function columns(ctx) {
     // Row 0's id: the drawer snapshot (saved when the tab is hidden) names the active row.
     const hl = await page.evaluate(async () => {
       const { state } = await import('/assets/state.ts');
-      const dq = await import('/assets/dataset-query.ts');
+      const dq = await import('/assets/query/dataset-query.ts');
       const feats = async id => (await state.map.getSource(id)?.getData())?.features ?? [];
       const all = [...await feats('highlight-pts'), ...await feats('highlight-lines')];
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });

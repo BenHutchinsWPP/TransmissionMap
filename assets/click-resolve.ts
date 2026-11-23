@@ -13,9 +13,9 @@
 //       predicate. Imported by popup.ts (resolveHits for clicks, hitLit for the hover
 //       cursor); tested by click-resolve.test.ts.
 
-import { outageFeatureLit } from './odin-outages.js';
+import { outageFeatureLit } from './live/odin-outages.js';
 import { nriFeatureLit } from './fema-nri.js';
-import { zoneFeatureLit } from './nws-zone-join.js';
+import { zoneFeatureLit } from './live/nws-zone-join.js';
 
 // The slice of a MapGeoJSONFeature the decision reads, so tests can pass plain
 // objects.

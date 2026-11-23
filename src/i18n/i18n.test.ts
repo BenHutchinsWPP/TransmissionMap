@@ -550,9 +550,7 @@ describe('i18n Core Engine', () => {
       };
       walk(path.join(root, 'assets')); walk(path.join(root, 'src'));
       const inRouteChunk = (rel: string) =>
-        rel.startsWith('assets/route/') || rel.startsWith('assets/ui/route/') || rel.startsWith('assets/ui/route-tabs/') ||
-        rel === 'assets/ui/ui-route.ts' || rel === 'assets/ui/notice-dialog.ts' ||
-        (/^assets\/ui\/route-/.test(rel) && rel !== 'assets/ui/route-panel-open.ts');
+        rel.startsWith('assets/route/') || rel.startsWith('assets/ui/route/') || rel === 'assets/ui/notice-dialog.ts';
       const skip = (rel: string) => /\.test\.ts$/.test(rel) || rel.startsWith('src/i18n/locales/') || rel.startsWith('src/i18n/route/') ||
         rel.startsWith('assets/route/fixtures/') || inRouteChunk(rel);
       const missing: string[] = [];

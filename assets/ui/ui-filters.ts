@@ -17,7 +17,7 @@ import { emit } from '../state-bus.js';
 import { mwPosToMw, mwToPos, applyGeneratorFilters, applyLayerFilter } from '../filters.js';
 import { MW_SLIDER_MAX } from '../../src/colors/ramps.js';
 import { facetAllIds } from '../../src/colors/facets.js';
-import { setWeatherVar } from '../weather-live.js';
+import { setWeatherVar } from '../live/weather-live.js';
 import { setNriHazard } from '../fema-nri.js';
 import { setGridGroup, setGridGlyph, setGridNumbers } from '../grid-ops/grid-ops.js';
 import { setRouteConcern } from '../route-constraints.js';

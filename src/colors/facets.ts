@@ -6,7 +6,8 @@
 // values map, the one every filter and value domain reads.
 // assets/filters.ts derives each facet's applier (FACET_APPLIERS),
 // assets/ui/ui-legends.ts pairs record and applier into LEGEND_FILTERS and
-// src/registry/field-schema.ts flattens value domains from facetValueMap().
+// src/registry/field-schema.ts flattens value domains from facetValueMap(),
+// assets/url-state-codec.ts reads FACETS' group codes.
 // Also owns the OGF / WestTEC colour-by: each mode names the facet whose field
 // and bucket colours paint the line (ogfColorExpr, westtecColorExpr).
 // Pure data: imports src/colors/* and types only, never assets/ or

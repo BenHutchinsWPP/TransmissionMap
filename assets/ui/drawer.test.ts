@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { TableSnapshot } from './drawer-snapshot.js';
 
 vi.mock('tabulator-tables', () => { throw new Error('the shell loaded Tabulator'); });
-vi.mock('../dataset-query.js', () => { throw new Error('the shell loaded dataset-query'); });
+vi.mock('../query/dataset-query.js', () => { throw new Error('the shell loaded dataset-query'); });
 vi.mock('../map-api.js', () => { throw new Error('the shell loaded map-api'); });
 
 type D = typeof import('./drawer.js');

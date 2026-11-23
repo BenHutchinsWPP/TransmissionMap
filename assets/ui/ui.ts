@@ -59,13 +59,13 @@ import { openVisualize } from './templates-open.js';
 import { wireMenubar } from './ui-menubar.js';
 import { initRoutePanelEntry } from './route-panel-open.js';
 import { wireMyData } from './ui-mydata.js';
-import { initWildfireStaleness } from '../wildfire-staleness.js';
-import { initNwsStaleness } from '../nws-staleness.js';
-import { initOdinOutages } from '../odin-outages.js';
+import { initWildfireStaleness } from '../live/wildfire-staleness.js';
+import { initNwsStaleness } from '../live/nws-staleness.js';
+import { initOdinOutages } from '../live/odin-outages.js';
 import { initFemaNri } from '../fema-nri.js';
-import { initWeatherLive } from '../weather-live.js';
+import { initWeatherLive } from '../live/weather-live.js';
 import { initGridOps } from '../grid-ops/grid-ops.js';
-import { initNwsZoneJoin } from '../nws-zone-join.js';
+import { initNwsZoneJoin } from '../live/nws-zone-join.js';
 import { TRIBAL_LAYER_IDS, showTribalDisclaimer } from '../tribal-disclaimer.js';
 // Static import is deliberate: diag-log.js is a zero-import leaf module (just
 // an array), so reading it here costs nothing. ui-diagnostics.js and

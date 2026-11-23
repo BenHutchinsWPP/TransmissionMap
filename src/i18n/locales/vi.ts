@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "Nhấp vào một bong bóng trên bản đồ để xem các đường liên kết của nó.",
   "gridOps.flyTo": "Hiện {name} trên bản đồ",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "Khoảng gần",
   'px.menu': "Khoảng gần",
   'px.privacy': "Tệp của bạn không bao giờ rời trình duyệt này: không được gửi tới máy chủ nào.",

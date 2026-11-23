@@ -6,8 +6,8 @@ layout, tests, benchmarks and the checklist for changing the tool.
 ## Layout
 
 - Entry points: Tools ▸ Proximity opens the drawer's **Proximity** tab through
-`assets/ui/proximity-open.ts`, which loads the lazy chunk `assets/ui/ui-proximity.ts`
-(the tab, its grids and the CSV downloads) and `assets/ui/proximity-map.ts` (the map
+`assets/ui/proximity-open.ts`, which loads the lazy chunk `assets/ui/proximity/ui-proximity.ts`
+(the tab, its grids and the CSV downloads) and `assets/ui/proximity/proximity-map.ts` (the map
 layers). The pure core is `assets/proximity/`.
 
 Core contract: `assets/proximity/types.ts` (ProximityResult, PairsResult), `MAX_PAIRS` in `proximity.ts`, and
@@ -36,7 +36,7 @@ with the bubble's size. With `circle-pitch-alignment: map` the same circle lies 
 - **Sample** (see Try a sample) downloads and cuts in `sample-worker.ts`.
 - **Map** draws points and bubbles only (O(n)). Pairs are never drawn as lines.
 - **Table** is a Tabulator grid, with virtual rows, so only visible rows are in the DOM.
-  Sorting and grouping are done by the tool, not by Tabulator. `assets/ui/proximity-rows.ts` (pure)
+  Sorting and grouping are done by the tool, not by Tabulator. `assets/ui/proximity/proximity-rows.ts` (pure)
   builds the view order (filter, then a stable sort) over typed arrays; its unit test holds the
   ordering step of 1,000,000 pairs to a time limit. Handing the result to the grid (`replaceData`)
   is not measured at that size.
@@ -65,7 +65,7 @@ The unit tests run in `npm test` (`vitest.config.ts` includes `assets/**/*.test.
 - `assets/proximity/geodesic.test.ts`: holds the geodesic to GeographicLib's published
   vectors and to the sphere-ratio bounds.
 - `assets/proximity/bubbles.test.ts`, `pairs-open.test.ts`, `pairs-worker.test.ts`,
-  `assets/ui/ui-proximity.test.ts`, `assets/ui/proximity-map.test.ts`.
+  `assets/ui/proximity/ui-proximity.test.ts`, `assets/ui/proximity/proximity-map.test.ts`.
 
 Run them alone with:
 

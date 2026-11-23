@@ -9,7 +9,7 @@
 //       bubble grows with its size). With circle-pitch-alignment `map` the same circle
 //       lies on the globe. Only points with group > 0 are emitted; latitudes are
 //       clamped to ±89.9° for `s`.
-// Deps: none. Used by: ui/proximity-map.ts.
+// Deps: none. Used by: ui/proximity/proximity-map.ts.
 
 const RAD = Math.PI / 180;
 const MAX_LAT = 89.9;

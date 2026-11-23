@@ -1,8 +1,8 @@
 // ─── Proximity: Reset hook (boot bundle, zero deps) ─────────────────────────
 // Role: lets both Reset paths remove the Proximity tool's `px-` map layers without
-//       importing its lazy chunk. ui/proximity-map.ts registers its remover while it
+//       importing its lazy chunk. ui/proximity/proximity-map.ts registers its remover while it
 //       has layers on the map; clearProximityMap() runs it (no-op otherwise).
-// Used by: ui/ui.ts and map-api.ts (after applyView({})), ui/proximity-map.ts.
+// Used by: ui/ui.ts and map-api.ts (after applyView({})), ui/proximity/proximity-map.ts.
 
 let remover: (() => void) | null = null;
 

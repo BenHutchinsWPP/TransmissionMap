@@ -88,7 +88,7 @@ export default async function chart(ctx) {
     check('CSV: NG row first, numbers, then the title and the EIA source rows', /^NG,\d/.test(lines[1] ?? '') && lines.slice(1).some(l => l === 'Existing capacity in Texas by fuel (MW)') && /Source: .*EIA/.test(lines.at(-1)), lines.slice(1, 3).join(' | ') + ' … ' + lines.at(-1));
     check('CSV: no unguarded = + @ - cell', lines.every(l => !/(^|,)[=+@-]/.test(l)));
     if (!PREVIEW) {
-      const want = await mod(page, '/assets/dataset-query.ts', async (m, a) => {
+      const want = await mod(page, '/assets/query/dataset-query.ts', async (m, a) => {
         const r = await m.aggregate(a.layerId, { area: a.area, where: a.where, groupBy: a.groupBy, sum: a.sum });
         return r.ok ? r.result.groups.reduce((s, g) => s + (g.sums.nameplate_mw ?? 0), 0) : null;
       }, AGG);

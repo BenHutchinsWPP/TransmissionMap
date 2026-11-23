@@ -13,7 +13,7 @@ import { ogfColorExpr, westtecColorExpr } from '../src/colors/facets.js';
 import { setStyle, clearStyle, applyAllStyles, listStylable, scaleBy, effectiveOverride, setColorBy } from './style-overrides.js';
 import { validateStyleOverride } from '../src/registry/view-validate.js';
 import { initPolygonHover, initLineHighlight, highlightLine } from './hover.js';
-import { crossfadeOpacities, initWeatherLive } from './weather-live.js';
+import { crossfadeOpacities, initWeatherLive } from './live/weather-live.js';
 import { WEATHER_WASH_OPACITY } from './constants.js';
 import { parseUrlState } from './url-state-codec.js';
 

@@ -12,7 +12,7 @@ import {
   openAsk, closeAsk, showTable, closeTable,
 } from './drawer-test-names.js';
 import { installDrawerEnv, resetDrawerEnv, type DrawerEnv } from './test-drawer-env.js';
-import { allowedFields, describe as describeLayer } from '../dataset-query.js';
+import { allowedFields, describe as describeLayer } from '../query/dataset-query.js';
 
 const fieldsOf = (layerId: string) => {
   const d = describeLayer(layerId);

@@ -23,8 +23,8 @@ const FIELDS = [
   { name: 'name', type: 'string', ops: [] },
   { name: 'nominal_kv', type: 'number', ops: ['>='] },
 ];
-vi.mock('../dataset-query.js', async (orig) => ({
-  ...(await orig<typeof import('../dataset-query.js')>()),
+vi.mock('../query/dataset-query.js', async (orig) => ({
+  ...(await orig<typeof import('../query/dataset-query.js')>()),
   describe: (layerId: string) => layerId === 'osm-substations-points'
     ? { ok: true, result: { layerId, queryable: true, kind: 'pmtiles', complete: false, idField: 'fid', fields: FIELDS, credit: 'OSM' } }
     : { ok: false, reason: 'no' },

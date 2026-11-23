@@ -126,7 +126,7 @@ Gates move only for a sourced difference in inputs.
 ## Route panel
 
 - **Strings:** see § Footguns › Route panel (UI); the boot-read `route.*` keys are the Routing constraints layer's concerns, the Tools item, the context menu and the drawer tab.
-- **Snapping:** `snapEnd` (`assets/ui/substation-index.ts`) returns, within the snap radius and at or
+- **Snapping:** `snapEnd` (`assets/ui/route/substation-index.ts`) returns, within the snap radius and at or
   above the line type's kV floor, the first of: a HIFLD hit of known kV (`snapAt`), an OSM hit of
   known kV (`snapAmong` over `substationPointsNear`; US points on the 250 m grid, `traction` and
   `industrial` dropped, kV by `osmKv`), a HIFLD hit of unknown kV, else null (the raw point).
@@ -141,7 +141,7 @@ Gates move only for a sourced difference in inputs.
   `terminals.position`); a request without kinds is `['new', 'new']`. The visitor's choice is
   `RouteEnd.term` (`TermChoice`: `auto` or a kind; absent is Auto); a choice replaces the
   `RouteEnd`, never mutates it, and survives a drag or re-snap of the same end. The panel, batch and chat
-  set the kinds at request time through `resolveEnds` (`assets/ui/route-request.ts`), which maps
+  set the kinds at request time through `resolveEnds` (`assets/ui/route/route-request.ts`), which maps
   over `explainEnds` (kind, reason code, kV per end): Auto gives `position` only for a snapped end
   with `maxKv` ≥ the line type's kV and a position figure on the patched line type, else `new`;
   an explicit `position` without a figure is `positionUnavailable`, which `requestFor` refuses

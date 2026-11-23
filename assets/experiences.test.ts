@@ -37,7 +37,7 @@ vi.mock('./terrain.js', async () => {
   };
 });
 
-vi.mock('./weather-live.js', async () => {
+vi.mock('./live/weather-live.js', async () => {
   const { state } = await import('./state.js');
   return {
     setWeatherVar: vi.fn((v: string) => { state.weatherVar = v; }),
@@ -47,7 +47,7 @@ vi.mock('./weather-live.js', async () => {
   };
 });
 
-vi.mock('./nws-zone-join.js', () => ({
+vi.mock('./live/nws-zone-join.js', () => ({
   syncZoneVisibility: vi.fn(),
   initNwsZoneJoin: vi.fn(),
   setZoneGroupFilter: vi.fn(),

@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "地図上のバブルをクリックすると連系線が表示されます。",
   "gridOps.flyTo": "{name} を地図に表示",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "近接",
   'px.menu': "近接",
   'px.privacy': "ファイルがこのブラウザーの外へ出ることはありません。どのサーバーにも送られません。",

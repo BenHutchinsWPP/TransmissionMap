@@ -25,7 +25,7 @@
 // validateConditions() is also the trust-boundary check for a view's `where`
 // (view-validate.ts's validateWhere(), reached from share links and setWhere);
 // its per-value valueError() also checks a view's Area filter codes
-// (view-validate.ts's validateArea()). assets/dataset-query.ts compiles a
+// (view-validate.ts's validateArea()). assets/query/dataset-query.ts compiles a
 // query's `where` through toMapLibreFilter(); assets/ui/ui-area.ts reads
 // MAX_LIST_VALUES.
 

@@ -21,7 +21,7 @@ name: Update live weather mosaic
 # The `schedule:` cron below is DISASTER INSURANCE only — sparse, so that if
 # cron-job.org dies the feed still refreshes well inside the frontend's staleness
 # window instead of going silently stale forever. That 6 h interval is the worst-case
-# gap between successful runs, and MAX_AGE_MS in assets/weather-live.ts (12 h)
+# gap between successful runs, and MAX_AGE_MS in assets/live/weather-live.ts (12 h)
 # must stay larger than it. Change one, change the other.
 on:
   workflow_dispatch:

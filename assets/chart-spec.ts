@@ -15,7 +15,7 @@
 //                               "(MW)"; also what templates/show-template.ts
 //                               titles a field with.
 //       Session only: a chart is never in the view, the link or undo.
-//       Loaded with the chat chunk (agent/tools.ts, ui/ui-chart.ts).
+//       Loaded with the chat chunk (agent/tools.ts, ui/chat/ui-chart.ts).
 //
 // Deps: src/outcome.ts (Outcome; type only), registry (layerById), utils/field-label.ts (humanise),
 //       user-data-export.ts (toCsv).

@@ -190,7 +190,7 @@ export interface LayerDef {
   // first when overlapping features exist. Only clickable layers, not heat/label/casing.
   clickPriority?: Record<string, number>;
   // Map layers that draw a second picture of features the others already draw
-  // (WECC corridors): not read as the layer's features by assets/dataset-query.ts.
+  // (WECC corridors): not read as the layer's features by assets/query/dataset-query.ts.
   drawnOnly?: string[];
   // Minimum zoom level to fetch this layer's data; absent means fetch when visible.
   fromZoom?: number;

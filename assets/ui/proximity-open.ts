@@ -8,8 +8,8 @@
 
 import { recordDiagEvent } from '../diag-log.js';
 
-let chunk: Promise<typeof import('./ui-proximity.js') | null> | null = null;
-const load = () => chunk ??= import('./ui-proximity.js')
+let chunk: Promise<typeof import('./proximity/ui-proximity.js') | null> | null = null;
+const load = () => chunk ??= import('./proximity/ui-proximity.js')
   .catch(err => { chunk = null; recordDiagEvent('layer', `proximity chunk: ${err}`); return null; });
 
 export function openProximity(from?: HTMLElement | null): Promise<void> {

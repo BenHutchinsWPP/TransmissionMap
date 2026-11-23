@@ -36,7 +36,7 @@ import {
 import { chat, listToolModels, resetModelCatalogue, MAX_TOKENS, DEFAULT_MODEL, type ChatMessage } from './openrouter.js';
 import { localContext, type LocalContext } from './local-commands.js';
 import { getDiagLog } from '../diag-log.js';
-import type { QueryResult } from '../dataset-query.js';
+import type { QueryResult } from '../query/dataset-query.js';
 import { CATALOGUE } from '../templates/catalogue.js';
 
 const KEY = 'sk-or-v1-' + '0123456789abcdef'.repeat(4);
@@ -274,7 +274,7 @@ describe('ask: model', () => {
   });
 
   it('the {"data": …} wrapper never pushes a query past 8 KB', async () => {
-    const { summarise } = await import('../dataset-query.js');
+    const { summarise } = await import('../query/dataset-query.js');
     const size = (s: unknown) => new TextEncoder().encode(JSON.stringify(s)).length;
     // A row size whose summary lands within the wrapper's 9 bytes of the cap.
     let r: QueryResult | undefined;

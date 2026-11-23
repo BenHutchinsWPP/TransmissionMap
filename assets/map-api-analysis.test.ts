@@ -22,7 +22,7 @@ vi.mock('./sandbox/sandbox-host.js', () => ({
     return m.sandbox ? m.sandbox(code, inputs, o) : { ok: true, result: { value: 7, ms: 3 } };
   },
 }));
-vi.mock('./dataset-query.js', () => ({
+vi.mock('./query/dataset-query.js', () => ({
   QUERY_MAX_ROWS: 5000,
   allowedFields: (id: string) => id === 'gen' ? ['plant_name', 'mw'] : id === 'geo' ? ['name'] : [],
   describe: (id: string) => id === 'gen' || id === 'geo'

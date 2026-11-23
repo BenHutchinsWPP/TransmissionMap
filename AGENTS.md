@@ -65,7 +65,9 @@ Each listed folder's README.md is its map; each file's header comment is the sou
 - `CLAUDE.md` and `.vscode/settings.json` — the two shims above; no rules in them
 - `src/README.md` — entry point, shared types, units, i18n, colors, registry (layer definitions and their JSON data)
 - `assets/README.md` — frontend root modules: map, state, filters, url-state, view-state, undo, map-api, popup, agent
-- `assets/ui/README.md` — UI wiring, panels, route panel and its tabs
+- `assets/live/README.md` — live feeds
+- `assets/query/README.md` — dataset queries
+- `assets/ui/README.md` — UI wiring, panels; the route panel, Proximity and chat in `route/`, `proximity/` and `chat/` READMEs
 - `assets/route/README.md` — the route optimizer
 - `assets/layers/README.md` — MapLibre layer builders and lazy data loading
 - `assets/templates/README.md` — visualization templates
@@ -90,7 +92,7 @@ A row's footguns are in the `## Footguns` section of the file after `footguns:`,
 |---|---|
 | Add a dataset to the pipeline | `docs/adding-a-dataset.md` (data half), then `docs/adding-a-layer.md` for frontend |
 | Add a map layer | `docs/adding-a-layer.md` ONLY, then `rg ">>> ADD-LAYER"` for insertion points |
-| Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (footguns: `assets/README.md`) |
+| Add a **live** layer (auto-refreshing feed) | `docs/adding-a-live-layer.md` — the delta on top of `adding-a-layer.md` (footguns: `assets/live/README.md`) |
 | Give a dataset a stable id / feature-id lookups | `docs/pipeline.md` § *Stable ids*, `assets/feature-id.ts`, `src/registry/osm-fid.ts` (footguns: `scripts/README.md`) |
 | Add a filter (legend chips or range/slider) | `docs/adding-a-filter.md` (footguns: `assets/README.md`) |
 | Change a display unit / add a setting | `docs/settings.md` (footguns: `src/README.md`) |
@@ -104,17 +106,17 @@ A row's footguns are in the `## Footguns` section of the file after `footguns:`,
 | Add a library service / vetted host | `src/registry/service-library.json`, `src/registry/service-hosts.json`, `assets/services/service-library.test.ts`, then `node scripts/check_service_library.mjs` (footguns: `assets/services/README.md`) |
 | Linked services / add-service-by-URL | `assets/services/`, `assets/ui/ui-services.ts`, `docs/url-state.md` (`sv`), `docs/internal/chat-trust-model.md` (footguns: `assets/services/README.md`) |
 | Analysis sandbox / `runAnalysis` | `assets/sandbox/runner.js`, `assets/sandbox/sandbox-host.ts`, `scripts/build_sandbox.mjs` (footguns: `assets/sandbox/README.md`) |
-| Chat canvas / `showCanvas` | `docs/internal/chat-trust-model.md` (§ *Frames*), `assets/sandbox/canvas-runner.js`, `assets/sandbox/canvas-host.ts`, `assets/ui/ui-canvas.ts`, `showCanvas` in `assets/agent/tools.ts`, the library list in `assets/agent/loop.ts` `SYSTEM_PROMPT` (footguns: `assets/sandbox/README.md`) |
+| Chat canvas / `showCanvas` | `docs/internal/chat-trust-model.md` (§ *Frames*), `assets/sandbox/canvas-runner.js`, `assets/sandbox/canvas-host.ts`, `assets/ui/chat/ui-canvas.ts`, `showCanvas` in `assets/agent/tools.ts`, the library list in `assets/agent/loop.ts` `SYSTEM_PROMPT` (footguns: `assets/sandbox/README.md`) |
 | Transmission line tools (copy, fault locator, profile) | `docs/line-tools.md`, then `assets/lines/line-read.ts`, `assets/ui/ui-line.ts`, `assets/lines/profile.ts` (data: `docs/pipeline.md` § *Line geometry*) (footguns: `docs/internal/line-tools-notes.md`) |
-| Spatial joins (`joinPoints`, `crossings`) | `assets/spatial-join.ts`, `assets/dataset-query.ts` (footguns: `assets/README.md`) |
+| Spatial joins (`joinPoints`, `crossings`) | `assets/query/spatial-join.ts`, `assets/query/dataset-query.ts` (footguns: `assets/query/README.md`) |
 | Map API / agent tools (what the chat may call) | `assets/map-api.ts`, `assets/agent/tools.ts`, `docs/internal/chat-trust-model.md` (footguns: `docs/internal/chat-trust-model.md`) |
 | Local chat commands (answered without a model) | `assets/agent/local-commands.ts` (footguns: `docs/internal/chat-trust-model.md`) |
-| Chat panel (the drawer's Ask tab) | `assets/ui/ui-chat.ts`, the Ask pane's shell, `assets/ui/drawer.ts` (footguns: `assets/ui/README.md`) |
-| Session restore (Android discard / reload) | `assets/session-snapshot.ts`, the save/restore halves of `assets/ui/ui-chat.ts` (`tm-chat`, the conversation) and `assets/ui/drawer.ts` (`tm-drawer`, the layout — Ask open or not — and the table, whose part `ui-table.ts` registers; shape checks in `assets/ui/drawer-snapshot.ts`, field checks at restore against `describe()`), `docs/internal/chat-trust-model.md` (§ *Session restore*) (footguns: `docs/internal/chat-trust-model.md`) |
-| Chat charts (bar/pie/line or Vega-Lite, PNG/CSV) | `assets/chart-spec.ts`, `assets/ui/ui-chart.ts`, `assets/vega-spec.ts` (a Vega-Lite `chart` object: page check, row injection, CSV), the `chart` argument of `runAnalysis` in `assets/agent/tools.ts` (`aggregate` takes none: its group charts are `showTemplate`'s) (footguns: `assets/ui/README.md`) |
+| Chat panel (the drawer's Ask tab) | `assets/ui/chat/ui-chat.ts`, the Ask pane's shell, `assets/ui/drawer.ts` (footguns: `assets/ui/chat/README.md`) |
+| Session restore (Android discard / reload) | `assets/session-snapshot.ts`, the save/restore halves of `assets/ui/chat/ui-chat.ts` (`tm-chat`, the conversation) and `assets/ui/drawer.ts` (`tm-drawer`, the layout — Ask open or not — and the table, whose part `ui-table.ts` registers; shape checks in `assets/ui/drawer-snapshot.ts`, field checks at restore against `describe()`), `docs/internal/chat-trust-model.md` (§ *Session restore*) (footguns: `docs/internal/chat-trust-model.md`) |
+| Chat charts (bar/pie/line or Vega-Lite, PNG/CSV) | `assets/chart-spec.ts`, `assets/ui/chat/ui-chart.ts`, `assets/vega-spec.ts` (a Vega-Lite `chart` object: page check, row injection, CSV), the `chart` argument of `runAnalysis` in `assets/agent/tools.ts` (`aggregate` takes none: its group charts are `showTemplate`'s) (footguns: `assets/ui/chat/README.md`) |
 | Templates (Tools ▸ Charts, `showTemplate`) | `assets/templates/show-template.ts`, `assets/templates/catalogue.ts`, `assets/ui/ui-templates.ts`, `src/registry/field-roles.ts`, `src/registry/template-signatures.ts`, `docs/templates-coverage.md`, `docs/internal/chat-trust-model.md` (footguns: `assets/templates/README.md`) |
 | Agent loop / OpenRouter client / the key | `assets/agent/loop.ts`, `assets/agent/openrouter.ts`, `assets/agent/key-store.ts`, `docs/internal/chat-trust-model.md` (footguns: `docs/internal/chat-trust-model.md`) |
-| Query a dataset (rows / count / group-by) | `assets/dataset-query.ts`, `assets/dataset-core.ts` (the state-free core), `assets/dataset-view.ts` (the map reads) (footguns: `assets/README.md`) |
+| Query a dataset (rows / count / group-by) | `assets/query/dataset-query.ts`, `assets/query/dataset-core.ts` (the state-free core), `assets/query/dataset-view.ts` (the map reads) (footguns: `assets/query/README.md`) |
 | Grid Operations layer (EIA-930 bubbles, interchange arrows, hour bar) | `docs/layers/ba-interchange.md`, `assets/grid-ops/` (footguns: `assets/grid-ops/README.md`) |
 | Popup content/format | `assets/popup.ts`, `assets/popup-format.ts` |
 | Filter UI / value maps | `assets/filters.ts`, `assets/ui/ui-filters.ts` |
@@ -133,7 +135,7 @@ A row's footguns are in the `## Footguns` section of the file after `footguns:`,
 | Search behavior | `assets/ui/ui-search.ts` |
 | Area picker UI (the AREA row, chips, row flags) | `assets/ui/ui-area.ts`, `assets/ui/panel-mirror.ts` (`commitArea`, `syncAreaControl`) (footguns: `assets/ui/README.md`) |
 | Layer add order / lazy loading | `assets/layers/add-all-layers.ts` (order), `assets/layers/layer-data.ts` (lazy GeoJSON loading), `assets/layers/layer-source.ts` (which file / source / credit a layer gets, from `LayerDef.data`) |
-| Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/wildfire-staleness.ts` |
+| Live wildfire feed (update cadence, staleness, workflow) | `docs/layers/wildfire-live.md`, `.github/workflows/wildfire-data.yml`, `assets/live/wildfire-staleness.ts` |
 | Data source facts (URL, license, columns) | `docs/data-sources.md`, `docs/layers/<layer>.md` |
 | Add/fix a layer's provenance (publisher, landing page, licence) | `scripts/data_manifest.yaml` — sourced only from `docs/data-sources.md` and `docs/layers/<id>.md`; a field those docs don't settle is the literal string `UNKNOWN` |
 | Change what the Data Credits dialog shows | `scripts/data_manifest.yaml` for the facts, `assets/ui/ui-credits.ts` for the rendering; `make data-manifest` rebuilds `data/layers/manifest.json` it fetches |
@@ -146,10 +148,10 @@ A row's footguns are in the `## Footguns` section of the file after `footguns:`,
 | How "continent" is defined / rebuilding the OSM extracts without Geofabrik | `docs/pipeline.md` § *Canonical regional boundaries* — the eight `.poly` files are vendored at `scripts/geofabrik_bounds/`, with an `osmium extract` config that recuts all eight from `planet-latest.osm.pbf` |
 | Moratorium layer data / twice-monthly refresh | `scripts/moratoriums/README.md` (footguns: `scripts/moratoriums/README.md`) |
 | Global tilesets | `docs/hosting-plan.md` (footguns: `scripts/README.md`) |
-| Route panel (UI) | `docs/internal/routing-notes.md` § *Route panel*, then `assets/ui/route-panel-open.ts`, `assets/ui/ui-route.ts`, `assets/ui/route-tabs/types.ts` (footguns: `docs/internal/routing-notes.md`) |
+| Route panel (UI) | `docs/internal/routing-notes.md` § *Route panel*, then `assets/ui/route-panel-open.ts`, `assets/ui/route/ui-route.ts`, `assets/ui/route/tabs/types.ts` (footguns: `docs/internal/routing-notes.md`) |
 | Routing constraints layer / concern picker | `docs/internal/routing-notes.md` § *Routing constraints layer*, then `src/colors/route-constraints.ts`, `assets/route-constraints.ts`, `scripts/build_route_constraints.py` (footguns: `docs/internal/routing-notes.md`) |
 | Route optimizer (cube, presets, solver) | `docs/internal/routing-notes.md`, then `assets/route/route.ts`, `assets/route/cost.ts`, `src/registry/route-presets.ts` (footguns: `docs/internal/routing-notes.md`) |
-| Proximity check (Tools ▸ Proximity) | `docs/proximity.md`, `docs/internal/proximity-notes.md` (tests, benchmarks, checklist), then `assets/proximity/proximity.ts`, `assets/proximity/types.ts`, `assets/ui/ui-proximity.ts`, `assets/ui/proximity-map.ts` (footguns: `docs/internal/proximity-notes.md`) |
+| Proximity check (Tools ▸ Proximity) | `docs/proximity.md`, `docs/internal/proximity-notes.md` (tests, benchmarks, checklist), then `assets/proximity/proximity.ts`, `assets/proximity/types.ts`, `assets/ui/proximity/ui-proximity.ts`, `assets/ui/proximity/proximity-map.ts` (footguns: `docs/internal/proximity-notes.md`) |
 
 ## Commands
 
@@ -170,7 +172,7 @@ A row's footguns are in the `## Footguns` section of the file after `footguns:`,
 - `npm run preview` — preview production build locally
 - `npm run typecheck` — TypeScript check only (cheapest gate; run before claiming any code change done)
 - `npm test` — run Vitest unit suite (`*.test.ts`); `npm run test:watch` to watch
-- `make test-pipeline` — pipeline smoke tests (`scripts/test_*.py`, no `data/` or network needed), run twice: stdlib only (`python3 -S`, what the CI runners and the moratorium refresh see — a test that needs PyYAML imports it inside the test and skips without it), then with PyYAML for the manifest checks. CI runs them on any `scripts/**` push (`pipeline-tests.yml`, PyYAML pinned in `scripts/requirements-tests.txt`). Run it after touching any `scripts/*.py`.
+- `make test-pipeline` — pipeline smoke tests (`scripts/test_*.py`, no `data/` or network needed), run twice: stdlib only (`python3 -S`, what the CI runners and the moratorium refresh see — a test that needs PyYAML imports it inside the test and skips without it), then with PyYAML for the manifest checks, then `test_dedup_points.py` under `venv/` when it exists. CI runs them on any `scripts/**` push (`pipeline-tests.yml`, PyYAML pinned in `scripts/requirements-tests.txt`). Run it after touching any `scripts/*.py`.
 - Per-dataset build targets exist too (e.g. `make wind`, `make seismic`) — run `make help` for the current list
 
 ## Working style

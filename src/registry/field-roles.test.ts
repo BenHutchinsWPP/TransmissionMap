@@ -12,8 +12,8 @@ import { COLUMNS_DATASETS } from './columns.js';
 import { templateById } from '../../assets/templates/catalogue.js';
 import { TEMPLATE_SIGNATURES, fit } from './template-signatures.js';
 import { FACETS, facet } from '../colors/facets.js';
-import { allowedFields } from '../../assets/dataset-query.js';
-import { DISPLAY_FIELDS } from '../../assets/dataset-core.js';
+import { allowedFields } from '../../assets/query/dataset-query.js';
+import { DISPLAY_FIELDS } from '../../assets/query/dataset-core.js';
 
 const QUERYABLE = LAYERS.filter(l => l.dataset && Object.hasOwn(FIELD_SCHEMA, l.dataset) && l.data?.id).map(l => l.id);
 const ROLES = QUERYABLE.map(id => rolesOf(id)!);

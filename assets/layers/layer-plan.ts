@@ -22,7 +22,7 @@
 // Imported by: add-all-layers.ts (applyLayerPlan), layer-init.ts
 //              (ensureCountyBoundaries), layer-source.ts (PlanStep type),
 //              map-layers-*.ts (LayerPlan type), ../visibility.ts,
-//              ../nws-zone-join.ts and ../user-data/user-data-draw.ts
+//              ../live/nws-zone-join.ts and ../user-data/user-data-draw.ts
 //              (setMapLayerVisibility), ../route-constraints.ts (setRasterUrl).
 // Deps: state.ts (layerVisibility), src/registry/index.ts (LAYERS),
 //       base-filters.ts (registerBaseFilter).

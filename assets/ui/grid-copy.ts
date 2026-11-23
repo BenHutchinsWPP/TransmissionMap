@@ -2,7 +2,7 @@
 // options all three range grids share, a cell's clipboard value, a range as tab-separated text, the
 // Ctrl/Cmd+C test, the keypress-bound clipboard write, and the guard that keeps a control's presses from the grid.
 // Deps: none. Used by: ui-table.ts (re-exports clipValue),
-// ui-proximity.ts, route-tabs/method-grid.ts, proximity-rows.ts.
+// ui-proximity.ts, ui/route/tabs/method-grid.ts, proximity-rows.ts.
 
 /** The Tabulator options the table drawer, the Proximity grid and the Method grid share: virtual rows, a
  *  one-range cell selection of whole rows, no focus grab on data load, Tab leaves the grid, resize from the header. */

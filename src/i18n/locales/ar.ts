@@ -1313,7 +1313,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "انقر على فقاعة في الخريطة لرؤية روابطها.",
   "gridOps.flyTo": "عرض {name} على الخريطة",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "القرب",
   'px.menu': "القرب",
   'px.privacy': "ملفك لا يغادر هذا المتصفح أبدًا: لا يُرسل إلى أي خادم.",

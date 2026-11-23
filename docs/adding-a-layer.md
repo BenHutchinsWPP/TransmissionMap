@@ -268,7 +268,7 @@ An OSM-derived credit must start with `OSM_CREDIT` (`src/registry/sources.ts`) b
 
 Common shapes have helpers in `./layer-init.js` that return plans, source included: `planPolygon` (fill + outline), `planRaster`, `planTransmissionLines`, `planSubstationPoints`. Compose plans by spreading: `[...planPolygon({...}), { layer: labelSpec }]`.
 
-A side effect that is not a layer — a tap handler, a bus subscription, a timer — goes in its own exported function that `addAllLayers()` calls after applying the plans (see `wireWeccPaths()`; a live poll gets its own module, like `startNexradRadar()` in `assets/nexrad-radar.ts`); images a layer's paint names are added before the plans (see `addDcmHatchImages()`).
+A side effect that is not a layer — a tap handler, a bus subscription, a timer — goes in its own exported function that `addAllLayers()` calls after applying the plans (see `wireWeccPaths()`; a live poll gets its own module, like `startNexradRadar()` in `assets/live/nexrad-radar.ts`); images a layer's paint names are added before the plans (see `addDcmHatchImages()`).
 
 ---
 

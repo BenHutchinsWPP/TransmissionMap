@@ -19,7 +19,7 @@ name: Update NWS alerts + ODIN outages
 # can't go silently stale forever if cron-job.org dies. Every 2 h — the
 # tighter of the two feeds' constraints wins: the NWS stale kill-switch
 # (nws-staleness.ts) force-disables that layer with a blocking modal at 3 h;
-# ODIN's no-paint gate is a laxer 6 h (assets/odin-outages.ts). The worst-case
+# ODIN's no-paint gate is a laxer 6 h (assets/live/odin-outages.ts). The worst-case
 # gap between successful runs must stay under 3 h. Change one, change the
 # other.
 #

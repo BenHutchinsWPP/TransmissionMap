@@ -12,8 +12,8 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach, beforeEach } 
 import { readFileSync } from 'node:fs';
 
 let rowCount = 3;
-vi.mock('../dataset-query.js', async (orig) => ({
-  ...(await orig<typeof import('../dataset-query.js')>()),
+vi.mock('../query/dataset-query.js', async (orig) => ({
+  ...(await orig<typeof import('../query/dataset-query.js')>()),
   describe: (layerId: string) => ({ ok: true, result: { layerId, queryable: true, kind: 'geojson', complete: true, idField: 'fid',
     fields: [{ name: 'name', type: 'string', ops: [] }] } }),
   count: async () => ({ ok: true, result: { complete: true, total: rowCount } }),

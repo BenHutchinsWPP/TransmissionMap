@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "Нажмите на пузырёк на карте, чтобы увидеть его связи.",
   "gridOps.flyTo": "Показать {name} на карте",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "Близость",
   'px.menu': "Близость",
   'px.privacy': "Ваш файл не покидает этот браузер: он не отправляется ни на какой сервер.",

@@ -322,7 +322,7 @@ def curate(features: list[dict], generated_utc: str) -> tuple[list[dict], list[d
             if ztype == "county":
                 county_ugcs.append(ugc)
             else:
-                # Drift check: key format mirrors assets/nws-zone-join.ts
+                # Drift check: key format mirrors assets/live/nws-zone-join.ts
                 # tileKey() — an alert naming a UGC absent from the tileset
                 # vintage would silently no-paint.
                 prefix = {"forecast": "z", "fire": "f", "marine": "m"}[ztype]

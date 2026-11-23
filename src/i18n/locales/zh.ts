@@ -1312,7 +1312,7 @@ const locale: LocaleDictionary = {
   "gridOps.pickNode": "点击地图上的气泡可查看其联络线。",
   "gridOps.flyTo": "在地图上显示 {name}",
   // <<< grid operations
-  // >>> proximity check (assets/ui/ui-proximity.ts)
+  // >>> proximity check (assets/ui/proximity/ui-proximity.ts)
   'px.tab': "邻近",
   'px.menu': "邻近",
   'px.privacy': "您的文件不会离开此浏览器：不会发送到任何服务器。",

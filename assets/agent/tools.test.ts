@@ -545,7 +545,7 @@ describe('toolSchemas', () => {
   });
 
   it('passes checkArgs, and the real describe refuses an unknown id and says a non-dataset layer is not queryable', async () => {
-    const real = await vi.importActual<typeof import('../dataset-query.js')>('../dataset-query.js');
+    const real = await vi.importActual<typeof import('../query/dataset-query.js')>('../query/dataset-query.js');
     const nonDataset = LAYERS.find(l => !l.dataset)!.id;
     for (const id of ['no-such-layer', nonDataset]) expect(checkArgs({ layerId: id }, params('describe')), id).toBeNull();
     expect(real.describe('no-such-layer')).toMatchObject({ ok: false });

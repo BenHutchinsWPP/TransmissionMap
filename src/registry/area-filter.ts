@@ -26,7 +26,7 @@
 //       condition-compile.ts (Condition type), src/types.ts (LayerDef type).
 // Consumed by: assets/filters.ts (areaExpr, setArea), assets/url-state-codec.ts
 //       (`af`), view-validate.ts, assets/ui/panel-mirror.ts (the row flag),
-//       assets/dataset-query.ts (areaCondition), assets/view-state.ts
+//       assets/query/dataset-query.ts (areaCondition), assets/view-state.ts
 //       (normalizeArea), assets/ui/ui-area.ts and assets/area-labels.ts
 //       (AREA_KINDS).
 

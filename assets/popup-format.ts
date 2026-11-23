@@ -16,7 +16,7 @@ import { escapeHtml, isHttpUrl } from './utils/utils.js';
 import { osmRef } from '../src/registry/osm-fid.js';
 import { OSM_TL_POPUP_IDS } from '../src/registry/transmission.js';
 import { NATGAS_FAC_TYPE_BUCKETS, WESTTEC_SCENARIO_BUCKETS, NRI_RATINGS } from '../src/colors/buckets.js';
-import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './nws-zone-join.js';
+import { lookupByZone, lookupByFips, compareZoneAlerts, type ZoneAlertEntry } from './live/nws-zone-join.js';
 import { fmtTemp, fmtElevation, fmtElevationRange, fmtDistanceMi, fmtAreaAcres, fmtAreaSqFt, fmtArea } from '../src/units.js';
 import { t, getLocale } from '../src/i18n/index.js';
 import { nriHazard, nriHazardLabel, nriVersion } from './fema-nri.js';

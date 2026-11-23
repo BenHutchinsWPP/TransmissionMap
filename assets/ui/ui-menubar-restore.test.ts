@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const m = vi.hoisted(() => ({ imported: 0, resumed: 0, restored: 0 }));
-vi.mock('./ui-chat.js', () => { m.imported++; return { resumeChat: () => { m.resumed++; } }; });
+vi.mock('./chat/ui-chat.js', () => { m.imported++; return { resumeChat: () => { m.resumed++; } }; });
 vi.mock('./table-open.js', () => ({
   restoreDrawer: async (resumeAsk: () => Promise<void>) => { m.restored++; await resumeAsk(); },
 }));

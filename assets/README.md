@@ -36,26 +36,8 @@ Map of this folder; each file's header comment is the source of truth.
     - `vega-spec.ts` — a model's Vega-Lite `chart` object: `validateVegaLite` (page-side check: plain
       JSON, ≤ 20 KB, no `data`/`url`/`href`/…), row injection as `data.values` (`rowsFromValue`),
       `rowsCsv`; Vega itself runs only in the canvas frame; chat chunk
-    - `dataset-core.ts` — the state-free half of `dataset-query.ts`: the feature test, the row, group and
-      shape passes over in-memory rows, `DISPLAY_FIELDS`, the result types, and the one place the scope and
-      `complete` rules live (`readFrom`, `coverageOf`, `rowSource`); imports no module that reaches `state.ts`
-    - `dataset-view.ts` — the map reads of `dataset-query.ts` (`drawnFilters`, `drawnView`, `featuresOf`, the
-      base filters and hidden voltage tiers); imports `state.ts`
-    - `dataset-query.ts` — a `dataset` layer's features as rows: `describe`, async
-      `query`/`count`/`aggregate` (each an `Outcome`), `summarise` (the capped copy a model may
-      see); filters are the map's, run through style-spec `featureFilter`; GeoJSON layers read
-      the whole file (`loadSource`), a vector layer with a columns file the whole dataset (`complete: true`; `scope: 'view'`, `fragments`, `ids` or no usable file read the view), any other vector layer the loaded tiles only (`complete: false`).
-      `shapeRows` — the template data pass: `where` + area + the base filter of each map layer
-      that draws the features (a symbol layer only when `clickPriority` names it), grouped by ≤ 2
-      fields and a year (or a date field's month), count + a measure's sum, optional numeric `bins`
-      (`binEdges`, rows `bin`/`lo`/`hi`, a bin's `where` matches exactly its rows), features on request
-      (≤ 50,000, cuts reported; `complete: true` reads a second layer whole, GeoJSON only); `states`
-      on a world layer is an alias of its US admin1 tags (`usOnly`);
-      a tiled layer without a columns file reads the current view only, one with it the whole dataset (area applies; `geometry: 'full'` stays on the view); `shapeSlots` — what each slot takes on a layer
+    - `query/` — the dataset query modules (rows, counts, group-bys, the template data pass, the map reads) and the spatial joins: `query/README.md`
     - `area-labels.ts` — the lazy region-label table (the only importer of `region-labels.json`)
-    - `spatial-join.ts` — `joinPoints` (points per polygon) and `crossings` (polygons a line
-      crosses) over `dataset-query.ts` rows; tile pieces of one feature merged; `complete` and
-      tile precision stated; registry layers only
     - `map-api.ts` — the view as calls (the chat's tools, `window.tm`): each returns an
       `Outcome`; a committing call is one `url:write` and its own undo step (`asOwnStep`);
       includes `addService`/`removeService`/`listServices`, `joinPoints`/`crossings`, `runAnalysis`,
@@ -69,7 +51,7 @@ Map of this folder; each file's header comment is the source of truth.
       include `addService`/`removeService`/`listServices` (a URL only after `confirm`), `copyToMyData` (asks above 50
       features per ask, the 50 a running total over the ask's model calls; the model sees counts only),
       `joinPoints`/`crossings`, `runAnalysis` (code shown in the chat first) and `planRoute` (solves through `route-panel-open.ts`'s `planRouteFromChat`); `runAnalysis`
-      takes `chart` (bar/pie/line, drawn by `ui/ui-chart.ts`, or a Vega-Lite spec shown
+      takes `chart` (bar/pie/line, drawn by `ui/chat/ui-chart.ts`, or a Vega-Lite spec shown
       in the canvas frame); `showCanvas` shows a model-written page in the canvas frame (code shown first)
     - `dev-console.ts` — dev-only `window.tm` (the `map-api.ts` calls and more); loaded by
       `src/main.ts` behind `import.meta.env.DEV`, never in the production bundle
@@ -110,32 +92,12 @@ Map of this folder; each file's header comment is the source of truth.
       `onHidden`; also the Diagnostics "Page load" line (`initPageLifecycle`, run first by `src/main.ts`;
       `tm-lifecycle`); `endSnapshots` (map.ts, before its reload for a pasted link). Keys: `tm-chat` (the conversation, owned by
       `ui-chat.ts`), `tm-drawer` (the drawer's layout and the table, owned by `ui/drawer.ts`; shape in `ui/drawer-snapshot.ts`)
-    - `live-poll.ts` — `pollWhileVisible`: **the one refresh loop every live feed runs on**
-      (interval while the layer is on, plus an instant refetch on return to the tab /
-      bfcache restore, at most once per 60 s); zero deps
-    - `live-staleness.ts` — **shared factory** for every live GeoJSON feed: auto-refresh
-      (through `live-poll.ts`) + stale-data kill-switch modal. `wildfire-staleness.ts` /
-      `nws-staleness.ts` are thin config shells over it that export their config (`WILDFIRE_LIVE`,
-      `NWS_LIVE`), whose `maxAgeMs` the legend age chips and diagnostics read. Raster/feature-state feeds
-      wire their own fetch and staleness on the same poll loop (see `odin-outages.ts`,
-      `weather-live.ts`).
-    - `stale-dialog.ts` — `staleDialog(cfg)`: builds a feed's stale-data `<dialog>` from nodes and the
-      `stale.<feed>.*` strings (called from each feed's init); no stale markup in `index.html`
-    - `weather-live.ts` — live GFS weather raster: image swap + hover-LUT
-      reload + age chip + timebar (own fetch on `live-poll.ts`; the factory only does
-      GeoJSON sources; a stale feed warns in the console, no modal)
-    - `nexrad-radar.ts` — NEXRAD/GeoMet radar frame poll (`startNexradRadar`, called from
-      `add-all-layers.ts`): keeps every tile on one scan, refreshes on switch-on and on
-      return to the tab; owns the GeoMet source table the builder reads
-    - `weather-particles.ts` — wind particle animation over the weather wash (lazy-loaded canvas layer)
-    - `odin-outages.ts` — ODIN county outage feature-state join (own fetch on `live-poll.ts`;
-      stale-data modal `#odinStaleDialog` from `stale-dialog.ts`, like the factory's)
+    - `live/` — the live feeds' refresh loop, staleness shells, weather, radar and outage joins, and the NWS zone join: `live/README.md`
     - `fema-nri.ts` — FEMA National Risk Index county feature-state join (static table; the hazard picker's `setNriHazard`)
     - `county-overlay.ts` — a template's per-county colours on the main map: `paintCountyOverlay` /
       `clearCountyOverlay` / `countyOverlayToken` / `onCountyOverlay`; feature-state key `tpl_v` on the shared
       county source, its own fill + outline above the county choropleths and a legend card; session only
     - `route-constraints.ts` — the Routing constraints layer's concern: `setRouteConcern` (state, legend, the raster url via `layer-plan.ts`'s `setRasterUrl`), `routeConcernUrl`, `routeConcernLegendHtml`; link param `rc`
-    - `nws-zone-join.ts` — NWS zone/county alert feature-state join; key contract with `extract_nws_zones.py`
     - `tribal-disclaimer.ts` — tribal-layer disclaimer dialog (used by `visibility.ts` + `ui.ts`)
     - `experiences.ts` — Map Experiences controller: renders a curated preset as
       `UrlStateData` — the shape a shared link parses to — and applies it with
@@ -148,15 +110,11 @@ Map of this folder; each file's header comment is the source of truth.
       snapshot and dirty flag are private module state; deps `state-bus.ts` only
     - `diag-log.ts` — zero-import ring buffer of runtime errors; `recordDiagEvent`
       is called from the existing catch blocks in `map.ts`, `basemap.ts`, `layers/layer-data.ts`,
-      `live-staleness.ts`, `odin-outages.ts`, `weather-live.ts`
+      `live/live-staleness.ts`, `live/odin-outages.ts`, `live/weather-live.ts`
     - `diagnostics.ts` — check catalogue behind the Diagnostics panel (browser
       capabilities, host probes, live-feed freshness, report builder); no DOM
 
 ## Footguns
-
-### Add a **live** layer (auto-refreshing feed)
-
-- a live feed's workflow joins the shared `data-branch` concurrency group, and `maxAgeMs` must exceed the worst-case cron gap; the stale `<dialog>` is built by `assets/stale-dialog.ts` from the `stale.<feed>.*` strings, never written into `index.html`
 
 ### Add a filter (legend chips or range/slider)
 
@@ -177,14 +135,6 @@ Map of this folder; each file's header comment is the source of truth.
 ### Anything that reacts to a click/tap/hover on the map
 
 - a touch screen reaches `click`/`mousemove` only as compatibility mouse events, and the browser withholds those while the draw control is attached — mapbox/mapbox-gl-draw#1301; `npm run lint` fails the raw form, though it cannot see a non-literal event name or a direct `addEventListener` on the canvas
-
-### Spatial joins (`joinPoints`, `crossings`)
-
-- `joinPoints` and `crossings` stay on the view: a vector-tile layer answers from the loaded tiles only, so `complete: false`; `crossings` counts are `null` on tiled layers, where a feature is cut into pieces
-
-### Query a dataset (rows / count / group-by)
-
-- a field outside `allowedFields()` is refused; a vector-tile layer with a columns file (`COLUMNS_DATASETS`) answers for the whole dataset (`scope: 'dataset'`, the default; it counts features the tiles drop for drawing), and falls back to the loaded tiles — `complete: false` — for `scope: 'view'`, `fragments`, `ids`, a missing, stale or over-`COLUMNS_MAX_BYTES` file and any layer without one, so check `complete`; a number test never matches a feature without the value, and a kV of 0 or less (OSM's -1) counts as none — in tests and bins alike
 
 ### Fetch from a new host / the Content Security Policy
 

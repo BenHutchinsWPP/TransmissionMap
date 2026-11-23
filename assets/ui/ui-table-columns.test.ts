@@ -15,8 +15,8 @@ const FIELDS = [
 ];
 const h = vi.hoisted(() => ({ complete: true, planned: 0, queries: 0, pointOnly: true }));
 
-vi.mock('../dataset-query.js', async (orig) => ({
-  ...(await orig<typeof import('../dataset-query.js')>()),
+vi.mock('../query/dataset-query.js', async (orig) => ({
+  ...(await orig<typeof import('../query/dataset-query.js')>()),
   describe: (layerId: string) => ({ ok: true, result: { layerId, queryable: true, kind: 'pmtiles', complete: true, idField: 'fid', fields: FIELDS, credit: 'OSM' } }),
   count: async () => ({ ok: true, result: { layerId: LAYER, complete: h.complete, total: 1 } }),
   query: async () => {

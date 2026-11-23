@@ -5,7 +5,7 @@
 // card's pure helpers: tick values and file names.
 import { describe, it, expect } from 'vitest';
 import { humanise, validateChart, chartCsv, MAX_CATEGORIES, MAX_PIE, MAX_SERIES, type Chart } from './chart-spec.js';
-import { ticks, fileName } from './ui/ui-chart.js';
+import { ticks, fileName } from './ui/chat/ui-chart.js';
 
 const GOOD = { type: 'bar', title: 'MW by fuel', categories: ['Gas', 'Wind'], series: [{ name: 'MW', values: [10, 5] }] };
 const reason = (v: unknown) => { const r = validateChart(v); return r.ok ? '' : r.reason; };

@@ -166,7 +166,7 @@ async function onMenubarClick(e: MouseEvent) {
     // The map chat is its own lazy chunk (ui-chat.js, with the agent and the
     // table drawer it docks in).
     if (menuItem.dataset.action === 'open-chat') {
-      const m = await import('./ui-chat.js');
+      const m = await import('./chat/ui-chat.js');
       // The item hides with its menu, so focus returns to the Tools button.
       m.openChat(wrapBtn);
       return;
@@ -420,7 +420,7 @@ function wireSessionRestore() {
   on('map:ready', () => {
     if (done) return;
     done = true;
-    void restoreDrawer(() => import('./ui-chat.js').then(m => m.resumeChat()), resumeVisualize)
+    void restoreDrawer(() => import('./chat/ui-chat.js').then(m => m.resumeChat()), resumeVisualize)
       .catch(() => { /* the drawer opens from its buttons as usual */ });
   });
 }

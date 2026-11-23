@@ -22,7 +22,7 @@
 //       proximityPairs prepares the input and the side-c grid once and groups on them (groupsOn).
 //       Pure: no DOM, no map. Run off the main thread by pairs-worker.ts.
 //
-// Deps: ./geodesic.js, ./methods/*, ./types.js. Used by ui/ui-proximity.ts, pairs-worker.ts, methods.ts, the tests and benchmarks.
+// Deps: ./geodesic.js, ./methods/*, ./types.js. Used by ui/proximity/ui-proximity.ts, pairs-worker.ts, methods.ts, the tests and benchmarks.
 
 import { geodesicKm } from './geodesic.js';
 import { prepare, type Prep } from './methods/common.js';

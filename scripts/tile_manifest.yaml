@@ -361,7 +361,7 @@ layers:
   # (type, ugc). Source layer name `nws_zones` (= this id) and strings
   # `ugc`+`type`+`key` are a load-bearing contract: `key` ("z"/"f" prefix +
   # ugc, computed in extract_nws_zones.py) is the pmtiles promoteId target
-  # assets/nws-zone-join.ts joins feature-state onto, since bare ugc collides
+  # assets/live/nws-zone-join.ts joins feature-state onto, since bare ugc collides
   # across the forecast/fire zone sets.
   - id: nws_zones
     src: data/build/nws_zones.geojson

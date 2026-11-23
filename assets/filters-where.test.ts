@@ -24,7 +24,7 @@ const SETFILTER_SITES: Record<string, number> = {
   'filters.ts': 1,                  // refilter() — the effectiveFilter writer
   'hover.ts': 2,                    // polygon-hover + line click-highlight twins
   'layers/map-layers-wecc.ts': 2,   // wecc-path-lines-highlight (click selection)
-  'ui/proximity-map.ts': 2,         // px-focus, px-focus-pt (the Proximity tool's own layers; no registry filter)
+  'ui/proximity/proximity-map.ts': 2, // px-focus, px-focus-pt (the Proximity tool's own layers; no registry filter)
 };
 
 describe('setFilter call sites', () => {

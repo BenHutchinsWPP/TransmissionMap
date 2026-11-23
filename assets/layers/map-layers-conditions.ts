@@ -3,7 +3,7 @@
 //       (wildfire hazard potential, seismic PGA), live GeoJSON (smoke, wildfire,
 //       incidents), and the live ODIN county-outage choropleth (feature-state
 //       data-join onto the shared county_boundaries PMTiles — the FIPS→[out,n]
-//       join itself lives in ../odin-outages.ts; this file only builds the source/layers),
+//       join itself lives in ../live/odin-outages.ts; this file only builds the source/layers),
 //       and the FEMA National Risk Index county choropleth (same shared-source
 //       feature-state pattern; the join lives in ../fema-nri.ts).
 // Each plan* returns a LayerPlan (layer-plan.ts), which add-all-layers.ts
@@ -27,7 +27,7 @@
 //
 // planWeatherLive() is a live baked-color raster IMAGE source ("weather-live") —
 // GFS 0.25° weather fields (temperature, wind, etc.) from scripts/fetch_weather_live.py.
-// The refresh loop, age chip and hover-LUT reload live in ../weather-live.ts.
+// The refresh loop, age chip and hover-LUT reload live in ../live/weather-live.ts.
 // It also adds "weather-admin-lines" (Natural Earth country/state borders,
 // scripts/extract_admin_lines.py) — white highlight lines above the wash,
 // toggled with the same registry row.
@@ -35,7 +35,7 @@
 // planNexradRadar() is a live external raster tile source ("nexrad-radar") —
 // IEM NEXRAD composite reflectivity; no data pipeline. Frame consistency comes
 // from polling IEM's tms.json for the current timestamped layer name — the
-// poll lives in ../nexrad-radar.ts, with the GeoMet source table. Canada
+// poll lives in ../live/nexrad-radar.ts, with the GeoMet source table. Canada
 // coverage comes from two ECCC GeoMet WMS raster sources (geomet-radar-rain/
 // -snow) added underneath and toggled by the same registry row.
 
@@ -47,7 +47,7 @@ import {
 import { countyBoundariesSource, planRaster } from './layer-init.js';
 import { layerSource } from './layer-source.js';
 import type { LayerPlan } from './layer-plan.js';
-import { GEOMET_RADAR, geometTiles } from '../nexrad-radar.js';
+import { GEOMET_RADAR, geometTiles } from '../live/nexrad-radar.js';
 import { NRI_RATINGS, NWS_GROUP_BUCKETS, bucketColorExpr } from '../../src/colors/buckets.js';
 
 function smokeFillOpacity(factor: number): ExpressionSpecification {
@@ -283,7 +283,7 @@ export function planNwsAlerts(): LayerPlan {
 export const planSeismicHazard = () => planRaster("usgs-seismic-pga");
 
 // ─── NEXRAD live radar (external tiles, no pipeline) ──────────────────────────
-// The frame poll that keeps every tile on one scan lives in ../nexrad-radar.ts.
+// The frame poll that keeps every tile on one scan lives in ../live/nexrad-radar.ts.
 export function planNexradRadar(): LayerPlan {
   const eccc = '<a href="https://eccc-msc.github.io/open-data/">Environment and Climate Change Canada</a>';
   // GeoMet (Canada) first so the IEM layer draws on top where coverage overlaps.
@@ -309,7 +309,7 @@ export function planNexradRadar(): LayerPlan {
 // FIPS — leading zeros matter). Counties with NO feature-state paint fully
 // transparent; the null guard comes first because arithmetic on a null
 // feature-state value poisons the whole expression. The join + refresh logic
-// lives in ../odin-outages.ts.
+// lives in ../live/odin-outages.ts.
 export function planOdinOutages(): LayerPlan {
   const out = ["feature-state", "odin_out"] as ExpressionSpecification;
   // YlOrRd choropleth — customers-out buckets: <100 / 100–1k / 1k–5k / 5k+.
@@ -364,7 +364,7 @@ export function planFemaNri(): LayerPlan {
 // WEBP mosaics (GFS 0.25° temperature, wind, humidity, etc.) served as
 // MapLibre `image` sources, not tiles — a whole-continent field is ~40–60 KB per
 // variable, so tiling it would buy nothing. Started holding a 1×1 transparent PNG
-// so visitors who never enable the layer never fetch; ../weather-live.ts
+// so visitors who never enable the layer never fetch; ../live/weather-live.ts
 // calls updateImage() on first enable and on every ~3-hourly refresh, and also
 // owns the age chip and the hover-LUT reload.
 // weather-admin-lines `level`: 1 = state borders; 0 = country borders and

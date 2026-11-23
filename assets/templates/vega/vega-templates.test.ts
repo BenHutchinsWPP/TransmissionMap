@@ -9,11 +9,11 @@
 // (the drive-app scenarios): vega and vega-lite are not dependencies.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ShapeOpts, ShapeResult } from '../../dataset-core.js';
-import type { ShapeRow } from '../../dataset-query.js';
+import type { ShapeOpts, ShapeResult } from '../../query/dataset-core.js';
+import type { ShapeRow } from '../../query/dataset-query.js';
 
 const m = vi.hoisted(() => ({ shape: vi.fn() }));
-vi.mock('../../dataset-query.js', async orig => ({ ...(await orig<typeof import('../../dataset-query.js')>()), shapeRows: m.shape }));
+vi.mock('../../query/dataset-query.js', async orig => ({ ...(await orig<typeof import('../../query/dataset-query.js')>()), shapeRows: m.shape }));
 
 import { build as buildComposition } from './composition.js';
 import { build as buildRanking, VALUE_ROOM } from './ranking.js';

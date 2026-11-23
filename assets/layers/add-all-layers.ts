@@ -1,11 +1,11 @@
 // ─── addAllLayers orchestrator ────────────────────────────────────────────────
 // Collects every builder's LayerPlan in z-order and applies them in one
 // applyLayerPlan() call (layer-plan.ts); then runs the few non-layer side
-// effects (hatch and Grid Operations arrow images first, then the radar poll (../nexrad-radar.ts) and
+// effects (hatch and Grid Operations arrow images first, then the radar poll (../live/nexrad-radar.ts) and
 // the data-centre and WECC tap wiring) and starts the data fetches for layers already on.
 // Imports from layer-plan.ts (applyLayerPlan),
 // layer-data.ts (ensureLayerData), map-layers-*.ts (builders) and
-// ../nexrad-radar.ts (startNexradRadar), ../grid-ops/grid-ops.ts (addGridOpsImages).
+// ../live/nexrad-radar.ts (startNexradRadar), ../grid-ops/grid-ops.ts (addGridOpsImages).
 // Isolated here so layer-init.ts has no back-imports from map-layers-*.ts.
 // >>> ADD-LAYER: add-all-layers — see docs/adding-a-layer.md §7
 
@@ -39,7 +39,7 @@ import {
   planFemaNri, planNwsAlerts, planNexradRadar, planWeatherLive,
 } from './map-layers-conditions.js';
 import { planMines } from './map-layers-mines.js';
-import { startNexradRadar } from '../nexrad-radar.js';
+import { startNexradRadar } from '../live/nexrad-radar.js';
 import { addGridOpsImages } from '../grid-ops/grid-ops.js';
 import { planCountries, planAdmin1, planUsStates, planUsCounties, planUsZcta } from './map-layers-admin.js';
 import { addHighlightLayers } from '../highlights.js';

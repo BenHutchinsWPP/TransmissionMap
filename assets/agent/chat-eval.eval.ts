@@ -62,7 +62,7 @@ const shared = vi.hoisted(() => {
 });
 
 vi.mock('../map-api.js', async () => {
-  const dq = await import('../dataset-query.js');
+  const dq = await import('../query/dataset-query.js');
   const { LAYERS, layerById } = await import('../../src/registry/index.js');
   const { t } = await import('../../src/i18n/index.js');
   const { FIELD_SCHEMA } = await import('../../src/registry/field-schema.js');

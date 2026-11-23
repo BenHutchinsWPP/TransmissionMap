@@ -57,9 +57,9 @@ baked color ramp by the IEM tile server (no client-side ramp, no hover readout).
 - **Radial velocity deliberately excluded** — this layer is reflectivity only.
 - **Refresh**: the source starts on IEM's `-0` (latest-frame) alias, but that alias
   resolves per tile in IEM's cache, so adjacent tiles can mix volume scans during a
-  frame rollover. `startNexradRadar()` (`assets/nexrad-radar.ts`) polls IEM's
+  frame rollover. `startNexradRadar()` (`assets/live/nexrad-radar.ts`) polls IEM's
   `tms.json` every 60 s while the layer is on — and at once when the layer is
-  switched on or the tab is shown again (`assets/live-poll.ts`) — for the current
+  switched on or the tab is shown again (`assets/live/live-poll.ts`) — for the current
   timestamped layer name (`ridge::USCOMP-N0Q-YYYYMMDDHHMM`) and calls `setTiles()`
   when the frame changes, so every tile renders the same scan. The same frame
   change cache-busts the two GeoMet sources (an ignored `_=` param), refreshing

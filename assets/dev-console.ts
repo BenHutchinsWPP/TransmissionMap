@@ -39,7 +39,7 @@ import * as api from './map-api.js';
 import { applyView, currentView } from './view-state.js';
 import { currentHash } from './url-state.js';
 import { listStylable } from './style-overrides.js';
-import { summarise } from './dataset-query.js';
+import { summarise } from './query/dataset-query.js';
 import type { Outcome } from '../src/outcome.js';
 import type { RouteResult, RouteSurface } from './route/route.js';
 import type { PresetPatch } from './route/preset-patch.js';

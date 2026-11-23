@@ -48,8 +48,8 @@ describe('rampLegendHtml', () => {
 });
 
 import { buildLegends, updateLegends } from './ui-legends.js';
-import { WILDFIRE_LIVE } from '../wildfire-staleness.js';
-import { NWS_LIVE } from '../nws-staleness.js';
+import { WILDFIRE_LIVE } from '../live/wildfire-staleness.js';
+import { NWS_LIVE } from '../live/nws-staleness.js';
 import { setLocale, loadDictionary } from '../../src/i18n/index.js';
 import { emit } from '../state-bus.js';
 import { state } from '../state.js';
