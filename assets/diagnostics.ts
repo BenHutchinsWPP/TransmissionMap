@@ -10,7 +10,8 @@
 //       detail string here is worded to say what was observed, never to name a
 //       cause. `timeout` and `unexpected body` are hints, not proof.
 // The required/optional host probes below cover the same hosts enumerated in
-//       docs/network-allowlist.md — update both together. The canvas probes
+//       docs/network-allowlist.md — update both together, except the analytics
+//       beacon's two, which a visitor never needs. The canvas probes
 //       (CDNs, Google Fonts) are the hosts only the model-written canvas frame
 //       (public/canvas.html) loads from; its CSP is built by scripts/build_sandbox.mjs.
 // Deps: state (live feed caches), layers/layer-data.ts (liveFeed — the same

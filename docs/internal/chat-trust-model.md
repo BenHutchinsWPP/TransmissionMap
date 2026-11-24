@@ -52,6 +52,9 @@ HTML-parsing APIs in these files; a popup goes through `escapeHtml`.
   `frame-src 'self'`.
 - A meta policy cannot carry `frame-ancestors` or reporting, and does not govern MapLibre's
   worker; tiles are data, accepted on the same ground.
+- One script from another host runs in the page: the Cloudflare Web Analytics beacon
+  (`ANALYTICS_SCRIPT_URL`, deployed build only). It has the page's access, the chat's stored
+  key included, so the page trusts Cloudflare's copy of that file.
 - The vetted host list is UX and provenance, not a security boundary.
 - A link naming an unvetted service fetches nothing from it until the visitor's Load; the
   approved set lives in `sessionStorage` (a duplicated tab inherits it).

@@ -10,7 +10,7 @@ Live: **https://www.wpptx.org/**
 
 **Traffic profile:** all requests are outbound HTTPS (port 443); they are GETs except the
 map chat (OpenRouter) and the line elevation profile (USGS 3DEP `getSamples`), which send
-POSTs. No
+POSTs, and the page-view beacon below, which sends a POST. No
 cookies, no authentication, no WebSockets. The only user-entered data that
 leaves the browser is text typed into the place-search box, sent to Esri's
 geocoder, and — only for a visitor who opens the map chat and enters their own
@@ -22,7 +22,8 @@ who adds a map service also sends that service's map requests to its host (see
 http-equiv>` tag, since GitHub Pages sets no response headers). Its
 `connect-src` and `img-src` name the hosts in the two tables below and also
 admit any other HTTPS host, for the map services a visitor adds; plain HTTP is
-refused. Scripts load only from the page's own host.
+refused. Scripts load only from the page's own host and, for the page-view
+beacon, `static.cloudflareinsights.com`.
 
 ## Required
 
@@ -38,7 +39,7 @@ The app fails to load or shows no data without these.
 
 ## Optional
 
-Only needed for specific basemap toggles, overlay layers, or older shared
+Only needed for specific basemap toggles, overlay layers, page-view counts, or older shared
 links — the app runs without these, those features just won't load.
 
 | Host | Feature |
@@ -53,6 +54,8 @@ links — the app runs without these, those features just won't load.
 | `moratoriums.wpptx.org` | Data center moratoriums layer |
 | `s3.us-west-2.amazonaws.com` | Grid Operations layer (EIA-930 hourly data read from the PUDL Project's published tables, path `/pudl.catalyst.coop/`), only while that layer is on |
 | `openrouter.ai` | Map chat, only after a visitor enters their own OpenRouter key; nothing is sent otherwise |
+| `static.cloudflareinsights.com` | Page-view counts: the Cloudflare Web Analytics script (no cookies; sends the page's path without the map state, the referrer and load timings); if blocked, the app works and the visit isn't counted |
+| `cloudflareinsights.com` | Page-view counts: where that script reports the visit |
 | `benhutchinswpp.github.io` | Opening a link shared before the move to `www.wpptx.org` — GitHub Pages redirects it, keeping the path and map state |
 
 ## Click-through links (app works without them)

@@ -2,7 +2,8 @@
 // Holds: where data lives (DATA, weatherLiveUrl and the origins behind them,
 // RELEASES_ORIGIN included; `versioned` adds ?v=<token> to a data-host URL), the external hosts more than one module reads
 // (basemap/terrain/radar/glyph/geocoder URLs, OPENROUTER_ORIGIN and PUDL_BASE_URL, which
-// diagnostics.ts also probes), CSP_HOSTS + CSP_POLICY (the production
+// diagnostics.ts also probes), the analytics beacon (ANALYTICS_*, added to the build by
+// vite.config.js), CSP_HOSTS + CSP_POLICY (the production
 // page's Content Security Policy, rendered by vite.config.js), EMPTY_FC, the
 // county join keys (COUNTY_SRC*) and WEATHER_WASH_OPACITY.
 // A constant with one owner lives in that owner instead: MW_SLIDER_MAX in
@@ -246,10 +247,19 @@ export const OPENROUTER_ORIGIN = "https://openrouter.ai";
 export const PUDL_VERSION = "v2026.8.0";
 export const PUDL_BASE_URL = `https://s3.us-west-2.amazonaws.com/pudl.catalyst.coop/${PUDL_VERSION}/`;
 
+// Cloudflare Web Analytics (cookieless page-load counts): vite.config.js adds the
+// beacon to the deployed build only. The script loads from ANALYTICS_SCRIPT_URL
+// (the one script CSP_POLICY admits from another host) and reports to
+// ANALYTICS_REPORT_ORIGIN; the token names the site and is public. Not a
+// Diagnostics probe: a blocked beacon costs the visitor nothing.
+export const ANALYTICS_SCRIPT_URL = "https://static.cloudflareinsights.com/beacon.min.js";
+export const ANALYTICS_REPORT_ORIGIN = "https://cloudflareinsights.com";
+export const ANALYTICS_TOKEN = "02e978cb03234310bd34591d95ab7827";
+
 // ─── Content Security Policy ──────────────────────────────────────────────────
 // Every origin a production build fetches from: the three data hosts
 // (DATA_HOSTS), basemaps, glyphs, the
-// geocoder, terrain, USGS 3DEP elevation, radar, OpenRouter and PUDL. Each is the origin of the constant the
+// geocoder, terrain, USGS 3DEP elevation, radar, OpenRouter, PUDL and the analytics beacon. Each is the origin of the constant the
 // code fetches with, so a host changes in one place. vite.config.js renders
 // CSP_POLICY into the built page's <meta http-equiv> (build only: the dev
 // server's HMR websocket stays unrestricted). assets/csp.test.ts holds CSP_HOSTS
@@ -261,19 +271,20 @@ export const PUDL_BASE_URL = `https://s3.us-west-2.amazonaws.com/pudl.catalyst.c
 // connect-src and img-src also admit any https: host, for the services a visitor
 // adds to the map; the named hosts stay listed as the record of what the app
 // itself reads. http: is refused (mixed content). Scripts and workers stay
-// 'self' (+ blob: workers), which is what keeps external data from running as
-// code (docs/internal/chat-trust-model.md). frame-src
+// 'self' (+ blob: workers, + the analytics beacon's one script URL), which is
+// what keeps external data from running as code (docs/internal/chat-trust-model.md). frame-src
 // 'self' admits only the page's own documents in an iframe.
 export const CSP_HOSTS: readonly string[] = [...new Set([
   ...DATA_HOSTS, OFM_STYLE_URLS.light, GLYPHS_URL, GEOCODER_URL, OSM_TILE_URL,
   AERIAL_TILE_URL, USGS_AERIAL_TILE_URL, TERRAIN_TILE_URL, ELEVATION_3DEP_URL,
   RADAR_TILE_TEMPLATE, GEOMET_RADAR_TILE_TEMPLATE, OPENROUTER_ORIGIN, PUDL_BASE_URL,
+  ANALYTICS_SCRIPT_URL, ANALYTICS_REPORT_ORIGIN,
 ].map(u => new URL(u).origin))];
 
 const IMG_HOSTS = CSP_HOSTS.filter(h => h !== OPENROUTER_ORIGIN);
 export const CSP_POLICY = [
   "default-src 'self'",
-  "script-src 'self'",
+  `script-src 'self' ${ANALYTICS_SCRIPT_URL}`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https: ${IMG_HOSTS.join(" ")}`,

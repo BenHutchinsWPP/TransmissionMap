@@ -1,7 +1,7 @@
 // The canvas frame: the committed public/canvas.html is what
 // scripts/build_sandbox.mjs generates, its CSP is exactly the planned one (no
 // hash or nonce, which would switch 'unsafe-inline' off), the tile hosts it may
-// fetch are the page's own minus the data host, the geocoder and OpenRouter,
+// fetch are the page's own minus the data host, the geocoder, OpenRouter and the analytics hosts,
 // canvas-runner.js stays inert outside an opaque, framed origin, the libs table
 // (src/registry/template-libs.json) is well-formed and inlined, and the html
 // path's TM API (drawn, fail, action, lib) posts what its header says, and the
@@ -24,11 +24,11 @@ const directives = () => new Map(csp().split('; ').map(d => {
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe('src/registry/canvas-hosts.json', () => {
-  it('is the CSP_HOSTS tile hosts: not the data host, the geocoder, 3DEP elevation, OpenRouter or PUDL (a keyed build, as deployed)', async () => {
+  it('is the CSP_HOSTS tile hosts: not the data host, the geocoder, 3DEP elevation, OpenRouter, PUDL or analytics (a keyed build, as deployed)', async () => {
     vi.resetModules();
     vi.stubEnv('VITE_ESRI_API_KEY', 'test-key');
     const c = await import('../constants.js');
-    const drop = new Set([...c.DATA_HOSTS.map(h => new URL(h).origin), new URL(c.GEOCODER_URL).origin, new URL(c.ELEVATION_3DEP_URL).origin, c.OPENROUTER_ORIGIN, new URL(c.PUDL_BASE_URL).origin]);
+    const drop = new Set([...c.DATA_HOSTS.map(h => new URL(h).origin), new URL(c.GEOCODER_URL).origin, new URL(c.ELEVATION_3DEP_URL).origin, c.OPENROUTER_ORIGIN, new URL(c.PUDL_BASE_URL).origin, new URL(c.ANALYTICS_SCRIPT_URL).origin, c.ANALYTICS_REPORT_ORIGIN]);
     expect(canvasHosts).toEqual(c.CSP_HOSTS.filter(h => !drop.has(h)));
   });
 });

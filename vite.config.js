@@ -8,6 +8,10 @@ import path from 'path';
 // websocket and inline client stay unrestricted. The policy is
 // assets/constants.ts's CSP_POLICY, imported through Vite with the build's own
 // env (PROD, the Esri key), so its hosts are the origins this bundle fetches from.
+// The same pass adds the Cloudflare Web Analytics beacon (constants.ts ANALYTICS_*)
+// before </body> when TM_ANALYTICS=1, which only the deploy workflow sets, so local
+// builds and previews send nothing. "spa": false counts page loads only: the app
+// rewrites the hash on every pan, which the beacon would otherwise count as a view.
 const CHARSET = '<meta charset="utf-8">';
 function cspMeta() {
   let env = {};
@@ -20,7 +24,11 @@ function cspMeta() {
       const define = Object.fromEntries(
         Object.entries(env).map(([k, v]) => [`import.meta.env.${k}`, JSON.stringify(v)]));
       const { module } = await runnerImport('/assets/constants.ts', { configFile: false, logLevel: 'silent', define });
-      return html.replace(CHARSET, `${CHARSET}\n  <meta http-equiv="Content-Security-Policy" content="${module.CSP_POLICY}">`);
+      html = html.replace(CHARSET, `${CHARSET}\n  <meta http-equiv="Content-Security-Policy" content="${module.CSP_POLICY}">`);
+      if (process.env.TM_ANALYTICS !== '1') return html;
+      if (!html.includes('</body>')) throw new Error('csp-meta: index.html has no </body>');
+      const beacon = `<script type="module" src="${module.ANALYTICS_SCRIPT_URL}" data-cf-beacon='{"token": "${module.ANALYTICS_TOKEN}", "spa": false}'></script>`;
+      return html.replace('</body>', `  ${beacon}\n</body>`);
     },
   };
 }

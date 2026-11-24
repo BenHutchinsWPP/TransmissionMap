@@ -2,7 +2,8 @@
 // rendered into dist/index.html by vite.config.js): its hosts are exactly the
 // fetched hosts docs/network-allowlist.md tables for IT, the policy carries
 // only what a <meta> can enforce, and its https: source (services a visitor adds)
-// widens fetches and images only — never scripts, eval or plain http.
+// widens fetches and images only — never scripts, eval or plain http; the one
+// script host beside the page's own is the analytics beacon's.
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 
@@ -59,9 +60,9 @@ describe('CSP policy', () => {
     for (const name of ['frame-ancestors', 'report-uri', 'report-to', 'sandbox']) expect(d.has(name)).toBe(false);
   });
 
-  it('keeps scripts to the page itself: no inline, no eval', async () => {
+  it('keeps scripts to the page itself and the analytics beacon: no inline, no eval', async () => {
     const d = await directives();
-    expect(d.get('script-src')).toEqual(["'self'"]);
+    expect(d.get('script-src')).toEqual(["'self'", 'https://static.cloudflareinsights.com/beacon.min.js']);
     expect(d.get('default-src')).toEqual(["'self'"]);
     expect(d.get('object-src')).toEqual(["'none'"]);
   });

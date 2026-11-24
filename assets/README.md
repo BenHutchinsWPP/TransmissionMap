@@ -138,7 +138,7 @@ Map of this folder; each file's header comment is the source of truth.
 
 ### Fetch from a new host / the Content Security Policy
 
-- the CSP exists only in a build, so a host missing from `CSP_HOSTS` works in dev and is refused in production; add it there, to the allowlist and a Diagnostics probe, then run `drive.mjs --preview csp`
+- the CSP exists only in a build, so a host missing from `CSP_HOSTS` works in dev and is refused in production; add it there, to the allowlist and a Diagnostics probe (the analytics beacon has none: blocking it costs the visitor nothing), then run `drive.mjs --preview csp`
 
 ### "Things aren't loading" reports / add a diagnostics check
 
